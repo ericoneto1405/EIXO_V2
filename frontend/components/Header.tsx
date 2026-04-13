@@ -57,16 +57,16 @@ const Header: React.FC<HeaderProps> = ({
     }, []);
 
     return (
-        <header className="relative z-20 rounded-[28px] border border-stone-200/80 bg-white/82 px-4 py-4 shadow-[0_18px_60px_rgba(120,95,58,0.10)] backdrop-blur lg:px-6">
+        <header className="relative z-20 rounded-[28px] border border-[#ccb99d] bg-[#f3eadc]/92 px-4 py-4 backdrop-blur lg:px-6">
             <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                 <div className="relative min-w-0 xl:flex-1" ref={dropdownRef}>
                         <button
                             onClick={() => setIsOpen(!isOpen)}
-                            className="flex w-full items-center rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-left transition-colors hover:bg-stone-100 xl:max-w-[360px]"
+                            className="flex w-full items-center rounded-2xl border border-[#d1c1aa] bg-[#efe6d8] px-4 py-3 text-left transition-colors hover:bg-[#e8ddcd] xl:max-w-[360px]"
                         >
                             <FarmIcon />
                             <div className="min-w-0">
-                                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">Fazenda selecionada</span>
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7f6d58]">Fazenda selecionada</span>
                                 <div className="flex items-center">
                                     <h2 className="truncate text-base font-bold text-stone-900">{currentFarmLabel}</h2>
                                     <ChevronDownIcon isOpen={isOpen} />
@@ -74,7 +74,7 @@ const Header: React.FC<HeaderProps> = ({
                             </div>
                         </button>
                         {isOpen && (
-                            <div className="absolute z-30 mt-2 w-full rounded-2xl border border-stone-200 bg-white shadow-xl xl:max-w-[360px]">
+                            <div className="absolute z-30 mt-2 w-full rounded-2xl border border-[#ccb99d] bg-[#f5ede2] shadow-xl xl:max-w-[360px]">
                                 <ul className="py-2">
                                     {hasFarms ? (
                                         <>
@@ -82,7 +82,7 @@ const Header: React.FC<HeaderProps> = ({
                                                 <a
                                                     href="#"
                                                     onClick={(e) => { e.preventDefault(); handleSelect(null); }}
-                                                    className="block px-4 py-2 text-sm text-stone-700 transition-colors hover:bg-stone-100"
+                                                    className="block px-4 py-2 text-sm text-[#5f5244] transition-colors hover:bg-[#eadfce]"
                                                 >
                                                     Todas as Fazendas
                                                 </a>
@@ -92,7 +92,7 @@ const Header: React.FC<HeaderProps> = ({
                                                     <a
                                                         href="#"
                                                         onClick={(e) => { e.preventDefault(); handleSelect(farm.id); }}
-                                                        className="block px-4 py-2 text-sm text-stone-700 transition-colors hover:bg-stone-100"
+                                                        className="block px-4 py-2 text-sm text-[#5f5244] transition-colors hover:bg-[#eadfce]"
                                                     >
                                                         {farm.name}
                                                     </a>
@@ -100,7 +100,7 @@ const Header: React.FC<HeaderProps> = ({
                                             ))}
                                         </>
                                     ) : (
-                                        <li className="px-4 py-3 text-sm text-stone-500">
+                                        <li className="px-4 py-3 text-sm text-[#7f6d58]">
                                             Nenhuma fazenda cadastrada.
                                         </li>
                                     )}
@@ -110,25 +110,25 @@ const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center xl:justify-end">
-                    <div className="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 lg:min-w-[420px] xl:min-w-[560px]">
+                    <div className="min-w-0 rounded-2xl border border-[#d1c1aa] bg-[#efe6d8] px-4 py-3 lg:min-w-[420px] xl:min-w-[560px]">
                         <AlertTicker />
                     </div>
 
-                    <button className="relative rounded-2xl border border-stone-200 bg-stone-50 p-3 text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900">
+                    <button className="relative rounded-2xl border border-[#d1c1aa] bg-[#efe6d8] p-3 text-[#6f604f] transition-colors hover:bg-[#e8ddcd] hover:text-stone-900">
                         <NotificationIcon />
                         <span className="absolute right-3 top-3 h-2 w-2 rounded-full bg-red-500"></span>
                     </button>
 
                     {currentUser && (
-                        <div className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3">
+                        <div className="flex items-center gap-3 rounded-2xl border border-[#d1c1aa] bg-[#efe6d8] px-4 py-3">
                             <div className="text-right">
                                 <p className="text-sm font-semibold text-stone-900">{currentUser.name}</p>
-                                <p className="text-xs text-stone-500">{currentUser.email}</p>
+                                <p className="text-xs text-[#7f6d58]">{currentUser.email}</p>
                                 {canRegisterUsers && (
                                     <button
                                         type="button"
                                         onClick={onOpenUserRegister}
-                                        className="mt-2 w-full rounded-xl border border-amber-300 bg-white px-3 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-amber-50"
+                                        className="mt-2 w-full rounded-xl border border-[#c7a56a] bg-[#f7f1e5] px-3 py-1 text-xs font-semibold text-[#8b6332] transition-colors hover:bg-[#efe2c7]"
                                     >
                                         Cadastrar usuários
                                     </button>

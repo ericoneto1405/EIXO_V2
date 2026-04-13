@@ -179,13 +179,30 @@ const SettingsIcon: React.FC = () => (
 
 const SidebarPanelIcon: React.FC<{ collapsed: boolean }> = ({ collapsed }) => (
     <svg
-        className="h-5 w-5"
+        className="h-6 w-6"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
     >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d={collapsed ? 'M5 6h7M5 12h7M5 18h7' : 'M12 6h7M12 12h7M12 18h7'} />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d={collapsed ? 'M13 4l4 2-4 2M13 10l4 2-4 2M13 16l4 2-4 2' : 'M11 4L7 6l4 2M11 10l-4 2 4 2M11 16l-4 2 4 2'} />
+        {collapsed ? (
+            <>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M4 6h6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M4 12h6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M4 18h6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M11 4.5l7 1.5-7 1.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M11 10.5l7 1.5-7 1.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M11 16.5l7 1.5-7 1.5" />
+            </>
+        ) : (
+            <>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M14 6h6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M14 12h6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M14 18h6" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M13 4.5L6 6l7 1.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M13 10.5L6 12l7 1.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M13 16.5L6 18l7 1.5" />
+            </>
+        )}
     </svg>
 );
 
@@ -270,10 +287,10 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
         isCollapsed ? 'justify-center' : 'justify-start'
     } ${isSubItem ? 'py-1.5' : 'py-2.5'} ${isSubItem ? (isCollapsed ? 'px-3' : 'pl-11 pr-3') : 'px-3.5'} ${
         isSubItem ? 'text-[13px]' : 'text-sm'
-    } font-medium transition-all duration-150 rounded-2xl active:translate-y-[1px] ${
+    } font-medium transition-all duration-150 rounded-2xl active:translate-y-[2px] ${
         isActive
-            ? 'translate-y-[1px] border border-amber-300/60 bg-amber-100 text-stone-900 shadow-[inset_0_2px_6px_rgba(120,95,58,0.14)]'
-            : 'text-stone-600 shadow-[inset_0_0_0_rgba(0,0,0,0)] hover:translate-y-[1px] hover:border hover:border-stone-200 hover:bg-stone-100 hover:text-stone-900 hover:shadow-[inset_0_2px_5px_rgba(120,95,58,0.08)]'
+            ? 'translate-y-[2px] border border-[#c7a56a] bg-[#d9b878] text-[#3e3122] shadow-[inset_0_3px_7px_rgba(120,95,58,0.22),0_1px_1px_rgba(255,255,255,0.20)]'
+            : 'border border-transparent text-[#e5dccb] shadow-[inset_0_0_0_rgba(0,0,0,0)] hover:translate-y-[2px] hover:border-[#6e5e47] hover:bg-[#5a4c39] hover:text-white hover:shadow-[inset_0_3px_7px_rgba(34,24,16,0.24)] active:bg-[#5a4c39]'
     }`;
 
     return (
@@ -350,13 +367,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                 isCollapsed ? 'w-20' : 'w-72'
             }`}
         >
-            <div className="flex h-full flex-col rounded-[30px] border border-stone-200/80 bg-white/78 shadow-[0_18px_60px_rgba(120,95,58,0.10)] backdrop-blur">
+            <div className="flex h-full flex-col rounded-[30px] border border-[#6a5a46] bg-[#4c4030]/94 shadow-[0_14px_40px_rgba(66,46,24,0.14)] backdrop-blur">
             <div className="flex items-start justify-between px-5 pb-2 pt-6">
                 <div className="flex-1">
                     {!isCollapsed && (
                         <div className="min-h-[124px]">
-                            <p className="text-[3.6rem] font-black leading-[0.9] text-stone-900">eixo</p>
-                            <p className="mt-3 pl-[2px] text-[11px] uppercase tracking-[0.16em] text-stone-600">
+                            <p className="text-[3.6rem] font-black leading-[0.9] text-[#f4eadb]">eixo</p>
+                            <p className="mt-3 pl-[2px] text-[11px] uppercase tracking-[0.16em] text-[#cdbfa8]">
                                 Gestão Pecuária de Corte
                             </p>
                         </div>
@@ -365,7 +382,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                 <button
                     type="button"
                     onClick={() => setIsCollapsed((prev) => !prev)}
-                    className="rounded-xl border border-stone-200 bg-stone-50 p-2 text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
+                    className="rounded-xl border border-[#6e5e47] bg-[#5a4c39] p-2.5 text-[#e8dcc7] transition-colors hover:bg-[#665742] hover:text-white"
                     aria-label={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
                 >
                     <SidebarPanelIcon collapsed={isCollapsed} />
@@ -376,7 +393,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                 {navSections.map((section) => (
                     <div key={section.title}>
                         {!isCollapsed && (
-                            <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-400">
+                            <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b9aa91]">
                                 {section.title}
                             </p>
                         )}
@@ -446,7 +463,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
 
             {!isCollapsed && isAssistantVisible && (
                 <div className="px-5 pb-6">
-                    <div className="rounded-3xl border border-stone-200 bg-stone-900 p-4 text-white shadow-lg">
+                    <div className="rounded-3xl border border-[#6e5e47] bg-[#2f261d] p-4 text-white shadow-lg">
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-sm font-semibold">Assistente Virtual</p>

@@ -463,16 +463,16 @@ const AppContent: React.FC = () => {
 
     return (
         <>
-            <div className="relative min-h-screen overflow-hidden bg-stone-50 font-sans text-stone-900">
+            <div className="relative min-h-screen overflow-hidden bg-[#e8dfcf] font-sans text-stone-900">
                 <div
-                    className="pointer-events-none absolute inset-0 opacity-20"
+                    className="pointer-events-none absolute inset-0 opacity-18"
                     style={{
                         backgroundImage: "url('/pasture-horizon.jpg')",
                         backgroundPosition: 'center top',
                         backgroundSize: 'cover',
                     }}
                 />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-stone-50/70 via-stone-50 to-stone-100/95" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#f1e7d6]/84 via-[#e8dfcf]/96 to-[#ddd1bd]" />
 
                 <div className="relative flex min-h-screen">
                     <Sidebar
@@ -490,7 +490,7 @@ const AppContent: React.FC = () => {
                             canRegisterUsers={currentUser?.email === ADMIN_EMAIL}
                             onOpenUserRegister={() => setIsRegisterModalOpen(true)}
                         />
-                        <div className="mt-[10px] flex-1 overflow-hidden rounded-[28px] border border-stone-200/80 bg-white/88 shadow-[0_24px_80px_rgba(120,95,58,0.10)] backdrop-blur">
+                        <div className="mt-[10px] flex-1 overflow-hidden rounded-[28px] border border-[#cdbda5] bg-[#f6f0e5]/96 backdrop-blur">
                             <div className="h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6">
                                 {renderContent()}
                             </div>
