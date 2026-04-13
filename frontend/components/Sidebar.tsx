@@ -118,6 +118,15 @@ const SupplementIcon: React.FC = () => (
     </svg>
 );
 
+const NutritionIcon: React.FC = () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 4h8" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 4v6a3 3 0 003 3 3 3 0 003-3V4" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 20h12" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 14h8" />
+    </svg>
+);
+
 const MoneyDownIcon: React.FC = () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="9" />
@@ -168,7 +177,20 @@ const SettingsIcon: React.FC = () => (
     </svg>
 );
 
+const SidebarPanelIcon: React.FC<{ collapsed: boolean }> = ({ collapsed }) => (
+    <svg
+        className="h-5 w-5"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+    >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d={collapsed ? 'M5 6h7M5 12h7M5 18h7' : 'M12 6h7M12 12h7M12 18h7'} />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d={collapsed ? 'M13 4l4 2-4 2M13 10l4 2-4 2M13 16l4 2-4 2' : 'M11 4L7 6l4 2M11 10l-4 2 4 2M11 16l-4 2 4 2'} />
+    </svg>
+);
+
 const geneticsSubItems: NavSubItem[] = [
+    { label: 'Plantel', path: '/genetics/plantel' },
     { label: 'Reprodução', path: '/genetics/reproducao' },
     { label: 'Seleção', path: '/genetics/selecao' },
     { label: 'Relatórios', path: '/genetics/relatorios' },
@@ -178,11 +200,12 @@ const navSections: NavSection[] = [
     {
         title: 'Principal',
         items: [
+            { label: 'Mapa do Sistema', icon: <HomeIcon />, badge: 'Audit' },
             { label: 'Visão Geral', icon: <HomeIcon /> },
             { label: 'Fazendas', icon: <FarmIcon /> },
             { label: 'Rebanho Comercial', icon: <HerdCommercialIcon /> },
-            { label: 'Rebanho P.O.', icon: <HerdPoIcon /> },
-            { label: 'Rebanho Genética', icon: <HerdGeneticIcon />, subItems: geneticsSubItems },
+            { label: 'Plantel P.O.', icon: <HerdPoIcon /> },
+            { label: 'Eixo Genetics', icon: <HerdGeneticIcon />, subItems: geneticsSubItems, badge: 'Módulo' },
         ],
     },
     {
@@ -192,6 +215,12 @@ const navSections: NavSection[] = [
             { label: 'Remédios', icon: <MedicineIcon /> },
             { label: 'Rações', icon: <GrainIcon /> },
             { label: 'Suplementos', icon: <SupplementIcon /> },
+        ],
+    },
+    {
+        title: 'Nutrição',
+        items: [
+            { label: 'Nutrição', icon: <NutritionIcon /> },
         ],
     },
     {
@@ -211,23 +240,6 @@ const navSections: NavSection[] = [
         ],
     },
 ];
-
-const LogoIcon: React.FC = () => (
-    <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold">
-        E
-    </div>
-);
-
-const CollapseIcon: React.FC<{ collapsed: boolean }> = ({ collapsed }) => (
-    <svg
-        className={`w-5 h-5 transition-transform duration-200 ${collapsed ? 'rotate-180' : ''}`}
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-    >
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-    </svg>
-);
 
 const ChevronIndicator: React.FC<{ isOpen: boolean }> = ({ isOpen }) => (
     <span className="text-xs text-current">{isOpen ? '▾' : '▸'}</span>
@@ -256,12 +268,12 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
 }) => {
     const baseClasses = `w-full flex items-center ${
         isCollapsed ? 'justify-center' : 'justify-start'
-    } ${isSubItem ? 'py-1.5' : 'py-2'} ${isSubItem ? (isCollapsed ? 'px-3' : 'pl-11 pr-3') : 'px-3'} ${
+    } ${isSubItem ? 'py-1.5' : 'py-2.5'} ${isSubItem ? (isCollapsed ? 'px-3' : 'pl-11 pr-3') : 'px-3.5'} ${
         isSubItem ? 'text-[13px]' : 'text-sm'
-    } font-medium transition-colors rounded-xl ${
+    } font-medium transition-all duration-150 rounded-2xl active:translate-y-[1px] ${
         isActive
-            ? 'bg-primary/10 text-primary dark:text-primary border border-primary/30'
-            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+            ? 'translate-y-[1px] border border-amber-300/60 bg-amber-100 text-stone-900 shadow-[inset_0_2px_6px_rgba(120,95,58,0.14)]'
+            : 'text-stone-600 shadow-[inset_0_0_0_rgba(0,0,0,0)] hover:translate-y-[1px] hover:border hover:border-stone-200 hover:bg-stone-100 hover:text-stone-900 hover:shadow-[inset_0_2px_5px_rgba(120,95,58,0.08)]'
     }`;
 
     return (
@@ -334,18 +346,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
 
     return (
         <aside
-            className={`hidden lg:flex flex-col bg-white dark:bg-dark-card border-r border-gray-100 dark:border-gray-800 transition-all duration-200 ${
+            className={`hidden lg:flex lg:shrink-0 flex-col px-4 py-5 transition-all duration-200 ${
                 isCollapsed ? 'w-20' : 'w-72'
             }`}
         >
-            <div className="flex items-center justify-between px-5 py-6">
-                <div className="flex items-center space-x-3">
-                    <LogoIcon />
+            <div className="flex h-full flex-col rounded-[30px] border border-stone-200/80 bg-white/78 shadow-[0_18px_60px_rgba(120,95,58,0.10)] backdrop-blur">
+            <div className="flex items-start justify-between px-5 pb-2 pt-6">
+                <div className="flex-1">
                     {!isCollapsed && (
-                        <div>
-                            <p className="text-base font-semibold text-gray-900 dark:text-white">Eixo</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                                Gestão Pecuária
+                        <div className="min-h-[124px]">
+                            <p className="text-[3.6rem] font-black leading-[0.9] text-stone-900">eixo</p>
+                            <p className="mt-3 pl-[2px] text-[11px] uppercase tracking-[0.16em] text-stone-600">
+                                Gestão Pecuária de Corte
                             </p>
                         </div>
                     )}
@@ -353,18 +365,18 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                 <button
                     type="button"
                     onClick={() => setIsCollapsed((prev) => !prev)}
-                    className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                    className="rounded-xl border border-stone-200 bg-stone-50 p-2 text-stone-600 transition-colors hover:bg-stone-100 hover:text-stone-900"
                     aria-label={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
                 >
-                    <CollapseIcon collapsed={isCollapsed} />
+                    <SidebarPanelIcon collapsed={isCollapsed} />
                 </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto px-3 pb-6 space-y-6">
+            <nav className="flex-1 overflow-y-auto px-3 pb-6 pt-0 space-y-5">
                 {navSections.map((section) => (
                     <div key={section.title}>
                         {!isCollapsed && (
-                            <p className="px-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-2">
+                            <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-400">
                                 {section.title}
                             </p>
                         )}
@@ -434,12 +446,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
 
             {!isCollapsed && isAssistantVisible && (
                 <div className="px-5 pb-6">
-                    <div className="rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white p-4">
+                    <div className="rounded-3xl border border-stone-200 bg-stone-900 p-4 text-white shadow-lg">
                         <div className="flex items-start justify-between">
                             <div>
                                 <p className="text-sm font-semibold">Assistente Virtual</p>
                                 {!isAssistantMinimized && (
-                                    <p className="text-xs text-white/80 mt-1">
+                                    <p className="mt-1 text-xs text-white/75">
                                         Tire dúvidas sobre o rebanho, finanças ou cadastros com o Eixo Copiloto.
                                     </p>
                                 )}
@@ -447,7 +459,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                             <div className="flex space-x-1">
                                 <button
                                     type="button"
-                                    className="h-6 w-6 flex items-center justify-center rounded-md bg-white/20 text-xs font-bold hover:bg-white/30 transition-colors"
+                                    className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-xs font-bold transition-colors hover:bg-white/25"
                                     onClick={() => setIsAssistantMinimized((prev) => !prev)}
                                     aria-label={isAssistantMinimized ? 'Expandir assistente' : 'Minimizar assistente'}
                                 >
@@ -455,7 +467,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                                 </button>
                                 <button
                                     type="button"
-                                    className="h-6 w-6 flex items-center justify-center rounded-md bg-white/20 text-xs font-bold hover:bg-white/30 transition-colors"
+                                    className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-xs font-bold transition-colors hover:bg-white/25"
                                     onClick={() => setIsAssistantVisible(false)}
                                     aria-label="Fechar assistente"
                                 >
@@ -471,6 +483,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                     </div>
                 </div>
             )}
+            </div>
         </aside>
     );
 };

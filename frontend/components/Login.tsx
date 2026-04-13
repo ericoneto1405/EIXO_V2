@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 interface LoginProps {
     onLogin: (email: string, password: string, rememberMe: boolean) => void;
     error?: string | null;
+    onBack?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, error, onBack }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
@@ -16,52 +17,53 @@ const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-primary/10 via-white to-primary/10 flex items-center justify-center px-4">
-            <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-2 bg-white dark:bg-dark-card shadow-2xl rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-800">
-                <div className="hidden lg:flex flex-col justify-between p-10 bg-primary text-white">
-                    <div>
-                        <p className="uppercase tracking-[0.3em] text-sm opacity-80">Eixo Gestão</p>
-                        <h1 className="text-4xl font-bold mt-4">Gerencie sua fazenda com dados e inteligência.</h1>
-                        <p className="mt-4 text-white/80">
-                            Painel completo de operações, rebanho e finanças para sua gestão pecuária.
-                        </p>
-                    </div>
-                    <div className="mt-10 space-y-4">
-                        <div className="flex items-center space-x-3">
-                            <div className="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center text-lg font-semibold">
-                                1
-                            </div>
-                            <p className="text-white/90">Monitore o rebanho em tempo real.</p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            <div className="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center text-lg font-semibold">
-                                2
-                            </div>
-                            <p className="text-white/90">Centralize cadastros de fornecedores e insumos.</p>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            <div className="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center text-lg font-semibold">
-                                3
-                            </div>
-                            <p className="text-white/90">Tome decisões financeiras com clareza.</p>
-                        </div>
-                    </div>
-                </div>
+        <div className="min-h-screen bg-stone-50 text-stone-900">
+            <div className="relative overflow-hidden min-h-screen">
+                <div
+                    className="absolute inset-0 opacity-40"
+                    style={{
+                        backgroundImage: "url('/pasture-horizon.jpg')",
+                        backgroundPosition: 'center -160px',
+                        backgroundSize: 'cover',
+                    }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-stone-50 via-stone-50/80 to-stone-50/55" />
 
+                <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-10 pt-8 lg:px-8">
+                    <div className="mb-10">
+                        <div className="text-[2rem] font-black leading-none text-stone-900">eixo</div>
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-stone-500">Plataforma de Gestão Pecuária</div>
+                    </div>
+
+                    <div className="flex flex-1 items-center justify-center">
+                        <div className="w-full max-w-xl rounded-3xl border border-stone-200 bg-white/95 shadow-xl backdrop-blur">
                 <div className="p-8 lg:p-10 flex flex-col justify-center">
                     <div className="max-w-md mx-auto w-full">
-                        <div className="flex items-center space-x-3 mb-6">
-                            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center text-xl font-bold">
-                                E
+                        {onBack && (
+                            <button
+                                type="button"
+                                onClick={onBack}
+                                className="mb-6 inline-flex items-center text-sm font-medium text-stone-700 transition-colors hover:text-stone-900"
+                            >
+                                ← VOLTAR
+                            </button>
+                        )}
+                        <div className="mb-6">
+                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-100/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                                Acesso seguro
                             </div>
                             <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wide">Bem-vindo</p>
-                                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Acesse o painel</h2>
+                                <p className="text-sm uppercase tracking-[0.18em] text-stone-500">Bem-vindo</p>
+                                <h2 className="mt-2 text-3xl font-black text-stone-900">Entrar na conta</h2>
+                                <p className="mt-3 text-sm leading-relaxed text-stone-600">
+                                    Acesse sua fazenda com segurança e continue de onde parou.
+                                </p>
                             </div>
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                                <label htmlFor="email" className="block text-sm font-medium text-stone-700">
                                     E-mail corporativo
                                 </label>
                                 <input
@@ -69,7 +71,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="mt-1 w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark px-4 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-stone-900 focus:outline-none focus:ring-2 focus:ring-primary"
                                     placeholder="nome@fazenda.com"
                                     required
                                 />
@@ -77,7 +79,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
                             <div>
                                 <label
                                     htmlFor="password"
-                                    className="block text-sm font-medium text-gray-700 dark:text-gray-200"
+                                    className="block text-sm font-medium text-stone-700"
                                 >
                                     Senha
                                 </label>
@@ -86,12 +88,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="mt-1 w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark px-4 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-stone-900 focus:outline-none focus:ring-2 focus:ring-primary"
                                     placeholder="••••••••"
                                     required
                                 />
                             </div>
-                            <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                            <div className="flex items-center justify-between text-sm text-stone-600">
                                 <label className="flex items-center gap-2">
                                     <input
                                         type="checkbox"
@@ -104,21 +106,24 @@ const Login: React.FC<LoginProps> = ({ onLogin, error }) => {
                             </div>
 
                             {error && (
-                                <div className="rounded-2xl bg-red-50 text-red-600 text-sm px-4 py-3 dark:bg-red-500/10 dark:text-red-300">
+                                <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">
                                     {error}
                                 </div>
                             )}
                             <button
                                 type="submit"
-                                className="w-full bg-primary hover:bg-primary-dark text-white font-semibold py-3 rounded-2xl transition-colors"
+                                className="w-full rounded-2xl bg-primary py-3 font-semibold text-white transition-colors hover:bg-primary-dark"
                             >
                                 Entrar
                             </button>
 
-                            <p className="text-xs text-gray-400 text-center">
+                            <p className="text-center text-xs text-stone-500">
                                 Ao continuar, você concorda com os Termos de Uso e Política de Privacidade.
                             </p>
                         </form>
+                    </div>
+                </div>
+                        </div>
                     </div>
                 </div>
             </div>

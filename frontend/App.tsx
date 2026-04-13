@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { buildApiUrl } from './api';
 import Sidebar from './components/Sidebar';
+import SystemCoverage from './components/SystemCoverage';
 import Dashboard from './components/Dashboard';
 import HerdModule from './components/HerdModule';
 import Operations from './components/Operations';
@@ -20,7 +21,9 @@ import GeneticsReproducao from './components/GeneticsReproducao';
 import GeneticsSelecao from './components/GeneticsSelecao';
 import GeneticsRelatorios from './components/GeneticsRelatorios';
 import GeneticsPlantelPO from './components/GeneticsPlantelPO';
+import NutritionModule from './components/NutritionModule';
 import Login from './components/Login';
+import PublicLanding from './components/PublicLanding';
 import UserRegisterModal from './components/UserRegisterModal';
 import { Farm } from './types';
 
@@ -31,6 +34,7 @@ interface User {
     modules: string[];
     roles?: string[];
     lastFarmId?: string | null;
+    entitlements?: string[];
 }
 
 const ADMIN_EMAIL = 'admin@eixo.com';
@@ -38,11 +42,15 @@ const ADMIN_EMAIL = 'admin@eixo.com';
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Rebanho P.O.', 'Rebanho Genética'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Plantel P.O.', 'Eixo Genetics'],
     },
     {
         title: 'Cadastros',
         modules: ['Fornecedores', 'Remédios', 'Rações', 'Suplementos'],
+    },
+    {
+        title: 'Nutrição',
+        modules: ['Nutrição'],
     },
     {
         title: 'Financeiro',
@@ -62,6 +70,7 @@ const AppContent: React.FC = () => {
     const [activeView, setActiveView] = useState('Visão Geral');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
+    const [authScreen, setAuthScreen] = useState<'landing' | 'login'>('landing');
     const [authError, setAuthError] = useState<string | null>(null);
     const [registerMessage, setRegisterMessage] = useState<string | null>(null);
     const [registerError, setRegisterError] = useState<string | null>(null);
@@ -70,11 +79,20 @@ const AppContent: React.FC = () => {
     const [farms, setFarms] = useState<Farm[]>([]);
     const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
     const currentAllowedModules = React.useMemo(() => {
+        const hasNutritionEntitlement = (currentUser?.entitlements || []).some((code) =>
+            ['NUTRITION', 'EIXO_NUTRITION'].includes(code),
+        );
         if (!currentUser?.modules?.length) {
-            return ALL_MODULES;
+            return hasNutritionEntitlement ? ALL_MODULES : ALL_MODULES.filter((module) => module !== 'Nutrição');
         }
-        const filtered = currentUser.modules.filter((module) => ALL_MODULES.includes(module));
-        return filtered.length ? filtered : ALL_MODULES;
+        const filtered = currentUser.modules.map((module) => module === 'Rebanho Genética' ? 'Eixo Genetics' : module === 'Rebanho P.O.' ? 'Plantel P.O.' : module).filter((module) => ALL_MODULES.includes(module));
+        const withNutrition = hasNutritionEntitlement && !filtered.includes('Nutrição')
+            ? [...filtered, 'Nutrição']
+            : filtered;
+        const fallbackModules = hasNutritionEntitlement
+            ? ALL_MODULES
+            : ALL_MODULES.filter((module) => module !== 'Nutrição');
+        return withNutrition.length ? withNutrition : fallbackModules;
     }, [currentUser]);
     const [openFarmForm, setOpenFarmForm] = useState(false);
     const updateFarmFormQuery = React.useCallback((shouldOpen: boolean) => {
@@ -177,10 +195,10 @@ const AppContent: React.FC = () => {
             updateFarmFormQuery(false);
             const targetView = currentAllowedModules.includes('Rebanho Comercial')
                 ? 'Rebanho Comercial'
-                : currentAllowedModules.includes('Rebanho P.O.')
-                ? 'Rebanho P.O.'
-                : currentAllowedModules.includes('Rebanho Genética')
-                ? 'Rebanho Genética'
+                : currentAllowedModules.includes('Plantel P.O.')
+                ? 'Plantel P.O.'
+                : currentAllowedModules.includes('Eixo Genetics')
+                ? 'Eixo Genetics'
                 : 'Fazendas';
             setActiveView(targetView);
         },
@@ -235,6 +253,7 @@ const AppContent: React.FC = () => {
             }
             const foundUser: User = payload.user;
             setIsAuthenticated(true);
+            setAuthScreen('login');
             setCurrentUser(foundUser);
             setAuthError(null);
             setRegisterMessage(null);
@@ -300,6 +319,7 @@ const AppContent: React.FC = () => {
         }
         setIsAuthenticated(false);
         setCurrentUser(null);
+        setAuthScreen('landing');
         setFarms([]);
         setSelectedFarmId(null);
         setOpenFarmForm(false);
@@ -320,10 +340,15 @@ const AppContent: React.FC = () => {
     }
 
     if (!isAuthenticated) {
+        if (authScreen === 'landing') {
+            return <PublicLanding onEnter={() => setAuthScreen('login')} />;
+        }
+
         return (
             <Login
                 onLogin={handleLogin}
                 error={authError}
+                onBack={() => setAuthScreen('landing')}
             />
         );
     }
@@ -370,6 +395,17 @@ const AppContent: React.FC = () => {
                 return <Feeds />;
             case 'Suplementos':
                 return <Supplements />;
+            case 'Nutrição':
+                if (!hasSelectedFarm) {
+                    return (
+                        <FarmRequiredPanel
+                            title="Selecione uma fazenda para acessar a nutrição"
+                            actionLabel="Selecionar fazenda"
+                            onAction={() => setActiveView('Fazendas')}
+                        />
+                    );
+                }
+                return <NutritionModule farmId={selectedFarmId} currentUser={currentUser} />;
             case 'Fazendas':
                 return (
                     <Farms
@@ -394,7 +430,7 @@ const AppContent: React.FC = () => {
                     );
                 }
                 return <HerdModule farmId={selectedFarmId} mode="COMMERCIAL" />;
-            case 'Rebanho P.O.':
+            case 'Plantel P.O.':
                 if (!hasSelectedFarm) {
                     return (
                         <FarmRequiredPanel
@@ -405,7 +441,7 @@ const AppContent: React.FC = () => {
                     );
                 }
                 return <HerdModule farmId={selectedFarmId} mode="PO" />;
-            case 'Rebanho Genética':
+            case 'Eixo Genetics':
                 return <Navigate to="/genetics/plantel" replace />;
             case 'Contas a Pagar':
                 return <AccountsPayable />;
@@ -427,26 +463,40 @@ const AppContent: React.FC = () => {
 
     return (
         <>
-            <div className="flex h-screen bg-light dark:bg-dark text-gray-800 dark:text-gray-200 font-sans">
-                <Sidebar
-                    activeItem={activeView}
-                    setActiveItem={setActiveView}
-                    allowedModules={currentAllowedModules}
+            <div className="relative min-h-screen overflow-hidden bg-stone-50 font-sans text-stone-900">
+                <div
+                    className="pointer-events-none absolute inset-0 opacity-20"
+                    style={{
+                        backgroundImage: "url('/pasture-horizon.jpg')",
+                        backgroundPosition: 'center top',
+                        backgroundSize: 'cover',
+                    }}
                 />
-                <main className="flex-1 flex flex-col overflow-hidden">
-                    <Header 
-                        farms={farms}
-                        selectedFarmId={selectedFarmId}
-                        onSelectFarm={setSelectedFarmId}
-                        currentUser={currentUser}
-                        onLogout={handleLogout}
-                        canRegisterUsers={currentUser?.email === ADMIN_EMAIL}
-                        onOpenUserRegister={() => setIsRegisterModalOpen(true)}
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-stone-50/70 via-stone-50 to-stone-100/95" />
+
+                <div className="relative flex min-h-screen">
+                    <Sidebar
+                        activeItem={activeView}
+                        setActiveItem={setActiveView}
+                        allowedModules={currentAllowedModules}
                     />
-                    <div className="flex-1 overflow-x-hidden overflow-y-auto p-6">
-                        {renderContent()}
-                    </div>
-                </main>
+                    <main className="flex min-h-screen flex-1 flex-col overflow-hidden px-4 pb-4 pt-4 lg:px-6 lg:pb-6 lg:pt-6">
+                        <Header
+                            farms={farms}
+                            selectedFarmId={selectedFarmId}
+                            onSelectFarm={setSelectedFarmId}
+                            currentUser={currentUser}
+                            onLogout={handleLogout}
+                            canRegisterUsers={currentUser?.email === ADMIN_EMAIL}
+                            onOpenUserRegister={() => setIsRegisterModalOpen(true)}
+                        />
+                        <div className="mt-[10px] flex-1 overflow-hidden rounded-[28px] border border-stone-200/80 bg-white/88 shadow-[0_24px_80px_rgba(120,95,58,0.10)] backdrop-blur">
+                            <div className="h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6">
+                                {renderContent()}
+                            </div>
+                        </div>
+                    </main>
+                </div>
             </div>
             <UserRegisterModal
                 isOpen={isRegisterModalOpen}

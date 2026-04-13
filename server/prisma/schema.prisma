@@ -8,46 +8,81 @@ datasource db {
 }
 
 model User {
-  id         String    @id @default(uuid())
-  name       String
-  email      String    @unique
-  password   String
-  modules    String[]
-  roles      String[]  @default([])
-  lastFarmId String?
-  createdAt  DateTime  @default(now())
-  farms      Farm[]
-  sessions   Session[]
+  id                   String                  @id @default(uuid())
+  name                 String
+  email                String                  @unique
+  password             String
+  modules              String[]
+  roles                String[]                @default([])
+  lastFarmId           String?
+  activeOrganizationId String?
+  createdAt            DateTime                @default(now())
+  farms                Farm[]
+  sessions             Session[]
+  memberships          OrganizationMembership[]
+  activityLogs         ActivityLog[]
+  geneticsAnalysisRuns GeneticsAnalysisRun[]   @relation("GeneticsAnalysisCreatedBy")
+  externalOperations   ExternalOperation[]     @relation("ExternalOperationCreatedBy")
+  externalOperationLedgerEntries ExternalOperationLedgerEntry[] @relation("ExternalOperationLedgerCreatedBy")
+  externalOperationSettlements  ExternalOperationSettlement[]   @relation("ExternalOperationSettlementCreatedBy")
+  feedlotContracts     FeedlotContract[]       @relation("FeedlotContractCreatedBy")
+  feedlotLedgerEntries FeedlotLedgerEntry[]    @relation("FeedlotLedgerCreatedBy")
+  feedlotSettlements   FeedlotSettlement[]     @relation("FeedlotSettlementCreatedBy")
+  reproCheckupSessions ReproCheckupSession[]   @relation("ReproCheckupCreatedBy")
+  activeOrganization   Organization?           @relation("ActiveOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
 }
 
 model Farm {
-  id         String           @id @default(uuid())
-  name       String
-  city       String
-  lat        Float?
-  lng        Float?
-  size       Float
-  notes      String?
-  createdAt  DateTime         @default(now())
-  reproMode  ReproMode        @default(CONTINUO)
-  paddocks   Paddock[]
-  lots       Lot[]
-  animals    Animal[]
-  seasons    BreedingSeason[]
-  reproEvents ReproEvent[]
+  id                 String                @id @default(uuid())
+  name               String
+  city               String
+  lat                Float?
+  lng                Float?
+  size               Float
+  notes              String?
+  mapAssetPath       String?
+  mapData            Json?
+  organizationId     String?
+  createdAt          DateTime              @default(now())
+  reproMode          ReproMode             @default(CONTINUO)
+  paddocks           Paddock[]
+  lots               Lot[]
+  animals            Animal[]
+  seasons            BreedingSeason[]
+  reproEvents        ReproEvent[]
   selectionDecisions SelectionDecision[]
-  poAnimals  PoAnimal[]
-  poLots     PoLot[]
-  semenBatches SemenBatch[]
-  embryoBatches EmbryoBatch[]
-  poWeighings PoWeighing[]
-  paddockMoves PaddockMove[]
-  nutritionPlans NutritionPlan[]
+  poAnimals          PoAnimal[]
+  poLots             PoLot[]
+  semenBatches       SemenBatch[]
+  embryoBatches      EmbryoBatch[]
+  poWeighings        PoWeighing[]
+  paddockMoves       PaddockMove[]
+  nutritionPlans     NutritionPlan[]
   nutritionAssignments NutritionAssignment[]
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     String
+  nutritionSettings  NutritionSettings?
+  nutritionPhases    NutritionPhase[]
+  nutritionUnits     NutritionUnit[]
+  nutritionIngredients NutritionIngredient[]
+  nutritionPreparedFeeds NutritionPreparedFeed[]
+  nutritionFabrications NutritionFabrication[]
+  nutritionExecutions NutritionExecution[]
+  nutritionTroughReadings NutritionTroughReading[]
+  nutritionCostEntries NutritionCostEntry[]
+  financialPayables  FinancialPayable[]
+  financialReceivables FinancialReceivable[]
+  criaMortalities    CriaMortality[]
+  geneticsAnalysisRuns GeneticsAnalysisRun[]
+  herdImportPendings HerdImportPending[]
+  externalOperations ExternalOperation[]
+  feedlotContracts   FeedlotContract[]
+  reproCheckupSessions ReproCheckupSession[]
+  reproCheckupRecords  ReproCheckupRecord[]
+  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String
+  organization       Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([organizationId])
 }
 
 model Paddock {
@@ -55,6 +90,9 @@ model Paddock {
   name             String
   areaHa           Float?        @map("size")
   capacity         Float?
+  lat              Float?
+  lng              Float?
+  mapGeometry      Json?
   active           Boolean       @default(true)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
@@ -72,6 +110,11 @@ enum AnimalSexo {
   FEMEA
 }
 
+enum AnimalTipoCadastro {
+  PO
+  MESTICO
+}
+
 model Lot {
   id        String   @id @default(uuid())
   name      String
@@ -82,17 +125,24 @@ model Lot {
   farmId    String
   animals   Animal[]
   nutritionAssignments NutritionAssignment[]
+  nutritionUnits NutritionUnit[]
+  nutritionExecutions NutritionExecution[]
+  nutritionCostEntries NutritionCostEntry[]
 
   @@index([farmId])
 }
 
 model Animal {
-  id             String       @id @default(uuid())
+  id             String             @id @default(uuid())
   brinco         String
-  raca           String
-  sexo           AnimalSexo
-  dataNascimento DateTime
-  pesoAtual      Float
+  registro       String?
+  identityKey    String
+  raca           String?
+  tipoCadastro   AnimalTipoCadastro @default(MESTICO)
+  sexo           AnimalSexo?
+  categoria      String?
+  dataNascimento DateTime?
+  pesoAtual      Float?
   gmd            Float?
   gmd30          Float?
   createdAt      DateTime     @default(now())
@@ -109,23 +159,61 @@ model Animal {
   selectionDecisions SelectionDecision[]
   nutritionAssignments NutritionAssignment[]
   paddockMoves   PaddockMove[]
+  reproCheckupRecords ReproCheckupRecord[]
+  criaMortalities CriaMortality[]
 
-  @@unique([farmId, brinco])
+  @@index([farmId, brinco], map: "Animal_farmId_brinco_idx")
+  @@unique([farmId, identityKey], map: "Animal_farmId_identityKey_key")
+  @@index([farmId, registro], map: "Animal_farmId_registro_idx")
   @@index([farmId])
   @@index([lotId])
   @@index([currentPaddockId])
 }
 
+enum WeighingSource {
+  MANUAL
+  COIMMA
+}
+
+enum ScaleIntegrationProvider {
+  COIMMA
+}
+
 model Weighing {
-  id        String   @id @default(uuid())
-  data      DateTime
-  peso      Float
-  gmd       Float
-  createdAt DateTime @default(now())
-  animal    Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
-  animalId  String
+  id             String                   @id @default(uuid())
+  data           DateTime
+  peso           Float
+  gmd            Float
+  source         WeighingSource           @default(MANUAL)
+  provider       ScaleIntegrationProvider?
+  rawPayload     String?
+  createdAt      DateTime                 @default(now())
+  animal         Animal                   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  animalId       String
+  scaleSessionId String?
 
   @@unique([animalId, data])
+  @@unique([scaleSessionId], map: "Weighing_scaleSessionId_key")
+}
+
+model CriaMortality {
+  id         String    @id
+  farmId     String
+  animalId   String?
+  poAnimalId String?
+  category   String
+  cause      String
+  date       DateTime
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  farm       Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  animal     Animal?   @relation(fields: [animalId], references: [id], onDelete: SetNull)
+  poAnimal   PoAnimal? @relation(fields: [poAnimalId], references: [id], onDelete: SetNull)
+
+  @@index([animalId])
+  @@index([farmId, date], map: "CriaMortality_farmId_date_idx")
+  @@index([poAnimalId])
 }
 
 model Session {
@@ -143,9 +231,264 @@ model Session {
   @@index([expiresAt])
 }
 
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum BillingProvider {
+  INTERNAL
+  STRIPE
+  ASAAS
+  PAGARME
+  MERCADOPAGO
+}
+
+enum BillingAccessState {
+  ACTIVE
+  TRIALING
+  GRACE
+  PAST_DUE
+  BLOCKED
+  CANCELED
+}
+
+enum BillingEventStatus {
+  RECEIVED
+  PROCESSED
+  FAILED
+}
+
+enum FinancialPayableStatus {
+  PENDING
+  PAID
+  CANCELED
+}
+
+enum FinancialReceivableStatus {
+  PENDING
+  RECEIVED
+  CANCELED
+}
+
+enum ExternalAllocationType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum ExternalLedgerEntryType {
+  FREIGHT
+  SANITARY_PROTOCOL
+  ADVANCE
+  MORTALITY
+  MORTALITY_COMPENSATION
+  MANUAL_DEBIT
+  MANUAL_CREDIT
+}
+
+enum ExternalOperationDocumentType {
+  SIGNED_CONTRACT
+  WEIGHING_REPORT
+  GTA
+  NF
+  OTHER
+}
+
+enum ExternalOperationNature {
+  SERVICE
+  GAIN_PARTNERSHIP
+  CUSTOM_OPERATION
+}
+
+enum ExternalOperationStatus {
+  DRAFT
+  ACTIVE
+  PARTIALLY_SETTLED
+  SETTLED
+  CANCELLED
+}
+
+enum ExternalPricingModel {
+  ARROBA_PRODUCED
+  HEAD_PER_DAY
+  PERCENT_GAIN_SHARE
+  CUSTOM_RULE
+}
+
+enum ExternalResponsibilityParty {
+  OWNER
+  OPERATOR
+  SHARED
+  CUSTOM
+}
+
+enum ExternalSettlementType {
+  FINAL
+  PARTIAL
+}
+
+enum FeedlotAttachmentType {
+  WEIGHING_REPORT
+  GTA
+  NF
+  OTHER
+}
+
+enum FeedlotContractStatus {
+  DRAFT
+  ACTIVE
+  PARTIALLY_SETTLED
+  SETTLED
+  CANCELLED
+}
+
+enum FeedlotContractType {
+  BOITEL_ARROBA
+  PARCERIA_GANHO
+}
+
+enum FeedlotLedgerEntryType {
+  FREIGHT
+  SANITARY_PROTOCOL
+  ADVANCE
+  MORTALITY
+  MORTALITY_COMPENSATION
+  MANUAL_DEBIT
+  MANUAL_CREDIT
+}
+
+enum FeedlotOperationAllocationType {
+  INTERNAL
+  EXTERNAL
+}
+
+enum FeedlotSettlementType {
+  FINAL
+  PARTIAL
+}
+
+model Organization {
+  id                   String                         @id @default(uuid())
+  name                 String
+  slug                 String                         @unique
+  billingProvider      BillingProvider                @default(INTERNAL)
+  billingCustomerId    String?
+  accessState          BillingAccessState             @default(ACTIVE)
+  accessStateUpdatedAt DateTime                       @default(now())
+  graceUntil           DateTime?
+  trialEndsAt          DateTime?
+  createdAt            DateTime                       @default(now())
+  updatedAt            DateTime                       @updatedAt
+  memberships          OrganizationMembership[]
+  farms                Farm[]
+  activeUsers          User[]                         @relation("ActiveOrganization")
+  entitlements         OrganizationProductEntitlement[]
+  billingEvents        BillingEvent[]
+  billingSubscriptions BillingSubscription[]
+  geneticsAnalysisRuns GeneticsAnalysisRun[]
+
+  @@index([accessState])
+}
+
+model Product {
+  id           String                         @id @default(uuid())
+  code         String                         @unique
+  name         String
+  description  String?
+  isActive     Boolean                        @default(true)
+  createdAt    DateTime                       @default(now())
+  updatedAt    DateTime                       @updatedAt
+  entitlements OrganizationProductEntitlement[]
+}
+
+model OrganizationProductEntitlement {
+  id             String       @id @default(uuid())
+  organizationId String
+  productId      String
+  status         String       @default("ACTIVE")
+  startedAt      DateTime     @default(now())
+  endedAt        DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, productId])
+  @@index([organizationId, status])
+}
+
+model OrganizationMembership {
+  id             String           @id @default(uuid())
+  organizationId String
+  userId         String
+  role           OrganizationRole @default(MEMBER)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
 enum ReproMode {
   CONTINUO
   ESTACAO
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+}
+
+enum NutritionOperationContext {
+  CONFINAMENTO
+  PASTO
+  SEMI_CONFINAMENTO
+}
+
+enum NutritionAdjustmentMode {
+  SUGESTAO
+  REVISAO_OBRIGATORIA
+  AUTOMATICO
+}
+
+enum NutritionUnitType {
+  BAIA
+  LOTE
+  PONTO_TRATO
+}
+
+enum NutritionPreparedFeedStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum NutritionPlanLifecycleStatus {
+  DRAFT
+  ACTIVE
+  ENDED
+  ARCHIVED
+}
+
+enum NutritionFabricationStatus {
+  PENDING
+  APPROVED
+  CANCELED
+  REVERSED
+}
+
+enum NutritionReadingType {
+  DIURNA
+  NOTURNA
+}
+
+enum NutritionAnimalBehavior {
+  RUMINANDO
+  NORMAL
+  INQUIETO
+  APATICO
+  OUTRO
 }
 
 enum ReproEventType {
@@ -264,6 +607,7 @@ model PoAnimal {
   registro       String?
   categoria      String?
   observacoes    String?
+  criaMortalities CriaMortality[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   pesagens       PoWeighing[]
@@ -289,6 +633,8 @@ model PoLot {
   farmId    String
   animals   PoAnimal[]
   nutritionAssignments NutritionAssignment[]
+  nutritionExecutions NutritionExecution[]
+  nutritionCostEntries NutritionCostEntry[]
 
   @@index([farmId])
 }
@@ -317,15 +663,34 @@ model NutritionPlan {
   farmId     String
   nome       String
   fase       String?
+  objetivo   String?
   startAt    DateTime
   endAt      DateTime?
   metaGmd    Float?
+  preparedFeedId String?
+  phaseId    String?
+  feedingSlot String?
+  plannedIntakeNaturalKgPerHead Float?
+  plannedIntakeDryKgPerHead Float?
+  plannedIntakeNaturalKgTotal Float?
+  plannedIntakeDryKgTotal Float?
+  estimatedCostPerHeadDay Float?
+  versionNumber Int @default(1)
+  previousVersionId String?
+  status     NutritionPlanLifecycleStatus @default(ACTIVE)
   observacoes String?
+  reviewStatus ReviewStatus @default(PENDING)
   assignments NutritionAssignment[]
+  preparedFeed NutritionPreparedFeed? @relation(fields: [preparedFeedId], references: [id], onDelete: SetNull)
+  phase      NutritionPhase? @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  executions NutritionExecution[]
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   @@index([farmId])
+  @@index([preparedFeedId])
+  @@index([phaseId])
+  @@index([status])
 }
 
 model NutritionAssignment {
@@ -342,8 +707,11 @@ model NutritionAssignment {
   animalId   String?
   poAnimal   PoAnimal? @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
   poAnimalId String?
+  unit       NutritionUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  unitId     String?
   startAt    DateTime
   endAt      DateTime?
+  reviewStatus ReviewStatus @default(PENDING)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -353,7 +721,335 @@ model NutritionAssignment {
   @@index([poLotId])
   @@index([animalId])
   @@index([poAnimalId])
+  @@index([unitId])
   @@index([farmId, startAt])
+}
+
+model NutritionSettings {
+  id                         String                    @id @default(uuid())
+  farmId                     String                    @unique
+  operationContext           NutritionOperationContext @default(PASTO)
+  adjustmentMode             NutritionAdjustmentMode   @default(SUGESTAO)
+  indicatorsApprovedOnly     Boolean                   @default(false)
+  requireFabricationApproval Boolean                   @default(true)
+  requireExecutionApproval   Boolean                   @default(true)
+  requireTroughApproval      Boolean                   @default(true)
+  predictiveSafeDays         Int                       @default(7)
+  predictiveWarningDays      Int                       @default(3)
+  diffWarningPercent         Float                     @default(3)
+  diffCriticalPercent        Float                     @default(7)
+  manualReviewThresholdPercent Float                   @default(5)
+  createdAt                  DateTime                  @default(now())
+  updatedAt                  DateTime                  @updatedAt
+  farm                       Farm                      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+}
+
+model NutritionPhase {
+  id                    String          @id @default(uuid())
+  farmId                String
+  name                  String
+  periodStart           DateTime?
+  periodEnd             DateTime?
+  primaryPlanId         String?
+  targetIntakeDryKgHead Float?
+  targetGmd             Float?
+  targetFeedConversion  Float?
+  targetCostPerHeadDay  Float?
+  notes                 String?
+  active                Boolean         @default(true)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  farm                  Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  units                 NutritionUnit[]
+  plans                 NutritionPlan[]
+
+  @@index([farmId])
+  @@index([active])
+}
+
+model NutritionUnit {
+  id               String             @id @default(uuid())
+  farmId           String
+  lotId            String?
+  phaseId          String?
+  type             NutritionUnitType
+  name             String
+  currentHeadCount Int?
+  active           Boolean            @default(true)
+  notes            String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  farm             Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  lot              Lot?               @relation(fields: [lotId], references: [id], onDelete: SetNull)
+  phase            NutritionPhase?    @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  assignments      NutritionAssignment[]
+  executions       NutritionExecution[]
+  troughReadings   NutritionTroughReading[]
+
+  @@index([farmId])
+  @@index([lotId])
+  @@index([phaseId])
+  @@index([type])
+}
+
+model NutritionIngredient {
+  id                     String                           @id @default(uuid())
+  farmId                 String
+  name                   String
+  category               String
+  unit                   String
+  currentCost            Float
+  supplier               String?
+  currentDryMatterPercent Float
+  dryMatterUpdatedAt     DateTime?
+  currentStockNatural    Float                            @default(0)
+  minStockNatural        Float                            @default(0)
+  active                 Boolean                          @default(true)
+  createdAt              DateTime                         @default(now())
+  updatedAt              DateTime                         @updatedAt
+  farm                   Farm                             @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  priceHistory           NutritionIngredientCostHistory[]
+  dryMatterHistory       NutritionIngredientDryMatterHistory[]
+  preparedFeedItems      NutritionPreparedFeedItem[]
+  fabricationItems       NutritionFabricationItem[]
+
+  @@index([farmId])
+  @@index([active])
+}
+
+model NutritionIngredientCostHistory {
+  id              String               @id @default(uuid())
+  ingredientId    String
+  cost            Float
+  recordedAt      DateTime
+  notes           String?
+  createdByUserId String?
+  createdByName   String?
+  ingredient      NutritionIngredient  @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@index([ingredientId])
+  @@index([recordedAt])
+}
+
+model NutritionIngredientDryMatterHistory {
+  id              String               @id @default(uuid())
+  ingredientId    String
+  dryMatterPercent Float
+  recordedAt      DateTime
+  notes           String?
+  createdByUserId String?
+  createdByName   String?
+  ingredient      NutritionIngredient  @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@index([ingredientId])
+  @@index([recordedAt])
+}
+
+model NutritionPreparedFeed {
+  id                    String                       @id @default(uuid())
+  farmId                String
+  name                  String
+  expectedYieldNaturalKg Float
+  expectedYieldDryKg    Float?
+  currentDryMatterPercent Float
+  currentTotalCost      Float
+  currentCostPerNaturalKg Float
+  currentCostPerDryKg   Float?
+  currentStockNatural   Float                        @default(0)
+  currentStockDry       Float                        @default(0)
+  status                NutritionPreparedFeedStatus  @default(ACTIVE)
+  notes                 String?
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+  farm                  Farm                         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  items                 NutritionPreparedFeedItem[]
+  fabrications          NutritionFabrication[]
+  plans                 NutritionPlan[]
+  executions            NutritionExecution[]
+
+  @@index([farmId])
+  @@index([status])
+}
+
+model NutritionPreparedFeedItem {
+  id             String                @id @default(uuid())
+  preparedFeedId String
+  ingredientId   String
+  proportionPercent Float
+  sequence       Int                   @default(0)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  preparedFeed   NutritionPreparedFeed @relation(fields: [preparedFeedId], references: [id], onDelete: Cascade)
+  ingredient     NutritionIngredient   @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([preparedFeedId, ingredientId])
+  @@index([ingredientId])
+}
+
+model NutritionFabrication {
+  id                 String                    @id @default(uuid())
+  farmId             String
+  preparedFeedId     String
+  batchCode          String
+  producedAt         DateTime
+  outputNaturalKg    Float
+  outputDryKg        Float
+  remainingNaturalKg Float
+  remainingDryKg     Float
+  totalCost          Float
+  costPerNaturalKg   Float
+  costPerDryKg       Float?
+  status             NutritionFabricationStatus @default(PENDING)
+  notes              String?
+  createdByUserId    String?
+  createdByName      String?
+  approvedAt         DateTime?
+  approvedByUserId   String?
+  approvedByName     String?
+  canceledAt         DateTime?
+  canceledByUserId   String?
+  canceledByName     String?
+  cancelReason       String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  farm               Farm                      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  preparedFeed       NutritionPreparedFeed     @relation(fields: [preparedFeedId], references: [id], onDelete: Cascade)
+  items              NutritionFabricationItem[]
+  executions         NutritionExecution[]
+
+  @@index([farmId])
+  @@index([preparedFeedId])
+  @@index([producedAt])
+  @@index([status])
+}
+
+model NutritionFabricationItem {
+  id               String                @id @default(uuid())
+  fabricationId    String
+  ingredientId     String
+  ingredientName   String
+  quantityNaturalKg Float
+  quantityDryKg    Float
+  dryMatterPercent Float
+  unitCost         Float
+  lineCost         Float
+  fabrication      NutritionFabrication @relation(fields: [fabricationId], references: [id], onDelete: Cascade)
+  ingredient       NutritionIngredient  @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@index([fabricationId])
+  @@index([ingredientId])
+}
+
+model NutritionCostEntry {
+  id           String       @id @default(uuid())
+  farmId       String
+  lotId        String?
+  poLotId      String?
+  date         DateTime
+  costType     String
+  amount       Float
+  notes        String?
+  reviewStatus ReviewStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  farm         Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  lot          Lot?         @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  poLot        PoLot?       @relation(fields: [poLotId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, date], map: "NutritionCostEntry_farmId_date_idx")
+  @@index([farmId, lotId, date], map: "NutritionCostEntry_farmId_lotId_date_idx")
+  @@index([farmId, poLotId, date], map: "NutritionCostEntry_farmId_poLotId_date_idx")
+  @@index([reviewStatus], map: "NutritionCostEntry_reviewStatus_idx")
+}
+
+model NutritionExecution {
+  id                 String                @id @default(uuid())
+  farmId             String
+  lotId              String?
+  poLotId            String?
+  unitId             String?
+  planId             String?
+  preparedFeedId     String?
+  fabricationId      String?
+  date               DateTime
+  feedingSlot        String?
+  plannedNaturalKg   Float?
+  plannedDryMatterKg Float?
+  actualNaturalKg    Float?
+  actualDryMatterKg  Float
+  refusalNaturalKg   Float?
+  refusalDryMatterKg Float?
+  headCountSnapshot  Int?
+  totalCost          Float?
+  costPerHeadDay     Float?
+  notes              String?
+  reviewStatus       ReviewStatus         @default(APPROVED)
+  createdByUserId    String?
+  createdByName      String?
+  approvedAt         DateTime?
+  approvedByUserId   String?
+  approvedByName     String?
+  rejectedAt         DateTime?
+  rejectedByUserId   String?
+  rejectedByName     String?
+  rejectionReason    String?
+  canceledAt         DateTime?
+  canceledByUserId   String?
+  canceledByName     String?
+  cancelReason       String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  farm               Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  lot                Lot?                 @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  poLot              PoLot?               @relation(fields: [poLotId], references: [id], onDelete: Cascade)
+  unit               NutritionUnit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  plan               NutritionPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
+  preparedFeed       NutritionPreparedFeed? @relation(fields: [preparedFeedId], references: [id], onDelete: SetNull)
+  fabrication        NutritionFabrication? @relation(fields: [fabricationId], references: [id], onDelete: SetNull)
+
+  @@index([farmId, date], map: "NutritionExecution_farmId_date_idx")
+  @@index([farmId, lotId, date], map: "NutritionExecution_farmId_lotId_date_idx")
+  @@index([farmId, poLotId, date], map: "NutritionExecution_farmId_poLotId_date_idx")
+  @@index([reviewStatus], map: "NutritionExecution_reviewStatus_idx")
+  @@index([unitId])
+  @@index([planId])
+  @@index([preparedFeedId])
+  @@index([fabricationId])
+}
+
+model NutritionTroughReading {
+  id                      String                  @id @default(uuid())
+  farmId                  String
+  unitId                  String
+  date                    DateTime
+  readingType             NutritionReadingType
+  score                   Int
+  supplyObservation       String?
+  observedDryMatterPercent Float?
+  animalBehavior          NutritionAnimalBehavior
+  notes                   String?
+  reviewStatus            ReviewStatus           @default(PENDING)
+  suggestedAdjustmentPercent Float?
+  suggestedNextNaturalKg  Float?
+  suggestedNextDryKg      Float?
+  syncSource              String?
+  createdByUserId         String?
+  createdByName           String?
+  approvedAt              DateTime?
+  approvedByUserId        String?
+  approvedByName          String?
+  rejectedAt              DateTime?
+  rejectedByUserId        String?
+  rejectedByName          String?
+  rejectionReason         String?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  farm                    Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  unit                    NutritionUnit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, date])
+  @@index([unitId])
+  @@index([reviewStatus])
 }
 
 model SemenBatch {
@@ -456,4 +1152,460 @@ model PaddockMove {
   @@index([animalId])
   @@index([poAnimalId])
   @@index([farmId, startAt])
+}
+
+
+model ActivityLog {
+  id             String        @id
+  userId         String
+  organizationId String?
+  method         String
+  path           String
+  statusCode     Int?
+  ip             String?
+  userAgent      String?
+  requestMeta    Json?
+  createdAt      DateTime      @default(now())
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt], map: "ActivityLog_organizationId_createdAt_idx")
+  @@index([userId, createdAt], map: "ActivityLog_userId_createdAt_idx")
+}
+
+model BillingSubscription {
+  id                     String           @id
+  organizationId         String
+  provider               BillingProvider  @default(INTERNAL)
+  providerSubscriptionId String?
+  planCode               String
+  status                 String
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean          @default(false)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime
+  organization           Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubscriptionId], map: "BillingSubscription_provider_providerSubscriptionId_key")
+  @@index([organizationId], map: "BillingSubscription_organizationId_idx")
+}
+
+model BillingEvent {
+  id             String             @id
+  organizationId String?
+  provider       BillingProvider    @default(INTERNAL)
+  eventId        String
+  eventType      String
+  status         BillingEventStatus @default(RECEIVED)
+  payload        Json
+  processedAt    DateTime?
+  createdAt      DateTime           @default(now())
+  organization   Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, eventId], map: "BillingEvent_provider_eventId_key")
+  @@index([organizationId, createdAt], map: "BillingEvent_organizationId_createdAt_idx")
+}
+
+model ReproCheckupSession {
+  id              String              @id
+  farmId          String              @map("farm_id")
+  createdById     String              @map("created_by_id")
+  occurredAt      DateTime            @db.Timestamptz(6) @map("occurred_at")
+  responsibleName String?             @map("responsible_name")
+  notes           String?
+  createdAt       DateTime            @default(now()) @db.Timestamptz(6) @map("created_at")
+  farm            Farm                @relation(fields: [farmId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  createdBy       User                @relation("ReproCheckupCreatedBy", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  records         ReproCheckupRecord[]
+
+  @@index([farmId, occurredAt(sort: Desc)], map: "idx_repro_checkup_sessions_farm")
+  @@map("repro_checkup_sessions")
+}
+
+model ReproCheckupRecord {
+  id                   String             @id
+  sessionId            String             @map("session_id")
+  farmId               String             @map("farm_id")
+  animalId             String             @map("animal_id")
+  aptitude             String
+  diagnosis            String?
+  notes                String?
+  discardLight         String?            @map("discard_light")
+  discardReason        String?            @map("discard_reason")
+  calfQuality          String?            @map("calf_quality")
+  veterinarianDecision String?            @map("veterinarian_decision")
+  iatfCount            Int                @default(0) @map("iatf_count")
+  createdAt            DateTime           @default(now()) @db.Timestamptz(6) @map("created_at")
+  session              ReproCheckupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  farm                 Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  animal               Animal             @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([farmId, animalId, createdAt(sort: Desc)], map: "idx_repro_checkup_records_farm_animal")
+  @@map("repro_checkup_records")
+}
+
+
+model FinancialPayable {
+  id          String                 @id
+  farmId      String
+  description String
+  amount      Float
+  dueDate     DateTime
+  paidAt      DateTime?
+  status      FinancialPayableStatus @default(PENDING)
+  category    String?
+  notes       String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  farm        Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, dueDate], map: "FinancialPayable_farmId_dueDate_idx")
+  @@index([farmId, status], map: "FinancialPayable_farmId_status_idx")
+}
+
+model FinancialReceivable {
+  id          String                    @id
+  farmId      String
+  description String
+  amount      Float
+  dueDate     DateTime
+  receivedAt  DateTime?
+  status      FinancialReceivableStatus @default(PENDING)
+  category    String?
+  notes       String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  farm        Farm                      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, dueDate], map: "FinancialReceivable_farmId_dueDate_idx")
+  @@index([farmId, status], map: "FinancialReceivable_farmId_status_idx")
+}
+
+
+model GeneticsAnalysisRun {
+  id             String                    @id
+  organizationId String
+  farmId         String?
+  createdById    String
+  herdType       String
+  strategy       String
+  objective      String?
+  inputFileName  String?
+  resultCount    Int                       @default(0)
+  summary        Json?
+  createdAt      DateTime                  @default(now())
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  farm           Farm?                     @relation(fields: [farmId], references: [id], onDelete: SetNull)
+  createdBy      User                      @relation("GeneticsAnalysisCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  topResults     GeneticsAnalysisTopResult[]
+
+  @@index([createdById, createdAt], map: "GeneticsAnalysisRun_createdById_createdAt_idx")
+  @@index([farmId, createdAt], map: "GeneticsAnalysisRun_farmId_createdAt_idx")
+  @@index([organizationId, createdAt], map: "GeneticsAnalysisRun_organizationId_createdAt_idx")
+}
+
+model GeneticsAnalysisTopResult {
+  id           String               @id
+  analysisRunId String
+  referenceId  String
+  topBullName  String
+  central      String
+  score        Float
+  trustSeal    String?
+  analysisRun  GeneticsAnalysisRun  @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+
+  @@index([analysisRunId], map: "GeneticsAnalysisTopResult_analysisRunId_idx")
+}
+
+model HerdImportPending {
+  id             String   @id
+  farmId         String
+  herdType       String
+  batchId        String
+  sourceFileName String
+  rowNumber      Int
+  message        String
+  cells          Json
+  totalRows      Int
+  importedRows   Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  farm           Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, batchId], map: "HerdImportPending_farmId_batchId_idx")
+  @@index([farmId, herdType, createdAt], map: "HerdImportPending_farmId_herdType_createdAt_idx")
+}
+
+
+model ExternalOperation {
+  id                 String                          @id
+  farmId             String
+  createdById        String
+  code               String
+  title              String
+  partnerName        String
+  partnerDocument    String?
+  partnerRoleLabel   String?
+  operationNature    ExternalOperationNature
+  pricingModel       ExternalPricingModel
+  allocationType     ExternalAllocationType
+  externalFarmName   String?
+  externalFarmCity   String?
+  externalFarmState  String?
+  externalUnitName   String?
+  status             ExternalOperationStatus        @default(DRAFT)
+  startDate          DateTime?
+  minDays            Int?
+  maxDays            Int?
+  notes              String?
+  createdAt          DateTime                        @default(now())
+  updatedAt          DateTime                        @updatedAt
+  farm               Farm                            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  createdBy          User                            @relation("ExternalOperationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  documents          ExternalOperationDocument[]
+  ledgerEntries      ExternalOperationLedgerEntry[]
+  lots               ExternalOperationLot[]
+  responsibilities   ExternalOperationResponsibility[]
+  rules              ExternalOperationRule[]
+  settlements        ExternalOperationSettlement[]
+
+  @@unique([farmId, code], map: "ExternalOperation_farmId_code_key")
+  @@index([farmId, status], map: "ExternalOperation_farmId_status_idx")
+}
+
+model ExternalOperationDocument {
+  id          String                        @id
+  operationId String
+  type        ExternalOperationDocumentType
+  fileName    String
+  storagePath String?
+  uploadedAt  DateTime                      @default(now())
+  operation   ExternalOperation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@index([operationId], map: "ExternalOperationDocument_operationId_idx")
+}
+
+model ExternalOperationLedgerEntry {
+  id                String                        @id
+  operationId       String
+  createdById       String
+  type              ExternalLedgerEntryType
+  occurredAt        DateTime
+  description       String
+  amount            Float
+  quantityHeads     Int?
+  responsibility    ExternalResponsibilityParty?
+  evaluatedWeightKg Float?
+  evaluatedAmount   Float?
+  offsetReference   String?
+  notes             String?
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+  operation         ExternalOperation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  createdBy         User                          @relation("ExternalOperationLedgerCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([operationId, occurredAt], map: "ExternalOperationLedgerEntry_operationId_occurredAt_idx")
+  @@index([operationId, type], map: "ExternalOperationLedgerEntry_operationId_type_idx")
+}
+
+model ExternalOperationLot {
+  id                  String            @id
+  operationId         String
+  label               String
+  category            String
+  quantityAnimals     Int
+  avgEntryWeightArroba Float
+  entryDate           DateTime?
+  originFarmName      String?
+  originCity          String?
+  originState         String?
+  gtaNumber           String?
+  notes               String?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  operation           ExternalOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@index([operationId], map: "ExternalOperationLot_operationId_idx")
+}
+
+model ExternalOperationResponsibility {
+  id                                 String                     @id
+  operationId                        String
+  freightInboundResponsibility       ExternalResponsibilityParty
+  freightOutboundResponsibility      ExternalResponsibilityParty
+  gtaResponsibility                  ExternalResponsibilityParty
+  nfResponsibility                   ExternalResponsibilityParty
+  transportMortalityResponsibility   ExternalResponsibilityParty
+  postArrivalMortalityResponsibility ExternalResponsibilityParty
+  sanitaryProtocolResponsibility     ExternalResponsibilityParty
+  extraordinaryCostResponsibility    ExternalResponsibilityParty
+  customNotes                        String?
+  createdAt                          DateTime                   @default(now())
+  updatedAt                          DateTime                   @updatedAt
+  operation                          ExternalOperation          @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@unique([operationId], map: "ExternalOperationResponsibility_operationId_key")
+}
+
+model ExternalOperationRule {
+  id                    String            @id
+  operationId           String
+  lockedArrobaValue     Float?
+  dailyHeadValue        Float?
+  partnerSharePct       Float?
+  operatorSharePct      Float?
+  returnEntryArroba     Boolean           @default(false)
+  customRuleDescription String?
+  sanitaryCostPerHead   Float?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  operation             ExternalOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@unique([operationId], map: "ExternalOperationRule_operationId_key")
+}
+
+model ExternalOperationSettlement {
+  id                   String                 @id
+  operationId          String
+  createdById          String
+  type                 ExternalSettlementType
+  exitDate             DateTime
+  destination          String
+  quantityAnimals      Int
+  avgExitWeightArroba  Float
+  allocatedEntryArroba Float
+  totalExitArroba      Float
+  grossAmount          Float
+  discountAmount       Float
+  creditAmount         Float
+  netAmount            Float
+  remainingAnimals     Int
+  remainingEntryArroba Float
+  notes                String?
+  commercialValue      Float?
+  gtaNumber            String?
+  paymentTerms         String?
+  calcMemory           Json
+  romaneio             Json
+  addendumData         Json?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  operation            ExternalOperation      @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  createdBy            User                   @relation("ExternalOperationSettlementCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([operationId, exitDate], map: "ExternalOperationSettlement_operationId_exitDate_idx")
+  @@index([operationId, type], map: "ExternalOperationSettlement_operationId_type_idx")
+}
+
+model FeedlotContract {
+  id                   String                       @id
+  farmId               String
+  createdById          String
+  code                 String
+  title                String
+  type                 FeedlotContractType
+  status               FeedlotContractStatus       @default(DRAFT)
+  allocationType       FeedlotOperationAllocationType
+  allocationFarmName   String?
+  partnerName          String
+  minDays              Int?
+  maxDays              Int?
+  lockedArrobaValue    Float?
+  sharePartnerPct      Float?
+  shareOperatorPct     Float?
+  returnEntryArroba    Boolean                      @default(true)
+  notes                String?
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+  farm                 Farm                         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  createdBy            User                         @relation("FeedlotContractCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  attachments          FeedlotContractAttachment[]
+  lots                 FeedlotContractLot[]
+  ledgerEntries        FeedlotLedgerEntry[]
+  settlements          FeedlotSettlement[]
+
+  @@unique([farmId, code], map: "FeedlotContract_farmId_code_key")
+  @@index([farmId, status], map: "FeedlotContract_farmId_status_idx")
+}
+
+model FeedlotContractAttachment {
+  id          String                 @id
+  contractId  String
+  type        FeedlotAttachmentType
+  fileName    String
+  storagePath String?
+  createdAt   DateTime               @default(now())
+  contract    FeedlotContract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId], map: "FeedlotContractAttachment_contractId_idx")
+}
+
+model FeedlotContractLot {
+  id                   String           @id
+  contractId           String
+  label                String
+  category             String
+  quantityAnimals      Int
+  avgEntryWeightArroba Float
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  contract             FeedlotContract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId], map: "FeedlotContractLot_contractId_idx")
+}
+
+model FeedlotLedgerEntry {
+  id                String                 @id
+  contractId        String
+  createdById       String
+  type              FeedlotLedgerEntryType
+  occurredAt        DateTime
+  description       String
+  amount            Float
+  quantityHeads     Int?
+  responsibility    String?
+  notes             String?
+  evaluatedWeightKg Float?
+  evaluatedAmount   Float?
+  offsetReference   String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  contract          FeedlotContract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  createdBy         User                   @relation("FeedlotLedgerCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([contractId, occurredAt], map: "FeedlotLedgerEntry_contractId_occurredAt_idx")
+  @@index([contractId, type], map: "FeedlotLedgerEntry_contractId_type_idx")
+}
+
+model FeedlotSettlement {
+  id                   String                @id
+  contractId           String
+  createdById          String
+  type                 FeedlotSettlementType
+  exitDate             DateTime
+  destination          String
+  quantityAnimals      Int
+  avgExitWeightArroba  Float
+  allocatedEntryArroba Float
+  totalExitArroba      Float
+  grossAmount          Float
+  discountAmount       Float
+  creditAmount         Float
+  netAmount            Float
+  remainingAnimals     Int
+  remainingEntryArroba Float
+  notes                String?
+  commercialValue      Float?
+  gtaNumber            String?
+  paymentTerms         String?
+  calcMemory           Json
+  romaneio             Json
+  addendumData         Json?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  contract             FeedlotContract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  createdBy            User                  @relation("FeedlotSettlementCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([contractId, exitDate], map: "FeedlotSettlement_contractId_exitDate_idx")
+  @@index([contractId, type], map: "FeedlotSettlement_contractId_type_idx")
 }

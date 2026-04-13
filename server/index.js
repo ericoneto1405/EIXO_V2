@@ -4,6 +4,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
+import { registerNutritionModuleRoutes } from './nutritionModule.js';
 
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -369,19 +370,19 @@ const calculateGmdMetrics = (weighings) => {
     return { gmdLast, gmd30 };
 };
 
-const moveAnimalBetweenPaddocks = async ({ animalId, paddockId, startAt, notes, userId, isPo }) => {
+const moveAnimalBetweenPaddocks = async ({ animalId, paddockId, startAt, notes, scopeFilter, isPo }) => {
     const animalModel = isPo ? prisma.poAnimal : prisma.animal;
     const moveWhere = isPo ? { poAnimalId: animalId } : { animalId };
 
     const animal = await animalModel.findFirst({
-        where: { id: animalId, farm: { userId } },
+        where: { id: animalId, farm: scopeFilter },
     });
     if (!animal) {
         return { error: { status: 404, message: isPo ? 'Animal P.O. não encontrado.' : 'Animal não encontrado.' } };
     }
 
     const paddock = await prisma.paddock.findFirst({
-        where: { id: paddockId, farmId: animal.farmId, farm: { userId } },
+        where: { id: paddockId, farmId: animal.farmId, farm: scopeFilter },
     });
     if (!paddock) {
         return { error: { status: 400, message: 'Pasto inválido para esta fazenda.' } };
@@ -667,13 +668,18 @@ const computeSelectionKpis = ({ events, animalId, seasonId, exposuresSet }) => {
     };
 };
 
-const serializeAuthUser = (user) => ({
+const serializeAuthUser = (user, saasContext = null) => ({
     id: user.id,
     name: user.name,
     email: user.email,
     modules: user.modules,
     roles: user.roles,
     lastFarmId: user.lastFarmId,
+    organizationId: saasContext?.organizationId || null,
+    membershipRole: saasContext?.membershipRole || null,
+    billingAccessState: saasContext?.billingAccessState || null,
+    entitlements: saasContext?.entitlements || [],
+    organization: saasContext?.organization || null,
 });
 
 const app = express();
@@ -714,6 +720,177 @@ const LOGIN_MAX_ATTEMPTS = 10;
 const loginAttempts = new Map();
 
 const allowXUserId = !IS_PROD && ALLOW_X_USER_ID;
+const BILLING_BLOCKED_STATES = new Set(['PAST_DUE', 'BLOCKED', 'CANCELED']);
+
+const buildLegacyEntitlements = (modules) => {
+    const normalized = new Set((modules || []).map((item) => String(item || '').trim()));
+    const codes = ['CORE'];
+    if (normalized.has('Rebanho Genética')) {
+        codes.push('GENETICS');
+    }
+    if (normalized.has('Rebanho P.O.')) {
+        codes.push('PO');
+    }
+    if (normalized.has('Rações') || normalized.has('Suplementos')) {
+        codes.push('NUTRITION');
+    }
+    return [...new Set(codes)];
+};
+
+const normalizeOrganizationSlug = (value) =>
+    String(value || '')
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 48) || 'org';
+
+const buildFarmScopeFilter = (req, extra = {}) => ({
+    ...(req.saas?.organizationId ? { organizationId: req.saas.organizationId } : { userId: req.user.id }),
+    ...extra,
+});
+
+const buildFarmRelationFilter = (req, extra = {}) => ({
+    ...(req.saas?.organizationId ? { organizationId: req.saas.organizationId } : { userId: req.user.id }),
+    ...extra,
+});
+
+const ensureSaasContextForUser = async (userId) => {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+            activeOrganization: true,
+            memberships: {
+                include: { organization: true },
+                orderBy: { createdAt: 'asc' },
+            },
+        },
+    });
+
+    if (!user) {
+        return null;
+    }
+
+    let activeOrganization = user.activeOrganization || null;
+    let membership = activeOrganization
+        ? user.memberships.find((item) => item.organizationId === activeOrganization.id) || null
+        : null;
+
+    if (!activeOrganization && user.memberships.length) {
+        membership = user.memberships[0];
+        activeOrganization = membership.organization;
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { activeOrganizationId: activeOrganization.id },
+        });
+    }
+
+    if (!activeOrganization) {
+        const slugBase = normalizeOrganizationSlug((user.name || user.email) + '-org');
+        activeOrganization = await prisma.organization.create({
+            data: {
+                name: (user.name || 'Conta') + ' - Organização',
+                slug: slugBase + '-' + user.id.slice(0, 8),
+                billingProvider: 'INTERNAL',
+                accessState: 'ACTIVE',
+            },
+        });
+        membership = await prisma.organizationMembership.create({
+            data: {
+                organizationId: activeOrganization.id,
+                userId: user.id,
+                role: 'OWNER',
+            },
+        });
+        await prisma.user.update({
+            where: { id: user.id },
+            data: { activeOrganizationId: activeOrganization.id },
+        });
+    }
+
+    await prisma.farm.updateMany({
+        where: {
+            userId: user.id,
+            organizationId: null,
+        },
+        data: { organizationId: activeOrganization.id },
+    });
+
+    const entitlementCodes = buildLegacyEntitlements(user.modules);
+    if (entitlementCodes.length) {
+        const products = await prisma.product.findMany({
+            where: { code: { in: entitlementCodes } },
+            select: { id: true },
+        });
+        for (const product of products) {
+            await prisma.organizationProductEntitlement.upsert({
+                where: {
+                    organizationId_productId: {
+                        organizationId: activeOrganization.id,
+                        productId: product.id,
+                    },
+                },
+                update: {
+                    status: 'ACTIVE',
+                    endedAt: null,
+                },
+                create: {
+                    organizationId: activeOrganization.id,
+                    productId: product.id,
+                    status: 'ACTIVE',
+                },
+            });
+        }
+    }
+
+    const entitlements = await prisma.organizationProductEntitlement.findMany({
+        where: {
+            organizationId: activeOrganization.id,
+            status: 'ACTIVE',
+        },
+        include: { product: true },
+    });
+
+    return {
+        organizationId: activeOrganization.id,
+        membershipRole: membership?.role || null,
+        billingAccessState: activeOrganization.accessState,
+        entitlements: entitlements.map((item) => item.product.code),
+        organization: {
+            id: activeOrganization.id,
+            name: activeOrganization.name,
+            slug: activeOrganization.slug,
+            accessState: activeOrganization.accessState,
+        },
+    };
+};
+
+const requireBillingAccess = (req, res, next) => {
+    const accessState = req.saas?.billingAccessState || null;
+    if (!accessState || !BILLING_BLOCKED_STATES.has(accessState)) {
+        return next();
+    }
+    return res.status(402).json({
+        code: 'billing_blocked',
+        message: 'Acesso bloqueado por assinatura.',
+        accessState,
+    });
+};
+
+const resolveFarmForRequest = async (req, farmId) =>
+    prisma.farm.findFirst({
+        where: buildFarmScopeFilter(req, { id: String(farmId) }),
+    });
+
+const serializeAuthUserWithContext = async (userId) => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+        return null;
+    }
+    const saasContext = await ensureSaasContextForUser(userId);
+    return serializeAuthUser(user, saasContext);
+};
 
 const hashSessionToken = (token) =>
     crypto
@@ -781,6 +958,7 @@ const requireAuth = async (req, res, next) => {
         if (session?.user) {
             req.user = session.user;
             req.session = session;
+            req.saas = await ensureSaasContextForUser(session.user.id);
             return next();
         }
 
@@ -797,6 +975,7 @@ const requireAuth = async (req, res, next) => {
                 return res.status(401).json({ message: 'Usuário não encontrado.' });
             }
             req.user = user;
+            req.saas = await ensureSaasContextForUser(user.id);
             return next();
         }
 
@@ -810,6 +989,7 @@ const requireAuth = async (req, res, next) => {
 app.use(
     ['/farms', '/lots', '/animals', '/users', '/seasons', '/repro-events', '/genetics', '/po', '/nutrition', '/pastos'],
     requireAuth,
+    requireBillingAccess,
 );
 
 app.post('/auth/login', async (req, res) => {
@@ -868,7 +1048,7 @@ app.post('/auth/login', async (req, res) => {
         });
 
         res.cookie(SESSION_COOKIE_NAME, token, buildCookieOptions(expiresAt));
-        return res.json({ user: serializeAuthUser(user) });
+        return res.json({ user: await serializeAuthUserWithContext(user.id) });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao autenticar usuário.' });
@@ -899,7 +1079,7 @@ app.get('/auth/me', async (req, res) => {
         if (!session?.user) {
             return res.status(401).json({ message: 'Usuário não autenticado.' });
         }
-        return res.json({ user: serializeAuthUser(session.user) });
+        return res.json({ user: await serializeAuthUserWithContext(session.user.id) });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao validar sessão.' });
@@ -959,15 +1139,15 @@ app.post('/users', async (req, res) => {
 app.get('/farms', async (req, res) => {
     try {
         const farms = await prisma.farm.findMany({
-            where: { userId: req.user.id },
+            where: buildFarmScopeFilter(req),
             include: { paddocks: { orderBy: { createdAt: 'asc' } } },
+            orderBy: { createdAt: 'desc' },
         });
-        return res.json({
-            farms: farms.map((farm) => ({
-                ...farm,
-                paddocks: farm.paddocks.map(serializePaddock),
-            })),
-        });
+        const items = farms.map((farm) => ({
+            ...farm,
+            paddocks: farm.paddocks.map(serializePaddock),
+        }));
+        return res.json({ farms: items, items, total: items.length });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao listar fazendas.' });
@@ -1033,6 +1213,7 @@ app.post('/farms', async (req, res) => {
                 size: parsedSize,
                 notes: notes?.trim() || null,
                 userId: req.user.id,
+                organizationId: req.saas?.organizationId || null,
                 paddocks: {
                     create: paddocksToCreate,
                 },
@@ -1058,7 +1239,7 @@ app.get('/pastos', async (req, res) => {
     }
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -1095,7 +1276,7 @@ app.post('/pastos', async (req, res) => {
     const activeValue = ativo === false || active === false ? false : true;
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -1138,7 +1319,7 @@ app.patch('/pastos/:id', async (req, res) => {
     }
     try {
         const paddock = await prisma.paddock.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!paddock) {
             return res.status(404).json({ message: 'Pasto não encontrado.' });
@@ -1185,7 +1366,7 @@ app.patch('/farms/:id/repro-mode', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id, userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -1210,7 +1391,7 @@ app.get('/seasons', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -1244,7 +1425,7 @@ app.post('/seasons', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: farmId, userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: farmId }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -1283,7 +1464,7 @@ app.patch('/seasons/:id', async (req, res) => {
 
     try {
         const season = await prisma.breedingSeason.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!season) {
             return res.status(404).json({ message: 'Estação não encontrada.' });
@@ -1308,7 +1489,7 @@ app.delete('/seasons/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const season = await prisma.breedingSeason.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!season) {
             return res.status(404).json({ message: 'Estação não encontrada.' });
@@ -1334,7 +1515,7 @@ app.get('/seasons/:id/exposures', async (req, res) => {
     const { id } = req.params;
     try {
         const season = await prisma.breedingSeason.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!season) {
             return res.status(404).json({ message: 'Estação não encontrada.' });
@@ -1372,7 +1553,7 @@ app.post('/seasons/:id/exposures', async (req, res) => {
 
     try {
         const season = await prisma.breedingSeason.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!season) {
             return res.status(404).json({ message: 'Estação não encontrada.' });
@@ -1382,7 +1563,7 @@ app.post('/seasons/:id/exposures', async (req, res) => {
             where: {
                 id: { in: uniqueAnimalIds },
                 farmId: season.farmId,
-                farm: { userId: req.user.id },
+                farm: buildFarmRelationFilter(req),
                 sexo: 'FEMEA',
             },
             select: { id: true },
@@ -1426,7 +1607,7 @@ app.delete('/seasons/:id/exposures/:animalId', async (req, res) => {
     const { id, animalId } = req.params;
     try {
         const season = await prisma.breedingSeason.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!season) {
             return res.status(404).json({ message: 'Estação não encontrada.' });
@@ -1450,14 +1631,14 @@ app.get('/lots', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
 
         const lots = await prisma.lot.findMany({
-            where: { farmId: String(farmId), farm: { userId: req.user.id } },
+            where: { farmId: String(farmId), farm: buildFarmRelationFilter(req) },
             orderBy: { createdAt: 'desc' },
         });
         return res.json({ lots });
@@ -1475,7 +1656,7 @@ app.post('/lots', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: farmId, userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: farmId }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -1503,7 +1684,7 @@ app.get('/repro-events', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -1511,7 +1692,7 @@ app.get('/repro-events', async (req, res) => {
 
         if (animalId) {
             const animal = await prisma.animal.findFirst({
-                where: { id: String(animalId), farmId: String(farmId), farm: { userId: req.user.id } },
+                where: { id: String(animalId), farmId: String(farmId), farm: buildFarmRelationFilter(req) },
             });
             if (!animal) {
                 return res.status(404).json({ message: 'Animal não encontrado.' });
@@ -1520,7 +1701,7 @@ app.get('/repro-events', async (req, res) => {
 
         if (seasonId) {
             const season = await prisma.breedingSeason.findFirst({
-                where: { id: String(seasonId), farmId: String(farmId), farm: { userId: req.user.id } },
+                where: { id: String(seasonId), farmId: String(farmId), farm: buildFarmRelationFilter(req) },
             });
             if (!season) {
                 return res.status(404).json({ message: 'Estação não encontrada.' });
@@ -1573,14 +1754,14 @@ app.post('/repro-events', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: farmId, userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: farmId }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
 
         const animal = await prisma.animal.findFirst({
-            where: { id: animalId, farmId, farm: { userId: req.user.id } },
+            where: { id: animalId, farmId, farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
@@ -1592,7 +1773,7 @@ app.post('/repro-events', async (req, res) => {
         let validSeasonId = null;
         if (seasonId) {
             const season = await prisma.breedingSeason.findFirst({
-                where: { id: seasonId, farmId, farm: { userId: req.user.id } },
+                where: { id: seasonId, farmId, farm: buildFarmRelationFilter(req) },
             });
             if (!season) {
                 return res.status(404).json({ message: 'Estação não encontrada.' });
@@ -1625,7 +1806,7 @@ app.delete('/repro-events/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const event = await prisma.reproEvent.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!event) {
             return res.status(404).json({ message: 'Evento não encontrado.' });
@@ -1662,7 +1843,7 @@ app.get('/genetics/selection', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -1671,7 +1852,7 @@ app.get('/genetics/selection', async (req, res) => {
         let validSeasonId = null;
         if (seasonId) {
             const season = await prisma.breedingSeason.findFirst({
-                where: { id: String(seasonId), farmId: farm.id, farm: { userId: req.user.id } },
+                where: { id: String(seasonId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
             });
             if (!season) {
                 return res.status(404).json({ message: 'Estação não encontrada.' });
@@ -1682,7 +1863,7 @@ app.get('/genetics/selection', async (req, res) => {
         const animals = await prisma.animal.findMany({
             where: {
                 farmId: farm.id,
-                farm: { userId: req.user.id },
+                farm: buildFarmRelationFilter(req),
                 ...(onlyFemalesFlag ? { sexo: 'FEMEA' } : {}),
                 ...(searchTerm
                     ? {
@@ -1795,7 +1976,7 @@ app.get('/genetics/reports/summary', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -1804,7 +1985,7 @@ app.get('/genetics/reports/summary', async (req, res) => {
         let validSeasonId = null;
         if (seasonId) {
             const season = await prisma.breedingSeason.findFirst({
-                where: { id: String(seasonId), farmId: farm.id, farm: { userId: req.user.id } },
+                where: { id: String(seasonId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
             });
             if (!season) {
                 return res.status(404).json({ message: 'Estação não encontrada.' });
@@ -1815,7 +1996,7 @@ app.get('/genetics/reports/summary', async (req, res) => {
         const animals = await prisma.animal.findMany({
             where: {
                 farmId: farm.id,
-                farm: { userId: req.user.id },
+                farm: buildFarmRelationFilter(req),
                 sexo: 'FEMEA',
             },
             orderBy: { createdAt: 'desc' },
@@ -2030,7 +2211,7 @@ app.get('/genetics/selection/decisions', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -2076,14 +2257,14 @@ app.post('/genetics/selection/decisions', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
 
         const animal = await prisma.animal.findFirst({
-            where: { id: String(animalId), farmId: farm.id, farm: { userId: req.user.id } },
+            where: { id: String(animalId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
@@ -2137,7 +2318,7 @@ app.delete('/genetics/selection/decisions/:animalId', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -2169,7 +2350,7 @@ app.get('/po/animals', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -2274,7 +2455,7 @@ app.post('/po/animals', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -2291,7 +2472,7 @@ app.post('/po/animals', async (req, res) => {
         }
 
         const paddock = await prisma.paddock.findFirst({
-            where: { id: paddockId, farmId: farm.id, farm: { userId: req.user.id } },
+            where: { id: paddockId, farmId: farm.id, farm: buildFarmRelationFilter(req) },
         });
         if (!paddock) {
             return res.status(400).json({ message: 'Pasto inválido para esta fazenda.' });
@@ -2348,7 +2529,7 @@ app.patch('/po/animals/:id', async (req, res) => {
 
     try {
         const animal = await prisma.poAnimal.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
@@ -2442,7 +2623,7 @@ app.delete('/po/animals/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const animal = await prisma.poAnimal.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
@@ -2463,7 +2644,7 @@ app.get('/po/lots', async (req, res) => {
     }
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -2486,7 +2667,7 @@ app.post('/po/lots', async (req, res) => {
     }
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -2509,7 +2690,7 @@ const listPoWeighings = async (req, res, responseKey) => {
     const { id } = req.params;
     try {
         const animal = await prisma.poAnimal.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
@@ -2561,7 +2742,7 @@ const createPoWeighing = async (req, res, responseKey) => {
 
     try {
         const animal = await prisma.poAnimal.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
@@ -2654,7 +2835,7 @@ app.get('/nutrition/plans', async (req, res) => {
     }
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -2696,7 +2877,7 @@ app.post('/nutrition/plans', async (req, res) => {
     }
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -2724,7 +2905,7 @@ app.patch('/nutrition/plans/:id', async (req, res) => {
     const { nome, fase, startAt, endAt, metaGmd, observacoes } = req.body || {};
     try {
         const plan = await prisma.nutritionPlan.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!plan) {
             return res.status(404).json({ message: 'Plano não encontrado.' });
@@ -2789,7 +2970,7 @@ app.delete('/nutrition/plans/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const plan = await prisma.nutritionPlan.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!plan) {
             return res.status(404).json({ message: 'Plano não encontrado.' });
@@ -2824,7 +3005,7 @@ app.post('/nutrition/assignments', async (req, res) => {
     }
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -2837,7 +3018,7 @@ app.post('/nutrition/assignments', async (req, res) => {
         }
         if (lotId) {
             const lot = await prisma.lot.findFirst({
-                where: { id: String(lotId), farmId: farm.id, farm: { userId: req.user.id } },
+                where: { id: String(lotId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
             });
             if (!lot) {
                 return res.status(404).json({ message: 'Lote não encontrado.' });
@@ -2853,7 +3034,7 @@ app.post('/nutrition/assignments', async (req, res) => {
         }
         if (animalId) {
             const animal = await prisma.animal.findFirst({
-                where: { id: String(animalId), farmId: farm.id, farm: { userId: req.user.id } },
+                where: { id: String(animalId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
             });
             if (!animal) {
                 return res.status(404).json({ message: 'Animal não encontrado.' });
@@ -2861,7 +3042,7 @@ app.post('/nutrition/assignments', async (req, res) => {
         }
         if (poAnimalId) {
             const poAnimal = await prisma.poAnimal.findFirst({
-                where: { id: String(poAnimalId), farmId: farm.id, farm: { userId: req.user.id } },
+                where: { id: String(poAnimalId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
             });
             if (!poAnimal) {
                 return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
@@ -2901,14 +3082,14 @@ app.get('/nutrition/assignments/current', async (req, res) => {
     }
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
         if (lotId) {
             const lot = await prisma.lot.findFirst({
-                where: { id: String(lotId), farmId: farm.id, farm: { userId: req.user.id } },
+                where: { id: String(lotId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
             });
             if (!lot) {
                 return res.status(404).json({ message: 'Lote não encontrado.' });
@@ -2924,7 +3105,7 @@ app.get('/nutrition/assignments/current', async (req, res) => {
         }
         if (animalId) {
             const animal = await prisma.animal.findFirst({
-                where: { id: String(animalId), farmId: farm.id, farm: { userId: req.user.id } },
+                where: { id: String(animalId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
             });
             if (!animal) {
                 return res.status(404).json({ message: 'Animal não encontrado.' });
@@ -2932,7 +3113,7 @@ app.get('/nutrition/assignments/current', async (req, res) => {
         }
         if (poAnimalId) {
             const poAnimal = await prisma.poAnimal.findFirst({
-                where: { id: String(poAnimalId), farmId: farm.id, farm: { userId: req.user.id } },
+                where: { id: String(poAnimalId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
             });
             if (!poAnimal) {
                 return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
@@ -2964,6 +3145,14 @@ app.get('/nutrition/assignments/current', async (req, res) => {
     }
 });
 
+registerNutritionModuleRoutes({
+    app,
+    prisma,
+    parseNumber,
+    parseDateValue,
+    buildFarmScopeFilter,
+});
+
 app.get('/po/semen', async (req, res) => {
     const { farmId } = req.query || {};
     if (!farmId) {
@@ -2972,7 +3161,7 @@ app.get('/po/semen', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -3035,7 +3224,7 @@ app.post('/po/semen', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -3099,7 +3288,7 @@ app.patch('/po/semen/:id', async (req, res) => {
 
     try {
         const batch = await prisma.semenBatch.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!batch) {
             return res.status(404).json({ message: 'Lote de sêmen não encontrado.' });
@@ -3235,7 +3424,7 @@ app.post('/po/semen/:id/move', async (req, res) => {
 
     try {
         const batch = await prisma.semenBatch.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!batch) {
             return res.status(404).json({ message: 'Lote de sêmen não encontrado.' });
@@ -3291,7 +3480,7 @@ app.delete('/po/semen/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const batch = await prisma.semenBatch.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!batch) {
             return res.status(404).json({ message: 'Lote de sêmen não encontrado.' });
@@ -3323,7 +3512,7 @@ app.get('/po/embryos', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -3393,7 +3582,7 @@ app.post('/po/embryos', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -3479,7 +3668,7 @@ app.patch('/po/embryos/:id', async (req, res) => {
 
     try {
         const batch = await prisma.embryoBatch.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!batch) {
             return res.status(404).json({ message: 'Lote de embriões não encontrado.' });
@@ -3648,7 +3837,7 @@ app.post('/po/embryos/:id/move', async (req, res) => {
 
     try {
         const batch = await prisma.embryoBatch.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!batch) {
             return res.status(404).json({ message: 'Lote de embriões não encontrado.' });
@@ -3704,7 +3893,7 @@ app.delete('/po/embryos/:id', async (req, res) => {
     const { id } = req.params;
     try {
         const batch = await prisma.embryoBatch.findFirst({
-            where: { id: String(id), farm: { userId: req.user.id } },
+            where: { id: String(id), farm: buildFarmRelationFilter(req) },
         });
         if (!batch) {
             return res.status(404).json({ message: 'Lote de embriões não encontrado.' });
@@ -3736,7 +3925,7 @@ app.get('/animals', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: String(farmId), userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -3745,7 +3934,7 @@ app.get('/animals', async (req, res) => {
         const animals = await prisma.animal.findMany({
             where: {
                 farmId: String(farmId),
-                farm: { userId: req.user.id },
+                farm: buildFarmRelationFilter(req),
                 ...(lotId ? { lotId: String(lotId) } : {}),
             },
             include: { currentPaddock: true },
@@ -3835,7 +4024,7 @@ app.post('/animals', async (req, res) => {
 
     try {
         const farm = await prisma.farm.findFirst({
-            where: { id: farmId, userId: req.user.id },
+            where: buildFarmScopeFilter(req, { id: farmId }),
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -3844,7 +4033,7 @@ app.post('/animals', async (req, res) => {
         let validLotId = null;
         if (lotId) {
             const lot = await prisma.lot.findFirst({
-                where: { id: lotId, farmId, farm: { userId: req.user.id } },
+                where: { id: lotId, farmId, farm: buildFarmRelationFilter(req) },
             });
             if (!lot || lot.farmId !== farmId) {
                 return res.status(400).json({ message: 'Lote inválido para esta fazenda.' });
@@ -3853,7 +4042,7 @@ app.post('/animals', async (req, res) => {
         }
 
         const paddock = await prisma.paddock.findFirst({
-            where: { id: paddockId, farmId, farm: { userId: req.user.id } },
+            where: { id: paddockId, farmId, farm: buildFarmRelationFilter(req) },
         });
         if (!paddock) {
             return res.status(400).json({ message: 'Pasto inválido para esta fazenda.' });
@@ -3905,7 +4094,7 @@ app.get('/animals/:id/repro-kpis', async (req, res) => {
     const { seasonId } = req.query || {};
     try {
         const animal = await prisma.animal.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
@@ -3917,7 +4106,7 @@ app.get('/animals/:id/repro-kpis', async (req, res) => {
         let validSeasonId = null;
         if (seasonId) {
             const season = await prisma.breedingSeason.findFirst({
-                where: { id: String(seasonId), farmId: animal.farmId, farm: { userId: req.user.id } },
+                where: { id: String(seasonId), farmId: animal.farmId, farm: buildFarmRelationFilter(req) },
             });
             if (!season) {
                 return res.status(404).json({ message: 'Estação não encontrada.' });
@@ -3951,7 +4140,7 @@ app.get('/animals/:id/pesagens', async (req, res) => {
     const { id } = req.params;
     try {
         const animal = await prisma.animal.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
@@ -3991,7 +4180,7 @@ app.post('/animals/:id/pesagens', async (req, res) => {
 
     try {
         const animal = await prisma.animal.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
@@ -4063,7 +4252,7 @@ app.get('/animals/:id/paddock-moves', async (req, res) => {
     const { id } = req.params;
     try {
         const animal = await prisma.animal.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
@@ -4096,7 +4285,7 @@ app.post('/animals/:id/paddock-moves', async (req, res) => {
             paddockId,
             startAt,
             notes,
-            userId: req.user.id,
+            scopeFilter: buildFarmRelationFilter(req),
             isPo: false,
         });
         if (error) {
@@ -4116,7 +4305,7 @@ app.get('/po/animals/:id/paddock-moves', async (req, res) => {
     const { id } = req.params;
     try {
         const animal = await prisma.poAnimal.findFirst({
-            where: { id, farm: { userId: req.user.id } },
+            where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
@@ -4138,6 +4327,7 @@ app.get('/po/animals/:id/paddock-moves', async (req, res) => {
 
 app.post('/po/animals/:id/paddock-moves', async (req, res) => {
     const { id } = req.params;
+    const { paddockId, startAt, notes } = req.body || {};
 
     try {
         if (!paddockId) {
@@ -4148,7 +4338,7 @@ app.post('/po/animals/:id/paddock-moves', async (req, res) => {
             paddockId,
             startAt,
             notes,
-            userId: req.user.id,
+            scopeFilter: buildFarmRelationFilter(req),
             isPo: true,
         });
         if (error) {
@@ -4174,7 +4364,7 @@ app.post('/animals/:id/move-pasto', async (req, res) => {
     try {
         if (farmId) {
             const animal = await prisma.animal.findFirst({
-                where: { id, farmId: String(farmId), farm: { userId: req.user.id } },
+                where: { id, farmId: String(farmId), farm: buildFarmRelationFilter(req) },
             });
             if (!animal) {
                 return res.status(404).json({ message: 'Animal não encontrado para a fazenda informada.' });
@@ -4185,7 +4375,7 @@ app.post('/animals/:id/move-pasto', async (req, res) => {
             paddockId: targetPaddockId,
             startAt: startAt || date,
             notes,
-            userId: req.user.id,
+            scopeFilter: buildFarmRelationFilter(req),
             isPo: false,
         });
         if (error) {
@@ -4211,7 +4401,7 @@ app.post('/po/animals/:id/move-pasto', async (req, res) => {
     try {
         if (farmId) {
             const animal = await prisma.poAnimal.findFirst({
-                where: { id, farmId: String(farmId), farm: { userId: req.user.id } },
+                where: { id, farmId: String(farmId), farm: buildFarmRelationFilter(req) },
             });
             if (!animal) {
                 return res.status(404).json({ message: 'Animal P.O. não encontrado para a fazenda informada.' });
@@ -4222,7 +4412,7 @@ app.post('/po/animals/:id/move-pasto', async (req, res) => {
             paddockId: targetPaddockId,
             startAt: startAt || date,
             notes,
-            userId: req.user.id,
+            scopeFilter: buildFarmRelationFilter(req),
             isPo: true,
         });
         if (error) {
