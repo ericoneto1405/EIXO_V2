@@ -191,19 +191,27 @@ const AppContent: React.FC = () => {
                 return [...current, farm];
             });
             setSelectedFarmId(farm.id);
-            setOpenFarmForm(false);
-            updateFarmFormQuery(false);
-            const targetView = currentAllowedModules.includes('Rebanho Comercial')
-                ? 'Rebanho Comercial'
-                : currentAllowedModules.includes('Plantel P.O.')
-                ? 'Plantel P.O.'
-                : currentAllowedModules.includes('Eixo Genetics')
-                ? 'Eixo Genetics'
-                : 'Fazendas';
-            setActiveView(targetView);
+            setActiveView('Fazendas');
         },
-        [currentAllowedModules, updateFarmFormQuery],
+        [],
     );
+
+    const handleFarmUpdated = React.useCallback((farm: Farm) => {
+        setFarms((current) => current.map((item) => (item.id === farm.id ? farm : item)));
+        if (selectedFarmId === farm.id) {
+            setSelectedFarmId(farm.id);
+        }
+    }, [selectedFarmId]);
+
+    const handleFarmDeleted = React.useCallback((farmId: string) => {
+        setFarms((current) => {
+            const next = current.filter((item) => item.id !== farmId);
+            if (selectedFarmId === farmId) {
+                setSelectedFarmId(next[0]?.id || null);
+            }
+            return next;
+        });
+    }, [selectedFarmId]);
 
     React.useEffect(() => {
         const bootstrapAuth = async () => {
@@ -411,6 +419,8 @@ const AppContent: React.FC = () => {
                     <Farms
                         farms={farms}
                         onFarmCreated={handleFarmCreated}
+                        onFarmUpdated={handleFarmUpdated}
+                        onFarmDeleted={handleFarmDeleted}
                         openForm={openFarmForm}
                         onFormOpened={() => {
                             setOpenFarmForm(false);

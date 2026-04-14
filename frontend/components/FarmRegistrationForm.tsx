@@ -1,40 +1,55 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Farm, Paddock } from '../types';
-import { buildApiUrl } from '../api';
+import { buildApiUrl, detectApiBaseUrl } from '../api';
 
-// A simple unique ID generator for paddocks
-let paddockIdCounter = 0;
+// A simple unique ID generator for divisions
+let divisionIdCounter = 0;
 
-interface PaddockInput {
+interface DivisionInput {
     id: string;
     name: string;
-    areaHa: string; // Use string to handle empty inputs
+    areaHa: string;
+    divisionType: string;
 }
 
 interface FarmRegistrationFormProps {
     onFarmCreated?: (farm: Farm) => void;
+    onFarmUpdated?: (farm: Farm) => void;
     autoFocusName?: boolean;
+    initialFarm?: Farm | null;
+    onCancelEdit?: () => void;
+    onSaveAndReturn?: () => void;
 }
 
-const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({ onFarmCreated, autoFocusName }) => {
+const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
+    onFarmCreated,
+    onFarmUpdated,
+    autoFocusName,
+    initialFarm,
+    onCancelEdit,
+    onSaveAndReturn,
+}) => {
     const [farmName, setFarmName] = useState('');
     const [farmCity, setFarmCity] = useState('');
     const [farmLat, setFarmLat] = useState('');
     const [farmLng, setFarmLng] = useState('');
     const [farmSize, setFarmSize] = useState(''); // Total size in hectares
+    const [responsibleName, setResponsibleName] = useState('');
     const [farmNotes, setFarmNotes] = useState('');
-    const [paddocks, setPaddocks] = useState<PaddockInput[]>([]);
+    const [divisions, setDivisions] = useState<DivisionInput[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+    const [activeFarm, setActiveFarm] = useState<Farm | null>(initialFarm || null);
     const nameInputRef = useRef<HTMLInputElement | null>(null);
+    const divisionsRef = useRef<HTMLDivElement | null>(null);
 
-    const totalPaddockSize = useMemo(() => {
-        return paddocks.reduce((sum, paddock) => sum + (parseFloat(paddock.areaHa) || 0), 0);
-    }, [paddocks]);
+    const totalDivisionSize = useMemo(() => {
+        return divisions.reduce((sum, division) => sum + (parseFloat(division.areaHa) || 0), 0);
+    }, [divisions]);
 
     const farmSizeFloat = parseFloat(farmSize) || 0;
-    const remainingSize = farmSizeFloat - totalPaddockSize;
+    const remainingSize = farmSizeFloat - totalDivisionSize;
     const isBalancedArea = Math.abs(remainingSize) < 0.0001;
 
     const isSaveDisabled = isSubmitting;
@@ -45,22 +60,58 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({ onFarmCreat
         }
     }, [autoFocusName]);
 
-    const handleAddPaddock = () => {
-        const paddockNumber = paddocks.length + 1;
-        setPaddocks([...paddocks, { id: `paddock-${paddockIdCounter++}`, name: `Pasto ${paddockNumber}`, areaHa: '' }]);
+    useEffect(() => {
+        if (!initialFarm) {
+            return;
+        }
+        setActiveFarm(initialFarm);
+        setFarmName(initialFarm.name || '');
+        setFarmCity(initialFarm.city || '');
+        setFarmLat(initialFarm.lat?.toString?.() || '');
+        setFarmLng(initialFarm.lng?.toString?.() || '');
+        setFarmSize(initialFarm.size?.toString?.() || '');
+        setResponsibleName(initialFarm.responsibleName || '');
+        setFarmNotes(initialFarm.notes || '');
+        setDivisions(
+            (initialFarm.paddocks || []).map((division, index) => ({
+                id: division.id,
+                name: division.name || `Divisão ${index + 1}`,
+                areaHa: division.areaHa?.toString?.() || '',
+                divisionType: division.divisionType || 'pasto',
+            })),
+        );
+    }, [initialFarm]);
+
+    const handleAddDivision = () => {
+        const divisionNumber = divisions.length + 1;
+        setDivisions([
+            ...divisions,
+            {
+                id: `division-${divisionIdCounter++}`,
+                name: `Divisão ${divisionNumber}`,
+                areaHa: '',
+                divisionType: 'pasto',
+            },
+        ]);
     };
 
-    const handleRemovePaddock = (id: string) => {
-        setPaddocks(paddocks.filter(p => p.id !== id));
+    const handleRemoveDivision = (id: string) => {
+        setDivisions(divisions.filter((division) => division.id !== id));
     };
 
-    const handlePaddockSizeChange = (id: string, value: string) => {
-        setPaddocks(paddocks.map(p => p.id === id ? { ...p, areaHa: value } : p));
+    const handleDivisionSizeChange = (id: string, value: string) => {
+        setDivisions(divisions.map((division) => division.id === id ? { ...division, areaHa: value } : division));
     };
 
-    const handlePaddockNameChange = (id: string, value: string) => {
-        setPaddocks(paddocks.map(p => p.id === id ? { ...p, name: value } : p));
+    const handleDivisionNameChange = (id: string, value: string) => {
+        setDivisions(divisions.map((division) => division.id === id ? { ...division, name: value } : division));
     };
+
+    const handleDivisionTypeChange = (id: string, value: string) => {
+        setDivisions(divisions.map((division) => division.id === id ? { ...division, divisionType: value } : division));
+    };
+
+    const normalizeCoordinateInput = (value: string) => value.replace(',', '.');
 
     const resetForm = () => {
         setFarmName('');
@@ -68,58 +119,72 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({ onFarmCreat
         setFarmLat('');
         setFarmLng('');
         setFarmSize('');
+        setResponsibleName('');
         setFarmNotes('');
-        setPaddocks([]);
-        paddockIdCounter = 0;
+        setDivisions([]);
+        divisionIdCounter = 0;
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const saveFarm = async (mode: 'continue' | 'save-and-return') => {
         setSubmitError(null);
         setSubmitSuccess(null);
+        const currentFarm = activeFarm || initialFarm;
 
-        const payloadPaddocks: Paddock[] = paddocks.map((p) => ({
-            id: p.id,
-            name: p.name.trim(),
-            areaHa: parseFloat(p.areaHa) || 0,
+        const payloadDivisions: Paddock[] = divisions.map((division) => ({
+            id: division.id,
+            name: division.name.trim(),
+            areaHa: parseFloat(division.areaHa) || 0,
+            divisionType: division.divisionType,
         }));
 
-        const hasInvalidPaddock = payloadPaddocks.some(
-            (p) => !p.name || Number.isNaN(p.areaHa ?? 0) || (p.areaHa ?? 0) <= 0,
+        const hasInvalidDivision = payloadDivisions.some(
+            (division) =>
+                !division.name ||
+                Number.isNaN(division.areaHa ?? 0) ||
+                (division.areaHa ?? 0) <= 0 ||
+                !division.divisionType,
         );
         if (!farmName.trim() || !farmCity.trim()) {
             setSubmitError('Informe nome e cidade da fazenda.');
             return;
         }
-        if (!payloadPaddocks.length || hasInvalidPaddock) {
-            setSubmitError('Pastos precisam de nome e área válidos.');
+        if (payloadDivisions.length > 0 && hasInvalidDivision) {
+            setSubmitError('Divisões precisam de nome, área útil e tipo válidos.');
             return;
         }
         if (farmSizeFloat <= 0) {
             setSubmitError('Informe o tamanho total da fazenda.');
             return;
         }
-        if (!isBalancedArea) {
-            setSubmitError('Distribua a área total da fazenda entre os pastos para salvar.');
+        if (currentFarm && mode === 'continue' && payloadDivisions.length > 0 && !isBalancedArea) {
+            setSubmitError('Distribua a área total da fazenda entre as divisões para salvar.');
             return;
         }
 
         setIsSubmitting(true);
-        try {
-            const response = await fetch(buildApiUrl('/farms'), {
-                method: 'POST',
+        const requestUrl = currentFarm ? `/farms/${currentFarm.id}` : '/farms';
+        const requestBody = JSON.stringify({
+            name: farmName.trim(),
+            city: farmCity.trim(),
+            lat: farmLat.trim(),
+            lng: farmLng.trim(),
+            size: farmSizeFloat,
+            responsibleName: responsibleName.trim(),
+            notes: farmNotes.trim(),
+            paddocks: payloadDivisions,
+        });
+
+        const persistFarm = async () => {
+            return fetch(buildApiUrl(requestUrl), {
+                method: currentFarm ? 'PATCH' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                    name: farmName.trim(),
-                    city: farmCity.trim(),
-                    lat: farmLat.trim(),
-                    lng: farmLng.trim(),
-                    size: farmSizeFloat,
-                    notes: farmNotes.trim(),
-                    paddocks: payloadPaddocks,
-                }),
+                body: requestBody,
             });
+        };
+
+        try {
+            const response = await persistFarm();
 
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -127,141 +192,269 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({ onFarmCreat
                 return;
             }
 
-            setSubmitSuccess('Fazenda salva com sucesso!');
-            resetForm();
-            if (payload?.farm) {
-                onFarmCreated?.(payload.farm);
+            const savedFarm = payload?.farm || null;
+            setActiveFarm(savedFarm);
+            setSubmitSuccess(currentFarm ? 'Fazenda atualizada com sucesso!' : 'Fazenda salva. Agora cadastre as divisões.');
+            if (savedFarm) {
+                setFarmName(savedFarm.name || '');
+                setFarmCity(savedFarm.city || '');
+                setFarmLat(savedFarm.lat?.toString?.() || '');
+                setFarmLng(savedFarm.lng?.toString?.() || '');
+                setFarmSize(savedFarm.size?.toString?.() || '');
+                setResponsibleName(savedFarm.responsibleName || '');
+                setFarmNotes(savedFarm.notes || '');
+                setDivisions(
+                    (savedFarm.paddocks || []).map((division, index) => ({
+                        id: division.id,
+                        name: division.name || `Divisão ${index + 1}`,
+                        areaHa: division.areaHa?.toString?.() || '',
+                        divisionType: division.divisionType || 'pasto',
+                    })),
+                );
             }
+            if (payload?.farm) {
+                if (currentFarm) {
+                    onFarmUpdated?.(payload.farm);
+                } else {
+                    onFarmCreated?.(payload.farm);
+                }
+            }
+            if (mode === 'save-and-return') {
+                onSaveAndReturn?.();
+                return;
+            }
+            divisionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } catch (error) {
             console.error(error);
-            setSubmitError('Não foi possível salvar a fazenda. Verifique sua conexão.');
+            try {
+                await detectApiBaseUrl();
+                const retryResponse = await persistFarm();
+
+                const retryPayload = await retryResponse.json().catch(() => ({}));
+                if (!retryResponse.ok) {
+                    setSubmitError(retryPayload?.message || 'Não foi possível salvar a fazenda.');
+                    return;
+                }
+
+                const savedFarm = retryPayload?.farm || null;
+                setActiveFarm(savedFarm);
+                setSubmitSuccess(currentFarm ? 'Fazenda atualizada com sucesso!' : 'Fazenda salva. Agora cadastre as divisões.');
+                if (savedFarm) {
+                    setFarmName(savedFarm.name || '');
+                    setFarmCity(savedFarm.city || '');
+                    setFarmLat(savedFarm.lat?.toString?.() || '');
+                    setFarmLng(savedFarm.lng?.toString?.() || '');
+                    setFarmSize(savedFarm.size?.toString?.() || '');
+                    setResponsibleName(savedFarm.responsibleName || '');
+                    setFarmNotes(savedFarm.notes || '');
+                    setDivisions(
+                        (savedFarm.paddocks || []).map((division, index) => ({
+                            id: division.id,
+                            name: division.name || `Divisão ${index + 1}`,
+                            areaHa: division.areaHa?.toString?.() || '',
+                            divisionType: division.divisionType || 'pasto',
+                        })),
+                    );
+                }
+                if (retryPayload?.farm) {
+                    if (currentFarm) {
+                        onFarmUpdated?.(retryPayload.farm);
+                    } else {
+                        onFarmCreated?.(retryPayload.farm);
+                    }
+                }
+                if (mode === 'save-and-return') {
+                    onSaveAndReturn?.();
+                    return;
+                }
+                divisionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (retryError) {
+                console.error(retryError);
+                setSubmitError('Não foi possível salvar a fazenda. Verifique sua conexão.');
+            }
         } finally {
             setIsSubmitting(false);
         }
     };
 
     return (
-        <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-6 sm:p-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Cadastro de Fazenda</h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="rounded-[24px] border border-[#d7cab3] bg-[#fffaf1] p-6 sm:p-8">
+            <h2 className="mb-2 text-2xl font-bold text-[#2f3a2d]">{(activeFarm || initialFarm) ? 'Editar Fazenda' : 'Cadastro de Fazenda'}</h2>
+            <p className="mb-6 text-sm text-[#6d6558]">Cadastre a fazenda, distribua a área entre as divisões e mantenha a estrutura territorial organizada.</p>
+            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                 {/* Farm Details Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                        <label htmlFor="farmName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome da Fazenda</label>
+                        <label htmlFor="farmName" className="block text-sm font-medium text-[#5f5648]">Nome da Fazenda</label>
                         <input
                             ref={nameInputRef}
                             type="text"
                             id="farmName"
                             value={farmName}
                             onChange={e => setFarmName(e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                            className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none"
                             required
                         />
                     </div>
                     <div>
-                        <label htmlFor="farmCity" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Cidade/UF</label>
-                        <input type="text" id="farmCity" value={farmCity} onChange={e => setFarmCity(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" required />
+                        <label htmlFor="farmCity" className="block text-sm font-medium text-[#5f5648]">Cidade/UF</label>
+                        <input type="text" id="farmCity" value={farmCity} onChange={e => setFarmCity(e.target.value)} className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none" required />
                     </div>
                     <div>
-                        <label htmlFor="farmLat" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Latitude</label>
-                        <input type="text" id="farmLat" placeholder="-23.550520" value={farmLat} onChange={e => setFarmLat(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                        <label htmlFor="farmLat" className="block text-sm font-medium text-[#5f5648]">Latitude</label>
+                        <input type="text" inputMode="decimal" id="farmLat" placeholder="-12.345678" value={farmLat} onChange={e => setFarmLat(e.target.value)} onBlur={e => setFarmLat(normalizeCoordinateInput(e.target.value.trim()))} className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none" />
+                        <p className="mt-1 text-xs text-[#7b715f]">Use graus decimais. Ex.: -12.345678</p>
                     </div>
                     <div>
-                        <label htmlFor="farmLng" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Longitude</label>
-                        <input type="text" id="farmLng" placeholder="-46.633308" value={farmLng} onChange={e => setFarmLng(e.target.value)} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" />
+                        <label htmlFor="farmLng" className="block text-sm font-medium text-[#5f5648]">Longitude</label>
+                        <input type="text" inputMode="decimal" id="farmLng" placeholder="-39.123456" value={farmLng} onChange={e => setFarmLng(e.target.value)} onBlur={e => setFarmLng(normalizeCoordinateInput(e.target.value.trim()))} className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none" />
+                        <p className="mt-1 text-xs text-[#7b715f]">Use graus decimais. Ex.: -39.123456</p>
                     </div>
-                    <div className="md:col-span-2">
-                        <label htmlFor="farmSize" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Tamanho Total (ha)</label>
-                        <input type="number" id="farmSize" value={farmSize} onChange={e => setFarmSize(e.target.value)} min="0" step="0.01" className="mt-1 block w-full px-3 py-2 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm" required />
+                    <div>
+                        <label htmlFor="farmSize" className="block text-sm font-medium text-[#5f5648]">Tamanho Total (ha)</label>
+                        <input type="number" id="farmSize" value={farmSize} onChange={e => setFarmSize(e.target.value)} min="0" step="0.01" className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none" required />
+                    </div>
+                    <div>
+                        <label htmlFor="responsibleName" className="block text-sm font-medium text-[#5f5648]">Nome do Responsável</label>
+                        <input type="text" id="responsibleName" value={responsibleName} onChange={e => setResponsibleName(e.target.value)} className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none" />
                     </div>
                      <div className="md:col-span-2">
-                        <label htmlFor="farmNotes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Observações</label>
-                        <textarea id="farmNotes" value={farmNotes} onChange={e => setFarmNotes(e.target.value)} rows={3} className="mt-1 block w-full px-3 py-2 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"></textarea>
+                        <label htmlFor="farmNotes" className="block text-sm font-medium text-[#5f5648]">Observações</label>
+                        <textarea id="farmNotes" value={farmNotes} onChange={e => setFarmNotes(e.target.value)} rows={3} className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none"></textarea>
+                    </div>
+                    <div className="md:col-span-2 flex justify-end pt-1">
+                        <button
+                            type="button"
+                            onClick={onCancelEdit}
+                            className="mr-3 flex items-center rounded-2xl border border-[#c7b59b] bg-[#f3ebde] px-6 py-2.5 font-bold text-[#5f5648] transition-colors duration-200 hover:bg-[#eadfcd]"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void saveFarm('continue')}
+                            disabled={isSaveDisabled}
+                            className="flex items-center rounded-2xl bg-[#9d7d4d] px-6 py-2.5 font-bold text-white transition-colors duration-200 hover:bg-[#8f7144] disabled:cursor-not-allowed disabled:bg-[#b8ab95]"
+                        >
+                            {isSubmitting ? 'Salvando...' : 'Salvar'}
+                        </button>
                     </div>
                 </div>
 
-                {/* Paddocks Section */}
-                <div>
-                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Pastos</h3>
-                    <div className="mt-4 space-y-4">
-                        {paddocks.map((paddock, index) => (
-                            <div key={paddock.id} className="flex flex-col gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Pasto {index + 1}</span>
-                                    <button type="button" onClick={() => handleRemovePaddock(paddock.id)} className="ml-auto text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors" aria-label="Remover pasto">
+                {/* Divisions Section */}
+                <div ref={divisionsRef}>
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <h3 className="text-lg font-medium text-[#2f3a2d]">Divisões</h3>
+                            <p className="mt-1 text-sm text-[#6d6558]">Cadastre as áreas que compõem a fazenda.</p>
+                        </div>
+                    </div>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                        {divisions.map((division, index) => (
+                            <div key={division.id} className="rounded-2xl border border-[#e2d7c7] bg-[#fcf7ee] p-4">
+                                <div className="mb-3 flex items-center gap-3">
+                                    <span className="text-sm font-medium text-[#5f5648]">Divisão {index + 1}</span>
+                                    <button type="button" onClick={() => handleRemoveDivision(division.id)} className="ml-auto rounded-full p-2 text-red-500 transition-colors hover:bg-red-100 hover:text-red-700" aria-label="Remover divisão">
                                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
                                     </button>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="grid grid-cols-1 gap-3">
                                     <div>
-                                        <label htmlFor={`paddock-name-${paddock.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">Nome do Pasto</label>
+                                        <label htmlFor={`division-name-${division.id}`} className="block text-sm font-medium text-[#5f5648]">Nome da Divisão</label>
                                         <input
                                             type="text"
-                                            id={`paddock-name-${paddock.id}`}
-                                            value={paddock.name}
-                                            onChange={(e) => handlePaddockNameChange(paddock.id, e.target.value)}
-                                            placeholder="Ex.: Pasto 01, Rotacionado, Maternidade..."
-                                            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                                            id={`division-name-${division.id}`}
+                                            value={division.name}
+                                            onChange={(e) => handleDivisionNameChange(division.id, e.target.value)}
+                                            placeholder="Ex.: Pasto 01, Curral de manejo, APP..."
+                                            className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none"
                                         />
                                     </div>
-                                    <div>
-                                        <label htmlFor={`paddock-size-${paddock.id}`} className="block text-sm font-medium text-gray-700 dark:text-gray-300">Área (ha)</label>
+                                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                        <div>
+                                        <label htmlFor={`division-size-${division.id}`} className="block text-sm font-medium text-[#5f5648]">Área Útil (ha)</label>
                                         <input
                                             type="number"
-                                            id={`paddock-size-${paddock.id}`}
-                                            value={paddock.areaHa}
-                                            onChange={(e) => handlePaddockSizeChange(paddock.id, e.target.value)}
+                                            id={`division-size-${division.id}`}
+                                            value={division.areaHa}
+                                            onChange={(e) => handleDivisionSizeChange(division.id, e.target.value)}
                                             min="0"
                                             step="0.01"
                                             placeholder="0.00"
-                                            className="mt-1 block w-full px-3 py-2 bg-white dark:bg-dark-card border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm"
+                                            className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none"
                                         />
+                                        </div>
+                                        <div>
+                                            <label htmlFor={`division-type-${division.id}`} className="block text-sm font-medium text-[#5f5648]">Tipo</label>
+                                            <select
+                                                id={`division-type-${division.id}`}
+                                                value={division.divisionType}
+                                                onChange={(e) => handleDivisionTypeChange(division.id, e.target.value)}
+                                                className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none"
+                                            >
+                                                <option value="pasto">Pasto</option>
+                                                <option value="curral de manejo">Curral de manejo</option>
+                                                <option value="área de preservação">Área de preservação</option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         ))}
+                        <button
+                            type="button"
+                            onClick={handleAddDivision}
+                            className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-[#ccb894] bg-[#f7f0e3] p-6 text-center transition-colors hover:bg-[#f2e7d4]"
+                        >
+                            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#9d7d4d] text-white">
+                                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v12m6-6H6" />
+                                </svg>
+                            </span>
+                            <span className="mt-4 text-base font-semibold text-[#5f5648]">Adicionar Divisão</span>
+                            <span className="mt-2 max-w-[220px] text-sm text-[#7b715f]">
+                                Crie uma nova divisão para organizar a fazenda do jeito que ela existe no campo.
+                            </span>
+                        </button>
                     </div>
-                    <button type="button" onClick={handleAddPaddock} className="mt-4 flex items-center text-sm font-medium text-primary hover:text-primary-dark transition-colors">
-                         <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        Adicionar Pasto
-                    </button>
                 </div>
 
                 {submitError && (
-                    <p className="text-sm text-red-600 dark:text-red-400">{submitError}</p>
+                    <p className="text-sm text-red-600">{submitError}</p>
                 )}
                 {submitSuccess && (
-                    <p className="text-sm text-green-600 dark:text-green-400">{submitSuccess}</p>
+                    <p className="text-sm text-green-700">{submitSuccess}</p>
                 )}
 
                 {/* Summary and Validation */}
-                <div className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border dark:border-gray-700 space-y-2 mt-4">
+                {activeFarm && (
+                    <div className="flex justify-end">
+                        <button
+                            type="button"
+                            onClick={() => void saveFarm('save-and-return')}
+                            disabled={isSaveDisabled}
+                            className="rounded-xl border border-[#c7b59b] bg-[#f3ebde] px-4 py-2 text-sm font-semibold text-[#5f5648] transition-colors duration-200 hover:bg-[#eadfcd] disabled:cursor-not-allowed disabled:bg-[#e1d7c7]"
+                        >
+                            Salvar e voltar
+                        </button>
+                    </div>
+                )}
+                <div className="mt-4 space-y-2 rounded-2xl border border-[#e2d7c7] bg-[#f6efe3] p-4">
                     <div className="flex justify-between text-sm">
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Área Total da Fazenda:</span>
-                        <span className="font-bold text-gray-800 dark:text-white">{farmSizeFloat.toFixed(2)} ha</span>
+                        <span className="font-medium text-[#6d6558]">Área Total da Fazenda:</span>
+                        <span className="font-bold text-[#2f3a2d]">{farmSizeFloat.toFixed(2)} ha</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                        <span className="font-medium text-gray-600 dark:text-gray-400">Área Total dos Pastos:</span>
-                        <span className="font-bold text-gray-800 dark:text-white">{totalPaddockSize.toFixed(2)} ha</span>
+                        <span className="font-medium text-[#6d6558]">Área Total das Divisões:</span>
+                        <span className="font-bold text-[#2f3a2d]">{totalDivisionSize.toFixed(2)} ha</span>
                     </div>
                     <div className="flex justify-between text-sm font-bold">
                         <span className={isBalancedArea && farmSizeFloat > 0 ? 'text-green-600' : 'text-red-600'}>Área Restante a Alocar:</span>
                         <span className={isBalancedArea && farmSizeFloat > 0 ? 'text-green-600' : 'text-red-600'}>{remainingSize.toFixed(2)} ha</span>
                     </div>
                      {!isBalancedArea && farmSizeFloat > 0 && (
-                        <p className="text-xs text-center text-yellow-600 dark:text-yellow-400 pt-2">A soma das áreas dos pastos deve ser igual à área total da fazenda (tolerância de 0.0001 ha).</p>
+                        <p className="pt-2 text-center text-xs text-yellow-700">A soma das áreas das divisões deve ser igual à área total da fazenda (tolerância de 0.0001 ha).</p>
                      )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex justify-end pt-4">
-                    <button
-                        type="submit"
-                        disabled={isSaveDisabled}
-                        className="flex items-center bg-primary hover:bg-primary-dark text-white font-bold py-2 px-6 rounded-lg shadow-md transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed dark:disabled:bg-gray-600"
-                    >
-                        {isSubmitting ? 'Salvando...' : 'Salvar'}
-                    </button>
                 </div>
             </form>
         </div>

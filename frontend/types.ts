@@ -112,6 +112,7 @@ export interface Paddock {
     id: string;
     name: string;
     areaHa?: number | null;
+    divisionType?: string | null;
     capacity?: number | null;
     active?: boolean;
     createdAt?: string | null;
@@ -135,6 +136,7 @@ export interface Farm {
     lng?: number | null;
     size: number;
     notes?: string;
+    responsibleName?: string | null;
     paddocks: Paddock[];
     createdAt: string;
     userId?: string;

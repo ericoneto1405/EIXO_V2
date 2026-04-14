@@ -9,7 +9,9 @@ interface SidebarProps {
 
 interface NavSubItem {
     label: string;
-    path: string;
+    value: string;
+    path?: string;
+    allowedLabels?: string[];
 }
 
 interface NavItem {
@@ -17,11 +19,10 @@ interface NavItem {
     icon: React.ReactNode;
     badge?: string;
     subItems?: NavSubItem[];
-}
-
-interface NavSection {
-    title: string;
-    items: NavItem[];
+    value?: string;
+    path?: string;
+    allowedLabels?: string[];
+    disabled?: boolean;
 }
 
 const HomeIcon: React.FC = () => (
@@ -207,56 +208,75 @@ const SidebarPanelIcon: React.FC<{ collapsed: boolean }> = ({ collapsed }) => (
 );
 
 const geneticsSubItems: NavSubItem[] = [
-    { label: 'Plantel', path: '/genetics/plantel' },
-    { label: 'Reprodução', path: '/genetics/reproducao' },
-    { label: 'Seleção', path: '/genetics/selecao' },
-    { label: 'Relatórios', path: '/genetics/relatorios' },
+    { label: 'Plantel', value: 'Eixo Genetics', path: '/genetics/plantel', allowedLabels: ['Eixo Genetics'] },
+    { label: 'Seleção', value: 'Eixo Genetics', path: '/genetics/selecao', allowedLabels: ['Eixo Genetics'] },
+    { label: 'Relatórios', value: 'Eixo Genetics', path: '/genetics/relatorios', allowedLabels: ['Eixo Genetics'] },
 ];
 
-const navSections: NavSection[] = [
+const navItems: NavItem[] = [
+    { label: 'Visão Geral', icon: <HomeIcon />, value: 'Visão Geral' },
+    { label: 'Estrutura da Fazenda', icon: <FarmIcon />, value: 'Fazendas', allowedLabels: ['Fazendas'] },
     {
-        title: 'Principal',
-        items: [
-            { label: 'Mapa do Sistema', icon: <HomeIcon />, badge: 'Audit' },
-            { label: 'Visão Geral', icon: <HomeIcon /> },
-            { label: 'Fazendas', icon: <FarmIcon /> },
-            { label: 'Rebanho Comercial', icon: <HerdCommercialIcon /> },
-            { label: 'Plantel P.O.', icon: <HerdPoIcon /> },
-            { label: 'Eixo Genetics', icon: <HerdGeneticIcon />, subItems: geneticsSubItems, badge: 'Módulo' },
+        label: 'Manejo do Rebanho',
+        icon: <HerdCommercialIcon />,
+        value: 'Rebanho Comercial',
+        allowedLabels: ['Rebanho Comercial', 'Plantel P.O.'],
+        subItems: [
+            { label: 'Rebanho Comercial', value: 'Rebanho Comercial', allowedLabels: ['Rebanho Comercial'] },
+            { label: 'Plantel P.O.', value: 'Plantel P.O.', allowedLabels: ['Plantel P.O.'] },
+        ],
+    },
+    { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição' },
+    { label: 'Confinamento e Contratos', icon: <OperationsIcon />, value: 'Operações', allowedLabels: ['Operações'] },
+    { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Eixo Genetics', path: '/genetics/reproducao', allowedLabels: ['Eixo Genetics'] },
+    {
+        label: 'Eixo Genetics',
+        icon: <HerdGeneticIcon />,
+        value: 'Eixo Genetics',
+        allowedLabels: ['Eixo Genetics'],
+        subItems: geneticsSubItems,
+    },
+    {
+        label: 'Estoque e Equipamentos',
+        icon: <SuppliersIcon />,
+        value: 'Fornecedores',
+        allowedLabels: ['Fornecedores', 'Remédios', 'Rações', 'Suplementos'],
+        subItems: [
+            { label: 'Fornecedores', value: 'Fornecedores', allowedLabels: ['Fornecedores'] },
+            { label: 'Remédios', value: 'Remédios', allowedLabels: ['Remédios'] },
+            { label: 'Rações', value: 'Rações', allowedLabels: ['Rações'] },
+            { label: 'Suplementos', value: 'Suplementos', allowedLabels: ['Suplementos'] },
         ],
     },
     {
-        title: 'Cadastros',
-        items: [
-            { label: 'Fornecedores', icon: <SuppliersIcon /> },
-            { label: 'Remédios', icon: <MedicineIcon /> },
-            { label: 'Rações', icon: <GrainIcon /> },
-            { label: 'Suplementos', icon: <SupplementIcon /> },
+        label: 'Financeiro',
+        icon: <MoneyDownIcon />,
+        value: 'Contas a Pagar',
+        allowedLabels: ['Contas a Pagar', 'Contas a Receber', 'Fluxo de Caixa', 'DRE'],
+        subItems: [
+            { label: 'Contas a Pagar', value: 'Contas a Pagar', allowedLabels: ['Contas a Pagar'] },
+            { label: 'Contas a Receber', value: 'Contas a Receber', allowedLabels: ['Contas a Receber'] },
+            { label: 'Fluxo de Caixa', value: 'Fluxo de Caixa', allowedLabels: ['Fluxo de Caixa'] },
+            { label: 'DRE', value: 'DRE', allowedLabels: ['DRE'] },
         ],
     },
-    {
-        title: 'Nutrição',
-        items: [
-            { label: 'Nutrição', icon: <NutritionIcon /> },
-        ],
-    },
-    {
-        title: 'Financeiro',
-        items: [
-            { label: 'Contas a Pagar', icon: <MoneyDownIcon /> },
-            { label: 'Contas a Receber', icon: <MoneyUpIcon /> },
-            { label: 'Fluxo de Caixa', icon: <ChartIcon /> },
-            { label: 'DRE', icon: <ReportIcon /> },
-        ],
-    },
-    {
-        title: 'Operação',
-        items: [
-            { label: 'Operações', icon: <OperationsIcon /> },
-            { label: 'Configurações', icon: <SettingsIcon /> },
-        ],
-    },
+    { label: 'Gestão Comercial', icon: <ChartIcon />, badge: 'Em breve', disabled: true },
+    { label: 'Registro de Atividades', icon: <ReportIcon />, badge: 'Em breve', disabled: true },
 ];
+
+const navItemsWithStructureSubItems: NavItem[] = navItems.map((item) =>
+    item.label === 'Estrutura da Fazenda'
+        ? {
+              ...item,
+              subItems: [
+                  { label: 'Fazendas e Setores', value: 'Fazendas', allowedLabels: ['Fazendas'] },
+                  { label: 'Mapa da Fazenda', value: 'Mapa da Fazenda' },
+                  { label: 'Estruturas da Fazenda', value: 'Estruturas da Fazenda' },
+                  { label: 'Equipe e Permissões', value: 'Equipe e Permissões' },
+              ],
+          }
+        : item,
+);
 
 const ChevronIndicator: React.FC<{ isOpen: boolean }> = ({ isOpen }) => (
     <span className="text-xs text-current">{isOpen ? '▾' : '▸'}</span>
@@ -271,6 +291,7 @@ interface SidebarButtonProps {
     badge?: string;
     suffix?: React.ReactNode;
     isSubItem?: boolean;
+    disabled?: boolean;
 }
 
 const SidebarButton: React.FC<SidebarButtonProps> = ({
@@ -282,12 +303,16 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
     badge,
     suffix,
     isSubItem,
+    disabled,
 }) => {
     const baseClasses = `w-full flex items-center ${
         isCollapsed ? 'justify-center' : 'justify-start'
     } ${isSubItem ? 'py-1.5' : 'py-2.5'} ${isSubItem ? (isCollapsed ? 'px-3' : 'pl-11 pr-3') : 'px-3.5'} ${
         isSubItem ? 'text-[13px]' : 'text-sm'
-    } font-medium transition-all duration-150 rounded-2xl active:translate-y-[2px] ${
+    } font-medium transition-all duration-150 rounded-2xl ${disabled ? 'cursor-not-allowed opacity-70' : 'active:translate-y-[2px]'} ${
+        disabled
+            ? 'border border-dashed border-[#7b6a55] bg-[#594b39]/40 text-[#d6ccb8]'
+            :
         isActive
             ? 'translate-y-[2px] border border-[#c7a56a] bg-[#d9b878] text-[#3e3122] shadow-[inset_0_3px_7px_rgba(120,95,58,0.22),0_1px_1px_rgba(255,255,255,0.20)]'
             : 'border border-transparent text-[#e5dccb] shadow-[inset_0_0_0_rgba(0,0,0,0)] hover:translate-y-[2px] hover:border-[#6e5e47] hover:bg-[#5a4c39] hover:text-white hover:shadow-[inset_0_3px_7px_rgba(34,24,16,0.24)] active:bg-[#5a4c39]'
@@ -298,6 +323,7 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
             type="button"
             onClick={onClick}
             className={baseClasses}
+            disabled={disabled}
         >
             {!isCollapsed && icon ? (
                 <span className="flex items-center justify-center mr-3 text-current">{icon}</span>
@@ -330,36 +356,34 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
     const location = useLocation();
     const navigate = useNavigate();
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
-    const [isGeneticsOpen, setIsGeneticsOpen] = React.useState(false);
+    const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({});
 
-    const handleSelect = (label: string) => {
-        setActiveItem(label);
+    const handleSelect = (value: string, path?: string) => {
+        setActiveItem(value);
+        if (path) {
+            navigate(path);
+            return;
+        }
         if (isGeneticsRoute) {
             navigate('/');
         }
     };
 
-    const isModuleAllowed = (label: string) => {
+    const isModuleAllowed = (labels?: string[]) => {
         if (!allowedModules || allowedModules.length === 0) {
             return true;
         }
-        return allowedModules.includes(label);
+        if (!labels?.length) {
+            return true;
+        }
+        return labels.some((label) => allowedModules.includes(label));
     };
 
     React.useEffect(() => {
         if (isGeneticsRoute) {
-            setIsGeneticsOpen(true);
+            setOpenGroups((current) => ({ ...current, 'Eixo Genetics': true }));
         }
     }, [isGeneticsRoute]);
-
-    const isGeneticsExpanded = isGeneticsRoute || isGeneticsOpen;
-
-    const handleToggleGenetics = () => {
-        if (isGeneticsRoute) {
-            return;
-        }
-        setIsGeneticsOpen((prev) => !prev);
-    };
 
     return (
         <aside
@@ -389,76 +413,87 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                 </button>
             </div>
 
-            <nav className="flex-1 overflow-y-auto px-3 pb-6 pt-0 space-y-5">
-                {navSections.map((section) => (
-                    <div key={section.title}>
-                        {!isCollapsed && (
-                            <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#b9aa91]">
-                                {section.title}
-                            </p>
-                        )}
-                        <ul className="space-y-1">
-                            {section.items.map((item) => {
-                                if (!isModuleAllowed(item.label)) {
-                                    return null;
-                                }
-                                const isDropdown = Boolean(item.subItems?.length);
-                                if (!isDropdown) {
-                                    const isActive = !isGeneticsRoute && activeItem === item.label;
-                                    return (
-                                        <li key={item.label}>
-                                            <SidebarButton
-                                                label={item.label}
-                                                icon={item.icon}
-                                                isActive={isActive}
-                                                isCollapsed={isCollapsed}
-                                                onClick={() => handleSelect(item.label)}
-                                                badge={item.badge}
-                                            />
-                                        </li>
-                                    );
-                                }
+            <nav className="flex-1 overflow-y-auto px-3 pb-6 pt-0">
+                <ul className="space-y-1.5">
+                    {navItemsWithStructureSubItems.map((item) => {
+                        if (!item.disabled && !isModuleAllowed(item.allowedLabels || (item.value ? [item.value] : undefined))) {
+                            return null;
+                        }
 
-                                const isParentActive = isGeneticsRoute;
-                                return (
-                                    <li key={item.label}>
-                                        <SidebarButton
-                                            label={item.label}
-                                            icon={item.icon}
-                                            isActive={isParentActive}
-                                            isCollapsed={isCollapsed}
-                                            onClick={handleToggleGenetics}
-                                            suffix={<ChevronIndicator isOpen={isGeneticsExpanded} />}
-                                        />
-                                        {!isCollapsed && isGeneticsExpanded && (
-                                            <ul className="mt-1 space-y-1">
-                                                {item.subItems?.map((subItem) => {
-                                                    const isSubActive =
-                                                        location.pathname === subItem.path ||
-                                                        location.pathname.startsWith(`${subItem.path}/`);
-                                                    return (
-                                                        <li key={subItem.label}>
-                                                            <SidebarButton
-                                                                label={subItem.label}
-                                                                isActive={isSubActive}
-                                                                isCollapsed={isCollapsed}
-                                                                isSubItem
-                                                                onClick={() => {
-                                                                    navigate(subItem.path);
-                                                                    setIsGeneticsOpen(true);
-                                                                }}
-                                                            />
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </div>
-                ))}
+                        const visibleSubItems = item.subItems?.filter((subItem) => {
+                            if (!subItem.allowedLabels?.length && !subItem.path) {
+                                return true;
+                            }
+                            return isModuleAllowed(subItem.allowedLabels || [subItem.value]);
+                        }) || [];
+                        const hasSubItems = visibleSubItems.length > 0;
+                        const isExpanded = isGeneticsRoute && item.label === 'Eixo Genetics'
+                            ? true
+                            : Boolean(openGroups[item.label]);
+                        const isDirectPathActive = item.path
+                            ? location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
+                            : false;
+                        const isSubItemActive = visibleSubItems.some((subItem) =>
+                            subItem.path
+                                ? location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`)
+                                : activeItem === subItem.value,
+                        );
+                        const isParentActive = isDirectPathActive || isSubItemActive || (!!item.value && activeItem === item.value);
+
+                        return (
+                            <li key={item.label}>
+                                <SidebarButton
+                                    label={item.label}
+                                    icon={item.icon}
+                                    isActive={isParentActive}
+                                    isCollapsed={isCollapsed}
+                                    badge={item.badge}
+                                    disabled={item.disabled}
+                                    suffix={hasSubItems ? <ChevronIndicator isOpen={isExpanded} /> : undefined}
+                                    onClick={() => {
+                                        if (item.disabled) {
+                                            return;
+                                        }
+                                        if (hasSubItems) {
+                                            setOpenGroups((current) => ({ ...current, [item.label]: !isExpanded }));
+                                        }
+                                        if (item.value) {
+                                            handleSelect(item.value, item.path || visibleSubItems[0]?.path);
+                                        }
+                                    }}
+                                />
+                                {!isCollapsed && hasSubItems && isExpanded && (
+                                    <ul className="mt-1 space-y-1">
+                                        {visibleSubItems.map((subItem) => {
+                                            const isComingSoon = !subItem.path && !isModuleAllowed(subItem.allowedLabels || [subItem.value]);
+                                            const isSubActive = subItem.path
+                                                ? location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`)
+                                                : activeItem === subItem.value;
+                                            return (
+                                                <li key={subItem.label}>
+                                                    <SidebarButton
+                                                        label={subItem.label}
+                                                        isActive={isSubActive}
+                                                        isCollapsed={isCollapsed}
+                                                        isSubItem
+                                                        badge={isComingSoon ? 'Em breve' : undefined}
+                                                        disabled={isComingSoon}
+                                                        onClick={() => {
+                                                            if (isComingSoon) {
+                                                                return;
+                                                            }
+                                                            handleSelect(subItem.value, subItem.path);
+                                                        }}
+                                                    />
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                )}
+                            </li>
+                        );
+                    })}
+                </ul>
             </nav>
 
             {!isCollapsed && isAssistantVisible && (

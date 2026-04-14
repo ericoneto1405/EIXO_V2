@@ -31,8 +31,40 @@ const parseCoordinate = (value) => {
     if (typeof value === 'string' && value.trim() === '') {
         return null;
     }
-    const parsed = Number(value);
+    const normalizedValue = typeof value === 'string' ? value.trim().replace(',', '.') : value;
+    const parsed = Number(normalizedValue);
     return Number.isFinite(parsed) ? parsed : null;
+};
+
+const validateCoordinatePair = (lat, lng) => {
+    if ((lat === null) !== (lng === null)) {
+        return 'Informe latitude e longitude juntas.';
+    }
+    if (lat !== null && (lat < -90 || lat > 90)) {
+        return 'Latitude inválida. Use um valor entre -90 e 90.';
+    }
+    if (lng !== null && (lng < -180 || lng > 180)) {
+        return 'Longitude inválida. Use um valor entre -180 e 180.';
+    }
+    return null;
+};
+
+const findFarmByCoordinates = async ({ lat, lng, excludeFarmId = null }) => {
+    if (lat === null || lng === null) {
+        return null;
+    }
+    return prisma.farm.findFirst({
+        where: {
+            lat,
+            lng,
+            ...(excludeFarmId ? { NOT: { id: excludeFarmId } } : {}),
+        },
+        select: {
+            id: true,
+            name: true,
+            city: true,
+        },
+    });
 };
 
 const parseNumber = (value) => {
@@ -313,6 +345,7 @@ const serializePaddock = (paddock) => ({
     farmId: paddock.farmId,
     name: paddock.name,
     areaHa: paddock.areaHa ?? null,
+    divisionType: paddock.divisionType ?? null,
     capacity: paddock.capacity ?? null,
     active: paddock.active ?? true,
     createdAt: paddock.createdAt?.toISOString?.() ?? null,
@@ -1145,6 +1178,7 @@ app.get('/farms', async (req, res) => {
         });
         const items = farms.map((farm) => ({
             ...farm,
+            responsibleName: farm.responsibleName ?? null,
             paddocks: farm.paddocks.map(serializePaddock),
         }));
         return res.json({ farms: items, items, total: items.length });
@@ -1155,21 +1189,29 @@ app.get('/farms', async (req, res) => {
 });
 
 app.post('/farms', async (req, res) => {
-    const { name, city, lat, lng, size, notes, paddocks } = req.body || {};
+    const { name, city, lat, lng, size, notes, responsibleName, paddocks } = req.body || {};
 
     const parsedSize = Number(size);
+    const parsedLat = parseCoordinate(lat);
+    const parsedLng = parseCoordinate(lng);
     if (!name || !city || Number.isNaN(parsedSize) || parsedSize <= 0) {
         return res.status(400).json({ message: 'Nome, cidade e tamanho da fazenda são obrigatórios.' });
+    }
+    const coordinateError = validateCoordinatePair(parsedLat, parsedLng);
+    if (coordinateError) {
+        return res.status(400).json({ message: coordinateError });
     }
 
     const normalizedPaddocks = Array.isArray(paddocks)
         ? paddocks
               .map((paddock) => {
+                  const paddockId = typeof paddock?.id === 'string' ? paddock.id.trim() : '';
                   const paddockName = (paddock?.name || paddock?.nome || '').trim();
                   const areaRaw = paddock?.areaHa ?? paddock?.size ?? paddock?.area;
                   const areaValue = areaRaw === undefined || areaRaw === null || areaRaw === ''
                       ? null
                       : Number(areaRaw);
+                  const divisionType = (paddock?.divisionType || paddock?.type || '').trim() || null;
                   const capacityValue = parseNumber(paddock?.capacity);
                   const activeValue = paddock?.active === false ? false : true;
                   if (!paddockName) {
@@ -1181,6 +1223,7 @@ app.post('/farms', async (req, res) => {
                   return {
                       name: paddockName,
                       areaHa: areaValue,
+                      divisionType,
                       capacity: capacityValue,
                       active: activeValue,
                   };
@@ -1193,29 +1236,26 @@ app.post('/farms', async (req, res) => {
     }
 
     try {
-        const paddocksToCreate = normalizedPaddocks.length
-            ? normalizedPaddocks
-            : [
-                  {
-                      name: 'Pasto 01 - Principal',
-                      areaHa: parsedSize,
-                      capacity: null,
-                      active: true,
-                  },
-              ];
+        const existingFarmAtCoordinates = await findFarmByCoordinates({ lat: parsedLat, lng: parsedLng });
+        if (existingFarmAtCoordinates) {
+            return res.status(409).json({
+                message: `Já existe uma fazenda cadastrada nesse local: ${existingFarmAtCoordinates.name} (${existingFarmAtCoordinates.city}).`,
+            });
+        }
 
         const newFarm = await prisma.farm.create({
             data: {
                 name,
                 city,
-                lat: parseCoordinate(lat),
-                lng: parseCoordinate(lng),
+                lat: parsedLat,
+                lng: parsedLng,
                 size: parsedSize,
                 notes: notes?.trim() || null,
+                responsibleName: responsibleName?.trim() || null,
                 userId: req.user.id,
                 organizationId: req.saas?.organizationId || null,
                 paddocks: {
-                    create: paddocksToCreate,
+                    create: normalizedPaddocks,
                 },
             },
             include: { paddocks: true },
@@ -1223,12 +1263,158 @@ app.post('/farms', async (req, res) => {
         return res.status(201).json({
             farm: {
                 ...newFarm,
+                responsibleName: newFarm.responsibleName ?? null,
                 paddocks: newFarm.paddocks.map(serializePaddock),
             },
         });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar fazenda.' });
+    }
+});
+
+app.patch('/farms/:id', async (req, res) => {
+    const { id } = req.params;
+    const { name, city, lat, lng, size, notes, responsibleName, paddocks } = req.body || {};
+
+    const parsedSize = Number(size);
+    const parsedLat = parseCoordinate(lat);
+    const parsedLng = parseCoordinate(lng);
+    if (!name || !city || Number.isNaN(parsedSize) || parsedSize <= 0) {
+        return res.status(400).json({ message: 'Nome, cidade e tamanho da fazenda são obrigatórios.' });
+    }
+    const coordinateError = validateCoordinatePair(parsedLat, parsedLng);
+    if (coordinateError) {
+        return res.status(400).json({ message: coordinateError });
+    }
+
+    const normalizedPaddocks = Array.isArray(paddocks)
+        ? paddocks
+              .map((paddock) => {
+                  const paddockId = typeof paddock?.id === 'string' ? paddock.id.trim() : '';
+                  const paddockName = (paddock?.name || paddock?.nome || '').trim();
+                  const areaRaw = paddock?.areaHa ?? paddock?.size ?? paddock?.area;
+                  const areaValue = areaRaw === undefined || areaRaw === null || areaRaw === ''
+                      ? null
+                      : Number(areaRaw);
+                  const divisionType = (paddock?.divisionType || paddock?.type || '').trim() || null;
+                  if (!paddockName) {
+                      return null;
+                  }
+                  if (areaValue !== null && (Number.isNaN(areaValue) || areaValue <= 0)) {
+                      return null;
+                  }
+                  return {
+                      id: paddockId || null,
+                      name: paddockName,
+                      areaHa: areaValue,
+                      divisionType,
+                  };
+              })
+              .filter(Boolean)
+        : [];
+
+    if (Array.isArray(paddocks) && paddocks.length && normalizedPaddocks.length === 0) {
+        return res.status(400).json({ message: 'Divisões devem ter nome e área válidos.' });
+    }
+
+    try {
+        const farm = await prisma.farm.findFirst({
+            where: buildFarmScopeFilter(req, { id: String(id) }),
+            include: { paddocks: true },
+        });
+        if (!farm) {
+            return res.status(404).json({ message: 'Fazenda não encontrada.' });
+        }
+
+        const existingFarmAtCoordinates = await findFarmByCoordinates({
+            lat: parsedLat,
+            lng: parsedLng,
+            excludeFarmId: farm.id,
+        });
+        if (existingFarmAtCoordinates) {
+            return res.status(409).json({
+                message: `Já existe uma fazenda cadastrada nesse local: ${existingFarmAtCoordinates.name} (${existingFarmAtCoordinates.city}).`,
+            });
+        }
+
+        const updatedFarm = await prisma.$transaction(async (tx) => {
+            const existingPaddocks = await tx.paddock.findMany({
+                where: { farmId: farm.id },
+                select: { id: true },
+            });
+            const existingIds = new Set(existingPaddocks.map((item) => item.id));
+
+            for (const division of normalizedPaddocks) {
+                if (division.id && existingIds.has(division.id)) {
+                    await tx.paddock.update({
+                        where: { id: division.id },
+                        data: {
+                            name: division.name,
+                            areaHa: division.areaHa,
+                            divisionType: division.divisionType,
+                        },
+                    });
+                    continue;
+                }
+
+                await tx.paddock.create({
+                    data: {
+                        farmId: farm.id,
+                        name: division.name,
+                        areaHa: division.areaHa,
+                        divisionType: division.divisionType,
+                        active: true,
+                    },
+                });
+            }
+
+            return tx.farm.update({
+                where: { id: farm.id },
+                data: {
+                    name,
+                    city,
+                    lat: parsedLat,
+                    lng: parsedLng,
+                    size: parsedSize,
+                    notes: notes?.trim() || null,
+                    responsibleName: responsibleName?.trim() || null,
+                },
+                include: { paddocks: true },
+            });
+        });
+
+        return res.json({
+            farm: {
+                ...updatedFarm,
+                responsibleName: updatedFarm.responsibleName ?? null,
+                paddocks: updatedFarm.paddocks.map(serializePaddock),
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar fazenda.' });
+    }
+});
+
+app.delete('/farms/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const farm = await prisma.farm.findFirst({
+            where: buildFarmScopeFilter(req, { id: String(id) }),
+        });
+        if (!farm) {
+            return res.status(404).json({ message: 'Fazenda não encontrada.' });
+        }
+
+        await prisma.farm.delete({
+            where: { id: farm.id },
+        });
+
+        return res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao excluir fazenda.' });
     }
 });
 
@@ -1259,7 +1445,7 @@ app.get('/pastos', async (req, res) => {
 });
 
 app.post('/pastos', async (req, res) => {
-    const { farmId, nome, name, areaHa, size, capacity, ativo, active } = req.body || {};
+    const { farmId, nome, name, areaHa, size, capacity, ativo, active, divisionType, type } = req.body || {};
     const paddockName = (nome || name || '').trim();
     if (!farmId || !paddockName) {
         return res.status(400).json({ message: 'Informe fazenda e nome do pasto.' });
@@ -1274,6 +1460,7 @@ app.post('/pastos', async (req, res) => {
         return res.status(400).json({ message: 'Capacidade do pasto inválida.' });
     }
     const activeValue = ativo === false || active === false ? false : true;
+    const normalizedDivisionType = (divisionType || type || '').trim() || null;
     try {
         const farm = await prisma.farm.findFirst({
             where: buildFarmScopeFilter(req, { id: String(farmId) }),
@@ -1292,6 +1479,7 @@ app.post('/pastos', async (req, res) => {
                 farmId: farm.id,
                 name: paddockName,
                 areaHa: areaValue,
+                divisionType: normalizedDivisionType,
                 capacity: capacityValue,
                 active: activeValue,
             },
@@ -1305,12 +1493,16 @@ app.post('/pastos', async (req, res) => {
 
 app.patch('/pastos/:id', async (req, res) => {
     const { id } = req.params;
-    const { nome, name, areaHa, size, capacity, ativo, active } = req.body || {};
+    const { nome, name, areaHa, size, capacity, ativo, active, divisionType, type } = req.body || {};
     const paddockName = typeof nome === 'string' || typeof name === 'string' ? (nome || name).trim() : null;
     const areaRaw = areaHa ?? size;
     const areaValue = areaRaw === undefined || areaRaw === null || areaRaw === '' ? undefined : Number(areaRaw);
     const capacityValue = capacity === undefined || capacity === null || capacity === '' ? undefined : parseNumber(capacity);
     const activeValue = ativo === undefined && active === undefined ? undefined : !(ativo === false || active === false);
+    const normalizedDivisionType =
+        divisionType === undefined && type === undefined
+            ? undefined
+            : ((divisionType || type || '').trim() || null);
     if (areaValue !== undefined && (Number.isNaN(areaValue) || areaValue <= 0)) {
         return res.status(400).json({ message: 'Área do pasto inválida.' });
     }
@@ -1345,6 +1537,7 @@ app.patch('/pastos/:id', async (req, res) => {
             data: {
                 ...(paddockName ? { name: paddockName } : {}),
                 ...(areaValue !== undefined ? { areaHa: areaValue } : {}),
+                ...(normalizedDivisionType !== undefined ? { divisionType: normalizedDivisionType } : {}),
                 ...(capacityValue !== undefined ? { capacity: capacityValue } : {}),
                 ...(activeValue !== undefined ? { active: activeValue } : {}),
             },

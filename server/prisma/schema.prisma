@@ -40,6 +40,7 @@ model Farm {
   lng                Float?
   size               Float
   notes              String?
+  responsibleName    String?               @map("responsible_name")
   mapAssetPath       String?
   mapData            Json?
   organizationId     String?
@@ -89,6 +90,7 @@ model Paddock {
   id               String        @id @default(uuid())
   name             String
   areaHa           Float?        @map("size")
+  divisionType     String?       @map("division_type")
   capacity         Float?
   lat              Float?
   lng              Float?
