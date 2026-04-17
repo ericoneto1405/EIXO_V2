@@ -84,6 +84,12 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
         }
     }, [showForm]);
 
+    useEffect(() => {
+        if (!showForm) {
+            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, [showForm]);
+
     return (
         <div className="space-y-6">
             <div className="rounded-[24px] border border-[#d7cab3] bg-[#fbf7ef] p-5">

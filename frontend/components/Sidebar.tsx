@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import AssistantChat from './AssistantChat'; // Added AssistantChat import
 
 interface SidebarProps {
     activeItem: string;
@@ -180,28 +181,22 @@ const SettingsIcon: React.FC = () => (
 
 const SidebarPanelIcon: React.FC<{ collapsed: boolean }> = ({ collapsed }) => (
     <svg
-        className="h-6 w-6"
+        className="h-4 w-4"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"
     >
         {collapsed ? (
             <>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M4 6h6" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M4 12h6" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M4 18h6" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M11 4.5l7 1.5-7 1.5" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M11 10.5l7 1.5-7 1.5" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M11 16.5l7 1.5-7 1.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M10 3L2 12L10 21" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M16 3L8 12L16 21" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M22 3L14 12L22 21" />
             </>
         ) : (
             <>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M14 6h6" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M14 12h6" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M14 18h6" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M13 4.5L6 6l7 1.5" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M13 10.5L6 12l7 1.5" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.3" d="M13 16.5L6 18l7 1.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M2 3L10 12L2 21" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M8 3L16 12L8 21" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.4" d="M14 3L22 12L14 21" />
             </>
         )}
     </svg>
@@ -270,7 +265,7 @@ const navItemsWithStructureSubItems: NavItem[] = navItems.map((item) =>
               ...item,
               subItems: [
                   { label: 'Fazendas e Setores', value: 'Fazendas', allowedLabels: ['Fazendas'] },
-                  { label: 'Mapa da Fazenda', value: 'Mapa da Fazenda' },
+                  { label: 'Mapa da Fazenda', value: 'Mapa da Fazenda', allowedLabels: ['Fazendas'] },
                   { label: 'Estruturas da Fazenda', value: 'Estruturas da Fazenda' },
                   { label: 'Equipe e Permissões', value: 'Equipe e Permissões' },
               ],
@@ -279,7 +274,7 @@ const navItemsWithStructureSubItems: NavItem[] = navItems.map((item) =>
 );
 
 const ChevronIndicator: React.FC<{ isOpen: boolean }> = ({ isOpen }) => (
-    <span className="text-xs text-current">{isOpen ? '▾' : '▸'}</span>
+    <span className="text-xl leading-none text-current">{isOpen ? '▾' : '▸'}</span>
 );
 
 interface SidebarButtonProps {
@@ -311,11 +306,11 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
         isSubItem ? 'text-[13px]' : 'text-sm'
     } font-medium transition-all duration-150 rounded-2xl ${disabled ? 'cursor-not-allowed opacity-70' : 'active:translate-y-[2px]'} ${
         disabled
-            ? 'border border-dashed border-[#7b6a55] bg-[#594b39]/40 text-[#d6ccb8]'
+            ? 'border border-dashed border-[#8b765d] bg-[#5f503d]/55 text-[#e3d7c1]'
             :
         isActive
             ? 'translate-y-[2px] border border-[#c7a56a] bg-[#d9b878] text-[#3e3122] shadow-[inset_0_3px_7px_rgba(120,95,58,0.22),0_1px_1px_rgba(255,255,255,0.20)]'
-            : 'border border-transparent text-[#e5dccb] shadow-[inset_0_0_0_rgba(0,0,0,0)] hover:translate-y-[2px] hover:border-[#6e5e47] hover:bg-[#5a4c39] hover:text-white hover:shadow-[inset_0_3px_7px_rgba(34,24,16,0.24)] active:bg-[#5a4c39]'
+            : 'border border-transparent text-[#f1e7d7] shadow-[inset_0_0_0_rgba(0,0,0,0)] hover:translate-y-[2px] hover:border-[#6e5e47] hover:bg-[#5a4c39] hover:text-white hover:shadow-[inset_0_3px_7px_rgba(34,24,16,0.24)] active:bg-[#5a4c39]'
     }`;
 
     return (
@@ -351,8 +346,9 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
 
 const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedModules }) => {
     const [isCollapsed, setIsCollapsed] = React.useState(false);
-    const [isAssistantVisible, setIsAssistantVisible] = React.useState(true);
+    const [isAssistantPanelVisible, setIsAssistantPanelVisible] = React.useState(true);
     const [isAssistantMinimized, setIsAssistantMinimized] = React.useState(false);
+    const [isChatOpen, setIsChatOpen] = React.useState(false);
     const location = useLocation();
     const navigate = useNavigate();
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
@@ -386,157 +382,170 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
     }, [isGeneticsRoute]);
 
     return (
-        <aside
-            className={`hidden lg:flex lg:shrink-0 flex-col px-4 py-5 transition-all duration-200 ${
-                isCollapsed ? 'w-20' : 'w-72'
-            }`}
-        >
-            <div className="flex h-full flex-col rounded-[30px] border border-[#6a5a46] bg-[#4c4030]/94 shadow-[0_14px_40px_rgba(66,46,24,0.14)] backdrop-blur">
-            <div className="flex items-start justify-between px-5 pb-2 pt-6">
-                <div className="flex-1">
-                    {!isCollapsed && (
-                        <div className="min-h-[124px]">
-                            <p className="text-[3.6rem] font-black leading-[0.9] text-[#f4eadb]">eixo</p>
-                            <p className="mt-3 pl-[2px] text-[11px] uppercase tracking-[0.16em] text-[#cdbfa8]">
-                                Gestão Pecuária de Corte
-                            </p>
-                        </div>
-                    )}
-                </div>
-                <button
-                    type="button"
-                    onClick={() => setIsCollapsed((prev) => !prev)}
-                    className="rounded-xl border border-[#6e5e47] bg-[#5a4c39] p-2.5 text-[#e8dcc7] transition-colors hover:bg-[#665742] hover:text-white"
-                    aria-label={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
-                >
-                    <SidebarPanelIcon collapsed={isCollapsed} />
-                </button>
-            </div>
-
-            <nav className="flex-1 overflow-y-auto px-3 pb-6 pt-0">
-                <ul className="space-y-1.5">
-                    {navItemsWithStructureSubItems.map((item) => {
-                        if (!item.disabled && !isModuleAllowed(item.allowedLabels || (item.value ? [item.value] : undefined))) {
-                            return null;
-                        }
-
-                        const visibleSubItems = item.subItems?.filter((subItem) => {
-                            if (!subItem.allowedLabels?.length && !subItem.path) {
-                                return true;
-                            }
-                            return isModuleAllowed(subItem.allowedLabels || [subItem.value]);
-                        }) || [];
-                        const hasSubItems = visibleSubItems.length > 0;
-                        const isExpanded = isGeneticsRoute && item.label === 'Eixo Genetics'
-                            ? true
-                            : Boolean(openGroups[item.label]);
-                        const isDirectPathActive = item.path
-                            ? location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
-                            : false;
-                        const isSubItemActive = visibleSubItems.some((subItem) =>
-                            subItem.path
-                                ? location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`)
-                                : activeItem === subItem.value,
-                        );
-                        const isParentActive = isDirectPathActive || isSubItemActive || (!!item.value && activeItem === item.value);
-
-                        return (
-                            <li key={item.label}>
-                                <SidebarButton
-                                    label={item.label}
-                                    icon={item.icon}
-                                    isActive={isParentActive}
-                                    isCollapsed={isCollapsed}
-                                    badge={item.badge}
-                                    disabled={item.disabled}
-                                    suffix={hasSubItems ? <ChevronIndicator isOpen={isExpanded} /> : undefined}
-                                    onClick={() => {
-                                        if (item.disabled) {
-                                            return;
-                                        }
-                                        if (hasSubItems) {
-                                            setOpenGroups((current) => ({ ...current, [item.label]: !isExpanded }));
-                                        }
-                                        if (item.value) {
-                                            handleSelect(item.value, item.path || visibleSubItems[0]?.path);
-                                        }
-                                    }}
-                                />
-                                {!isCollapsed && hasSubItems && isExpanded && (
-                                    <ul className="mt-1 space-y-1">
-                                        {visibleSubItems.map((subItem) => {
-                                            const isComingSoon = !subItem.path && !isModuleAllowed(subItem.allowedLabels || [subItem.value]);
-                                            const isSubActive = subItem.path
-                                                ? location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`)
-                                                : activeItem === subItem.value;
-                                            return (
-                                                <li key={subItem.label}>
-                                                    <SidebarButton
-                                                        label={subItem.label}
-                                                        isActive={isSubActive}
-                                                        isCollapsed={isCollapsed}
-                                                        isSubItem
-                                                        badge={isComingSoon ? 'Em breve' : undefined}
-                                                        disabled={isComingSoon}
-                                                        onClick={() => {
-                                                            if (isComingSoon) {
-                                                                return;
-                                                            }
-                                                            handleSelect(subItem.value, subItem.path);
-                                                        }}
-                                                    />
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                )}
-                            </li>
-                        );
-                    })}
-                </ul>
-            </nav>
-
-            {!isCollapsed && isAssistantVisible && (
-                <div className="px-5 pb-6">
-                    <div className="rounded-3xl border border-[#6e5e47] bg-[#2f261d] p-4 text-white shadow-lg">
-                        <div className="flex items-start justify-between">
-                            <div>
-                                <p className="text-sm font-semibold">Assistente Virtual</p>
-                                {!isAssistantMinimized && (
-                                    <p className="mt-1 text-xs text-white/75">
-                                        Tire dúvidas sobre o rebanho, finanças ou cadastros com o Eixo Copiloto.
-                                    </p>
-                                )}
+        <>
+            <aside
+                className={`hidden lg:flex lg:shrink-0 flex-col px-4 py-5 transition-all duration-200 ${
+                    isCollapsed ? 'w-20' : 'w-72'
+                }`}
+            >
+                <div className="flex h-full flex-col rounded-[30px] border border-[#6a5a46] bg-[#4c4030]/94 shadow-[0_14px_40px_rgba(66,46,24,0.14)] backdrop-blur">
+                <div className="flex items-start justify-between px-5 pb-2 pt-6">
+                    <div className="flex-1">
+                        {!isCollapsed && (
+                            <div className="min-h-[124px]">
+                                <p className="text-[3.6rem] font-black leading-[0.9] text-[#f4eadb]">eixo</p>
+                                <p className="mt-3 pl-[2px] text-[11px] uppercase tracking-[0.16em] text-[#cdbfa8]">
+                                    Gestão Pecuária de Corte
+                                </p>
                             </div>
-                            <div className="flex space-x-1">
-                                <button
-                                    type="button"
-                                    className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-xs font-bold transition-colors hover:bg-white/25"
-                                    onClick={() => setIsAssistantMinimized((prev) => !prev)}
-                                    aria-label={isAssistantMinimized ? 'Expandir assistente' : 'Minimizar assistente'}
-                                >
-                                    _
-                                </button>
-                                <button
-                                    type="button"
-                                    className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-xs font-bold transition-colors hover:bg-white/25"
-                                    onClick={() => setIsAssistantVisible(false)}
-                                    aria-label="Fechar assistente"
-                                >
-                                    x
-                                </button>
-                            </div>
-                        </div>
-                        {!isAssistantMinimized && (
-                            <button className="mt-4 w-full py-2 rounded-xl bg-white/15 text-sm font-semibold hover:bg-white/25 transition-colors">
-                                Abrir chat
-                            </button>
                         )}
+                    </div>
+                    <button
+                        type="button"
+                        onClick={() => setIsCollapsed((prev) => !prev)}
+                        className="rounded-md border border-[#6e5e47] bg-[#5a4c39] p-1.5 text-[#e8dcc7] transition-colors hover:bg-[#665742] hover:text-white"
+                        aria-label={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
+                    >
+                        <SidebarPanelIcon collapsed={isCollapsed} />
+                    </button>
+                </div>
+
+                <nav className="flex-1 overflow-y-auto px-3 pb-6 pt-0">
+                    <ul className="space-y-1.5">
+                        {navItemsWithStructureSubItems.map((item) => {
+                            if (!item.disabled && !isModuleAllowed(item.allowedLabels || (item.value ? [item.value] : undefined))) {
+                                return null;
+                            }
+
+                            const visibleSubItems = item.subItems?.filter((subItem) => {
+                                if (!subItem.allowedLabels?.length && !subItem.path) {
+                                    return true;
+                                }
+                                return isModuleAllowed(subItem.allowedLabels || [subItem.value]);
+                            }) || [];
+                            const hasSubItems = visibleSubItems.length > 0;
+                            const isExpanded = isGeneticsRoute && item.label === 'Eixo Genetics'
+                                ? true
+                                : Boolean(openGroups[item.label]);
+                            const isDirectPathActive = item.path
+                                ? location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
+                                : false;
+                            const isSubItemActive = visibleSubItems.some((subItem) =>
+                                subItem.path
+                                    ? location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`)
+                                    : activeItem === subItem.value,
+                            );
+                            const isParentActive = isDirectPathActive || isSubItemActive || (!!item.value && activeItem === item.value);
+
+                            return (
+                                <li key={item.label}>
+                                    <SidebarButton
+                                        label={item.label}
+                                        icon={item.icon}
+                                        isActive={isParentActive}
+                                        isCollapsed={isCollapsed}
+                                        badge={item.badge}
+                                        disabled={item.disabled}
+                                        suffix={hasSubItems ? <ChevronIndicator isOpen={isExpanded} /> : undefined}
+                                        onClick={() => {
+                                            if (item.disabled) {
+                                                return;
+                                            }
+                                            if (hasSubItems) {
+                                                setOpenGroups((current) => ({ ...current, [item.label]: !isExpanded }));
+                                            }
+                                            if (item.value) {
+                                                handleSelect(item.value, item.path || visibleSubItems[0]?.path);
+                                            }
+                                        }}
+                                    />
+                                    {!isCollapsed && hasSubItems && isExpanded && (
+                                        <ul className="mt-1 space-y-1">
+                                            {visibleSubItems.map((subItem) => {
+                                                const isComingSoon = !subItem.path && !isModuleAllowed(subItem.allowedLabels || [subItem.value]);
+                                                const isSubActive = subItem.path
+                                                    ? location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`)
+                                                    : activeItem === subItem.value;
+                                                return (
+                                                    <li key={subItem.label}>
+                                                        <SidebarButton
+                                                            label={subItem.label}
+                                                            isActive={isSubActive}
+                                                            isCollapsed={isCollapsed}
+                                                            isSubItem
+                                                            badge={isComingSoon ? 'Em breve' : undefined}
+                                                            disabled={isComingSoon}
+                                                            onClick={() => {
+                                                                if (isComingSoon) {
+                                                                    return;
+                                                                }
+                                                                handleSelect(subItem.value, subItem.path);
+                                                            }}
+                                                        />
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </nav>
+
+                {!isCollapsed && isAssistantPanelVisible && (
+                    <div className="px-5 pb-6">
+                        <div className="rounded-3xl border border-[#6e5e47] bg-[#2f261d] p-4 text-white shadow-lg">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold">Assistente Virtual</p>
+                                    {!isAssistantMinimized && (
+                                        <p className="mt-1 text-xs text-white/75">
+                                            Tire dúvidas sobre o rebanho, finanças ou cadastros com o Eixo Copiloto.
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex space-x-1">
+                                    <button
+                                        type="button"
+                                        className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-xs font-bold transition-colors hover:bg-white/25"
+                                        onClick={() => setIsAssistantMinimized((prev) => !prev)}
+                                        aria-label={isAssistantMinimized ? 'Expandir assistente' : 'Minimizar assistente'}
+                                    >
+                                        _
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-xs font-bold transition-colors hover:bg-white/25"
+                                        onClick={() => setIsAssistantPanelVisible(false)}
+                                        aria-label="Fechar assistente"
+                                    >
+                                        x
+                                    </button>
+                                </div>
+                            </div>
+                            {!isAssistantMinimized && (
+                                <button
+                                    className="mt-4 w-full py-2 rounded-xl bg-white/15 text-sm font-semibold hover:bg-white/25 transition-colors"
+                                    onClick={() => setIsChatOpen(true)}
+                                >
+                                    Abrir chat
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+                </div>
+            </aside>
+
+            {isChatOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="relative w-full max-w-md h-[80vh] flex flex-col">
+                        <AssistantChat onClose={() => setIsChatOpen(false)} farmId={null} />
                     </div>
                 </div>
             )}
-            </div>
-        </aside>
+        </>
     );
 };
 

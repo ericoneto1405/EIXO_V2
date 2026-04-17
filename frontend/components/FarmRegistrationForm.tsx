@@ -41,6 +41,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
     const [activeFarm, setActiveFarm] = useState<Farm | null>(initialFarm || null);
+    const [currentStep, setCurrentStep] = useState<'farm' | 'divisions'>(initialFarm ? 'divisions' : 'farm');
     const nameInputRef = useRef<HTMLInputElement | null>(null);
     const divisionsRef = useRef<HTMLDivElement | null>(null);
 
@@ -80,6 +81,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 divisionType: division.divisionType || 'pasto',
             })),
         );
+        setCurrentStep('divisions');
     }, [initialFarm]);
 
     const handleAddDivision = () => {
@@ -125,44 +127,62 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         divisionIdCounter = 0;
     };
 
-    const saveFarm = async (mode: 'continue' | 'save-and-return') => {
-        setSubmitError(null);
-        setSubmitSuccess(null);
-        const currentFarm = activeFarm || initialFarm;
-
-        const payloadDivisions: Paddock[] = divisions.map((division) => ({
-            id: division.id,
-            name: division.name.trim(),
-            areaHa: parseFloat(division.areaHa) || 0,
-            divisionType: division.divisionType,
-        }));
-
-        const hasInvalidDivision = payloadDivisions.some(
-            (division) =>
-                !division.name ||
-                Number.isNaN(division.areaHa ?? 0) ||
-                (division.areaHa ?? 0) <= 0 ||
-                !division.divisionType,
-        );
-        if (!farmName.trim() || !farmCity.trim()) {
-            setSubmitError('Informe nome e cidade da fazenda.');
+    const scrollToDivisionsStep = () => {
+        const target = divisionsRef.current;
+        if (!target) {
             return;
         }
-        if (payloadDivisions.length > 0 && hasInvalidDivision) {
-            setSubmitError('Divisões precisam de nome, área útil e tipo válidos.');
+        let scrollParent: HTMLElement | null = target.parentElement;
+        while (scrollParent) {
+            const style = window.getComputedStyle(scrollParent);
+            const canScroll = /(auto|scroll)/.test(style.overflowY) && scrollParent.scrollHeight > scrollParent.clientHeight;
+            if (canScroll) {
+                const parentRect = scrollParent.getBoundingClientRect();
+                const targetRect = target.getBoundingClientRect();
+                const nextTop = scrollParent.scrollTop + (targetRect.top - parentRect.top) - 20;
+                scrollParent.scrollTo({ top: Math.max(nextTop, 0), behavior: 'smooth' });
+                return;
+            }
+            scrollParent = scrollParent.parentElement;
+        }
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    const syncSavedFarm = (savedFarm: Farm | null) => {
+        if (!savedFarm) {
+            return;
+        }
+        setActiveFarm(savedFarm);
+        setFarmName(savedFarm.name || '');
+        setFarmCity(savedFarm.city || '');
+        setFarmLat(savedFarm.lat?.toString?.() || '');
+        setFarmLng(savedFarm.lng?.toString?.() || '');
+        setFarmSize(savedFarm.size?.toString?.() || '');
+        setResponsibleName(savedFarm.responsibleName || '');
+        setFarmNotes(savedFarm.notes || '');
+        setDivisions(
+            (savedFarm.paddocks || []).map((division, index) => ({
+                id: division.id,
+                name: division.name || `Divisão ${index + 1}`,
+                areaHa: division.areaHa?.toString?.() || '',
+                divisionType: division.divisionType || 'pasto',
+            })),
+        );
+    };
+
+    const saveFarmDetails = async () => {
+        setSubmitError(null);
+        setSubmitSuccess(null);
+        if (!farmName.trim() || !farmCity.trim()) {
+            setSubmitError('Informe nome e cidade da fazenda.');
             return;
         }
         if (farmSizeFloat <= 0) {
             setSubmitError('Informe o tamanho total da fazenda.');
             return;
         }
-        if (currentFarm && mode === 'continue' && payloadDivisions.length > 0 && !isBalancedArea) {
-            setSubmitError('Distribua a área total da fazenda entre as divisões para salvar.');
-            return;
-        }
-
         setIsSubmitting(true);
-        const requestUrl = currentFarm ? `/farms/${currentFarm.id}` : '/farms';
+        const requestUrl = activeFarm ? `/farms/${activeFarm.id}` : '/farms';
         const requestBody = JSON.stringify({
             name: farmName.trim(),
             city: farmCity.trim(),
@@ -171,12 +191,17 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             size: farmSizeFloat,
             responsibleName: responsibleName.trim(),
             notes: farmNotes.trim(),
-            paddocks: payloadDivisions,
+            paddocks: activeFarm ? divisions.map((division) => ({
+                id: division.id,
+                name: division.name.trim(),
+                areaHa: parseFloat(division.areaHa) || 0,
+                divisionType: division.divisionType,
+            })) : [],
         });
 
         const persistFarm = async () => {
             return fetch(buildApiUrl(requestUrl), {
-                method: currentFarm ? 'PATCH' : 'POST',
+                method: activeFarm ? 'PATCH' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: requestBody,
@@ -193,37 +218,19 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             }
 
             const savedFarm = payload?.farm || null;
-            setActiveFarm(savedFarm);
-            setSubmitSuccess(currentFarm ? 'Fazenda atualizada com sucesso!' : 'Fazenda salva. Agora cadastre as divisões.');
-            if (savedFarm) {
-                setFarmName(savedFarm.name || '');
-                setFarmCity(savedFarm.city || '');
-                setFarmLat(savedFarm.lat?.toString?.() || '');
-                setFarmLng(savedFarm.lng?.toString?.() || '');
-                setFarmSize(savedFarm.size?.toString?.() || '');
-                setResponsibleName(savedFarm.responsibleName || '');
-                setFarmNotes(savedFarm.notes || '');
-                setDivisions(
-                    (savedFarm.paddocks || []).map((division, index) => ({
-                        id: division.id,
-                        name: division.name || `Divisão ${index + 1}`,
-                        areaHa: division.areaHa?.toString?.() || '',
-                        divisionType: division.divisionType || 'pasto',
-                    })),
-                );
-            }
+            syncSavedFarm(savedFarm);
+            setCurrentStep('divisions');
+            setSubmitSuccess(activeFarm ? 'Dados da fazenda atualizados. Continue nas divisões.' : 'Fazenda salva. Agora cadastre as divisões.');
             if (payload?.farm) {
-                if (currentFarm) {
+                if (activeFarm) {
                     onFarmUpdated?.(payload.farm);
                 } else {
                     onFarmCreated?.(payload.farm);
                 }
             }
-            if (mode === 'save-and-return') {
-                onSaveAndReturn?.();
-                return;
-            }
-            divisionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            requestAnimationFrame(() => {
+                scrollToDivisionsStep();
+            });
         } catch (error) {
             console.error(error);
             try {
@@ -237,37 +244,19 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 }
 
                 const savedFarm = retryPayload?.farm || null;
-                setActiveFarm(savedFarm);
-                setSubmitSuccess(currentFarm ? 'Fazenda atualizada com sucesso!' : 'Fazenda salva. Agora cadastre as divisões.');
-                if (savedFarm) {
-                    setFarmName(savedFarm.name || '');
-                    setFarmCity(savedFarm.city || '');
-                    setFarmLat(savedFarm.lat?.toString?.() || '');
-                    setFarmLng(savedFarm.lng?.toString?.() || '');
-                    setFarmSize(savedFarm.size?.toString?.() || '');
-                    setResponsibleName(savedFarm.responsibleName || '');
-                    setFarmNotes(savedFarm.notes || '');
-                    setDivisions(
-                        (savedFarm.paddocks || []).map((division, index) => ({
-                            id: division.id,
-                            name: division.name || `Divisão ${index + 1}`,
-                            areaHa: division.areaHa?.toString?.() || '',
-                            divisionType: division.divisionType || 'pasto',
-                        })),
-                    );
-                }
+                syncSavedFarm(savedFarm);
+                setCurrentStep('divisions');
+                setSubmitSuccess(activeFarm ? 'Dados da fazenda atualizados. Continue nas divisões.' : 'Fazenda salva. Agora cadastre as divisões.');
                 if (retryPayload?.farm) {
-                    if (currentFarm) {
+                    if (activeFarm) {
                         onFarmUpdated?.(retryPayload.farm);
                     } else {
                         onFarmCreated?.(retryPayload.farm);
                     }
                 }
-                if (mode === 'save-and-return') {
-                    onSaveAndReturn?.();
-                    return;
-                }
-                divisionsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                requestAnimationFrame(() => {
+                    scrollToDivisionsStep();
+                });
             } catch (retryError) {
                 console.error(retryError);
                 setSubmitError('Não foi possível salvar a fazenda. Verifique sua conexão.');
@@ -277,13 +266,115 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         }
     };
 
+    const saveDivisions = async (mode: 'complete' | 'save-and-return') => {
+        setSubmitError(null);
+        setSubmitSuccess(null);
+
+        if (!activeFarm) {
+            setSubmitError('Salve a fazenda antes de cadastrar as divisões.');
+            return;
+        }
+
+        const payloadDivisions: Paddock[] = divisions.map((division) => ({
+            id: division.id,
+            name: division.name.trim(),
+            areaHa: parseFloat(division.areaHa) || 0,
+            divisionType: division.divisionType,
+        }));
+
+        const hasInvalidDivision = payloadDivisions.some(
+            (division) =>
+                !division.name ||
+                Number.isNaN(division.areaHa ?? 0) ||
+                (division.areaHa ?? 0) <= 0 ||
+                !division.divisionType,
+        );
+
+        if (payloadDivisions.length > 0 && hasInvalidDivision) {
+            setSubmitError('Divisões precisam de nome, área útil e tipo válidos.');
+            return;
+        }
+
+        if (mode === 'complete' && payloadDivisions.length > 0 && !isBalancedArea) {
+            setSubmitError('Distribua a área total da fazenda entre as divisões para salvar.');
+            return;
+        }
+
+        setIsSubmitting(true);
+        const requestBody = JSON.stringify({
+            name: farmName.trim(),
+            city: farmCity.trim(),
+            lat: farmLat.trim(),
+            lng: farmLng.trim(),
+            size: farmSizeFloat,
+            responsibleName: responsibleName.trim(),
+            notes: farmNotes.trim(),
+            paddocks: payloadDivisions,
+        });
+
+        const persistDivisions = async () => {
+            return fetch(buildApiUrl(`/farms/${activeFarm.id}`), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: requestBody,
+            });
+        };
+
+        try {
+            const response = await persistDivisions();
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                setSubmitError(payload?.message || 'Não foi possível salvar as divisões.');
+                return;
+            }
+
+            syncSavedFarm(payload?.farm || null);
+            onFarmUpdated?.(payload.farm);
+            if (mode === 'save-and-return') {
+                setSubmitSuccess('Progresso salvo com sucesso.');
+                onSaveAndReturn?.();
+                return;
+            }
+            setSubmitSuccess('Divisões salvas com sucesso.');
+        } catch (error) {
+            console.error(error);
+            try {
+                await detectApiBaseUrl();
+                const retryResponse = await persistDivisions();
+                const retryPayload = await retryResponse.json().catch(() => ({}));
+                if (!retryResponse.ok) {
+                    setSubmitError(retryPayload?.message || 'Não foi possível salvar as divisões.');
+                    return;
+                }
+                syncSavedFarm(retryPayload?.farm || null);
+                onFarmUpdated?.(retryPayload.farm);
+                if (mode === 'save-and-return') {
+                    setSubmitSuccess('Progresso salvo com sucesso.');
+                    onSaveAndReturn?.();
+                    return;
+                }
+                setSubmitSuccess('Divisões salvas com sucesso.');
+            } catch (retryError) {
+                console.error(retryError);
+                setSubmitError('Não foi possível salvar as divisões. Verifique sua conexão.');
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     return (
         <div className="rounded-[24px] border border-[#d7cab3] bg-[#fffaf1] p-6 sm:p-8">
-            <h2 className="mb-2 text-2xl font-bold text-[#2f3a2d]">{(activeFarm || initialFarm) ? 'Editar Fazenda' : 'Cadastro de Fazenda'}</h2>
-            <p className="mb-6 text-sm text-[#6d6558]">Cadastre a fazenda, distribua a área entre as divisões e mantenha a estrutura territorial organizada.</p>
+            <h2 className="mb-2 text-2xl font-bold text-[#2f3a2d]">{activeFarm ? 'Editar Fazenda' : 'Cadastro de Fazenda'}</h2>
+            <p className="mb-6 text-sm text-[#6d6558]">
+                {currentStep === 'farm'
+                    ? 'Primeiro salve os dados principais da fazenda.'
+                    : 'Agora cadastre as divisões e complete a estrutura territorial.'}
+            </p>
             <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
-                {/* Farm Details Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {currentStep === 'farm' ? (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div>
                         <label htmlFor="farmName" className="block text-sm font-medium text-[#5f5648]">Nome da Fazenda</label>
                         <input
@@ -332,7 +423,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         </button>
                         <button
                             type="button"
-                            onClick={() => void saveFarm('continue')}
+                            onClick={() => void saveFarmDetails()}
                             disabled={isSaveDisabled}
                             className="flex items-center rounded-2xl bg-[#9d7d4d] px-6 py-2.5 font-bold text-white transition-colors duration-200 hover:bg-[#8f7144] disabled:cursor-not-allowed disabled:bg-[#b8ab95]"
                         >
@@ -340,8 +431,24 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         </button>
                     </div>
                 </div>
-
-                {/* Divisions Section */}
+                ) : (
+                <>
+                <div className="rounded-2xl border border-[#e2d7c7] bg-[#f6efe3] p-4">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7350]">Dados salvos</p>
+                            <h3 className="mt-1 text-lg font-semibold text-[#2f3a2d]">{farmName}</h3>
+                            <p className="mt-1 text-sm text-[#6d6558]">{farmCity}</p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setCurrentStep('farm')}
+                            className="rounded-xl border border-[#c7b59b] bg-[#fffaf1] px-4 py-2 text-sm font-semibold text-[#5f5648] transition-colors hover:bg-[#f3ebde]"
+                        >
+                            Editar dados da fazenda
+                        </button>
+                    </div>
+                </div>
                 <div ref={divisionsRef}>
                     <div className="flex items-center justify-between gap-4">
                         <div>
@@ -418,6 +525,8 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         </button>
                     </div>
                 </div>
+                </>
+                )}
 
                 {submitError && (
                     <p className="text-sm text-red-600">{submitError}</p>
@@ -426,19 +535,27 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     <p className="text-sm text-green-700">{submitSuccess}</p>
                 )}
 
-                {/* Summary and Validation */}
-                {activeFarm && (
+                {currentStep === 'divisions' && activeFarm && (
                     <div className="flex justify-end">
                         <button
                             type="button"
-                            onClick={() => void saveFarm('save-and-return')}
+                            onClick={() => void saveDivisions('save-and-return')}
                             disabled={isSaveDisabled}
                             className="rounded-xl border border-[#c7b59b] bg-[#f3ebde] px-4 py-2 text-sm font-semibold text-[#5f5648] transition-colors duration-200 hover:bg-[#eadfcd] disabled:cursor-not-allowed disabled:bg-[#e1d7c7]"
                         >
-                            Salvar e voltar
+                            {isSubmitting ? 'Salvando...' : 'Salvar e voltar'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void saveDivisions('complete')}
+                            disabled={isSaveDisabled}
+                            className="ml-3 rounded-xl bg-[#9d7d4d] px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#8f7144] disabled:cursor-not-allowed disabled:bg-[#b8ab95]"
+                        >
+                            {isSubmitting ? 'Salvando...' : 'Salvar divisões'}
                         </button>
                     </div>
                 )}
+                {currentStep === 'divisions' && (
                 <div className="mt-4 space-y-2 rounded-2xl border border-[#e2d7c7] bg-[#f6efe3] p-4">
                     <div className="flex justify-between text-sm">
                         <span className="font-medium text-[#6d6558]">Área Total da Fazenda:</span>
@@ -456,6 +573,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         <p className="pt-2 text-center text-xs text-yellow-700">A soma das áreas das divisões deve ser igual à área total da fazenda (tolerância de 0.0001 ha).</p>
                      )}
                 </div>
+                )}
             </form>
         </div>
     );

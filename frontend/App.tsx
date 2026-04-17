@@ -13,6 +13,7 @@ import CashFlow from './components/CashFlow';
 import DRE from './components/DRE';
 import Header from './components/Header';
 import Farms from './components/Farms';
+import FarmMap from './components/FarmMap';
 import Suppliers from './components/Suppliers';
 import Medicines from './components/Medicines';
 import Feeds from './components/Feeds';
@@ -42,7 +43,7 @@ const ADMIN_EMAIL = 'admin@eixo.com';
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Plantel P.O.', 'Eixo Genetics'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda', 'Rebanho Comercial', 'Plantel P.O.', 'Eixo Genetics'],
     },
     {
         title: 'Cadastros',
@@ -63,6 +64,10 @@ const MODULE_CATEGORIES = [
 ];
 
 const ALL_MODULES = MODULE_CATEGORIES.flatMap((category) => category.modules);
+
+const SUB_VIEW_PARENT: Record<string, string> = {
+    'Mapa da Fazenda': 'Fazendas',
+};
 
 const AppContent: React.FC = () => {
     const location = useLocation();
@@ -235,10 +240,11 @@ const AppContent: React.FC = () => {
     }, [loadFarms]);
 
     React.useEffect(() => {
+        const parentView = SUB_VIEW_PARENT[activeView] ?? activeView;
         if (
             isAuthenticated &&
             currentAllowedModules.length &&
-            !currentAllowedModules.includes(activeView)
+            !currentAllowedModules.includes(parentView)
         ) {
             const fallbackView = currentAllowedModules[0] || 'Visão Geral';
             setActiveView(fallbackView);
@@ -414,6 +420,23 @@ const AppContent: React.FC = () => {
                     );
                 }
                 return <NutritionModule farmId={selectedFarmId} currentUser={currentUser} />;
+            case 'Mapa da Fazenda':
+                if (!hasSelectedFarm || !selectedFarm) {
+                    return (
+                        <FarmRequiredPanel
+                            title="Selecione uma fazenda para ver o mapa"
+                            actionLabel="Selecionar fazenda"
+                            onAction={() => setActiveView('Fazendas')}
+                        />
+                    );
+                }
+                return (
+                    <FarmMap
+                        farm={selectedFarm}
+                        asPage
+                        onGeometrySaved={handleFarmUpdated}
+                    />
+                );
             case 'Fazendas':
                 return (
                     <Farms
@@ -473,16 +496,16 @@ const AppContent: React.FC = () => {
 
     return (
         <>
-            <div className="relative min-h-screen overflow-hidden bg-[#e8dfcf] font-sans text-stone-900">
+            <div className="relative min-h-screen overflow-hidden bg-stone-100 font-sans text-stone-900">
                 <div
-                    className="pointer-events-none absolute inset-0 opacity-18"
+                    className="pointer-events-none absolute inset-0 opacity-24"
                     style={{
                         backgroundImage: "url('/pasture-horizon.jpg')",
                         backgroundPosition: 'center top',
                         backgroundSize: 'cover',
                     }}
                 />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-[#f1e7d6]/84 via-[#e8dfcf]/96 to-[#ddd1bd]" />
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-stone-100/92 via-stone-100/95 to-stone-200/94" />
 
                 <div className="relative flex min-h-screen">
                     <Sidebar
@@ -500,8 +523,8 @@ const AppContent: React.FC = () => {
                             canRegisterUsers={currentUser?.email === ADMIN_EMAIL}
                             onOpenUserRegister={() => setIsRegisterModalOpen(true)}
                         />
-                        <div className="mt-[10px] flex-1 overflow-hidden rounded-[28px] border border-[#cdbda5] bg-[#f6f0e5]/96 backdrop-blur">
-                            <div className="h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6">
+                        <div className="mt-[10px] flex-1 overflow-hidden rounded-[28px] border border-stone-300 bg-white/96 backdrop-blur">
+                            <div className={activeView === 'Mapa da Fazenda' ? 'h-full' : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'}>
                                 {renderContent()}
                             </div>
                         </div>

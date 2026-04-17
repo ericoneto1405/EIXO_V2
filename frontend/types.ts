@@ -114,6 +114,9 @@ export interface Paddock {
     areaHa?: number | null;
     divisionType?: string | null;
     capacity?: number | null;
+    lat?: number | null;
+    lng?: number | null;
+    mapGeometry?: object | null;
     active?: boolean;
     createdAt?: string | null;
     updatedAt?: string | null;

@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import { registerNutritionModuleRoutes } from './nutritionModule.js';
+import { GoogleGenerativeAI } from '@google/generative-ai'; // Added for Gemini AI
 
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -347,6 +348,9 @@ const serializePaddock = (paddock) => ({
     areaHa: paddock.areaHa ?? null,
     divisionType: paddock.divisionType ?? null,
     capacity: paddock.capacity ?? null,
+    lat: paddock.lat ?? null,
+    lng: paddock.lng ?? null,
+    mapGeometry: paddock.mapGeometry ?? null,
     active: paddock.active ?? true,
     createdAt: paddock.createdAt?.toISOString?.() ?? null,
     updatedAt: paddock.updatedAt?.toISOString?.() ?? null,
@@ -1019,6 +1023,41 @@ const requireAuth = async (req, res, next) => {
     }
 };
 
+// Initialize Google Generative AI
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
+if (!GOOGLE_API_KEY) {
+    console.warn('GOOGLE_API_KEY is not set. Gemini API will not be available.');
+}
+const genAI = GOOGLE_API_KEY ? new GoogleGenerativeAI(GOOGLE_API_KEY) : null;
+const model = genAI ? genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }) : null;
+
+app.post('/api/chat/send-message', requireAuth, async (req, res) => {
+    console.log('Recebida uma requisição para /api/chat/send-message'); // Debug log
+    if (!model) {
+        return res.status(503).json({ message: 'Assistente de IA não disponível. Chave de API ausente.' });
+    }
+
+    const { message, history } = req.body || {};
+    if (!message) {
+        return res.status(400).json({ message: 'Mensagem vazia.' });
+    }
+
+    try {
+        const chat = model.startChat({
+            history: history || [],
+        });
+
+        const result = await chat.sendMessage(message);
+        const response = await result.response;
+        const text = response.text();
+
+        return res.json({ response: text });
+    } catch (error) {
+        console.error('Erro ao comunicar com a API do Gemini:', error);
+        return res.status(500).json({ message: 'Erro ao processar sua solicitação com o assistente de IA.' });
+    }
+});
+
 app.use(
     ['/farms', '/lots', '/animals', '/users', '/seasons', '/repro-events', '/genetics', '/po', '/nutrition', '/pastos'],
     requireAuth,
@@ -1353,6 +1392,7 @@ app.patch('/farms/:id', async (req, res) => {
                             name: division.name,
                             areaHa: division.areaHa,
                             divisionType: division.divisionType,
+                            ...(division.mapGeometry !== undefined ? { mapGeometry: division.mapGeometry } : {}),
                         },
                     });
                     continue;
@@ -1364,6 +1404,7 @@ app.patch('/farms/:id', async (req, res) => {
                         name: division.name,
                         areaHa: division.areaHa,
                         divisionType: division.divisionType,
+                        ...(division.mapGeometry !== undefined ? { mapGeometry: division.mapGeometry } : {}),
                         active: true,
                     },
                 });
@@ -1415,6 +1456,66 @@ app.delete('/farms/:id', async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao excluir fazenda.' });
+    }
+});
+
+app.get('/farms/:id/map-summary', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const farm = await prisma.farm.findFirst({
+            where: buildFarmScopeFilter(req, { id: String(id) }),
+            include: { paddocks: { orderBy: { createdAt: 'asc' } } },
+        });
+        if (!farm) {
+            return res.status(404).json({ message: 'Fazenda não encontrada.' });
+        }
+
+        const paddockIds = farm.paddocks.map((p) => p.id);
+
+        const [commercialGroups, poGroups] = await Promise.all([
+            prisma.animal.groupBy({
+                by: ['currentPaddockId'],
+                where: { farmId: farm.id, currentPaddockId: { in: paddockIds } },
+                _count: { id: true },
+                _sum: { pesoAtual: true },
+            }),
+            prisma.poAnimal.groupBy({
+                by: ['currentPaddockId'],
+                where: { farmId: farm.id, currentPaddockId: { in: paddockIds } },
+                _count: { id: true },
+                _sum: { pesoAtual: true },
+            }),
+        ]);
+
+        const commercialMap = new Map(commercialGroups.map((g) => [g.currentPaddockId, g]));
+        const poMap = new Map(poGroups.map((g) => [g.currentPaddockId, g]));
+
+        const summary = farm.paddocks.map((paddock) => {
+            const commercial = commercialMap.get(paddock.id);
+            const po = poMap.get(paddock.id);
+            const animalCount = commercial?._count?.id ?? 0;
+            const poAnimalCount = po?._count?.id ?? 0;
+            const totalWeightKg = (commercial?._sum?.pesoAtual ?? 0) + (po?._sum?.pesoAtual ?? 0);
+            const areaHa = paddock.areaHa ?? 0;
+            const uaTotal = totalWeightKg / 450;
+            const lotacao = areaHa > 0 ? uaTotal / areaHa : null;
+            return {
+                paddockId: paddock.id,
+                paddockName: paddock.name,
+                areaHa,
+                divisionType: paddock.divisionType ?? null,
+                animalCount,
+                poAnimalCount,
+                totalAnimals: animalCount + poAnimalCount,
+                totalWeightKg,
+                lotacaoUaHa: lotacao !== null ? Math.round(lotacao * 100) / 100 : null,
+            };
+        });
+
+        return res.json({ summary });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar resumo do mapa.' });
     }
 });
 

@@ -220,7 +220,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                 Gestão Pecuária com Controle Real
               </div>
-              <h1 className="text-balance text-4xl font-black leading-tight text-stone-900 lg:text-6xl">
+              <h1 className="font-brand text-balance text-4xl font-extrabold leading-tight text-stone-900 lg:text-6xl">
                 Mais controle na fazenda.
                 <br />
                 Mais clareza na gestão.
@@ -294,7 +294,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
         <section className="py-16 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 lg:px-8">
             <div className="mx-auto mb-16 max-w-3xl text-center">
-              <h2 className="text-3xl font-black text-stone-900 lg:text-4xl">Tão simples quanto deveria ser</h2>
+              <h2 className="font-brand text-3xl font-extrabold text-stone-900 lg:text-4xl">Tão simples quanto deveria ser</h2>
               <p className="mt-4 text-lg text-stone-600">Três passos para sair do caderno e ter gestão real na fazenda</p>
             </div>
             <div className="grid gap-8 md:grid-cols-3">
@@ -319,7 +319,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
                 },
               ].map((step) => (
                 <div key={step.number} className="rounded-3xl border border-stone-200 bg-white p-8 shadow-sm">
-                  <div className="mb-6 text-5xl font-black text-amber-200">{step.number}</div>
+                  <div className="font-brand mb-6 text-5xl font-extrabold text-amber-200">{step.number}</div>
                   <step.icon className="mb-6 h-8 w-8 text-primary" />
                   <h3 className="text-xl font-bold text-stone-900">{step.title}</h3>
                   <p className="mt-3 leading-relaxed text-stone-600">{step.description}</p>
@@ -332,7 +332,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
         <section id="beneficios" className="bg-stone-100/70 py-16 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 lg:px-8">
             <div className="mx-auto mb-12 max-w-3xl text-center">
-              <h2 className="text-3xl font-black text-stone-900 lg:text-4xl">Por que sair do caderno e das planilhas</h2>
+              <h2 className="font-brand text-3xl font-extrabold text-stone-900 lg:text-4xl">Por que sair do caderno e das planilhas</h2>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {benefits.map((benefit) => (
@@ -349,7 +349,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
         <section className="bg-white py-20 lg:py-28">
           <div className="mx-auto max-w-7xl px-4 lg:px-8">
             <div className="mb-16 text-center">
-              <h2 className="text-3xl font-black text-stone-900 lg:text-4xl">De dados soltos para decisões claras</h2>
+              <h2 className="font-brand text-3xl font-extrabold text-stone-900 lg:text-4xl">De dados soltos para decisões claras</h2>
               <p className="mx-auto mt-4 max-w-2xl text-lg text-stone-600">
                 O EIXO organiza o que você já registra e transforma em visão prática, destacando o que precisa de atenção.
               </p>
@@ -415,7 +415,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
               <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-100/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" /> Realidade do Campo
               </div>
-              <h2 className="text-3xl font-black text-stone-900 lg:text-4xl">
+              <h2 className="font-brand text-3xl font-extrabold text-stone-900 lg:text-4xl">
                 Da fazenda ao indicador, com mais controle e menos ruído.
               </h2>
               <p className="mt-4 text-lg leading-relaxed text-stone-600">
@@ -443,7 +443,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
         <section className="py-16 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 lg:px-8">
             <div className="mx-auto mb-12 max-w-3xl text-center">
-              <h2 className="text-3xl font-black text-stone-900 lg:text-4xl">O EIXO foi pensado para a rotina real da pecuária</h2>
+              <h2 className="font-brand text-3xl font-extrabold text-stone-900 lg:text-4xl">O EIXO foi pensado para a rotina real da pecuária</h2>
               <p className="mt-4 text-lg text-stone-600">Não é vitrine vazia. É estrutura de gestão.</p>
             </div>
             <div className="grid gap-6 lg:grid-cols-2">
@@ -488,7 +488,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
         <section id="modulos" className="bg-stone-100/70 py-16 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 lg:px-8">
             <div className="mx-auto mb-12 max-w-3xl text-center">
-              <h2 className="text-3xl font-black text-stone-900 lg:text-4xl">Módulos que conversam entre si</h2>
+              <h2 className="font-brand text-3xl font-extrabold text-stone-900 lg:text-4xl">Módulos que conversam entre si</h2>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               {modules.map((module) => (
@@ -496,7 +496,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
                   <div className="mb-4 inline-flex rounded-2xl bg-amber-100 p-3">
                     <module.icon className="h-6 w-6 text-amber-700" />
                   </div>
-                  <h3 className="text-xl font-black text-stone-900">{module.title}</h3>
+                  <h3 className="font-brand text-xl font-extrabold text-stone-900">{module.title}</h3>
                   <p className="mt-3 text-sm leading-relaxed text-stone-600">{module.description}</p>
                 </div>
               ))}
@@ -507,7 +507,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
         <section className="py-16 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 lg:px-8">
             <div className="mx-auto mb-12 max-w-3xl text-center">
-              <h2 className="text-3xl font-black text-stone-900 lg:text-4xl">O que torna o EIXO mais confiável na prática</h2>
+              <h2 className="font-brand text-3xl font-extrabold text-stone-900 lg:text-4xl">O que torna o EIXO mais confiável na prática</h2>
             </div>
             <div className="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2">
               {differentials.map((item) => (
@@ -523,7 +523,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
         <section id="governanca" className="bg-stone-100/70 py-16 lg:py-24">
           <div className="mx-auto max-w-7xl px-4 lg:px-8">
             <div className="mx-auto mb-6 max-w-3xl text-center">
-              <h2 className="text-3xl font-black text-stone-900 lg:text-4xl">Controle para reduzir erro e dar mais segurança</h2>
+              <h2 className="font-brand text-3xl font-extrabold text-stone-900 lg:text-4xl">Controle para reduzir erro e dar mais segurança</h2>
               <p className="mt-4 text-lg leading-relaxed text-stone-600">
                 O problema não é apenas registrar. É confiar no que foi registrado. O EIXO organiza a operação com regras, rastreabilidade e validação.
               </p>
@@ -543,7 +543,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
         <section id="perguntas" className="py-16 lg:py-24">
           <div className="mx-auto max-w-4xl px-4 lg:px-8">
             <div className="mb-12 text-center">
-              <h2 className="text-3xl font-black text-stone-900 lg:text-4xl">Perguntas que travam a decisão</h2>
+              <h2 className="font-brand text-3xl font-extrabold text-stone-900 lg:text-4xl">Perguntas que travam a decisão</h2>
             </div>
             <div className="space-y-4">
               {faqs.map((faq, index) => {
@@ -571,7 +571,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-300/40 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
               Próximo passo
             </div>
-            <h2 className="text-balance text-3xl font-black text-stone-900 lg:text-5xl">
+            <h2 className="font-brand text-balance text-3xl font-extrabold text-stone-900 lg:text-5xl">
               Coloque a operação da fazenda em um sistema feito para gestão, não para improviso.
             </h2>
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-stone-600">

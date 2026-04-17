@@ -1,3 +1,5 @@
+const defaultTheme = require('tailwindcss/defaultTheme');
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class',
@@ -10,6 +12,10 @@ module.exports = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Manrope', ...defaultTheme.fontFamily.sans],
+        brand: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+      },
       colors: {
         primary: '#16a34a',
         'primary-dark': '#15803d',
