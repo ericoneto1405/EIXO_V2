@@ -78,6 +78,8 @@ model Farm {
   feedlotContracts   FeedlotContract[]
   reproCheckupSessions ReproCheckupSession[]
   reproCheckupRecords  ReproCheckupRecord[]
+  herdEvents           HerdEvent[]
+  sanitaryRecords      SanitaryRecord[]
   user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId             String
   organization       Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
@@ -163,6 +165,8 @@ model Animal {
   paddockMoves   PaddockMove[]
   reproCheckupRecords ReproCheckupRecord[]
   criaMortalities CriaMortality[]
+  herdEvents     HerdEvent[]
+  sanitaryRecords SanitaryRecord[]
 
   @@index([farmId, brinco], map: "Animal_farmId_brinco_idx")
   @@unique([farmId, identityKey], map: "Animal_farmId_identityKey_key")
@@ -618,6 +622,8 @@ model PoAnimal {
   embryoSireBatches EmbryoBatch[] @relation("EmbryoSire")
   nutritionAssignments NutritionAssignment[]
   paddockMoves   PaddockMove[]
+  herdEvents     HerdEvent[]
+  sanitaryRecords SanitaryRecord[]
 
   @@index([farmId])
   @@unique([farmId, brinco])
@@ -1610,4 +1616,49 @@ model FeedlotSettlement {
 
   @@index([contractId, exitDate], map: "FeedlotSettlement_contractId_exitDate_idx")
   @@index([contractId, type], map: "FeedlotSettlement_contractId_type_idx")
+}
+
+model HerdEvent {
+  id           String    @id @default(cuid())
+  farmId       String
+  animalId     String?
+  poAnimalId   String?
+  type         String
+  date         DateTime
+  peso         Float?
+  valor        Float?
+  origem       String?
+  destino      String?
+  observacoes  String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  farm         Farm      @relation(fields: [farmId], references: [id])
+  animal       Animal?   @relation(fields: [animalId], references: [id])
+  poAnimal     PoAnimal? @relation(fields: [poAnimalId], references: [id])
+
+  @@index([farmId])
+  @@index([animalId])
+  @@index([poAnimalId])
+}
+
+model SanitaryRecord {
+  id               String    @id @default(cuid())
+  farmId           String
+  animalId         String?
+  poAnimalId       String?
+  tipo             String
+  produto          String
+  date             DateTime
+  dose             String?
+  proximaAplicacao DateTime?
+  observacoes      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  farm             Farm      @relation(fields: [farmId], references: [id])
+  animal           Animal?   @relation(fields: [animalId], references: [id])
+  poAnimal         PoAnimal? @relation(fields: [poAnimalId], references: [id])
+
+  @@index([farmId])
+  @@index([animalId])
+  @@index([poAnimalId])
 }

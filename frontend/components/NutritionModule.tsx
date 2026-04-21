@@ -90,13 +90,6 @@ const formatDateTime = (value: string | null | undefined) => {
     return date.toLocaleString('pt-BR');
 };
 
-const formatDateInput = (value?: string | null) => {
-    if (!value) {
-        return new Date().toISOString().slice(0, 16);
-    }
-    return value.slice(0, 16);
-};
-
 const getSeverityClasses = (severity?: string) => {
     switch (severity) {
         case 'critical':
@@ -153,7 +146,6 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, currentUser }
     const [units, setUnits] = React.useState<any[]>([]);
     const [preparedFeeds, setPreparedFeeds] = React.useState<any[]>([]);
     const [plans, setPlans] = React.useState<any[]>([]);
-    const [assignments, setAssignments] = React.useState<any[]>([]);
     const [fabrications, setFabrications] = React.useState<any[]>([]);
     const [executions, setExecutions] = React.useState<any[]>([]);
     const [troughReadings, setTroughReadings] = React.useState<any[]>([]);
@@ -309,7 +301,7 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, currentUser }
         setLoading(true);
         setError(null);
         try {
-            const [settingsPayload, dashboardPayload, ingredientPayload, phasePayload, unitPayload, preparedFeedPayload, planPayload, assignmentPayload, fabricationPayload, executionPayload, readingPayload] = await Promise.all([
+            const [settingsPayload, dashboardPayload, ingredientPayload, phasePayload, unitPayload, preparedFeedPayload, planPayload, fabricationPayload, executionPayload, readingPayload] = await Promise.all([
                 getNutritionSettings(farmId),
                 getNutritionDashboard(farmId),
                 listNutritionIngredients(farmId),
@@ -330,7 +322,6 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, currentUser }
             setUnits(unitPayload?.items || []);
             setPreparedFeeds(preparedFeedPayload?.items || []);
             setPlans(planPayload?.items || []);
-            setAssignments(assignmentPayload?.items || []);
             setFabrications(fabricationPayload?.items || []);
             setExecutions(executionPayload?.items || []);
             setTroughReadings(readingPayload?.items || []);

@@ -92,34 +92,6 @@ const SuppliersIcon: React.FC = () => (
     </svg>
 );
 
-const MedicineIcon: React.FC = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2"
-            d="M9 7l8 8a4 4 0 01-5.657 5.657l-8-8A4 4 0 019 7z"
-        />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 11l-4 4" />
-    </svg>
-);
-
-const GrainIcon: React.FC = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 3h10l-1 3H8L7 3z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 6h12l2 14H4L6 6z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 11h6" />
-    </svg>
-);
-
-const SupplementIcon: React.FC = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3l8 4v10l-8 4-8-4V7l8-4z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v18" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 7l8 4 8-4" />
-    </svg>
-);
-
 const NutritionIcon: React.FC = () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 4h8" />
@@ -134,14 +106,6 @@ const MoneyDownIcon: React.FC = () => (
         <circle cx="12" cy="12" r="9" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 7v8" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.5 11.5l3.5 3.5 3.5-3.5" />
-    </svg>
-);
-
-const MoneyUpIcon: React.FC = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="9" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 17V9" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.5 12.5l3.5-3.5 3.5 3.5" />
     </svg>
 );
 
@@ -167,15 +131,6 @@ const ReportIcon: React.FC = () => (
 const OperationsIcon: React.FC = () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
-    </svg>
-);
-
-const SettingsIcon: React.FC = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-        <circle cx="8" cy="6" r="2" />
-        <circle cx="16" cy="12" r="2" />
-        <circle cx="10" cy="18" r="2" />
     </svg>
 );
 
@@ -217,7 +172,7 @@ const navItems: NavItem[] = [
         value: 'Rebanho Comercial',
         allowedLabels: ['Rebanho Comercial', 'Plantel P.O.'],
         subItems: [
-            { label: 'Rebanho Comercial', value: 'Rebanho Comercial', allowedLabels: ['Rebanho Comercial'] },
+            { label: 'Rebanho', value: 'Rebanho Comercial', allowedLabels: ['Rebanho Comercial'] },
             { label: 'Plantel P.O.', value: 'Plantel P.O.', allowedLabels: ['Plantel P.O.'] },
         ],
     },
@@ -225,7 +180,7 @@ const navItems: NavItem[] = [
     { label: 'Confinamento e Contratos', icon: <OperationsIcon />, value: 'Operações', allowedLabels: ['Operações'] },
     { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Eixo Genetics', path: '/genetics/reproducao', allowedLabels: ['Eixo Genetics'] },
     {
-        label: 'Eixo Genetics',
+        label: 'Eixo Acasalamento',
         icon: <HerdGeneticIcon />,
         value: 'Eixo Genetics',
         allowedLabels: ['Eixo Genetics'],
@@ -264,7 +219,7 @@ const navItemsWithStructureSubItems: NavItem[] = navItems.map((item) =>
         ? {
               ...item,
               subItems: [
-                  { label: 'Fazendas e Setores', value: 'Fazendas', allowedLabels: ['Fazendas'] },
+                  { label: 'Fazendas e Pastos', value: 'Fazendas', allowedLabels: ['Fazendas'] },
                   { label: 'Mapa da Fazenda', value: 'Mapa da Fazenda', allowedLabels: ['Fazendas'] },
                   { label: 'Estruturas da Fazenda', value: 'Estruturas da Fazenda' },
                   { label: 'Equipe e Permissões', value: 'Equipe e Permissões' },
@@ -388,7 +343,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                     isCollapsed ? 'w-20' : 'w-72'
                 }`}
             >
-                <div className="flex h-full flex-col rounded-[30px] border border-[#6a5a46] bg-[#4c4030]/94 shadow-[0_14px_40px_rgba(66,46,24,0.14)] backdrop-blur">
+                <div className="flex h-full flex-col rounded-[30px] border border-[#6a5a46] bg-[#4c4030] shadow-[0_14px_40px_rgba(66,46,24,0.14)] backdrop-blur">
                 <div className="flex items-start justify-between px-5 pb-2 pt-6">
                     <div className="flex-1">
                         {!isCollapsed && (
@@ -424,7 +379,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                                 return isModuleAllowed(subItem.allowedLabels || [subItem.value]);
                             }) || [];
                             const hasSubItems = visibleSubItems.length > 0;
-                            const isExpanded = isGeneticsRoute && item.label === 'Eixo Genetics'
+                            const isExpanded = isGeneticsRoute && item.label === 'Eixo Acasalamento'
                                 ? true
                                 : Boolean(openGroups[item.label]);
                             const isDirectPathActive = item.path

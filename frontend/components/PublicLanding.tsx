@@ -24,6 +24,7 @@ import {
 
 interface PublicLandingProps {
   onEnter: () => void;
+  onRegister: () => void;
 }
 
 const benefits = [
@@ -67,8 +68,8 @@ const modules = [
   },
   {
     icon: ShieldCheck,
-    title: 'Governança',
-    description: 'Perfis, rastreabilidade e validação dos registros antes do fechamento oficial.',
+    title: 'Controle',
+    description: 'Controle de acesso, histórico de registros e segurança dos dados da sua operação.',
   },
 ];
 
@@ -125,6 +126,22 @@ const faqs = [
     question: 'Os registros podem ser validados antes de fechar os números?',
     answer: 'Sim. O sistema suporta governança sobre os lançamentos.',
   },
+  {
+    question: 'Quanto custa?',
+    answer: 'Você começa grátis, sem cartão. Quando quiser mais recursos, os planos são acessíveis e você escolhe o momento certo para evoluir.',
+  },
+  {
+    question: 'Funciona no celular?',
+    answer: 'Sim. O EIXO foi pensado para funcionar em qualquer dispositivo, inclusive no campo.',
+  },
+  {
+    question: 'Meus dados ficam seguros?',
+    answer: 'Sim. Seus dados são armazenados em servidores de alto desempenho, com acesso completo ao histórico a qualquer momento. O EIXO opera em conformidade com a Lei Geral de Proteção de Dados (LGPD).',
+  },
+  {
+    question: 'Preciso de internet para usar?',
+    answer: 'A conexão é necessária para sincronizar os dados. Recomendamos uso com internet para garantir que tudo fique atualizado.',
+  },
 ];
 
 const navItems = [
@@ -134,7 +151,7 @@ const navItems = [
   { label: 'Perguntas frequentes', target: 'perguntas' },
 ];
 
-const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
+const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) => {
   const [activeFaq, setActiveFaq] = React.useState<number | null>(0);
   const [isScrolled, setIsScrolled] = React.useState(false);
 
@@ -189,11 +206,11 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
               onClick={onEnter}
               className="hidden rounded-xl px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-100 sm:inline-flex"
             >
-              Entrar
+              Já tenho conta
             </button>
             <button
               type="button"
-              onClick={onEnter}
+              onClick={onRegister}
               className={`${ctaButton} bg-primary text-white hover:bg-primary-dark`}
             >
               Criar conta grátis
@@ -233,7 +250,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
               </p>
 
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <button type="button" onClick={onEnter} className={`${ctaButton} bg-primary text-white hover:bg-primary-dark`}>
+                <button type="button" onClick={onRegister} className={`${ctaButton} bg-primary text-white hover:bg-primary-dark`}>
                   Criar conta grátis
                 </button>
                 <button
@@ -241,7 +258,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
                   onClick={onEnter}
                   className={`${ctaButton} border border-stone-300 bg-white text-stone-800 hover:border-stone-400 hover:bg-stone-100`}
                 >
-                  Entrar na conta
+                  Já tenho conta
                 </button>
               </div>
 
@@ -249,14 +266,14 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
                 <div className="flex items-center gap-2"><Building2 className="h-4 w-4 text-amber-600" />Controle por fazenda</div>
                 <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-amber-600" />Rebanho comercial e P.O.</div>
                 <div className="flex items-center gap-2"><FileCheck className="h-4 w-4 text-amber-600" />Histórico confiável</div>
-                <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-amber-600" />Governança dos registros</div>
+                <div className="flex items-center gap-2"><Shield className="h-4 w-4 text-amber-600" />Controle dos registros</div>
               </div>
 
               <div className="mx-auto mt-12 max-w-2xl rounded-3xl border border-amber-300/30 bg-white p-6 text-left shadow-sm">
                 <div className="mb-4 flex items-start gap-3">
                   <div className="mt-1 rounded-xl bg-primary/10 p-2 text-primary"><Zap className="h-5 w-5" /></div>
                   <div>
-                    <h3 className="text-lg font-bold text-stone-900">Comece no plano Free</h3>
+                    <h3 className="text-lg font-bold text-stone-900">Grátis para começar</h3>
                     <p className="mt-1 text-sm leading-relaxed text-stone-600">
                       Organize sua primeira fazenda, conheça o sistema na prática e evolua para mais recursos quando fizer sentido.
                     </p>
@@ -265,29 +282,10 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
                 <ul className="space-y-2 text-sm text-stone-600">
                   <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-primary" />Sem limite de animais</li>
                   <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-primary" />Estrutura inicial de gestão</li>
-                  <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-primary" />Cancele quando quiser</li>
+                  <li className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-primary" />Sem cartão para começar</li>
                 </ul>
               </div>
             </div>
-          </div>
-        </section>
-
-        <section className="bg-stone-100/70 py-16 lg:py-24">
-          <div className="mx-auto max-w-4xl px-4 lg:px-8">
-            <div className="mb-6 flex justify-center gap-1.5">
-              {[...Array(5)].map((_, index) => <Star key={index} className="h-5 w-5 fill-amber-500 text-amber-500" />)}
-            </div>
-            <div className="relative rounded-3xl border border-stone-200 bg-white p-8 shadow-sm lg:p-12">
-              <p className="text-lg leading-relaxed text-stone-800 lg:text-xl">
-                "O EIXO transformou como a gente vê o rebanho. Antes era caderneta e planilha espalhada. Hoje tenho tudo organizado,
-                histórico de cada animal e ainda me aponta quando algo está fora da meta. Sem sofisticação desnecessária, só o que realmente importa na fazenda."
-              </p>
-              <div className="mt-8">
-                <p className="font-semibold text-stone-900">Marcos Ribeiro</p>
-                <p className="text-sm text-stone-500">Produtor pecuário, Mato Grosso do Sul</p>
-              </div>
-            </div>
-            <p className="mt-8 text-center text-sm text-stone-500">Usado por mais de 800 gestores de fazenda em todo Brasil</p>
           </div>
         </section>
 
@@ -578,7 +576,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
               Crie sua conta grátis, sem limite de animais. Não precisa de cartão para começar.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <button type="button" onClick={onEnter} className={`${ctaButton} bg-primary text-white hover:bg-primary-dark`}>
+              <button type="button" onClick={onRegister} className={`${ctaButton} bg-primary text-white hover:bg-primary-dark`}>
                 Criar conta grátis
               </button>
               <button
@@ -586,10 +584,10 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
                 onClick={onEnter}
                 className={`${ctaButton} border border-stone-300 bg-white text-stone-800 hover:border-stone-400 hover:bg-stone-100`}
               >
-                Entrar na conta
+                Já tenho conta
               </button>
             </div>
-            <div className="mt-6 text-xs text-stone-500">Cancele quando quiser • Sem compromisso</div>
+            <div className="mt-6 text-xs text-stone-500">Sem cartão para começar</div>
           </div>
         </section>
       </main>
@@ -606,7 +604,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter }) => {
       </footer>
 
       <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden">
-        <button type="button" onClick={onEnter} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 font-semibold text-white shadow-lg">
+        <button type="button" onClick={onRegister} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 font-semibold text-white shadow-lg">
           Criar conta grátis
           <ArrowRight className="h-4 w-4" />
         </button>

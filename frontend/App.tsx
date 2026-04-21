@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { buildApiUrl } from './api';
 import Sidebar from './components/Sidebar';
-import SystemCoverage from './components/SystemCoverage';
 import Dashboard from './components/Dashboard';
 import HerdModule from './components/HerdModule';
 import Operations from './components/Operations';
@@ -24,6 +23,7 @@ import GeneticsRelatorios from './components/GeneticsRelatorios';
 import GeneticsPlantelPO from './components/GeneticsPlantelPO';
 import NutritionModule from './components/NutritionModule';
 import Login from './components/Login';
+import Register from './components/Register';
 import PublicLanding from './components/PublicLanding';
 import UserRegisterModal from './components/UserRegisterModal';
 import { Farm } from './types';
@@ -75,7 +75,7 @@ const AppContent: React.FC = () => {
     const [activeView, setActiveView] = useState('Visão Geral');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [authScreen, setAuthScreen] = useState<'landing' | 'login'>('landing');
+    const [authScreen, setAuthScreen] = useState<'landing' | 'login' | 'register'>('landing');
     const [authError, setAuthError] = useState<string | null>(null);
     const [registerMessage, setRegisterMessage] = useState<string | null>(null);
     const [registerError, setRegisterError] = useState<string | null>(null);
@@ -290,6 +290,13 @@ const AppContent: React.FC = () => {
         }
     };
 
+    const handlePublicRegisterSuccess = React.useCallback(() => {
+        setAuthScreen('login');
+        setAuthError(null);
+        setRegisterError(null);
+        setRegisterMessage('Conta criada com sucesso! Faça login para continuar.');
+    }, []);
+
     const handleRegister = async (name: string, email: string, password: string, modules: string[]) => {
         if (currentUser?.email !== ADMIN_EMAIL) {
             setRegisterMessage(null);
@@ -355,14 +362,40 @@ const AppContent: React.FC = () => {
 
     if (!isAuthenticated) {
         if (authScreen === 'landing') {
-            return <PublicLanding onEnter={() => setAuthScreen('login')} />;
+            return (
+                <PublicLanding
+                    onEnter={() => setAuthScreen('login')}
+                    onRegister={() => setAuthScreen('register')}
+                />
+            );
+        }
+
+        if (authScreen === 'register') {
+            return (
+                <Register
+                    onSuccess={handlePublicRegisterSuccess}
+                    onBack={() => {
+                        setAuthError(null);
+                        setRegisterError(null);
+                        setRegisterMessage(null);
+                        setAuthScreen('login');
+                    }}
+                />
+            );
         }
 
         return (
             <Login
                 onLogin={handleLogin}
                 error={authError}
+                success={registerMessage}
                 onBack={() => setAuthScreen('landing')}
+                onRegister={() => {
+                    setAuthError(null);
+                    setRegisterError(null);
+                    setRegisterMessage(null);
+                    setAuthScreen('register');
+                }}
             />
         );
     }
@@ -490,7 +523,7 @@ const AppContent: React.FC = () => {
                 return <Settings />;
             case 'Visão Geral':
             default:
-                return <Dashboard />;
+                return <Dashboard farmId={selectedFarmId} />;
         }
     };
 
@@ -499,11 +532,7 @@ const AppContent: React.FC = () => {
             <div className="relative min-h-screen overflow-hidden bg-stone-100 font-sans text-stone-900">
                 <div
                     className="pointer-events-none absolute inset-0 opacity-24"
-                    style={{
-                        backgroundImage: "url('/pasture-horizon.jpg')",
-                        backgroundPosition: 'center top',
-                        backgroundSize: 'cover',
-                    }}
+                    style={{ backgroundColor: '#ede3d0' }}
                 />
                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-stone-100/92 via-stone-100/95 to-stone-200/94" />
 

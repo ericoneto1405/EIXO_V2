@@ -80,12 +80,11 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
         setActiveTab(availableTabs[0]);
     }, [mode]);
 
-    const [searchAnimals, setSearchAnimals] = useState('');
     const [searchSemen, setSearchSemen] = useState('');
     const [searchEmbryos, setSearchEmbryos] = useState('');
 
     const [isAnimalModalOpen, setIsAnimalModalOpen] = useState(false);
-    const [editingAnimal, setEditingAnimal] = useState<PoAnimal | null>(null);
+    const [editingAnimal] = useState<PoAnimal | null>(null);
     const [animalForm, setAnimalForm] = useState({
         brinco: '',
         nome: '',
@@ -149,21 +148,6 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
     });
     const [moveError, setMoveError] = useState<string | null>(null);
     const [isSavingMove, setIsSavingMove] = useState(false);
-
-    const resetAnimalForm = () => {
-        setAnimalForm({
-            brinco: '',
-            nome: '',
-            raca: '',
-            sexo: 'FEMEA',
-            dataNascimento: '',
-            registro: '',
-            categoria: '',
-            observacoes: '',
-            paddockId: '',
-            paddockStartAt: '',
-        });
-    };
 
     const resetSemenForm = () => {
         setSemenForm({
@@ -273,18 +257,6 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
         };
     }, [farmId]);
 
-    const filteredAnimals = useMemo(() => {
-        if (!searchAnimals.trim()) {
-            return poAnimals;
-        }
-        const term = searchAnimals.trim().toLowerCase();
-        return poAnimals.filter((animal) =>
-            [animal.brinco, animal.nome, animal.registro, animal.raca]
-                .filter(Boolean)
-                .some((value) => String(value).toLowerCase().includes(term)),
-        );
-    }, [poAnimals, searchAnimals]);
-
     const filteredSemen = useMemo(() => {
         if (!searchSemen.trim()) {
             return semenBatches;
@@ -311,29 +283,6 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                 .some((value) => String(value).toLowerCase().includes(term));
         });
     }, [embryoBatches, searchEmbryos]);
-
-    const openAnimalModal = (animal?: PoAnimal) => {
-        if (animal) {
-            setEditingAnimal(animal);
-            setAnimalForm({
-                brinco: animal.brinco || '',
-                nome: animal.nome,
-                raca: animal.raca,
-                sexo: animal.sexo,
-                dataNascimento: animal.dataNascimento ? animal.dataNascimento.slice(0, 10) : '',
-                registro: animal.registro || '',
-                categoria: animal.categoria || '',
-                observacoes: animal.observacoes || '',
-                paddockId: animal.currentPaddockId || '',
-                paddockStartAt: '',
-            });
-        } else {
-            setEditingAnimal(null);
-            resetAnimalForm();
-        }
-        setAnimalError(null);
-        setIsAnimalModalOpen(true);
-    };
 
     const openSemenModal = (batch?: SemenBatch) => {
         if (batch) {

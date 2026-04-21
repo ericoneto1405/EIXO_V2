@@ -3,10 +3,12 @@ import React, { useState } from 'react';
 interface LoginProps {
     onLogin: (email: string, password: string, rememberMe: boolean) => void;
     error?: string | null;
+    success?: string | null;
     onBack?: () => void;
+    onRegister?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, error, onBack }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegister }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
@@ -64,7 +66,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, onBack }) => {
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div>
                                 <label htmlFor="email" className="block text-sm font-medium text-stone-700">
-                                    E-mail corporativo
+                                    E-mail
                                 </label>
                                 <input
                                     id="email"
@@ -104,7 +106,22 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, onBack }) => {
                                     <span>Lembrar de mim</span>
                                 </label>
                             </div>
+                            <div className="flex justify-end">
+                                {/* TODO: implementar recuperação de senha */}
+                                <button
+                                    type="button"
+                                    onClick={() => {}}
+                                    className="text-sm text-amber-700 hover:underline"
+                                >
+                                    Esqueci minha senha
+                                </button>
+                            </div>
 
+                            {success && (
+                                <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                                    {success}
+                                </div>
+                            )}
                             {error && (
                                 <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">
                                     {error}
@@ -116,6 +133,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, onBack }) => {
                             >
                                 Entrar
                             </button>
+
+                            {onRegister && (
+                                <button
+                                    type="button"
+                                    onClick={onRegister}
+                                    className="w-full text-center text-sm font-medium text-stone-700 transition-colors hover:text-stone-900"
+                                >
+                                    Ainda nao tem conta? Criar conta gratis
+                                </button>
+                            )}
 
                             <p className="text-center text-xs text-stone-500">
                                 Ao continuar, você concorda com os Termos de Uso e Política de Privacidade.

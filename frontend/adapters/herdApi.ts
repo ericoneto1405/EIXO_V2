@@ -7,6 +7,42 @@ export type HerdAnimal = AnimalUI;
 export type HerdLot = LotUI;
 export type HerdWeighing = WeighingUI;
 
+// ---- Tipos novos ----
+
+export type HerdEventType = 'NASCIMENTO' | 'COMPRA' | 'VENDA' | 'MORTE';
+export type SanitaryTipo = 'VACINA' | 'VERMIFUGO' | 'TRATAMENTO';
+
+export interface HerdEvent {
+    id: string;
+    farmId: string;
+    animalId: string | null;
+    poAnimalId: string | null;
+    type: HerdEventType;
+    date: string;
+    peso: number | null;
+    valor: number | null;
+    origem: string | null;
+    destino: string | null;
+    observacoes: string | null;
+    createdAt: string;
+}
+
+export interface SanitaryRecord {
+    id: string;
+    farmId: string;
+    animalId: string | null;
+    poAnimalId: string | null;
+    tipo: SanitaryTipo;
+    produto: string;
+    date: string;
+    dose: string | null;
+    proximaAplicacao: string | null;
+    observacoes: string | null;
+    createdAt: string;
+}
+
+// ---- Funções existentes (sem alteração) ----
+
 const getSexoLabel = (value: string) => {
     const normalized = value?.toUpperCase?.() || value;
     if (normalized === 'FEMEA') {
@@ -203,4 +239,74 @@ export const createPaddockMove = async (
         throw new Error(data?.message || 'Erro ao salvar movimentação de pasto.');
     }
     return data.move;
+};
+
+// ---- Funções novas: Eventos de Inventário ----
+
+export const listHerdEvents = async (animalId: string, herdType: HerdType): Promise<HerdEvent[]> => {
+    const endpoint = herdType === 'PO'
+        ? `/po/animals/${animalId}/eventos`
+        : `/animals/${animalId}/eventos`;
+    const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload?.message || 'Erro ao listar eventos.');
+    }
+    return payload.events || [];
+};
+
+export const createHerdEvent = async (
+    animalId: string,
+    herdType: HerdType,
+    payload: Record<string, any>,
+): Promise<HerdEvent> => {
+    const endpoint = herdType === 'PO'
+        ? `/po/animals/${animalId}/eventos`
+        : `/animals/${animalId}/eventos`;
+    const response = await fetch(buildApiUrl(endpoint), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao salvar evento.');
+    }
+    return data.event;
+};
+
+// ---- Funções novas: Manejo Sanitário ----
+
+export const listSanitaryRecords = async (animalId: string, herdType: HerdType): Promise<SanitaryRecord[]> => {
+    const endpoint = herdType === 'PO'
+        ? `/po/animals/${animalId}/sanitario`
+        : `/animals/${animalId}/sanitario`;
+    const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload?.message || 'Erro ao listar registros sanitários.');
+    }
+    return payload.records || [];
+};
+
+export const createSanitaryRecord = async (
+    animalId: string,
+    herdType: HerdType,
+    payload: Record<string, any>,
+): Promise<SanitaryRecord> => {
+    const endpoint = herdType === 'PO'
+        ? `/po/animals/${animalId}/sanitario`
+        : `/animals/${animalId}/sanitario`;
+    const response = await fetch(buildApiUrl(endpoint), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao salvar registro sanitário.');
+    }
+    return data.record;
 };

@@ -29,8 +29,14 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     onCancelEdit,
     onSaveAndReturn,
 }) => {
+    const BRAZILIAN_STATES = [
+        'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS',
+        'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC',
+        'SP', 'SE', 'TO',
+    ];
     const [farmName, setFarmName] = useState('');
     const [farmCity, setFarmCity] = useState('');
+    const [farmState, setFarmState] = useState('');
     const [farmLat, setFarmLat] = useState('');
     const [farmLng, setFarmLng] = useState('');
     const [farmSize, setFarmSize] = useState(''); // Total size in hectares
@@ -65,9 +71,11 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         if (!initialFarm) {
             return;
         }
+        const [cityPart = '', statePart = ''] = (initialFarm.city || '').split('/').map((value) => value.trim());
         setActiveFarm(initialFarm);
         setFarmName(initialFarm.name || '');
-        setFarmCity(initialFarm.city || '');
+        setFarmCity(cityPart);
+        setFarmState(statePart.toUpperCase());
         setFarmLat(initialFarm.lat?.toString?.() || '');
         setFarmLng(initialFarm.lng?.toString?.() || '');
         setFarmSize(initialFarm.size?.toString?.() || '');
@@ -76,7 +84,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         setDivisions(
             (initialFarm.paddocks || []).map((division, index) => ({
                 id: division.id,
-                name: division.name || `Divisão ${index + 1}`,
+                name: division.name || `Pasto ${index + 1}`,
                 areaHa: division.areaHa?.toString?.() || '',
                 divisionType: division.divisionType || 'pasto',
             })),
@@ -90,7 +98,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             ...divisions,
             {
                 id: `division-${divisionIdCounter++}`,
-                name: `Divisão ${divisionNumber}`,
+                name: `Pasto ${divisionNumber}`,
                 areaHa: '',
                 divisionType: 'pasto',
             },
@@ -114,18 +122,6 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     };
 
     const normalizeCoordinateInput = (value: string) => value.replace(',', '.');
-
-    const resetForm = () => {
-        setFarmName('');
-        setFarmCity('');
-        setFarmLat('');
-        setFarmLng('');
-        setFarmSize('');
-        setResponsibleName('');
-        setFarmNotes('');
-        setDivisions([]);
-        divisionIdCounter = 0;
-    };
 
     const scrollToDivisionsStep = () => {
         const target = divisionsRef.current;
@@ -154,7 +150,9 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         }
         setActiveFarm(savedFarm);
         setFarmName(savedFarm.name || '');
-        setFarmCity(savedFarm.city || '');
+        const [cityPart = '', statePart = ''] = (savedFarm.city || '').split('/').map((value) => value.trim());
+        setFarmCity(cityPart);
+        setFarmState(statePart.toUpperCase());
         setFarmLat(savedFarm.lat?.toString?.() || '');
         setFarmLng(savedFarm.lng?.toString?.() || '');
         setFarmSize(savedFarm.size?.toString?.() || '');
@@ -163,7 +161,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         setDivisions(
             (savedFarm.paddocks || []).map((division, index) => ({
                 id: division.id,
-                name: division.name || `Divisão ${index + 1}`,
+                name: division.name || `Pasto ${index + 1}`,
                 areaHa: division.areaHa?.toString?.() || '',
                 divisionType: division.divisionType || 'pasto',
             })),
@@ -173,8 +171,8 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     const saveFarmDetails = async () => {
         setSubmitError(null);
         setSubmitSuccess(null);
-        if (!farmName.trim() || !farmCity.trim()) {
-            setSubmitError('Informe nome e cidade da fazenda.');
+        if (!farmName.trim() || !farmCity.trim() || !farmState.trim()) {
+            setSubmitError('Informe nome, cidade e estado da fazenda.');
             return;
         }
         if (farmSizeFloat <= 0) {
@@ -185,7 +183,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         const requestUrl = activeFarm ? `/farms/${activeFarm.id}` : '/farms';
         const requestBody = JSON.stringify({
             name: farmName.trim(),
-            city: farmCity.trim(),
+            city: `${farmCity.trim()}/${farmState.trim().toUpperCase()}`,
             lat: farmLat.trim(),
             lng: farmLng.trim(),
             size: farmSizeFloat,
@@ -220,7 +218,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             const savedFarm = payload?.farm || null;
             syncSavedFarm(savedFarm);
             setCurrentStep('divisions');
-            setSubmitSuccess(activeFarm ? 'Dados da fazenda atualizados. Continue nas divisões.' : 'Fazenda salva. Agora cadastre as divisões.');
+            setSubmitSuccess(activeFarm ? 'Dados da fazenda atualizados. Continue nos pastos.' : 'Fazenda salva. Agora cadastre os pastos.');
             if (payload?.farm) {
                 if (activeFarm) {
                     onFarmUpdated?.(payload.farm);
@@ -246,7 +244,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 const savedFarm = retryPayload?.farm || null;
                 syncSavedFarm(savedFarm);
                 setCurrentStep('divisions');
-                setSubmitSuccess(activeFarm ? 'Dados da fazenda atualizados. Continue nas divisões.' : 'Fazenda salva. Agora cadastre as divisões.');
+                setSubmitSuccess(activeFarm ? 'Dados da fazenda atualizados. Continue nos pastos.' : 'Fazenda salva. Agora cadastre os pastos.');
                 if (retryPayload?.farm) {
                     if (activeFarm) {
                         onFarmUpdated?.(retryPayload.farm);
@@ -271,7 +269,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         setSubmitSuccess(null);
 
         if (!activeFarm) {
-            setSubmitError('Salve a fazenda antes de cadastrar as divisões.');
+            setSubmitError('Salve a fazenda antes de cadastrar os pastos.');
             return;
         }
 
@@ -291,19 +289,19 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         );
 
         if (payloadDivisions.length > 0 && hasInvalidDivision) {
-            setSubmitError('Divisões precisam de nome, área útil e tipo válidos.');
+            setSubmitError('Pastos precisam de nome, área útil e tipo válidos.');
             return;
         }
 
         if (mode === 'complete' && payloadDivisions.length > 0 && !isBalancedArea) {
-            setSubmitError('Distribua a área total da fazenda entre as divisões para salvar.');
+            setSubmitError('Distribua a área total da fazenda entre os pastos para salvar.');
             return;
         }
 
         setIsSubmitting(true);
         const requestBody = JSON.stringify({
             name: farmName.trim(),
-            city: farmCity.trim(),
+            city: `${farmCity.trim()}/${farmState.trim().toUpperCase()}`,
             lat: farmLat.trim(),
             lng: farmLng.trim(),
             size: farmSizeFloat,
@@ -325,7 +323,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             const response = await persistDivisions();
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {
-                setSubmitError(payload?.message || 'Não foi possível salvar as divisões.');
+                setSubmitError(payload?.message || 'Não foi possível salvar os pastos.');
                 return;
             }
 
@@ -336,7 +334,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 onSaveAndReturn?.();
                 return;
             }
-            setSubmitSuccess('Divisões salvas com sucesso.');
+            setSubmitSuccess('Pastos salvos com sucesso.');
         } catch (error) {
             console.error(error);
             try {
@@ -344,7 +342,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 const retryResponse = await persistDivisions();
                 const retryPayload = await retryResponse.json().catch(() => ({}));
                 if (!retryResponse.ok) {
-                    setSubmitError(retryPayload?.message || 'Não foi possível salvar as divisões.');
+                    setSubmitError(retryPayload?.message || 'Não foi possível salvar os pastos.');
                     return;
                 }
                 syncSavedFarm(retryPayload?.farm || null);
@@ -354,10 +352,10 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     onSaveAndReturn?.();
                     return;
                 }
-                setSubmitSuccess('Divisões salvas com sucesso.');
+                setSubmitSuccess('Pastos salvos com sucesso.');
             } catch (retryError) {
                 console.error(retryError);
-                setSubmitError('Não foi possível salvar as divisões. Verifique sua conexão.');
+                setSubmitError('Não foi possível salvar os pastos. Verifique sua conexão.');
             }
         } finally {
             setIsSubmitting(false);
@@ -370,7 +368,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             <p className="mb-6 text-sm text-[#6d6558]">
                 {currentStep === 'farm'
                     ? 'Primeiro salve os dados principais da fazenda.'
-                    : 'Agora cadastre as divisões e complete a estrutura territorial.'}
+                    : 'Agora cadastre os pastos e complete a estrutura territorial.'}
             </p>
             <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                 {currentStep === 'farm' ? (
@@ -388,8 +386,17 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         />
                     </div>
                     <div>
-                        <label htmlFor="farmCity" className="block text-sm font-medium text-[#5f5648]">Cidade/UF</label>
+                        <label htmlFor="farmCity" className="block text-sm font-medium text-[#5f5648]">Cidade</label>
                         <input type="text" id="farmCity" value={farmCity} onChange={e => setFarmCity(e.target.value)} className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none" required />
+                    </div>
+                    <div>
+                        <label htmlFor="farmState" className="block text-sm font-medium text-[#5f5648]">Estado</label>
+                        <select id="farmState" value={farmState} onChange={e => setFarmState(e.target.value)} className="mt-1 block w-full rounded-xl border border-[#d8cbb5] bg-[#fdf9f2] px-3 py-2.5 text-sm text-[#2f3a2d] focus:border-[#9d7d4d] focus:outline-none" required>
+                            <option value="">Selecione</option>
+                            {BRAZILIAN_STATES.map((state) => (
+                                <option key={state} value={state}>{state}</option>
+                            ))}
+                        </select>
                     </div>
                     <div>
                         <label htmlFor="farmLat" className="block text-sm font-medium text-[#5f5648]">Latitude</label>
@@ -438,7 +445,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8a7350]">Dados salvos</p>
                             <h3 className="mt-1 text-lg font-semibold text-[#2f3a2d]">{farmName}</h3>
-                            <p className="mt-1 text-sm text-[#6d6558]">{farmCity}</p>
+                            <p className="mt-1 text-sm text-[#6d6558]">{farmCity}{farmState ? `/${farmState}` : ''}</p>
                         </div>
                         <button
                             type="button"
@@ -452,7 +459,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 <div ref={divisionsRef}>
                     <div className="flex items-center justify-between gap-4">
                         <div>
-                            <h3 className="text-lg font-medium text-[#2f3a2d]">Divisões</h3>
+                            <h3 className="text-lg font-medium text-[#2f3a2d]">Pastos</h3>
                             <p className="mt-1 text-sm text-[#6d6558]">Cadastre as áreas que compõem a fazenda.</p>
                         </div>
                     </div>
@@ -460,14 +467,14 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         {divisions.map((division, index) => (
                             <div key={division.id} className="rounded-2xl border border-[#e2d7c7] bg-[#fcf7ee] p-4">
                                 <div className="mb-3 flex items-center gap-3">
-                                    <span className="text-sm font-medium text-[#5f5648]">Divisão {index + 1}</span>
-                                    <button type="button" onClick={() => handleRemoveDivision(division.id)} className="ml-auto rounded-full p-2 text-red-500 transition-colors hover:bg-red-100 hover:text-red-700" aria-label="Remover divisão">
+                                    <span className="text-sm font-medium text-[#5f5648]">Pasto {index + 1}</span>
+                                    <button type="button" onClick={() => handleRemoveDivision(division.id)} className="ml-auto rounded-full p-2 text-red-500 transition-colors hover:bg-red-100 hover:text-red-700" aria-label="Remover pasto">
                                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
                                     </button>
                                 </div>
                                 <div className="grid grid-cols-1 gap-3">
                                     <div>
-                                        <label htmlFor={`division-name-${division.id}`} className="block text-sm font-medium text-[#5f5648]">Nome da Divisão</label>
+                                        <label htmlFor={`division-name-${division.id}`} className="block text-sm font-medium text-[#5f5648]">Nome do Pasto</label>
                                         <input
                                             type="text"
                                             id={`division-name-${division.id}`}
@@ -518,9 +525,9 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v12m6-6H6" />
                                 </svg>
                             </span>
-                            <span className="mt-4 text-base font-semibold text-[#5f5648]">Adicionar Divisão</span>
+                            <span className="mt-4 text-base font-semibold text-[#5f5648]">Adicionar Pasto</span>
                             <span className="mt-2 max-w-[220px] text-sm text-[#7b715f]">
-                                Crie uma nova divisão para organizar a fazenda do jeito que ela existe no campo.
+                                Crie um novo pasto para organizar a fazenda do jeito que ela existe no campo.
                             </span>
                         </button>
                     </div>
@@ -551,7 +558,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             disabled={isSaveDisabled}
                             className="ml-3 rounded-xl bg-[#9d7d4d] px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#8f7144] disabled:cursor-not-allowed disabled:bg-[#b8ab95]"
                         >
-                            {isSubmitting ? 'Salvando...' : 'Salvar divisões'}
+                            {isSubmitting ? 'Salvando...' : 'Salvar pastos'}
                         </button>
                     </div>
                 )}
@@ -562,7 +569,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         <span className="font-bold text-[#2f3a2d]">{farmSizeFloat.toFixed(2)} ha</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                        <span className="font-medium text-[#6d6558]">Área Total das Divisões:</span>
+                        <span className="font-medium text-[#6d6558]">Área Total dos Pastos:</span>
                         <span className="font-bold text-[#2f3a2d]">{totalDivisionSize.toFixed(2)} ha</span>
                     </div>
                     <div className="flex justify-between text-sm font-bold">
@@ -570,7 +577,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         <span className={isBalancedArea && farmSizeFloat > 0 ? 'text-green-600' : 'text-red-600'}>{remainingSize.toFixed(2)} ha</span>
                     </div>
                      {!isBalancedArea && farmSizeFloat > 0 && (
-                        <p className="pt-2 text-center text-xs text-yellow-700">A soma das áreas das divisões deve ser igual à área total da fazenda (tolerância de 0.0001 ha).</p>
+                        <p className="pt-2 text-center text-xs text-yellow-700">A soma das áreas dos pastos deve ser igual à área total da fazenda (tolerância de 0.0001 ha).</p>
                      )}
                 </div>
                 )}

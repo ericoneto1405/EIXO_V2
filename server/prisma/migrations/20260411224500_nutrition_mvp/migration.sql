@@ -22,11 +22,93 @@ CREATE TYPE "NutritionReadingType" AS ENUM ('DIURNA', 'NOTURNA');
 -- CreateEnum
 CREATE TYPE "NutritionAnimalBehavior" AS ENUM ('RUMINANDO', 'NORMAL', 'INQUIETO', 'APATICO', 'OUTRO');
 
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ReviewStatus') THEN
+        CREATE TYPE "ReviewStatus" AS ENUM ('PENDING', 'APPROVED');
+    END IF;
+END $$;
 
 
 
 
 
+
+
+-- Ensure legacy nutrition tables exist for shadow database replay
+CREATE TABLE IF NOT EXISTS "NutritionPlan" (
+    "id" TEXT NOT NULL,
+    "farmId" TEXT NOT NULL,
+    "nome" TEXT NOT NULL,
+    "fase" TEXT,
+    "startAt" TIMESTAMP(3) NOT NULL,
+    "endAt" TIMESTAMP(3),
+    "metaGmd" DOUBLE PRECISION,
+    "observacoes" TEXT,
+    "reviewStatus" "ReviewStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "NutritionPlan_pkey" PRIMARY KEY ("id")
+);
+
+CREATE TABLE IF NOT EXISTS "NutritionAssignment" (
+    "id" TEXT NOT NULL,
+    "farmId" TEXT NOT NULL,
+    "planId" TEXT NOT NULL,
+    "lotId" TEXT,
+    "animalId" TEXT,
+    "poAnimalId" TEXT,
+    "poLotId" TEXT,
+    "startAt" TIMESTAMP(3) NOT NULL,
+    "endAt" TIMESTAMP(3),
+    "reviewStatus" "ReviewStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "NutritionAssignment_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX IF NOT EXISTS "NutritionPlan_farmId_idx" ON "NutritionPlan"("farmId");
+CREATE INDEX IF NOT EXISTS "NutritionAssignment_farmId_idx" ON "NutritionAssignment"("farmId");
+CREATE INDEX IF NOT EXISTS "NutritionAssignment_planId_idx" ON "NutritionAssignment"("planId");
+CREATE INDEX IF NOT EXISTS "NutritionAssignment_lotId_idx" ON "NutritionAssignment"("lotId");
+CREATE INDEX IF NOT EXISTS "NutritionAssignment_animalId_idx" ON "NutritionAssignment"("animalId");
+CREATE INDEX IF NOT EXISTS "NutritionAssignment_poAnimalId_idx" ON "NutritionAssignment"("poAnimalId");
+CREATE INDEX IF NOT EXISTS "NutritionAssignment_poLotId_idx" ON "NutritionAssignment"("poLotId");
+CREATE INDEX IF NOT EXISTS "NutritionAssignment_farmId_startAt_idx" ON "NutritionAssignment"("farmId", "startAt");
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'NutritionPlan_farmId_fkey') THEN
+        ALTER TABLE "NutritionPlan" ADD CONSTRAINT "NutritionPlan_farmId_fkey"
+        FOREIGN KEY ("farmId") REFERENCES "Farm"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'NutritionAssignment_farmId_fkey') THEN
+        ALTER TABLE "NutritionAssignment" ADD CONSTRAINT "NutritionAssignment_farmId_fkey"
+        FOREIGN KEY ("farmId") REFERENCES "Farm"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'NutritionAssignment_planId_fkey') THEN
+        ALTER TABLE "NutritionAssignment" ADD CONSTRAINT "NutritionAssignment_planId_fkey"
+        FOREIGN KEY ("planId") REFERENCES "NutritionPlan"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'NutritionAssignment_lotId_fkey') THEN
+        ALTER TABLE "NutritionAssignment" ADD CONSTRAINT "NutritionAssignment_lotId_fkey"
+        FOREIGN KEY ("lotId") REFERENCES "Lot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'NutritionAssignment_animalId_fkey') THEN
+        ALTER TABLE "NutritionAssignment" ADD CONSTRAINT "NutritionAssignment_animalId_fkey"
+        FOREIGN KEY ("animalId") REFERENCES "Animal"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'NutritionAssignment_poAnimalId_fkey') THEN
+        ALTER TABLE "NutritionAssignment" ADD CONSTRAINT "NutritionAssignment_poAnimalId_fkey"
+        FOREIGN KEY ("poAnimalId") REFERENCES "PoAnimal"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'NutritionAssignment_poLotId_fkey') THEN
+        ALTER TABLE "NutritionAssignment" ADD CONSTRAINT "NutritionAssignment_poLotId_fkey"
+        FOREIGN KEY ("poLotId") REFERENCES "PoLot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
 
 -- AlterTable
 ALTER TABLE "NutritionAssignment" ADD COLUMN     "unitId" TEXT;
@@ -263,6 +345,24 @@ CREATE TABLE "NutritionFabricationItem" (
 );
 
 -- CreateTable
+CREATE TABLE "NutritionExecution" (
+    "id" TEXT NOT NULL,
+    "farmId" TEXT NOT NULL,
+    "lotId" TEXT,
+    "poLotId" TEXT,
+    "date" TIMESTAMP(3) NOT NULL,
+    "plannedDryMatterKg" DOUBLE PRECISION,
+    "actualDryMatterKg" DOUBLE PRECISION NOT NULL,
+    "refusalDryMatterKg" DOUBLE PRECISION,
+    "notes" TEXT,
+    "reviewStatus" "ReviewStatus" NOT NULL DEFAULT 'APPROVED',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "NutritionExecution_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "NutritionTroughReading" (
     "id" TEXT NOT NULL,
     "farmId" TEXT NOT NULL,
@@ -364,6 +464,18 @@ CREATE INDEX "NutritionFabricationItem_fabricationId_idx" ON "NutritionFabricati
 CREATE INDEX "NutritionFabricationItem_ingredientId_idx" ON "NutritionFabricationItem"("ingredientId");
 
 -- CreateIndex
+CREATE INDEX "NutritionExecution_farmId_date_idx" ON "NutritionExecution"("farmId", "date");
+
+-- CreateIndex
+CREATE INDEX "NutritionExecution_farmId_lotId_date_idx" ON "NutritionExecution"("farmId", "lotId", "date");
+
+-- CreateIndex
+CREATE INDEX "NutritionExecution_farmId_poLotId_date_idx" ON "NutritionExecution"("farmId", "poLotId", "date");
+
+-- CreateIndex
+CREATE INDEX "NutritionExecution_reviewStatus_idx" ON "NutritionExecution"("reviewStatus");
+
+-- CreateIndex
 CREATE INDEX "NutritionTroughReading_farmId_date_idx" ON "NutritionTroughReading"("farmId", "date");
 
 -- CreateIndex
@@ -449,6 +561,15 @@ ALTER TABLE "NutritionFabricationItem" ADD CONSTRAINT "NutritionFabricationItem_
 
 -- AddForeignKey
 ALTER TABLE "NutritionFabricationItem" ADD CONSTRAINT "NutritionFabricationItem_ingredientId_fkey" FOREIGN KEY ("ingredientId") REFERENCES "NutritionIngredient"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NutritionExecution" ADD CONSTRAINT "NutritionExecution_farmId_fkey" FOREIGN KEY ("farmId") REFERENCES "Farm"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NutritionExecution" ADD CONSTRAINT "NutritionExecution_lotId_fkey" FOREIGN KEY ("lotId") REFERENCES "Lot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NutritionExecution" ADD CONSTRAINT "NutritionExecution_poLotId_fkey" FOREIGN KEY ("poLotId") REFERENCES "PoLot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "NutritionExecution" ADD CONSTRAINT "NutritionExecution_unitId_fkey" FOREIGN KEY ("unitId") REFERENCES "NutritionUnit"("id") ON DELETE SET NULL ON UPDATE CASCADE;

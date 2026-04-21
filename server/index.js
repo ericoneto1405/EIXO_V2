@@ -1,11 +1,20 @@
 import crypto from 'node:crypto';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
 import { registerNutritionModuleRoutes } from './nutritionModule.js';
 import { GoogleGenerativeAI } from '@google/generative-ai'; // Added for Gemini AI
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '.env.local'), override: true });
 
 const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -17,6 +26,11 @@ const SESSION_REMEMBER_TTL_MS = Number(process.env.SESSION_REMEMBER_TTL_MS) || 3
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const ALLOW_X_USER_ID = process.env.ALLOW_X_USER_ID === 'true';
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@eixo.com';
+
+if (IS_PROD && ALLOW_X_USER_ID) {
+    console.error('ERRO CRÍTICO: ALLOW_X_USER_ID não pode estar ativo em produção.');
+    process.exit(1);
+}
 
 function sanitizeUser(user) {
     const { password, ...safeUser } = user;
@@ -746,7 +760,7 @@ app.use(express.json());
 app.use(cookieParser());
 
 let activePort = Number(PORT) || 3001;
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
     res.set('X-Server-Port', String(activePort));
     return res.json({ ok: true, port: activePort });
 });
@@ -915,11 +929,6 @@ const requireBillingAccess = (req, res, next) => {
     });
 };
 
-const resolveFarmForRequest = async (req, farmId) =>
-    prisma.farm.findFirst({
-        where: buildFarmScopeFilter(req, { id: String(farmId) }),
-    });
-
 const serializeAuthUserWithContext = async (userId) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
@@ -1055,6 +1064,45 @@ app.post('/api/chat/send-message', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Erro ao comunicar com a API do Gemini:', error);
         return res.status(500).json({ message: 'Erro ao processar sua solicitação com o assistente de IA.' });
+    }
+});
+
+app.post('/register', async (req, res) => {
+    const { name, email, password } = req.body || {};
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!normalizedName || !normalizedEmail || !password) {
+        return res.status(400).json({ message: 'Informe nome, e-mail e senha.' });
+    }
+
+    if (String(password).length < 6) {
+        return res.status(400).json({ message: 'A senha deve ter pelo menos 6 caracteres.' });
+    }
+
+    try {
+        const emailExists = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (emailExists) {
+            return res.status(409).json({ message: 'E-mail já cadastrado.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(String(password), 10);
+        const newUser = await prisma.user.create({
+            data: {
+                name: normalizedName,
+                email: normalizedEmail,
+                password: hashedPassword,
+                modules: ['Visão Geral'],
+                roles: ['user'],
+            },
+        });
+
+        await ensureSaasContextForUser(newUser.id);
+
+        return res.status(201).json({ user: sanitizeUser(newUser) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao criar conta.' });
     }
 });
 
@@ -1244,7 +1292,6 @@ app.post('/farms', async (req, res) => {
     const normalizedPaddocks = Array.isArray(paddocks)
         ? paddocks
               .map((paddock) => {
-                  const paddockId = typeof paddock?.id === 'string' ? paddock.id.trim() : '';
                   const paddockName = (paddock?.name || paddock?.nome || '').trim();
                   const areaRaw = paddock?.areaHa ?? paddock?.size ?? paddock?.area;
                   const areaValue = areaRaw === undefined || areaRaw === null || areaRaw === ''
@@ -2365,7 +2412,7 @@ app.get('/genetics/reports/summary', async (req, res) => {
 
         const items = animals.map((animal) => {
             const events = eventsByAnimal.get(animal.id) || [];
-            const { kpis, diagnosticsInWindowCount, pregInWindowCount, isExposed, hasPrenheInSeason } =
+            const { kpis, diagnosticsInWindowCount, pregInWindowCount, isExposed } =
                 computeSelectionKpis({
                     events,
                     animalId: animal.id,
@@ -4719,6 +4766,300 @@ app.post('/po/animals/:id/move-pasto', async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao movimentar animal entre pastos.' });
+    }
+});
+
+// ================================================================
+// EIXO V2 — Novas rotas: Eventos de Inventário + Manejo Sanitário
+// Cole este bloco inteiro no index.js, logo ANTES da linha:
+//   const MAX_PORT_ATTEMPTS = ...
+// ================================================================
+
+const VALID_EVENT_TYPES = ['NASCIMENTO', 'COMPRA', 'VENDA', 'MORTE'];
+const VALID_SANITARY_TIPOS = ['VACINA', 'VERMIFUGO', 'TRATAMENTO'];
+
+const serializeHerdEvent = (event) => ({
+    id: event.id,
+    farmId: event.farmId,
+    animalId: event.animalId || null,
+    poAnimalId: event.poAnimalId || null,
+    type: event.type,
+    date: event.date.toISOString(),
+    peso: event.peso ?? null,
+    valor: event.valor ?? null,
+    origem: event.origem || null,
+    destino: event.destino || null,
+    observacoes: event.observacoes || null,
+    createdAt: event.createdAt.toISOString(),
+});
+
+const serializeSanitaryRecord = (record) => ({
+    id: record.id,
+    farmId: record.farmId,
+    animalId: record.animalId || null,
+    poAnimalId: record.poAnimalId || null,
+    tipo: record.tipo,
+    produto: record.produto,
+    date: record.date.toISOString(),
+    dose: record.dose || null,
+    proximaAplicacao: record.proximaAplicacao ? record.proximaAplicacao.toISOString() : null,
+    observacoes: record.observacoes || null,
+    createdAt: record.createdAt.toISOString(),
+});
+
+// =============================================
+// EVENTOS DE INVENTÁRIO — Rebanho Comercial
+// =============================================
+
+app.get('/animals/:id/eventos', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const animal = await prisma.animal.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal não encontrado.' });
+        }
+        const events = await prisma.herdEvent.findMany({
+            where: { animalId: id },
+            orderBy: { date: 'desc' },
+        });
+        return res.json({ events: events.map(serializeHerdEvent) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao listar eventos.' });
+    }
+});
+
+app.post('/animals/:id/eventos', async (req, res) => {
+    const { id } = req.params;
+    const { type, date, peso, valor, origem, destino, observacoes } = req.body || {};
+
+    if (!VALID_EVENT_TYPES.includes(type?.toUpperCase?.())) {
+        return res.status(400).json({ message: 'Tipo inválido. Use NASCIMENTO, COMPRA, VENDA ou MORTE.' });
+    }
+    const eventDate = parseDateValue(date);
+    if (!eventDate) {
+        return res.status(400).json({ message: 'Data do evento inválida.' });
+    }
+
+    try {
+        const animal = await prisma.animal.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal não encontrado.' });
+        }
+        const event = await prisma.herdEvent.create({
+            data: {
+                farmId: animal.farmId,
+                animalId: id,
+                type: type.toUpperCase(),
+                date: eventDate,
+                peso: parseNumber(peso),
+                valor: parseNumber(valor),
+                origem: origem?.trim() || null,
+                destino: destino?.trim() || null,
+                observacoes: observacoes?.trim() || null,
+            },
+        });
+        return res.status(201).json({ event: serializeHerdEvent(event) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar evento.' });
+    }
+});
+
+// =============================================
+// MANEJO SANITÁRIO — Rebanho Comercial
+// =============================================
+
+app.get('/animals/:id/sanitario', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const animal = await prisma.animal.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal não encontrado.' });
+        }
+        const records = await prisma.sanitaryRecord.findMany({
+            where: { animalId: id },
+            orderBy: { date: 'desc' },
+        });
+        return res.json({ records: records.map(serializeSanitaryRecord) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao listar registros sanitários.' });
+    }
+});
+
+app.post('/animals/:id/sanitario', async (req, res) => {
+    const { id } = req.params;
+    const { tipo, produto, date, dose, proximaAplicacao, observacoes } = req.body || {};
+
+    if (!VALID_SANITARY_TIPOS.includes(tipo?.toUpperCase?.())) {
+        return res.status(400).json({ message: 'Tipo inválido. Use VACINA, VERMIFUGO ou TRATAMENTO.' });
+    }
+    if (!produto?.trim()) {
+        return res.status(400).json({ message: 'Nome do produto é obrigatório.' });
+    }
+    const eventDate = parseDateValue(date);
+    if (!eventDate) {
+        return res.status(400).json({ message: 'Data do registro inválida.' });
+    }
+
+    try {
+        const animal = await prisma.animal.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal não encontrado.' });
+        }
+        const record = await prisma.sanitaryRecord.create({
+            data: {
+                farmId: animal.farmId,
+                animalId: id,
+                tipo: tipo.toUpperCase(),
+                produto: produto.trim(),
+                date: eventDate,
+                dose: dose?.trim() || null,
+                proximaAplicacao: parseDateValue(proximaAplicacao),
+                observacoes: observacoes?.trim() || null,
+            },
+        });
+        return res.status(201).json({ record: serializeSanitaryRecord(record) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar registro sanitário.' });
+    }
+});
+
+// =============================================
+// EVENTOS DE INVENTÁRIO — Plantel P.O.
+// =============================================
+
+app.get('/po/animals/:id/eventos', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const animal = await prisma.poAnimal.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
+        }
+        const events = await prisma.herdEvent.findMany({
+            where: { poAnimalId: id },
+            orderBy: { date: 'desc' },
+        });
+        return res.json({ events: events.map(serializeHerdEvent) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao listar eventos.' });
+    }
+});
+
+app.post('/po/animals/:id/eventos', async (req, res) => {
+    const { id } = req.params;
+    const { type, date, peso, valor, origem, destino, observacoes } = req.body || {};
+
+    if (!VALID_EVENT_TYPES.includes(type?.toUpperCase?.())) {
+        return res.status(400).json({ message: 'Tipo inválido. Use NASCIMENTO, COMPRA, VENDA ou MORTE.' });
+    }
+    const eventDate = parseDateValue(date);
+    if (!eventDate) {
+        return res.status(400).json({ message: 'Data do evento inválida.' });
+    }
+
+    try {
+        const animal = await prisma.poAnimal.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
+        }
+        const event = await prisma.herdEvent.create({
+            data: {
+                farmId: animal.farmId,
+                poAnimalId: id,
+                type: type.toUpperCase(),
+                date: eventDate,
+                peso: parseNumber(peso),
+                valor: parseNumber(valor),
+                origem: origem?.trim() || null,
+                destino: destino?.trim() || null,
+                observacoes: observacoes?.trim() || null,
+            },
+        });
+        return res.status(201).json({ event: serializeHerdEvent(event) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar evento.' });
+    }
+});
+
+// =============================================
+// MANEJO SANITÁRIO — Plantel P.O.
+// =============================================
+
+app.get('/po/animals/:id/sanitario', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const animal = await prisma.poAnimal.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
+        }
+        const records = await prisma.sanitaryRecord.findMany({
+            where: { poAnimalId: id },
+            orderBy: { date: 'desc' },
+        });
+        return res.json({ records: records.map(serializeSanitaryRecord) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao listar registros sanitários.' });
+    }
+});
+
+app.post('/po/animals/:id/sanitario', async (req, res) => {
+    const { id } = req.params;
+    const { tipo, produto, date, dose, proximaAplicacao, observacoes } = req.body || {};
+
+    if (!VALID_SANITARY_TIPOS.includes(tipo?.toUpperCase?.())) {
+        return res.status(400).json({ message: 'Tipo inválido. Use VACINA, VERMIFUGO ou TRATAMENTO.' });
+    }
+    if (!produto?.trim()) {
+        return res.status(400).json({ message: 'Nome do produto é obrigatório.' });
+    }
+    const eventDate = parseDateValue(date);
+    if (!eventDate) {
+        return res.status(400).json({ message: 'Data do registro inválida.' });
+    }
+
+    try {
+        const animal = await prisma.poAnimal.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!animal) {
+            return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
+        }
+        const record = await prisma.sanitaryRecord.create({
+            data: {
+                farmId: animal.farmId,
+                poAnimalId: id,
+                tipo: tipo.toUpperCase(),
+                produto: produto.trim(),
+                date: eventDate,
+                dose: dose?.trim() || null,
+                proximaAplicacao: parseDateValue(proximaAplicacao),
+                observacoes: observacoes?.trim() || null,
+            },
+        });
+        return res.status(201).json({ record: serializeSanitaryRecord(record) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar registro sanitário.' });
     }
 });
 

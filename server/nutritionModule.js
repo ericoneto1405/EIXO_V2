@@ -2687,8 +2687,6 @@ const registerNutritionModuleRoutes = ({ app, prisma, parseNumber, parseDateValu
 
             const officialExecutions = executions.filter((item) => matchesOfficialReview(item, settings.indicatorsApprovedOnly));
             const officialFabrications = fabrications.filter((item) => matchesOfficialFabrication(item, settings));
-            const officialReadings = readings.filter((item) => settings.indicatorsApprovedOnly ? item.reviewStatus === 'APPROVED' && !item.rejectedAt : !item.rejectedAt);
-
             const unitMetrics = units.map((unit) => {
                 const assignment = assignmentByUnit.get(unit.id) || (unit.lotId ? assignmentByLot.get(unit.lotId) : null) || null;
                 const headCount = resolveUnitHeadCount(unit, lotHeadCounts);

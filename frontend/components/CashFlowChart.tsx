@@ -1,16 +1,31 @@
-
 import React from 'react';
 import { ResponsiveContainer, BarChart, XAxis, YAxis, Tooltip, Legend, Bar, CartesianGrid } from 'recharts';
 import { FluxoCaixaData } from '../types';
 import ChartCard from './ChartCard';
 
-const data: FluxoCaixaData[] = [];
+interface CashFlowChartProps {
+    farmId?: string | null;
+}
 
-const CashFlowChart: React.FC = () => {
+const CashFlowChart: React.FC<CashFlowChartProps> = ({ farmId }) => {
+    const [data, setData] = React.useState<FluxoCaixaData[]>([]);
+
+    React.useEffect(() => {
+        if (!farmId) {
+            setData([]);
+            return;
+        }
+
+        // TODO: conectar ao endpoint financeiro real quando o backend expor série histórica de fluxo de caixa por fazenda.
+        setData([]);
+    }, [farmId]);
+
     if (!data.length) {
         return (
             <ChartCard title="Fluxo de Caixa (Últimos 6 Meses)">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum movimento financeiro disponível.</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Nenhum movimento financeiro disponível.
+                </p>
             </ChartCard>
         );
     }
