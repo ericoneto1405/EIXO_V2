@@ -1,5 +1,124 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
+
+// ─── Dados dos módulos bloqueados ───────────────────────────────────────────
+
+interface ModuleInfo {
+    plan: 'PRO' | 'PLUS';
+    phrase: string;
+}
+
+const MODULE_INFO: Record<string, ModuleInfo> = {
+    'Visão Geral': {
+        plan: 'PRO',
+        phrase: 'Tenha um painel completo com todos os números da sua fazenda em tempo real.',
+    },
+    'Nutrição': {
+        plan: 'PRO',
+        phrase: 'Controle a dieta do seu rebanho e reduza o custo por arroba com precisão.',
+    },
+    'Registro de Atividades': {
+        plan: 'PRO',
+        phrase: 'Registre todas as atividades da fazenda e nunca perca um histórico.',
+    },
+    'Confinamento e Contratos': {
+        plan: 'PLUS',
+        phrase: 'Gerencie confinamentos e contratos de terceiros com total controle.',
+    },
+    'Reprodução': {
+        plan: 'PLUS',
+        phrase: 'Acompanhe a reprodução do seu plantel com rastreabilidade completa.',
+    },
+    'Eixo Acasalamento': {
+        plan: 'PLUS',
+        phrase: 'Planeje os acasalamentos e maximize o potencial genético do seu rebanho.',
+    },
+    'Estoque e Equipamentos': {
+        plan: 'PLUS',
+        phrase: 'Controle insumos, medicamentos e equipamentos sem planilha.',
+    },
+    'Gestão Comercial': {
+        plan: 'PLUS',
+        phrase: 'Venda no momento certo com dados reais de mercado na palma da mão.',
+    },
+};
+
+const PLAN_FULL_NAMES: Record<string, string> = {
+    PRO: 'Eixo Gestão',
+    PLUS: 'Eixo Decisão',
+};
+
+// ─── Popover de upgrade ──────────────────────────────────────────────────────
+
+interface LockPopoverProps {
+    itemLabel: string;
+    pos: { top: number; left: number };
+    onClose: () => void;
+    popoverRef: React.RefObject<HTMLDivElement | null>;
+}
+
+const LockPopover: React.FC<LockPopoverProps> = ({ itemLabel, pos, onClose, popoverRef }) => {
+    const info = MODULE_INFO[itemLabel];
+    if (!info) return null;
+    const planName = PLAN_FULL_NAMES[info.plan];
+
+    // Ajusta verticalmente se sair da tela
+    const adjustedTop = Math.min(pos.top, window.innerHeight - 320);
+
+    return createPortal(
+        <div
+            ref={popoverRef}
+            style={{ top: adjustedTop, left: pos.left }}
+            className="fixed z-50 w-72 rounded-3xl border-2 border-[#e7e5e4] bg-white p-5 shadow-2xl"
+        >
+            {/* Botão fechar */}
+            <button
+                type="button"
+                onClick={onClose}
+                className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full text-[#a8a29e] transition-colors hover:bg-[#f5f5f4] hover:text-[#1c1917]"
+                aria-label="Fechar"
+            >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+            </button>
+
+            {/* Badge do plano */}
+            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#7a2a14]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                {planName}
+            </div>
+
+            {/* Nome do módulo */}
+            <h3 className="pr-6 font-brand text-[15px] font-extrabold leading-snug text-[#1c1917]">
+                {itemLabel}
+            </h3>
+
+            {/* Frase de incentivo */}
+            <p className="mt-2 text-sm leading-relaxed text-[#78716c]">{info.phrase}</p>
+
+            {/* Preço */}
+            <div className="mt-4 flex items-baseline gap-1 rounded-2xl bg-[#f5f5f4] px-4 py-3">
+                <span className="font-brand text-xl font-extrabold text-[#a8442a]">R$ XXX</span>
+                <span className="text-sm text-[#a8a29e]">/mês</span>
+                <span className="ml-auto text-xs text-[#a8a29e]">no {planName}</span>
+            </div>
+
+            {/* CTA */}
+            <button
+                type="button"
+                onClick={onClose}
+                className="mt-3 w-full rounded-xl bg-[#a8442a] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#933a22] active:translate-y-[1px]"
+            >
+                Fazer upgrade
+            </button>
+        </div>,
+        document.body,
+    );
+};
+
+// ─── Tipos e constantes de navegação ────────────────────────────────────────
 
 interface SidebarProps {
     activeItem: string;
@@ -29,6 +148,8 @@ interface NavItem {
     disabled?: boolean;
     requiredPlanBadge?: 'PRO' | 'PLUS';
 }
+
+// ─── Ícones ──────────────────────────────────────────────────────────────────
 
 const HomeIcon: React.FC = () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,6 +282,8 @@ const SidebarPanelIcon: React.FC<{ collapsed: boolean }> = ({ collapsed }) => (
     </svg>
 );
 
+// ─── Dados de navegação ──────────────────────────────────────────────────────
+
 const geneticsSubItems: NavSubItem[] = [
     { label: 'Plantel', value: 'Eixo Genetics', path: '/genetics/plantel', allowedLabels: ['Eixo Genetics'] },
     { label: 'Seleção', value: 'Eixo Genetics', path: '/genetics/selecao', allowedLabels: ['Eixo Genetics'] },
@@ -224,6 +347,8 @@ const navItemsWithStructureSubItems: NavItem[] = navItems.map((item) =>
         : item,
 );
 
+// ─── SidebarButton ───────────────────────────────────────────────────────────
+
 const ChevronIndicator: React.FC<{ isOpen: boolean }> = ({ isOpen }) => (
     <span className="text-xl leading-none text-current">{isOpen ? '▾' : '▸'}</span>
 );
@@ -234,6 +359,7 @@ interface SidebarButtonProps {
     isActive: boolean;
     isCollapsed: boolean;
     onClick: () => void;
+    onLockClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
     badge?: string;
     suffix?: React.ReactNode;
     isSubItem?: boolean;
@@ -246,11 +372,14 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
     isActive,
     isCollapsed,
     onClick,
+    onLockClick,
     badge,
     suffix,
     isSubItem,
     disabled,
 }) => {
+    const isLock = badge && badge !== 'Em breve';
+
     const baseClasses = `w-full flex items-center font-brand ${
         isCollapsed ? 'justify-center' : 'justify-start'
     } ${isSubItem ? 'py-1.5' : 'py-2.5'} ${isSubItem ? (isCollapsed ? 'px-3' : 'pl-11 pr-3') : 'px-3.5'} ${
@@ -281,15 +410,30 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
                 <>
                     <span className="flex-1 text-left">{label}</span>
                     {badge && (
-                        <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                            badge === 'Em breve'
-                                ? 'bg-[#292524] text-[#a8a29e]'
-                                : 'bg-[#faeee8] text-[#a8442a]'
-                        }`}>
-                            {badge}
-                        </span>
+                        badge === 'Em breve' ? (
+                            <span className="ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-[#292524] text-[#a8a29e]">
+                                Em breve
+                            </span>
+                        ) : (
+                            // Cadeado clicável
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onLockClick?.(e);
+                                }}
+                                className="ml-2 flex items-center justify-center rounded-md p-0.5 text-[#a8a29e] transition-colors hover:text-[#c4bdb5]"
+                                aria-label={`Saber mais sobre ${label}`}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                            </button>
+                        )
                     )}
-                    {suffix && <span className="ml-2">{suffix}</span>}
+                    {!isLock && suffix && <span className="ml-2">{suffix}</span>}
+                    {isLock && suffix && <span className="ml-1">{suffix}</span>}
                 </>
             )}
             {isCollapsed && icon ? (
@@ -299,6 +443,8 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
     );
 };
 
+// ─── Sidebar principal ───────────────────────────────────────────────────────
+
 const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedModules, lockedModules }) => {
     const [isCollapsed, setIsCollapsed] = React.useState(false);
     const location = useLocation();
@@ -306,6 +452,33 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
     const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({});
     const comingSoonItems = navItemsWithStructureSubItems.filter((item) => item.disabled);
+
+    // Estado do popover de upgrade
+    const [openPopover, setOpenPopover] = React.useState<string | null>(null);
+    const [popoverPos, setPopoverPos] = React.useState<{ top: number; left: number }>({ top: 0, left: 0 });
+    const popoverRef = React.useRef<HTMLDivElement | null>(null);
+
+    // Fechar popover ao clicar fora
+    React.useEffect(() => {
+        if (!openPopover) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+                setOpenPopover(null);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [openPopover]);
+
+    const handleLockClick = (itemLabel: string, e: React.MouseEvent) => {
+        if (openPopover === itemLabel) {
+            setOpenPopover(null);
+            return;
+        }
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setPopoverPos({ top: rect.top - 8, left: rect.right + 12 });
+        setOpenPopover(itemLabel);
+    };
 
     const handleSelect = (value: string, path?: string) => {
         setActiveItem(value);
@@ -328,7 +501,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
         return labels.some((label) => allowedModules.includes(label));
     };
 
-    // Retorna true se o módulo deve aparecer com cadeado (plano pago necessário)
     const isModuleLockedByPlan = (labels?: string[]) => {
         if (!lockedModules?.length || !labels?.length) return false;
         return labels.some((label) => lockedModules.includes(label));
@@ -340,7 +512,6 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
         }
     }, [isGeneticsRoute]);
 
-    // Auto-expandir o grupo pai quando um subitem está ativo
     React.useEffect(() => {
         navItemsWithStructureSubItems.forEach((item) => {
             if (!item.subItems) return;
@@ -415,6 +586,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                                         badge={item.badge || (isPlanLocked ? item.requiredPlanBadge : undefined)}
                                         disabled={item.disabled}
                                         suffix={hasSubItems ? <ChevronIndicator isOpen={isExpanded} /> : undefined}
+                                        onLockClick={(e) => handleLockClick(item.label, e)}
                                         onClick={() => {
                                             if (item.disabled) return;
                                             if (hasSubItems) {
@@ -444,6 +616,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                                                             isSubItem
                                                             badge={subItem.badge || (isComingSoon ? 'Em breve' : isPlanLockedSubItem ? (subItem.requiredPlanBadge || item.requiredPlanBadge) : undefined)}
                                                             disabled={isComingSoon}
+                                                            onLockClick={(e) => handleLockClick(subItem.label, e)}
                                                             onClick={() => {
                                                                 if (isComingSoon) {
                                                                     return;
@@ -490,6 +663,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                 </div>
             </aside>
 
+            {/* Popover de upgrade — renderizado via portal fora da sidebar */}
+            {openPopover && (
+                <LockPopover
+                    itemLabel={openPopover}
+                    pos={popoverPos}
+                    onClose={() => setOpenPopover(null)}
+                    popoverRef={popoverRef}
+                />
+            )}
         </>
     );
 };

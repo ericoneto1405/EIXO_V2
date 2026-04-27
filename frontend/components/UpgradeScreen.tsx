@@ -1,5 +1,10 @@
 import React from 'react';
 
+const PLAN_NAMES: Record<string, string> = {
+    PRO: 'Eixo Gestão',
+    PLUS: 'Eixo Decisão',
+};
+
 interface UpgradeScreenProps {
     moduleName: string;
     icon: React.ReactNode;
@@ -24,7 +29,7 @@ const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
             <section className="rounded-[24px] border border-[#d7cab3] bg-[#fffaf1] p-6 lg:p-8">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
                     <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
-                    Desbloqueie no plano {requiredPlan}
+                    Desbloqueie no {PLAN_NAMES[requiredPlan] ?? requiredPlan}
                 </div>
 
                 <div className="flex items-center gap-3">

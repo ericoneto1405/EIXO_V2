@@ -285,14 +285,14 @@ const serializeAnimal = (animal) => ({
     brinco: animal.brinco,
     raca: animal.raca,
     sexo: formatSexoLabel(animal.sexo),
-    dataNascimento: animal.dataNascimento.toISOString(),
+    dataNascimento: animal.dataNascimento ? animal.dataNascimento.toISOString() : null,
     pesoAtual: animal.pesoAtual,
     gmd: animal.gmd ?? null,
     gmdLast: animal.gmd ?? null,
     gmd30: animal.gmd30 ?? null,
     farmId: animal.farmId,
     lotId: animal.lotId,
-    currentPaddockId: animal.currentPaddockId,
+    currentPaddockId: animal.currentPaddockId ?? null,
     currentPaddockName: animal.currentPaddock?.name || null,
     nutritionPlan: animal.currentNutritionPlan || null,
     createdAt: animal.createdAt.toISOString(),
@@ -6226,20 +6226,18 @@ app.get('/animals', async (req, res) => {
 app.post('/animals', async (req, res) => {
     const { farmId, lotId, brinco, raca, sexo, dataNascimento, pesoAtual, paddockId, paddockStartAt, valorCompra, dataCompra } = req.body || {};
 
-    if (!farmId || !brinco?.trim() || !raca?.trim() || !sexo || !dataNascimento) {
+    if (!farmId || !brinco?.trim() || !raca?.trim() || !sexo) {
         return res.status(400).json({ message: 'Dados obrigatórios do animal ausentes.' });
     }
-    if (!paddockId) {
-        return res.status(400).json({ message: 'Pasto obrigatório para cadastrar o animal.' });
-    }
+    // paddockId é opcional — animais podem ser importados sem pasto e alocados depois
 
     const sexoEnum = normalizeSexo(sexo);
     if (!sexoEnum) {
         return res.status(400).json({ message: 'Sexo inválido. Use Macho ou Fêmea.' });
     }
 
-    const birthDate = parseDateValue(dataNascimento);
-    if (!birthDate) {
+    const birthDate = dataNascimento ? parseDateValue(dataNascimento) : null;
+    if (dataNascimento && !birthDate) {
         return res.status(400).json({ message: 'Data de nascimento inválida.' });
     }
 
@@ -6267,20 +6265,24 @@ app.post('/animals', async (req, res) => {
             validLotId = lotId;
         }
 
-        const paddock = await prisma.paddock.findFirst({
-            where: { id: paddockId, farmId, farm: buildFarmRelationFilter(req) },
-        });
-        if (!paddock) {
-            return res.status(400).json({ message: 'Pasto inválido para esta fazenda.' });
-        }
-
-        const moveStartAt = paddockStartAt ? parseDateValue(paddockStartAt) : new Date();
-        if (paddockStartAt && !moveStartAt) {
-            return res.status(400).json({ message: 'Data de entrada no pasto inválida.' });
+        let validPaddockId = null;
+        let moveStartAt = null;
+        if (paddockId) {
+            const paddock = await prisma.paddock.findFirst({
+                where: { id: paddockId, farmId, farm: buildFarmRelationFilter(req) },
+            });
+            if (!paddock) {
+                return res.status(400).json({ message: 'Pasto inválido para esta fazenda.' });
+            }
+            moveStartAt = paddockStartAt ? parseDateValue(paddockStartAt) : new Date();
+            if (paddockStartAt && !moveStartAt) {
+                return res.status(400).json({ message: 'Data de entrada no pasto inválida.' });
+            }
+            validPaddockId = paddockId;
         }
 
         const parsedValorCompra = valorCompra ? parseFloat(valorCompra) : null;
-        const compraDate = dataCompra ? parseDateValue(dataCompra) : moveStartAt;
+        const compraDate = dataCompra ? parseDateValue(dataCompra) : (moveStartAt || new Date());
 
         const animal = await prisma.$transaction(async (tx) => {
             const created = await tx.animal.create({
@@ -6288,23 +6290,26 @@ app.post('/animals', async (req, res) => {
                     farmId,
                     lotId: validLotId,
                     brinco: brinco.trim(),
+                    identityKey: brinco.trim(),
                     raca: raca.trim(),
                     sexo: sexoEnum,
                     dataNascimento: birthDate,
                     pesoAtual: parsedPesoAtual,
                     gmd: null,
                     gmd30: null,
-                    currentPaddockId: paddockId,
+                    currentPaddockId: validPaddockId,
                 },
             });
-            await tx.paddockMove.create({
-                data: {
-                    farmId,
-                    paddockId,
-                    animalId: created.id,
-                    startAt: moveStartAt,
-                },
-            });
+            if (validPaddockId && moveStartAt) {
+                await tx.paddockMove.create({
+                    data: {
+                        farmId,
+                        paddockId: validPaddockId,
+                        animalId: created.id,
+                        startAt: moveStartAt,
+                    },
+                });
+            }
 
             // Se valor de compra informado, cria evento + lançamento financeiro automaticamente
             if (parsedValorCompra && parsedValorCompra > 0) {
@@ -6400,6 +6405,7 @@ app.post('/animals/batch', async (req, res) => {
                         farmId,
                         lotId: validLotId,
                         brinco: a.brinco.trim(),
+                        identityKey: a.brinco.trim(),
                         raca: (a.raca || 'Indefinida').trim(),
                         sexo: sexoEnum,
                         dataNascimento: null,

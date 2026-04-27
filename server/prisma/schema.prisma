@@ -173,8 +173,8 @@ model Animal {
   farmId         String
   lot            Lot?         @relation(fields: [lotId], references: [id], onDelete: SetNull)
   lotId          String?
-  currentPaddock   Paddock    @relation("AnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
-  currentPaddockId String
+  currentPaddock   Paddock?   @relation("AnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
+  currentPaddockId String?
   pesagens       Weighing[]
   exposures      Exposure[]
   reproEvents    ReproEvent[]

@@ -25,7 +25,8 @@
     "react-is": "^19.2.0",
     "react-leaflet": "^5.0.0",
     "react-router-dom": "^6.30.3",
-    "recharts": "^3.4.1"
+    "recharts": "^3.4.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

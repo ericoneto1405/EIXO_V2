@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ExcelJS from 'exceljs';
+import * as XLSX from 'xlsx';
 import Papa from 'papaparse';
 import HerdAnimalModal from './AnimalDetailModal';
 import LotDetailModal from './LotDetailModal';
@@ -201,21 +202,13 @@ const parseImportedFile = async (file: File): Promise<Record<string, string>[]> 
     }
 
     const buffer = await file.arrayBuffer();
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-    const worksheet = workbook.worksheets[0];
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
     if (!worksheet) {
         return [];
     }
-
-    const matrix: string[][] = [];
-    worksheet.eachRow({ includeEmpty: false }, (row) => {
-        const values: string[] = [];
-        for (let index = 1; index <= row.cellCount; index += 1) {
-            values.push(String(row.getCell(index).text ?? '').trim());
-        }
-        matrix.push(values);
-    });
+    const matrix = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1, defval: '' });
     return normalizeImportedMatrix(matrix);
 };
 
@@ -682,7 +675,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
             a.sexo?.toLowerCase() === 'fêmea' ||
             a.sexo?.toLowerCase() === 'femea').length;
 
-        const semPesagem = animals.filter((a) => a.gmd30 === null && a.gmdLast === null).length;
+        const semPesagem = animals.filter((a) => !a.pesoAtual || a.pesoAtual <= 0).length;
 
         const avgArroba = avgWeight !== null ? avgWeight / 15 : null;
 

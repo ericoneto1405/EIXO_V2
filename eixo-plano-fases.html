@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EIXO — Plano de Fases</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: #f5f5f4;
+    color: #1c1917;
+    min-height: 100vh;
+    padding: 32px 24px;
+  }
+
+  .container { max-width: 860px; margin: 0 auto; }
+
+  /* Header */
+  .header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
+  .header img { height: 32px; }
+  .header-text h1 { font-size: 20px; font-weight: 800; color: #1c1917; }
+  .header-text p { font-size: 13px; color: #78716c; margin-top: 2px; }
+  .header-divider { flex: 1; height: 1px; background: #e7e5e4; }
+
+  /* Summary */
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .summary-card {
+    background: white;
+    border: 1.5px solid #e7e5e4;
+    border-radius: 16px;
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .summary-num { font-size: 26px; font-weight: 800; color: #1c1917; }
+  .summary-num.accent { color: #a8442a; }
+  .summary-label { font-size: 10px; color: #78716c; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 2px; }
+
+  /* Progress bar geral */
+  .global-progress { background: white; border: 1.5px solid #e7e5e4; border-radius: 16px; padding: 14px 20px; margin-bottom: 28px; }
+  .global-progress-label { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #78716c; margin-bottom: 8px; }
+  .bar-track { height: 8px; background: #f5f5f4; border-radius: 99px; overflow: hidden; }
+  .bar-fill { height: 100%; background: #a8442a; border-radius: 99px; transition: width 0.4s ease; }
+
+  /* Phases grid */
+  .phases { display: flex; flex-direction: column; gap: 14px; }
+
+  .phase { background: white; border-radius: 20px; border: 1.5px solid #e7e5e4; overflow: hidden; }
+
+  .phase-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.15s;
+  }
+  .phase-header:hover { opacity: 0.85; }
+
+  .phase-badge {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.12em;
+    text-transform: uppercase; padding: 4px 12px;
+    border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+  }
+  .phase-info { flex: 1; }
+  .phase-title { font-size: 14px; font-weight: 700; }
+  .phase-sub { font-size: 12px; color: #78716c; margin-top: 2px; }
+  .phase-meta { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+  .phase-count { font-size: 11px; font-weight: 600; color: #a8a29e; }
+  .phase-toggle { font-size: 11px; color: #a8a29e; transition: transform 0.2s; width: 16px; text-align: center; }
+  .phase-toggle.open { transform: rotate(90deg); }
+
+  /* Mini progress per phase */
+  .phase-mini-bar { width: 64px; height: 5px; background: #f5f5f4; border-radius: 99px; overflow: hidden; }
+  .phase-mini-fill { height: 100%; border-radius: 99px; transition: width 0.3s; }
+
+  .phase-body { display: none; padding: 0 20px 18px; }
+  .phase-body.open { display: block; }
+
+  .task-group { margin-top: 12px; }
+  .task-group-title {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.14em; color: #a8a29e; margin-bottom: 8px; padding-left: 2px;
+  }
+
+  .task {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 7px 0; border-bottom: 1px solid #f5f5f4;
+  }
+  .task:last-child { border-bottom: none; }
+
+  .task-check {
+    width: 18px; height: 18px; border-radius: 5px;
+    border: 1.5px solid #d6d3d1; flex-shrink: 0;
+    margin-top: 1px; display: flex; align-items: center;
+    justify-content: center; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .task-check:hover { border-color: #a8442a; }
+  .task-check.done { background: #a8442a; border-color: #a8442a; }
+  .task-check.done::after { content: '✓'; color: white; font-size: 11px; font-weight: 700; }
+
+  .task-text { font-size: 13px; color: #1c1917; line-height: 1.5; flex: 1; }
+  .task-text.done { text-decoration: line-through; color: #a8a29e; }
+
+  .task-tag {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    padding: 2px 7px; border-radius: 999px; margin-left: 8px;
+    vertical-align: middle; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+  }
+  .tag-front { background: #faeee8; color: #7a2a14; }
+  .tag-back  { background: #e8edf5; color: #1a3a7a; }
+  .tag-both  { background: #f0fae8; color: #2a6614; }
+
+  /* Phase colors */
+  .ph0 .phase-header { background: #f5f5f4; }
+  .ph0 .phase-badge  { background: #e7e5e4; color: #78716c; }
+  .ph0 .phase-mini-fill { background: #78716c; }
+
+  .ph1 .phase-header { background: #faeee8; }
+  .ph1 .phase-badge  { background: #a8442a; color: white; }
+  .ph1 .phase-mini-fill { background: #a8442a; }
+
+  .ph2 .phase-header { background: #fff7ed; }
+  .ph2 .phase-badge  { background: #c2652e; color: white; }
+  .ph2 .phase-mini-fill { background: #c2652e; }
+
+  .ph3 .phase-header { background: #eff6ff; }
+  .ph3 .phase-badge  { background: #1d4ed8; color: white; }
+  .ph3 .phase-mini-fill { background: #1d4ed8; }
+
+  .ph4 .phase-header { background: #f0fdf4; }
+  .ph4 .phase-badge  { background: #16a34a; color: white; }
+  .ph4 .phase-mini-fill { background: #16a34a; }
+
+  .ph5 .phase-header { background: #faf5ff; }
+  .ph5 .phase-badge  { background: #7c3aed; color: white; }
+  .ph5 .phase-mini-fill { background: #7c3aed; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; margin-top: 20px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #78716c; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* Timestamp */
+  .footer { margin-top: 24px; font-size: 11px; color: #a8a29e; text-align: center; }
+
+  @media (max-width: 600px) {
+    body { padding: 16px 12px; }
+    .summary { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-text">
+      <h1>EIXO — Plano de Desenvolvimento</h1>
+      <p>Fases ordenadas por prioridade · marque cada tarefa ao concluir</p>
+    </div>
+    <div class="header-divider"></div>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary">
+    <div class="summary-card">
+      <div class="summary-num" id="s-total">0</div>
+      <div class="summary-label">Total de tarefas</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num accent" id="s-done">0</div>
+      <div class="summary-label">Concluídas</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num" id="s-remain">0</div>
+      <div class="summary-label">Pendentes</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-num accent" id="s-pct">0%</div>
+      <div class="summary-label">Progresso</div>
+    </div>
+  </div>
+
+  <!-- Barra de progresso geral -->
+  <div class="global-progress">
+    <div class="global-progress-label">
+      <span>Progresso geral</span>
+      <span id="g-label">0 de 0 tarefas</span>
+    </div>
+    <div class="bar-track">
+      <div class="bar-fill" id="g-bar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <!-- Phases -->
+  <div class="phases">
+
+    <!-- FASE 0 -->
+    <div class="phase ph0" id="ph0">
+      <div class="phase-header" onclick="togglePhase('ph0')">
+        <span class="phase-badge">Fase 0</span>
+        <div class="phase-info">
+          <div class="phase-title">Paleta Visual — Fundação</div>
+          <div class="phase-sub">Identidade visual consistente antes de qualquer nova feature</div>
+        </div>
+        <div class="phase-meta">
+          <div class="phase-mini-bar"><div class="phase-mini-fill ph0-fill" style="width:0%"></div></div>
+          <span class="phase-count ph0-count">0/0</span>
+          <span class="phase-toggle" id="toggle-ph0">▶</span>
+        </div>
+      </div>
+      <div class="phase-body" id="body-ph0">
+        <div class="task-group">
+          <div class="task-group-title">Visual Global</div>
+          <div class="task">
+            <div class="task-check done" onclick="toggle(this)"></div>
+            <div class="task-text done">Botões primários <code>#a8442a</code> no HerdModule e FinanceModule</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Tabs ativas <code>#a8442a</code> em todos os módulos (Nutrição, Financeiro, Rebanho)</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Checkboxes e focus rings com <code>#a8442a</code> em todos os formulários</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Nutrição: substituir paleta antiga (<code>#d8d2c7</code>, <code>#b0a090</code>) pelo padrão atual</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FASE 1 -->
+    <div class="phase ph1" id="ph1">
+      <div class="phase-header" onclick="togglePhase('ph1')">
+        <span class="phase-badge">Fase 1</span>
+        <div class="phase-info">
+          <div class="phase-title">Manejo do Rebanho — Completo</div>
+          <div class="phase-sub">Módulo principal 100% funcional no Plano Grátis</div>
+        </div>
+        <div class="phase-meta">
+          <div class="phase-mini-bar"><div class="phase-mini-fill ph1-fill" style="width:0%"></div></div>
+          <span class="phase-count ph1-count">0/0</span>
+          <span class="phase-toggle" id="toggle-ph1">▶</span>
+        </div>
+      </div>
+      <div class="phase-body" id="body-ph1">
+        <div class="task-group">
+          <div class="task-group-title">Aba Pesagens</div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Backend: rota GET /weighings — listar pesagens do rebanho com filtros</div>
+            <span class="task-tag tag-back">Back</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Backend: rota POST /weighings — registrar pesagem individual ou em lote</div>
+            <span class="task-tag tag-back">Back</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Frontend: tabela de pesagens com data, animal, peso anterior, peso atual e GMD</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Frontend: formulário para registrar pesagem (animal individual ou vários de uma vez)</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Frontend: gráfico de evolução de peso por animal / lote</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+        </div>
+        <div class="task-group">
+          <div class="task-group-title">Aba Configurações do Rebanho</div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Peso alvo de abate por categoria (boi, novilha, vaca, etc.)</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Gerenciamento de raças cadastradas na fazenda</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Intervalo padrão de pesagem (em dias) para alertas</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+        </div>
+        <div class="task-group">
+          <div class="task-group-title">Modal de Detalhe do Animal</div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Verificar e completar todos os campos de exibição do animal</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Permitir edição dos dados básicos do animal direto no modal</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FASE 2 -->
+    <div class="phase ph2" id="ph2">
+      <div class="phase-header" onclick="togglePhase('ph2')">
+        <span class="phase-badge">Fase 2</span>
+        <div class="phase-info">
+          <div class="phase-title">Experiência do Plano Grátis — Polimento</div>
+          <div class="phase-sub">Limites amigáveis, avisos visuais e onboarding</div>
+        </div>
+        <div class="phase-meta">
+          <div class="phase-mini-bar"><div class="phase-mini-fill ph2-fill" style="width:0%"></div></div>
+          <span class="phase-count ph2-count">0/0</span>
+          <span class="phase-toggle" id="toggle-ph2">▶</span>
+        </div>
+      </div>
+      <div class="phase-body" id="body-ph2">
+        <div class="task-group">
+          <div class="task-group-title">Limites do Plano</div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Modal visual ao atingir limite de 1 fazenda (hoje retorna erro genérico)</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Modal visual ao atingir limite de 3 usuários</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Banner suave indicando plano atual e CTA de upgrade</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+        </div>
+        <div class="task-group">
+          <div class="task-group-title">Onboarding</div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Checklist de primeiros passos no primeiro login: criar fazenda → importar animais → registrar pesagem</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FASE 3 -->
+    <div class="phase ph3" id="ph3">
+      <div class="phase-header" onclick="togglePhase('ph3')">
+        <span class="phase-badge">Fase 3</span>
+        <div class="phase-info">
+          <div class="phase-title">Plano Eixo Gestão (Pago 1)</div>
+          <div class="phase-sub">Dashboard, Nutrição, exportação e pesagens avançadas</div>
+        </div>
+        <div class="phase-meta">
+          <div class="phase-mini-bar"><div class="phase-mini-fill ph3-fill" style="width:0%"></div></div>
+          <span class="phase-count ph3-count">0/0</span>
+          <span class="phase-toggle" id="toggle-ph3">▶</span>
+        </div>
+      </div>
+      <div class="phase-body" id="body-ph3">
+        <div class="task-group">
+          <div class="task-group-title">Módulos</div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Dashboard (Visão Geral): KPIs do rebanho, financeiro e alertas inteligentes</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Nutrição: revisar paleta + completar funcionalidades (dietas, rações, consumo)</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Pesagens avançadas: importação em lote, histórico comparativo entre períodos</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Exportação de dados: Excel e PDF para relatórios do rebanho e financeiro</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Registro de Atividades: log de ações na fazenda (sanidade, manejo, etc.)</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FASE 4 -->
+    <div class="phase ph4" id="ph4">
+      <div class="phase-header" onclick="togglePhase('ph4')">
+        <span class="phase-badge">Fase 4</span>
+        <div class="phase-info">
+          <div class="phase-title">Billing — Integração Asaas</div>
+          <div class="phase-sub">Monetização: upgrade, pagamento e controle de plano</div>
+        </div>
+        <div class="phase-meta">
+          <div class="phase-mini-bar"><div class="phase-mini-fill ph4-fill" style="width:0%"></div></div>
+          <span class="phase-count ph4-count">0/0</span>
+          <span class="phase-toggle" id="toggle-ph4">▶</span>
+        </div>
+      </div>
+      <div class="phase-body" id="body-ph4">
+        <div class="task-group">
+          <div class="task-group-title">Pagamento</div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Backend: integração Asaas — criar assinatura via API</div>
+            <span class="task-tag tag-back">Back</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Backend: webhook Asaas — ativar e desativar plano automaticamente ao pagar/cancelar</div>
+            <span class="task-tag tag-back">Back</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Frontend: fluxo de upgrade — escolher plano → pagar → liberar módulos imediatamente</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Frontend: tela de gestão de assinatura (trocar plano, visualizar fatura, cancelar)</div>
+            <span class="task-tag tag-front">Front</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FASE 5 -->
+    <div class="phase ph5" id="ph5">
+      <div class="phase-header" onclick="togglePhase('ph5')">
+        <span class="phase-badge">Fase 5</span>
+        <div class="phase-info">
+          <div class="phase-title">Plano Eixo Decisão (Pago 2)</div>
+          <div class="phase-sub">Reprodução, acasalamento, confinamento e rastreabilidade completa</div>
+        </div>
+        <div class="phase-meta">
+          <div class="phase-mini-bar"><div class="phase-mini-fill ph5-fill" style="width:0%"></div></div>
+          <span class="phase-count ph5-count">0/0</span>
+          <span class="phase-toggle" id="toggle-ph5">▶</span>
+        </div>
+      </div>
+      <div class="phase-body" id="body-ph5">
+        <div class="task-group">
+          <div class="task-group-title">Módulos Avançados</div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Reprodução: ciclos reprodutivos, diagnósticos e controle de prenhez</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Eixo Acasalamento: planejamento genético e formação de grupos de monta</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Confinamento e Contratos: lotes de terceiros, custo/arroba e fechamento</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Estoque e Equipamentos: controle de insumos, medicamentos e máquinas</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Gestão Comercial: projeções de venda e indicadores de mercado</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+          <div class="task">
+            <div class="task-check" onclick="toggle(this)"></div>
+            <div class="task-text">Rastreabilidade completa: SISBOV, EID, exportação auditável com relatório de erros</div>
+            <span class="task-tag tag-both">Full</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /phases -->
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#faeee8;border:1px solid #f0d5ca"></div> Front — só frontend</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e8edf5;border:1px solid #c7d4ea"></div> Back — só backend</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#f0fae8;border:1px solid #c7eac7"></div> Full — front + back</div>
+  </div>
+
+  <div class="footer" id="footer-ts"></div>
+
+</div><!-- /container -->
+
+<script>
+  // ── Estado persistido em localStorage ──────────────────────────────────────
+  const STORAGE_KEY = 'eixo_plano_fases_v1';
+
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch { return {}; }
+  }
+  function saveState(state) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  // ── Toggle fase ─────────────────────────────────────────────────────────────
+  function togglePhase(id) {
+    const body = document.getElementById('body-' + id);
+    const tog  = document.getElementById('toggle-' + id);
+    const open = body.classList.contains('open');
+    body.classList.toggle('open', !open);
+    tog.classList.toggle('open', !open);
+  }
+
+  // ── Toggle tarefa ───────────────────────────────────────────────────────────
+  function toggle(el) {
+    el.classList.toggle('done');
+    el.nextElementSibling.classList.toggle('done');
+    persistChecks();
+    updateAllCounters();
+  }
+
+  // ── Persistência ─────────────────────────────────────────────────────────────
+  function persistChecks() {
+    const checks = document.querySelectorAll('.task-check');
+    const state = {};
+    checks.forEach((c, i) => { state[i] = c.classList.contains('done'); });
+    saveState(state);
+  }
+
+  function restoreChecks() {
+    const state = loadState();
+    const checks = document.querySelectorAll('.task-check');
+    checks.forEach((c, i) => {
+      if (state[i]) {
+        c.classList.add('done');
+        c.nextElementSibling.classList.add('done');
+      }
+    });
+  }
+
+  // ── Contadores ──────────────────────────────────────────────────────────────
+  const phases = ['ph0','ph1','ph2','ph3','ph4','ph5'];
+
+  function updateAllCounters() {
+    let total = 0, done = 0;
+    phases.forEach(id => {
+      const el = document.getElementById(id);
+      const checks = el.querySelectorAll('.task-check');
+      const doneInPhase = el.querySelectorAll('.task-check.done');
+      const t = checks.length, d = doneInPhase.length;
+      total += t; done += d;
+      const pct = t > 0 ? Math.round(d/t*100) : 0;
+      el.querySelector('.' + id + '-fill').style.width = pct + '%';
+      el.querySelector('.' + id + '-count').textContent = d + '/' + t;
+    });
+    document.getElementById('s-total').textContent = total;
+    document.getElementById('s-done').textContent = done;
+    document.getElementById('s-remain').textContent = total - done;
+    const pct = total > 0 ? Math.round(done/total*100) : 0;
+    document.getElementById('s-pct').textContent = pct + '%';
+    document.getElementById('g-bar').style.width = pct + '%';
+    document.getElementById('g-label').textContent = done + ' de ' + total + ' tarefas';
+  }
+
+  // ── Timestamp ────────────────────────────────────────────────────────────────
+  document.getElementById('footer-ts').textContent =
+    'Gerado em ' + new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+  restoreChecks();
+  updateAllCounters();
+
+  // Abrir fases 0 e 1 por padrão na primeira visita
+  if (Object.keys(loadState()).length === 0) {
+    togglePhase('ph0');
+    togglePhase('ph1');
+  }
+</script>
+</body>
+</html>
