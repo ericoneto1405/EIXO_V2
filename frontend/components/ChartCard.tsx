@@ -8,8 +8,8 @@ interface ChartCardProps {
 
 const ChartCard: React.FC<ChartCardProps> = ({ title, children }) => {
     return (
-        <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-6 h-full">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{title}</h3>
+        <div className="h-full rounded-2xl border border-[#e7e5e4] bg-white p-6 shadow-lg">
+            <h3 className="mb-4 text-lg font-semibold text-[#1c1917]">{title}</h3>
             <div className="h-full">
                 {children}
             </div>

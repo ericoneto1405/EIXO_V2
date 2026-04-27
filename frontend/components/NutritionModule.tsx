@@ -39,6 +39,7 @@ interface FeedsUser {
 
 interface NutritionModuleProps {
     farmId?: string | null;
+    farmName?: string | null;
     currentUser?: FeedsUser | null;
 }
 
@@ -133,7 +134,7 @@ const Field: React.FC<{
     </label>
 );
 
-const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, currentUser }) => {
+const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, currentUser }) => {
     const [view, setView] = React.useState<ModuleView>('Hoje');
     const [loading, setLoading] = React.useState(false);
     const [saving, setSaving] = React.useState(false);
@@ -539,29 +540,35 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, currentUser }
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-semibold text-[#28352c]">Nutrição</h1>
-                    <p className="text-sm text-[#6b7280]">Controle do dia, custo, consumo, diferenças e estrutura do trato.</p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                    {VIEWS.map((item) => (
+            {/* Header */}
+            <div className="rounded-2xl border border-[#e7e5e4] bg-white px-6 py-5">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                            {farmName || 'Fazenda'}
+                        </div>
+                        <h2 className="font-brand text-2xl font-extrabold leading-tight text-[#1c1917]">Nutrição</h2>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {VIEWS.map((item) => (
+                            <button
+                                key={item}
+                                type="button"
+                                onClick={() => setView(item)}
+                                className={`rounded-xl px-4 py-2 text-sm font-semibold font-brand transition-colors ${view === item ? 'bg-[#a8442a] text-white' : 'bg-[#f5f5f4] text-[#78716c] hover:bg-[#f5f5f4]'}`}
+                            >
+                                {item}
+                            </button>
+                        ))}
                         <button
-                            key={item}
                             type="button"
-                            onClick={() => setView(item)}
-                            className={`rounded-full px-4 py-2 text-sm font-medium transition ${view === item ? 'bg-[#64704f] text-white' : 'border border-[#d8d2c7] bg-white text-[#28352c]'}`}
+                            onClick={loadAll}
+                            className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-2 text-sm font-semibold text-[#78716c] hover:bg-[#f5f5f4] font-brand"
                         >
-                            {item}
+                            Atualizar
                         </button>
-                    ))}
-                    <button
-                        type="button"
-                        onClick={loadAll}
-                        className="rounded-full border border-[#d8d2c7] bg-white px-4 py-2 text-sm font-medium text-[#28352c]"
-                    >
-                        Atualizar
-                    </button>
+                    </div>
                 </div>
             </div>
 

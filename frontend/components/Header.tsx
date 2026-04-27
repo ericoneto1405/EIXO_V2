@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { buildApiUrl } from '../api';
 import { Alert } from '../types';
 
 // ---- Icons ----
@@ -40,7 +41,7 @@ const UsersIcon: React.FC = () => (
 );
 
 const CheckIcon: React.FC = () => (
-    <svg className="w-4 h-4 text-[#9d7d4d]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4 text-[#1c1917]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
     </svg>
 );
@@ -90,6 +91,8 @@ const Header: React.FC<HeaderProps> = ({
     const [farmOpen, setFarmOpen] = useState(false);
     const [alertOpen, setAlertOpen] = useState(false);
     const [userOpen, setUserOpen] = useState(false);
+    const [alerts, setAlerts] = useState<Alert[]>([]);
+    const [alertsError, setAlertsError] = useState<string | null>(null);
 
     const farmRef = useRef<HTMLDivElement>(null);
     const alertRef = useRef<HTMLDivElement>(null);
@@ -98,9 +101,40 @@ const Header: React.FC<HeaderProps> = ({
     const selectedFarm = farms.find((f) => f.id === selectedFarmId) || null;
     const hasFarms = farms.length > 0;
 
-    // Placeholder — substituir por dados reais no plano avançado
-    const alerts: Alert[] = [];
     const hasAlerts = alerts.length > 0;
+
+    useEffect(() => {
+        let isMounted = true;
+        const loadAlerts = async () => {
+            setAlertsError(null);
+            try {
+                const query = selectedFarmId ? `?farmId=${encodeURIComponent(selectedFarmId)}` : '';
+                const response = await fetch(buildApiUrl(`/alerts${query}`), {
+                    credentials: 'include',
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload?.message || 'Erro ao carregar alertas.');
+                }
+                if (isMounted) {
+                    setAlerts(Array.isArray(payload?.alerts) ? payload.alerts : []);
+                }
+            } catch (error) {
+                console.error(error);
+                if (isMounted) {
+                    setAlerts([]);
+                    setAlertsError(error instanceof Error ? error.message : 'Erro ao carregar alertas.');
+                }
+            }
+        };
+
+        void loadAlerts();
+        const intervalId = window.setInterval(loadAlerts, 60_000);
+        return () => {
+            isMounted = false;
+            window.clearInterval(intervalId);
+        };
+    }, [selectedFarmId]);
 
     // Fechar dropdowns ao clicar fora
     useEffect(() => {
@@ -114,24 +148,24 @@ const Header: React.FC<HeaderProps> = ({
     }, []);
 
     return (
-        <header className="relative z-20 rounded-[28px] border border-[#ccb99d] bg-[#f3eadc]/92 px-4 py-3 backdrop-blur lg:px-6">
+        <header className="relative z-20 rounded-[28px] border border-[#e7e5e4] bg-white px-4 py-3 lg:px-6">
             <div className="flex items-center justify-between gap-3">
 
                 {/* Seletor de Fazenda */}
                 <div className="relative" ref={farmRef}>
                     <button
                         onClick={() => setFarmOpen((v) => !v)}
-                        className="flex items-center gap-3 rounded-2xl border border-[#d1c1aa] bg-[#efe6d8] px-4 py-2.5 transition-colors hover:bg-[#e8ddcd]"
+                        className="flex items-center gap-3 rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-2.5 transition-colors hover:bg-[#ece9e6]"
                     >
                         {/* Avatar com iniciais */}
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#9d7d4d] text-sm font-bold text-white">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#1c1917] text-sm font-bold text-white">
                             {selectedFarm ? getInitials(selectedFarm.name) : <LocationIcon />}
                         </div>
                         <div className="hidden min-w-0 text-left sm:block">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#7f6d58]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#78716c]">
                                 Fazenda selecionada
                             </p>
-                            <p className="max-w-[180px] truncate text-sm font-bold text-stone-900">
+                            <p className="max-w-[180px] truncate text-sm font-bold text-[#1c1917]">
                                 {selectedFarm?.name || (hasFarms ? 'Selecione uma fazenda' : 'Nenhuma cadastrada')}
                             </p>
                         </div>
@@ -139,9 +173,9 @@ const Header: React.FC<HeaderProps> = ({
                     </button>
 
                     {farmOpen && (
-                        <div className="absolute left-0 z-30 mt-2 w-72 rounded-2xl border border-[#ccb99d] bg-[#f5ede2] shadow-xl">
-                            <div className="border-b border-[#e3d4c0] px-4 py-3">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-[#7f6d58]">Suas fazendas</p>
+                        <div className="absolute left-0 z-30 mt-2 w-72 rounded-2xl border border-[#e7e5e4] bg-white shadow-xl">
+                            <div className="border-b border-[#e7e5e4] px-4 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-[#78716c]">Suas fazendas</p>
                             </div>
                             <ul className="max-h-64 overflow-y-auto py-2">
                                 {hasFarms ? (
@@ -150,9 +184,9 @@ const Header: React.FC<HeaderProps> = ({
                                             <button
                                                 type="button"
                                                 onClick={() => { onSelectFarm(farm.id); setFarmOpen(false); }}
-                                                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-[#4a3f35] transition-colors hover:bg-[#eadfce]"
+                                                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-[#1c1917] transition-colors hover:bg-[#f5f5f4]"
                                             >
-                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#d4c4ae] text-xs font-bold text-[#5a4a35]">
+                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1c1917] text-xs font-bold text-white">
                                                     {getInitials(farm.name)}
                                                 </div>
                                                 <span className="flex-1 font-medium">{farm.name}</span>
@@ -161,7 +195,7 @@ const Header: React.FC<HeaderProps> = ({
                                         </li>
                                     ))
                                 ) : (
-                                    <li className="px-4 py-3 text-sm text-[#7f6d58]">Nenhuma fazenda cadastrada.</li>
+                                    <li className="px-4 py-3 text-sm text-[#78716c]">Nenhuma fazenda cadastrada.</li>
                                 )}
                             </ul>
                         </div>
@@ -175,18 +209,18 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="relative" ref={alertRef}>
                         <button
                             onClick={() => setAlertOpen((v) => !v)}
-                            className="relative flex items-center justify-center rounded-2xl border border-[#d1c1aa] bg-[#efe6d8] p-3 text-[#6f604f] transition-colors hover:bg-[#e8ddcd] hover:text-stone-900"
+                            className="relative flex items-center justify-center rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] p-3 text-[#78716c] transition-colors hover:bg-[#ece9e6] hover:text-[#1c1917]"
                         >
                             <BellIcon />
                             {hasAlerts && (
-                                <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-red-500" />
+                                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
                             )}
                         </button>
 
                         {alertOpen && (
-                            <div className="absolute right-0 z-30 mt-2 w-80 rounded-2xl border border-[#ccb99d] bg-[#f5ede2] shadow-xl">
-                                <div className="flex items-center justify-between border-b border-[#e3d4c0] px-4 py-3">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-[#7f6d58]">Alertas</p>
+                            <div className="absolute right-0 z-30 mt-2 w-80 rounded-2xl border border-[#e7e5e4] bg-white shadow-xl">
+                                <div className="flex items-center justify-between border-b border-[#e7e5e4] px-4 py-3">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-[#78716c]">Alertas</p>
                                     {hasAlerts && (
                                         <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-600">
                                             {alerts.length}
@@ -208,11 +242,11 @@ const Header: React.FC<HeaderProps> = ({
                                         </ul>
                                     ) : (
                                         <div className="flex flex-col items-center py-6 text-center">
-                                            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[#ede5d8] text-[#9d7d4d]">
+                                            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f5f4] text-[#78716c]">
                                                 <BellIcon />
                                             </div>
-                                            <p className="text-sm font-medium text-[#4a3f35]">Tudo em ordem</p>
-                                            <p className="mt-1 text-xs text-[#7f6d58]">Nenhum alerta no momento.</p>
+                                            <p className="text-sm font-medium text-[#1c1917]">{alertsError ? 'Não foi possível carregar' : 'Tudo em ordem'}</p>
+                                            <p className="mt-1 text-xs text-[#78716c]">{alertsError || 'Nenhum alerta no momento.'}</p>
                                         </div>
                                     )}
                                 </div>
@@ -225,25 +259,25 @@ const Header: React.FC<HeaderProps> = ({
                         <div className="relative" ref={userRef}>
                             <button
                                 onClick={() => setUserOpen((v) => !v)}
-                                className="flex items-center gap-3 rounded-2xl border border-[#d1c1aa] bg-[#efe6d8] px-3 py-2.5 transition-colors hover:bg-[#e8ddcd]"
+                                className="flex items-center gap-3 rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-3 py-2.5 transition-colors hover:bg-[#ece9e6]"
                             >
                                 {/* Avatar */}
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#2f3a2d] text-xs font-bold text-[#f4eadb]">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1c1917] text-xs font-bold text-[#f5f0e8]">
                                     {getInitials(currentUser.name)}
                                 </div>
                                 <div className="hidden text-left sm:block">
-                                    <p className="text-sm font-semibold leading-tight text-stone-900">{currentUser.name}</p>
-                                    <p className="text-xs leading-tight text-[#7f6d58]">{currentUser.email}</p>
+                                    <p className="text-sm font-semibold leading-tight text-[#1c1917]">{currentUser.name}</p>
+                                    <p className="text-xs leading-tight text-[#78716c]">{currentUser.email}</p>
                                 </div>
                                 <ChevronDownIcon isOpen={userOpen} />
                             </button>
 
                             {userOpen && (
-                                <div className="absolute right-0 z-30 mt-2 w-56 rounded-2xl border border-[#ccb99d] bg-[#f5ede2] shadow-xl">
+                                <div className="absolute right-0 z-30 mt-2 w-56 rounded-2xl border border-[#e7e5e4] bg-white shadow-xl">
                                     {/* Info do usuário */}
-                                    <div className="border-b border-[#e3d4c0] px-4 py-3">
-                                        <p className="text-sm font-semibold text-stone-900">{currentUser.name}</p>
-                                        <p className="truncate text-xs text-[#7f6d58]">{currentUser.email}</p>
+                                    <div className="border-b border-[#e7e5e4] px-4 py-3">
+                                        <p className="text-sm font-semibold text-[#1c1917]">{currentUser.name}</p>
+                                        <p className="truncate text-xs text-[#78716c]">{currentUser.email}</p>
                                     </div>
 
                                     <ul className="py-2">
@@ -252,23 +286,23 @@ const Header: React.FC<HeaderProps> = ({
                                             <button
                                                 type="button"
                                                 disabled
-                                                className="cursor-not-allowed flex w-full items-center gap-3 px-4 py-2 text-sm text-[#a09080]"
+                                                className="cursor-not-allowed flex w-full items-center gap-3 px-4 py-2 text-sm text-[#a8a29e]"
                                             >
                                                 <UserIcon />
                                                 <span>Meu Perfil</span>
-                                                <span className="ml-auto text-[10px] font-semibold text-[#b09a80]">Em breve</span>
+                                                <span className="ml-auto text-[10px] font-semibold text-[#a8a29e]">Em breve</span>
                                             </button>
                                         </li>
 
                                         {/* Cadastrar usuários — só admin */}
                                         {canRegisterUsers && (
                                             <>
-                                                <li className="my-1 border-t border-[#e3d4c0]" />
+                                                <li className="my-1 border-t border-[#e7e5e4]" />
                                                 <li>
                                                     <button
                                                         type="button"
                                                         onClick={() => { onOpenUserRegister?.(); setUserOpen(false); }}
-                                                        className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[#4a3f35] transition-colors hover:bg-[#eadfce]"
+                                                        className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[#1c1917] transition-colors hover:bg-[#f5f5f4]"
                                                     >
                                                         <UsersIcon />
                                                         <span>Cadastrar usuários</span>
@@ -277,7 +311,7 @@ const Header: React.FC<HeaderProps> = ({
                                             </>
                                         )}
 
-                                        <li className="my-1 border-t border-[#e3d4c0]" />
+                                        <li className="my-1 border-t border-[#e7e5e4]" />
 
                                         {/* Sair */}
                                         <li>
@@ -295,6 +329,7 @@ const Header: React.FC<HeaderProps> = ({
                             )}
                         </div>
                     )}
+
                 </div>
             </div>
         </header>

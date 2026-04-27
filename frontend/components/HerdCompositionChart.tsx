@@ -71,7 +71,7 @@ const HerdCompositionChart: React.FC<HerdCompositionChartProps> = ({ farmId }) =
     if (isLoading) {
         return (
             <ChartCard title="Composição do Rebanho">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Carregando composição do rebanho...</p>
+                <p className="text-sm text-[#78716c]">Carregando composição do rebanho...</p>
             </ChartCard>
         );
     }
@@ -79,7 +79,7 @@ const HerdCompositionChart: React.FC<HerdCompositionChartProps> = ({ farmId }) =
     if (!data.length) {
         return (
             <ChartCard title="Composição do Rebanho">
-                <p className="text-sm text-gray-500 dark:text-gray-400">Nenhum dado de rebanho disponível.</p>
+                <p className="text-sm text-[#78716c]">Nenhum dado de rebanho disponível.</p>
             </ChartCard>
         );
     }
@@ -104,8 +104,8 @@ const HerdCompositionChart: React.FC<HerdCompositionChartProps> = ({ farmId }) =
                     </Pie>
                     <Tooltip
                          contentStyle={{
-                            backgroundColor: '#1f2937',
-                            borderColor: '#374151',
+                            backgroundColor: '#ffffff',
+                            borderColor: '#e7e5e4',
                             borderRadius: '0.5rem'
                         }}
                     />

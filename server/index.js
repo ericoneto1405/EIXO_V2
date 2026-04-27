@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
@@ -8,10 +9,27 @@ import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 import { registerNutritionModuleRoutes } from './nutritionModule.js';
-import { GoogleGenerativeAI } from '@google/generative-ai'; // Added for Gemini AI
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import twilio from 'twilio';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const FIELD_OCCURRENCE_UPLOAD_ROOT = path.join(__dirname, 'uploads', 'field-occurrences');
+const FIELD_WORKER_ROLE = 'field_worker';
+const FIELD_ADMIN_ROLE = 'field_admin';
+const FIELD_WORKER_DEFAULT_MODULES = ['Rebanho Comercial'];
+const APP_ACTIVATION_CODE_TTL_MS = 48 * 60 * 60 * 1000;
+const APP_ACTIVATION_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const FIELD_ATTACHMENT_MAX_FILES = 3;
+const FIELD_OCCURRENCE_TYPES = ['COCHO', 'AGUA', 'DOENTE', 'AVARIA', 'NASCEU', 'MORREU'];
+const FIELD_OCCURRENCE_STATUSES = ['PENDENTE', 'CONFIRMADO', 'CANCELADO'];
+const FIELD_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+]);
 
 dotenv.config({ path: path.join(__dirname, '.env') });
 dotenv.config({ path: path.join(__dirname, '.env.local'), override: true });
@@ -25,11 +43,46 @@ const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS) || 24 * 60 * 60 * 1000
 const SESSION_REMEMBER_TTL_MS = Number(process.env.SESSION_REMEMBER_TTL_MS) || 30 * 24 * 60 * 60 * 1000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const ALLOW_X_USER_ID = process.env.ALLOW_X_USER_ID === 'true';
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@eixo.com';
+const OTP_SEND_WINDOW_MS = Number(process.env.OTP_SEND_WINDOW_MS) || 10 * 60 * 1000;
+const OTP_SEND_MAX_PER_IP = Number(process.env.OTP_SEND_MAX_PER_IP) || 5;
+const OTP_SEND_MAX_PER_PHONE = Number(process.env.OTP_SEND_MAX_PER_PHONE) || 3;
+const OTP_VERIFY_WINDOW_MS = Number(process.env.OTP_VERIFY_WINDOW_MS) || 10 * 60 * 1000;
+const OTP_VERIFY_MAX_PER_IP = Number(process.env.OTP_VERIFY_MAX_PER_IP) || 10;
+const OTP_VERIFY_MAX_PER_PHONE = Number(process.env.OTP_VERIFY_MAX_PER_PHONE) || 5;
 
-if (IS_PROD && ALLOW_X_USER_ID) {
-    console.error('ERRO CRÍTICO: ALLOW_X_USER_ID não pode estar ativo em produção.');
-    process.exit(1);
+// ─── Twilio Verify ────────────────────────────────────────────────────────────
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_VERIFY_SID = process.env.TWILIO_VERIFY_SID;
+
+const twilioClient = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN
+    ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    : null;
+
+// Map temporário: phone -> { verifiedAt: number }  (TTL 30 min, uso único)
+const verifiedPhones = new Map();
+const otpSendAttempts = new Map();
+const otpVerifyAttempts = new Map();
+const PHONE_VERIFY_TTL_MS = 30 * 60 * 1000;
+// ─────────────────────────────────────────────────────────────────────────────
+
+if (IS_PROD) {
+    const productionConfigErrors = [];
+    if (ALLOW_X_USER_ID) {
+        productionConfigErrors.push('ALLOW_X_USER_ID não pode estar ativo em produção.');
+    }
+    if (!process.env.SESSION_TOKEN_SALT || SESSION_TOKEN_SALT === 'dev-session-salt') {
+        productionConfigErrors.push('SESSION_TOKEN_SALT deve ser definido com um valor forte em produção.');
+    }
+    if (!process.env.CORS_ORIGIN || CORS_ORIGIN.includes('localhost') || CORS_ORIGIN.includes('127.0.0.1')) {
+        productionConfigErrors.push('CORS_ORIGIN deve apontar para as origens reais do frontend em produção.');
+    }
+    if (productionConfigErrors.length) {
+        for (const errorMessage of productionConfigErrors) {
+            console.error(`ERRO CRÍTICO: ${errorMessage}`);
+        }
+        process.exit(1);
+    }
 }
 
 function sanitizeUser(user) {
@@ -37,7 +90,51 @@ function sanitizeUser(user) {
     return safeUser;
 }
 
+const PASSWORD_POLICY_MESSAGE = 'A senha deve ter pelo menos 8 caracteres, com ao menos 1 letra e 1 número.';
+
+const isPasswordStrongEnough = (value) => {
+    const password = String(value || '');
+    return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
+};
+
 const prisma = new PrismaClient();
+
+const normalizeActivationCode = (value) =>
+    String(value || '')
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '');
+
+const hashActivationCode = (value) =>
+    crypto
+        .createHash('sha256')
+        .update(normalizeActivationCode(value))
+        .update(':app-activation:')
+        .update(SESSION_TOKEN_SALT)
+        .digest('hex');
+
+const generateActivationCode = () => {
+    let raw = '';
+    for (let index = 0; index < 12; index += 1) {
+        const randomIndex = crypto.randomInt(0, APP_ACTIVATION_CODE_ALPHABET.length);
+        raw += APP_ACTIVATION_CODE_ALPHABET[randomIndex];
+    }
+    return `${raw.slice(0, 4)}-${raw.slice(4, 8)}-${raw.slice(8, 12)}`;
+};
+
+const normalizeInternalEmailToken = (value) => {
+    const normalized = String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 32);
+    return normalized || 'colaborador';
+};
+
+const generateInternalFieldUserEmail = (name) =>
+    `${normalizeInternalEmailToken(name)}.${crypto.randomBytes(4).toString('hex')}@manejo.eixo.local`;
 
 const parseCoordinate = (value) => {
     if (value === null || value === undefined) {
@@ -74,11 +171,7 @@ const findFarmByCoordinates = async ({ lat, lng, excludeFarmId = null }) => {
             lng,
             ...(excludeFarmId ? { NOT: { id: excludeFarmId } } : {}),
         },
-        select: {
-            id: true,
-            name: true,
-            city: true,
-        },
+        select: { id: true },
     });
 };
 
@@ -370,10 +463,201 @@ const serializePaddock = (paddock) => ({
     updatedAt: paddock.updatedAt?.toISOString?.() ?? null,
 });
 
+const serializeFieldOccurrenceAttachment = (attachment) => ({
+    id: attachment.id,
+    occurrenceId: attachment.occurrenceId,
+    fileName: attachment.fileName,
+    mimeType: attachment.mimeType,
+    storagePath: attachment.storagePath,
+    uploadedAt: attachment.uploadedAt?.toISOString?.() ?? null,
+    downloadUrl: `/field-occurrence-attachments/${attachment.id}/file`,
+});
+
+const serializeFieldOccurrence = (occurrence) => ({
+    id: occurrence.id,
+    organizationId: occurrence.organizationId,
+    farmId: occurrence.farmId,
+    createdById: occurrence.createdById,
+    type: occurrence.type,
+    status: occurrence.status,
+    description: occurrence.description ?? null,
+    animalId: occurrence.animalId ?? null,
+    paddockId: occurrence.paddockId ?? null,
+    occurredAt: occurrence.occurredAt?.toISOString?.() ?? null,
+    lat: occurrence.lat ?? null,
+    lng: occurrence.lng ?? null,
+    offlineCreatedAt: occurrence.offlineCreatedAt?.toISOString?.() ?? null,
+    syncSource: occurrence.syncSource ?? null,
+    createdAt: occurrence.createdAt?.toISOString?.() ?? null,
+    updatedAt: occurrence.updatedAt?.toISOString?.() ?? null,
+    createdByName: occurrence.createdBy?.name ?? null,
+    animal: occurrence.animal ? serializeAnimal(occurrence.animal) : null,
+    paddock: occurrence.paddock ? serializePaddock(occurrence.paddock) : null,
+    attachments: Array.isArray(occurrence.attachments)
+        ? occurrence.attachments.map(serializeFieldOccurrenceAttachment)
+        : [],
+});
+
+const getOccurrenceAnimalLabel = (occurrence) => {
+    const animal = occurrence?.animal;
+    if (!animal) {
+        return null;
+    }
+    return animal.brinco || animal.identificacao || animal.name || animal.id;
+};
+
+const getDaysSince = (date) => {
+    if (!date) {
+        return null;
+    }
+    return Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / (24 * 60 * 60 * 1000)));
+};
+
+const buildFieldOccurrenceAlert = (occurrence) => {
+    const animalLabel = getOccurrenceAnimalLabel(occurrence);
+    const paddockLabel = occurrence.paddock?.name || 'Local não informado';
+    const description = occurrence.description ? String(occurrence.description).trim() : '';
+    const createdAt = occurrence.occurredAt?.toISOString?.() ?? occurrence.createdAt?.toISOString?.() ?? null;
+
+    switch (occurrence.type) {
+        case 'NASCEU':
+            return {
+                id: `field-${occurrence.id}`,
+                type: 'info',
+                message: `NASCEU: revisar nascimento${animalLabel ? ` - mãe ${animalLabel}` : ' - mãe não informada'}.`,
+                source: 'APP_MANEJO',
+                sourceType: occurrence.type,
+                sourceId: occurrence.id,
+                farmId: occurrence.farmId,
+                createdAt,
+            };
+        case 'MORREU':
+            return {
+                id: `field-${occurrence.id}`,
+                type: 'critical',
+                message: `MORREU: revisar baixa${animalLabel ? ` - animal ${animalLabel}` : ' - animal não informado'}.`,
+                source: 'APP_MANEJO',
+                sourceType: occurrence.type,
+                sourceId: occurrence.id,
+                farmId: occurrence.farmId,
+                createdAt,
+            };
+        case 'DOENTE':
+            return {
+                id: `field-${occurrence.id}`,
+                type: 'critical',
+                message: `DOENTE: animal com atenção${animalLabel ? ` - ${animalLabel}` : ' - ID não informado'}.`,
+                source: 'APP_MANEJO',
+                sourceType: occurrence.type,
+                sourceId: occurrence.id,
+                farmId: occurrence.farmId,
+                createdAt,
+            };
+        case 'AVARIA':
+            return {
+                id: `field-${occurrence.id}`,
+                type: 'critical',
+                message: `AVARIA: ${paddockLabel}${description ? ` - ${description}` : ' - sem descrição'}.`,
+                source: 'APP_MANEJO',
+                sourceType: occurrence.type,
+                sourceId: occurrence.id,
+                farmId: occurrence.farmId,
+                createdAt,
+            };
+        default:
+            return null;
+    }
+};
+
+const sanitizeUploadFileName = (value) =>
+    String(value || 'arquivo')
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-zA-Z0-9._-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 80) || 'arquivo';
+
+const decodeBase64Payload = (value) => {
+    const raw = String(value || '').trim();
+    if (!raw) {
+        return null;
+    }
+    const normalized = raw.includes(',') ? raw.split(',').pop() : raw;
+    return Buffer.from(normalized, 'base64');
+};
+
+function serializeFinancialTransaction(t) {
+    return {
+        id: t.id,
+        farmId: t.farmId,
+        type: t.type,
+        categoria: t.categoria,
+        accountCategoryId: t.accountCategoryId || null,
+        accountCategoryName: t.accountCategory?.name || null,
+        accountCategoryGroup: t.accountCategory?.group || null,
+        valor: parseFloat(t.valor.toString()),
+        data: t.data,
+        descricao: t.descricao || null,
+        vencimento: t.vencimento || null,
+        status: t.status || 'PAGO',
+        herdEventId: t.herdEventId || null,
+        sanitaryRecordId: t.sanitaryRecordId || null,
+        createdAt: t.createdAt,
+    };
+}
+
+// Mapeamento de tipo de HerdEvent → AccountCategory ID do sistema
+const HERD_EVENT_CATEGORY_MAP = {
+    COMPRA: { categoryId: 'sys-compra-animais', type: 'SAIDA', categoria: 'COMPRA_ANIMAIS' },
+    VENDA:  { categoryId: 'sys-venda-animais',  type: 'ENTRADA', categoria: 'VENDA_ANIMAIS' },
+};
+
+// Mapeamento de tipo sanitário → AccountCategory ID do sistema
+const SANITARY_CATEGORY_MAP = {
+    VACINA:     { categoryId: 'sys-vacinas',     categoria: 'MEDICAMENTOS' },
+    VERMIFUGO:  { categoryId: 'sys-vermifugos',  categoria: 'MEDICAMENTOS' },
+    TRATAMENTO: { categoryId: 'sys-tratamentos', categoria: 'MEDICAMENTOS' },
+};
+
 const diffDays = (later, earlier) => {
     const diffMs = later.getTime() - earlier.getTime();
     return Math.round(diffMs / (1000 * 60 * 60 * 24));
 };
+
+// ── Log de atividades ─────────────────────────────────────────────────────────
+
+async function ensureActivityLogColumns() {
+    const stmts = [
+        `ALTER TABLE "ActivityLog" ALTER COLUMN "method" DROP NOT NULL`,
+        `ALTER TABLE "ActivityLog" ALTER COLUMN "path"   DROP NOT NULL`,
+        `ALTER TABLE "ActivityLog" ADD COLUMN IF NOT EXISTS "action"      TEXT`,
+        `ALTER TABLE "ActivityLog" ADD COLUMN IF NOT EXISTS "entity"      TEXT`,
+        `ALTER TABLE "ActivityLog" ADD COLUMN IF NOT EXISTS "entityId"    TEXT`,
+        `ALTER TABLE "ActivityLog" ADD COLUMN IF NOT EXISTS "description" TEXT`,
+        `ALTER TABLE "ActivityLog" ADD COLUMN IF NOT EXISTS "farmId"      TEXT`,
+        `CREATE INDEX IF NOT EXISTS "ActivityLog_farmId_createdAt_idx" ON "ActivityLog"("farmId","createdAt")`,
+    ];
+    for (const sql of stmts) {
+        try { await prisma.$executeRawUnsafe(sql); } catch { /* já existe */ }
+    }
+}
+ensureActivityLogColumns().catch(() => {});
+
+async function logActivity(req, { action, entity, entityId, description, farmId } = {}) {
+    try {
+        const userId = req.user?.id;
+        const organizationId = req.saas?.organizationId || null;
+        if (!userId) return;
+        const id = crypto.randomUUID();
+        await prisma.$executeRawUnsafe(
+            `INSERT INTO "ActivityLog" (id,"userId","organizationId","farmId",action,entity,"entityId",description,"createdAt")
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())`,
+            id, userId, organizationId, farmId ?? null,
+            action ?? null, entity ?? null, entityId ?? null, description ?? null,
+        );
+    } catch { /* log nunca deve quebrar a operação principal */ }
+}
 
 const diffDaysFloat = (later, earlier) => {
     return (later.getTime() - earlier.getTime()) / (1000 * 60 * 60 * 24);
@@ -719,13 +1003,20 @@ const computeSelectionKpis = ({ events, animalId, seasonId, exposuresSet }) => {
     };
 };
 
-const serializeAuthUser = (user, saasContext = null) => ({
+const serializeAuthUser = (user, saasContext = null, accessContext = null) => ({
     id: user.id,
     name: user.name,
     email: user.email,
-    modules: user.modules,
+    modules: accessContext?.allowedModules || user.modules,
+    allowedModules: accessContext?.allowedModules || user.modules,
     roles: user.roles,
+    accessType: getDerivedAccessType(user),
+    fieldProfile: getDerivedFieldProfile(user),
+    appActivationStatus: getDerivedActivationStatus(user),
     lastFarmId: user.lastFarmId,
+    allowedFarmIds: accessContext?.allowedFarmIds || [],
+    defaultFarmId: accessContext?.defaultFarmId || user.lastFarmId || null,
+    appContext: accessContext?.appContext || { profile: 'full_user', mode: 'full' },
     organizationId: saasContext?.organizationId || null,
     membershipRole: saasContext?.membershipRole || null,
     billingAccessState: saasContext?.billingAccessState || null,
@@ -739,6 +1030,29 @@ const corsOrigins = CORS_ORIGIN.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
 const devOriginRegex = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+const cspConnectSrc = [
+    "'self'",
+    ...corsOrigins,
+    ...(!IS_PROD
+        ? [
+            'http://localhost:3001',
+            'http://localhost:5173',
+            'http://127.0.0.1:3001',
+            'http://127.0.0.1:5173',
+        ]
+        : []),
+];
+const contentSecurityPolicy = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob: https://unpkg.com https://server.arcgisonline.com",
+    `connect-src ${[...new Set(cspConnectSrc)].join(' ')}`,
+].join('; ');
 app.use(
     cors({
         origin: (origin, callback) => {
@@ -756,6 +1070,17 @@ app.use(
         credentials: true,
     }),
 );
+app.use((req, res, next) => {
+    res.setHeader('Content-Security-Policy', contentSecurityPolicy);
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (IS_PROD && req.secure) {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+});
 app.use(express.json());
 app.use(cookieParser());
 
@@ -788,6 +1113,129 @@ const buildLegacyEntitlements = (modules) => {
     return [...new Set(codes)];
 };
 
+const ORGANIZATION_ADMIN_ROLES = new Set(['OWNER', 'ADMIN']);
+
+const hasUserRole = (user, role) => {
+    const normalizedRole = String(role || '').trim().toLowerCase();
+    return Array.isArray(user?.roles) && user.roles.some((item) => String(item || '').trim().toLowerCase() === normalizedRole);
+};
+
+const isFieldWorkerUser = (user) => hasUserRole(user, FIELD_WORKER_ROLE);
+const isFieldAdminUser = (user) => hasUserRole(user, FIELD_ADMIN_ROLE);
+const isFieldAppUser = (user) => isFieldWorkerUser(user) || isFieldAdminUser(user);
+
+const getDerivedFieldProfile = (user) => {
+    if (user?.fieldProfile) {
+        return user.fieldProfile;
+    }
+    if (isFieldWorkerUser(user)) {
+        return 'VAQUEIRO';
+    }
+    if (isFieldAdminUser(user)) {
+        return 'ADMIN_CAMPO';
+    }
+    return null;
+};
+
+const getDerivedAccessType = (user) => {
+    if (user?.accessType) {
+        return user.accessType;
+    }
+    return isFieldAppUser(user) ? 'APP_MANEJO' : 'WEB';
+};
+
+const getDerivedActivationStatus = (user) => {
+    const accessType = getDerivedAccessType(user);
+    if (user?.appActivationStatus) {
+        return user.appActivationStatus;
+    }
+    if (accessType === 'WEB') {
+        return null;
+    }
+    return 'PENDENTE_ATIVACAO';
+};
+
+const buildManagedUserSummaries = (user) => {
+    const latestCode = Array.isArray(user?.appActivationCodes) ? user.appActivationCodes[0] : null;
+    const activeDevice = Array.isArray(user?.appDevices) ? user.appDevices[0] : null;
+    const effectiveStatus = (() => {
+        if (activeDevice?.isActive && !activeDevice?.revokedAt) {
+            return 'ATIVO';
+        }
+        if (latestCode?.revokedAt) {
+            return 'BLOQUEADO';
+        }
+        if (latestCode?.usedAt) {
+            return getDerivedActivationStatus(user);
+        }
+        if (latestCode?.expiresAt && new Date(latestCode.expiresAt).getTime() < Date.now()) {
+            return 'CODIGO_EXPIRADO';
+        }
+        return getDerivedActivationStatus(user);
+    })();
+
+    return {
+        accessType: getDerivedAccessType(user),
+        fieldProfile: getDerivedFieldProfile(user),
+        appActivationStatus: effectiveStatus,
+        activeAppCode: latestCode
+            ? {
+                createdAt: latestCode.createdAt?.toISOString?.() ?? null,
+                expiresAt: latestCode.expiresAt?.toISOString?.() ?? null,
+                usedAt: latestCode.usedAt?.toISOString?.() ?? null,
+                revokedAt: latestCode.revokedAt?.toISOString?.() ?? null,
+            }
+            : null,
+        activeAppDevice: activeDevice
+            ? {
+                id: activeDevice.id,
+                deviceLabel: activeDevice.deviceLabel || null,
+                platform: activeDevice.platform || null,
+                appVersion: activeDevice.appVersion || null,
+                activatedAt: activeDevice.activatedAt?.toISOString?.() ?? null,
+                lastSeenAt: activeDevice.lastSeenAt?.toISOString?.() ?? null,
+            }
+            : null,
+    };
+};
+
+const normalizeUserModules = (modules, roles = [], accessType = 'WEB') => {
+    const normalizedModules = Array.isArray(modules)
+        ? Array.from(new Set(modules.map((item) => String(item || '').trim()).filter(Boolean)))
+        : [];
+    const hasFieldRole = roles.some((role) => {
+        const normalizedRole = String(role || '').trim().toLowerCase();
+        return normalizedRole === FIELD_WORKER_ROLE || normalizedRole === FIELD_ADMIN_ROLE;
+    });
+    if (accessType === 'APP_MANEJO' && hasFieldRole) {
+        return FIELD_WORKER_DEFAULT_MODULES;
+    }
+    if (hasFieldRole && !normalizedModules.includes('Rebanho Comercial')) {
+        return [...normalizedModules, 'Rebanho Comercial'];
+    }
+    return normalizedModules;
+};
+
+const canManageOrganizationUsers = (req) => {
+    const membershipRole = String(req.saas?.membershipRole || '').trim().toUpperCase();
+    return hasUserRole(req.user, 'admin') || ORGANIZATION_ADMIN_ROLES.has(membershipRole);
+};
+
+const serializeManagedUser = (user, membershipRole = null) => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    modules: Array.isArray(user.modules) ? user.modules : [],
+    roles: Array.isArray(user.roles) ? user.roles : [],
+    accessType: getDerivedAccessType(user),
+    fieldProfile: getDerivedFieldProfile(user),
+    appActivationStatus: getDerivedActivationStatus(user),
+    lastFarmId: user.lastFarmId ?? null,
+    membershipRole,
+    ...buildManagedUserSummaries(user),
+    createdAt: user.createdAt?.toISOString?.() ?? null,
+});
+
 const normalizeOrganizationSlug = (value) =>
     String(value || '')
         .normalize('NFD')
@@ -797,17 +1245,91 @@ const normalizeOrganizationSlug = (value) =>
         .replace(/^-+|-+$/g, '')
         .slice(0, 48) || 'org';
 
-const buildFarmScopeFilter = (req, extra = {}) => ({
-    ...(req.saas?.organizationId ? { organizationId: req.saas.organizationId } : { userId: req.user.id }),
-    ...extra,
-});
+const buildFarmScopeFilter = (req, extra = {}) => {
+    const clauses = [
+        req.saas?.organizationId ? { organizationId: req.saas.organizationId } : { userId: req.user.id },
+    ];
+    if (req.access?.restrictToFarmIds?.length) {
+        clauses.push({ id: { in: req.access.restrictToFarmIds } });
+    }
+    if (Object.keys(extra).length) {
+        clauses.push(extra);
+    }
+    return clauses.length === 1 ? clauses[0] : { AND: clauses };
+};
 
-const buildFarmRelationFilter = (req, extra = {}) => ({
-    ...(req.saas?.organizationId ? { organizationId: req.saas.organizationId } : { userId: req.user.id }),
-    ...extra,
-});
+const buildFarmRelationFilter = (req, extra = {}) => {
+    const clauses = [
+        req.saas?.organizationId ? { organizationId: req.saas.organizationId } : { userId: req.user.id },
+    ];
+    if (req.access?.restrictToFarmIds?.length) {
+        clauses.push({ id: { in: req.access.restrictToFarmIds } });
+    }
+    if (Object.keys(extra).length) {
+        clauses.push(extra);
+    }
+    return clauses.length === 1 ? clauses[0] : { AND: clauses };
+};
 
-const ensureSaasContextForUser = async (userId) => {
+const ensureFieldWorkerFarmAccess = async (user, saasContext = null) => {
+    if (!isFieldAppUser(user)) {
+        return {
+            allowedFarmIds: [],
+            defaultFarmId: user.lastFarmId ?? null,
+            restrictToFarmIds: null,
+            appContext: {
+                profile: 'full_user',
+                mode: 'full',
+            },
+        };
+    }
+
+    const farmAccesses = await prisma.userFarmAccess.findMany({
+        where: {
+            userId: user.id,
+            farm: saasContext?.organizationId
+                ? { organizationId: saasContext.organizationId }
+                : undefined,
+        },
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+        include: {
+            farm: {
+                select: { id: true },
+            },
+        },
+    });
+
+    const allowedFarmIds = farmAccesses.map((item) => item.farmId);
+    const defaultFarmId = farmAccesses.find((item) => item.isDefault)?.farmId
+        || allowedFarmIds[0]
+        || null;
+
+    if (!defaultFarmId || allowedFarmIds.length !== 1) {
+        throw new SaasContextError('Usuário de campo sem fazenda válida vinculada.');
+    }
+
+    return {
+        allowedFarmIds,
+        defaultFarmId,
+        restrictToFarmIds: allowedFarmIds,
+        appContext: {
+            profile: isFieldAdminUser(user) ? 'field_admin' : 'field_worker',
+            mode: 'field',
+        },
+    };
+};
+
+class SaasContextError extends Error {
+    constructor(message = 'Usuário sem organização ativa.') {
+        super(message);
+        this.name = 'SaasContextError';
+        this.code = 'SAAS_CONTEXT_INVALID';
+    }
+}
+
+const isSaasContextError = (error) => error?.code === 'SAAS_CONTEXT_INVALID';
+
+const ensureSaasContextForUser = async (userId, { allowProvision = false } = {}) => {
     const user = await prisma.user.findUnique({
         where: { id: userId },
         include: {
@@ -828,7 +1350,7 @@ const ensureSaasContextForUser = async (userId) => {
         ? user.memberships.find((item) => item.organizationId === activeOrganization.id) || null
         : null;
 
-    if (!activeOrganization && user.memberships.length) {
+    if ((!activeOrganization || !membership) && user.memberships.length) {
         membership = user.memberships[0];
         activeOrganization = membership.organization;
         await prisma.user.update({
@@ -837,7 +1359,10 @@ const ensureSaasContextForUser = async (userId) => {
         });
     }
 
-    if (!activeOrganization) {
+    if (!activeOrganization || !membership) {
+        if (!allowProvision) {
+            throw new SaasContextError('Usuário sem vínculo válido com uma organização.');
+        }
         const slugBase = normalizeOrganizationSlug((user.name || user.email) + '-org');
         activeOrganization = await prisma.organization.create({
             data: {
@@ -917,7 +1442,12 @@ const ensureSaasContextForUser = async (userId) => {
     };
 };
 
+const isFieldWorkerRequest = (req) => req.access?.appContext?.mode === 'field';
+
 const requireBillingAccess = (req, res, next) => {
+    if (isFieldWorkerRequest(req)) {
+        return res.status(403).json({ message: 'Financeiro não está disponível para operação de campo.' });
+    }
     const accessState = req.saas?.billingAccessState || null;
     if (!accessState || !BILLING_BLOCKED_STATES.has(accessState)) {
         return next();
@@ -929,13 +1459,24 @@ const requireBillingAccess = (req, res, next) => {
     });
 };
 
-const serializeAuthUserWithContext = async (userId) => {
+const requireNonFieldWorker = (req, res, next) => {
+    if (isFieldWorkerRequest(req)) {
+        return res.status(403).json({ message: 'Ação não permitida para operação de campo.' });
+    }
+    return next();
+};
+
+const serializeAuthUserWithContext = async (userId, options) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
         return null;
     }
-    const saasContext = await ensureSaasContextForUser(userId);
-    return serializeAuthUser(user, saasContext);
+    const saasContext = await ensureSaasContextForUser(userId, options);
+    const accessContext = await ensureFieldWorkerFarmAccess(user, saasContext);
+    return serializeAuthUser(user, saasContext, {
+        ...accessContext,
+        allowedModules: normalizeUserModules(user.modules, user.roles),
+    });
 };
 
 const hashSessionToken = (token) =>
@@ -954,6 +1495,33 @@ const buildCookieOptions = (expiresAt) => ({
     expires: expiresAt,
     path: '/',
 });
+
+const extractSessionTokenFromRequest = (req) => {
+    const cookieToken = req.cookies?.[SESSION_COOKIE_NAME];
+    if (cookieToken) {
+        return cookieToken;
+    }
+    const authHeader = req.get('authorization') || '';
+    if (authHeader.toLowerCase().startsWith('bearer ')) {
+        return authHeader.slice(7).trim();
+    }
+    const headerToken = req.get('x-session-token');
+    if (headerToken) {
+        return String(headerToken).trim();
+    }
+    return null;
+};
+
+const normalizeEmailForLogin = (value) => String(value || '').trim().toLowerCase();
+
+const buildLoginRateLimitKeys = (email, ip) => {
+    const keys = [`ip:${String(ip || 'unknown')}`];
+    const normalizedEmail = normalizeEmailForLogin(email);
+    if (normalizedEmail) {
+        keys.push(`email:${normalizedEmail}`);
+    }
+    return keys;
+};
 
 const isRateLimited = (key) => {
     const entry = loginAttempts.get(key);
@@ -982,8 +1550,150 @@ const clearLoginAttempts = (key) => {
     loginAttempts.delete(key);
 };
 
+const isAnyLoginRateLimited = (keys) => keys.some((key) => isRateLimited(key));
+
+const registerFailedLogins = (keys) => {
+    for (const key of keys) {
+        registerFailedLogin(key);
+    }
+};
+
+const clearLoginRateLimits = (keys) => {
+    for (const key of keys) {
+        clearLoginAttempts(key);
+    }
+};
+
+const isWindowRateLimited = (store, key, limit, windowMs) => {
+    const entry = store.get(key);
+    if (!entry) {
+        return false;
+    }
+    if (Date.now() - entry.firstAttemptAt > windowMs) {
+        store.delete(key);
+        return false;
+    }
+    return entry.count >= limit;
+};
+
+const registerWindowAttempt = (store, key, windowMs) => {
+    const now = Date.now();
+    const entry = store.get(key);
+    if (!entry || now - entry.firstAttemptAt > windowMs) {
+        store.set(key, { count: 1, firstAttemptAt: now });
+        return;
+    }
+    entry.count += 1;
+    store.set(key, entry);
+};
+
+const clearWindowAttempt = (store, key) => {
+    store.delete(key);
+};
+
+const recordActivityLog = async (req, { statusCode = null, requestMeta = null } = {}) => {
+    if (!req?.user?.id) {
+        return;
+    }
+    try {
+        await prisma.activityLog.create({
+            data: {
+                id: crypto.randomUUID(),
+                userId: req.user.id,
+                organizationId: req.saas?.organizationId || null,
+                method: req.method,
+                path: req.originalUrl || req.path || '',
+                statusCode,
+                ip: req.ip || null,
+                userAgent: req.get('user-agent') || null,
+                requestMeta,
+            },
+        });
+    } catch (error) {
+        console.error('Erro ao registrar ActivityLog:', error);
+    }
+};
+
+const createSessionForUser = async (userId, req, { rememberMe = false, deviceId = null } = {}) => {
+    const token = generateSessionToken();
+    const tokenHash = hashSessionToken(token);
+    const ttl = rememberMe ? SESSION_REMEMBER_TTL_MS : SESSION_TTL_MS;
+    const expiresAt = new Date(Date.now() + ttl);
+
+    await prisma.session.create({
+        data: {
+            userId,
+            deviceId,
+            tokenHash,
+            expiresAt,
+            userAgent: req.get('user-agent') || null,
+            ip: req.ip,
+        },
+    });
+
+    return { token, expiresAt };
+};
+
+const buildAppPermissions = (fieldProfile) => {
+    if (fieldProfile === 'ADMIN_CAMPO') {
+        return [
+            'animals.read',
+            'lots.read',
+            'paddocks.read',
+            'field_occurrences.read',
+            'field_occurrences.create',
+            'field_occurrences.attach',
+            'weighings.create',
+            'weighings.read',
+            'curral.operate',
+            'handling.collective',
+        ];
+    }
+
+    return [
+        'animals.read',
+        'lots.read',
+        'paddocks.read',
+        'field_occurrences.read',
+        'field_occurrences.create',
+        'field_occurrences.attach',
+    ];
+};
+
+const buildAppAuthPayload = async (userId, { device = null } = {}) => {
+    const user = await serializeAuthUserWithContext(userId);
+    if (!user) {
+        return null;
+    }
+
+    const fieldProfile = user.fieldProfile || null;
+    const farm = user.defaultFarmId
+        ? await prisma.farm.findUnique({
+            where: { id: user.defaultFarmId },
+            select: { id: true, name: true, city: true },
+        })
+        : null;
+
+    return {
+        user,
+        farm,
+        profile: fieldProfile,
+        permissions: buildAppPermissions(fieldProfile),
+        device: device
+            ? {
+                id: device.id,
+                deviceLabel: device.deviceLabel || null,
+                platform: device.platform || null,
+                appVersion: device.appVersion || null,
+                activatedAt: device.activatedAt?.toISOString?.() ?? null,
+                lastSeenAt: device.lastSeenAt?.toISOString?.() ?? null,
+            }
+            : null,
+    };
+};
+
 const getSessionFromRequest = async (req) => {
-    const sessionToken = req.cookies?.[SESSION_COOKIE_NAME];
+    const sessionToken = extractSessionTokenFromRequest(req);
     if (!sessionToken) {
         return null;
     }
@@ -994,7 +1704,7 @@ const getSessionFromRequest = async (req) => {
             revokedAt: null,
             expiresAt: { gt: new Date() },
         },
-        include: { user: true },
+        include: { user: true, device: true },
     });
 };
 
@@ -1002,9 +1712,24 @@ const requireAuth = async (req, res, next) => {
     try {
         const session = await getSessionFromRequest(req);
         if (session?.user) {
+            if (session.deviceId) {
+                if (!session.device || !session.device.isActive || session.device.revokedAt) {
+                    await prisma.session.updateMany({
+                        where: { id: session.id, revokedAt: null },
+                        data: { revokedAt: new Date() },
+                    });
+                    return res.status(401).json({ message: 'Aparelho revogado. Solicite nova liberacao da fazenda.' });
+                }
+                await prisma.appDevice.update({
+                    where: { id: session.deviceId },
+                    data: { lastSeenAt: new Date() },
+                });
+                req.appDevice = session.device;
+            }
             req.user = session.user;
             req.session = session;
             req.saas = await ensureSaasContextForUser(session.user.id);
+            req.access = await ensureFieldWorkerFarmAccess(session.user, req.saas);
             return next();
         }
 
@@ -1022,11 +1747,15 @@ const requireAuth = async (req, res, next) => {
             }
             req.user = user;
             req.saas = await ensureSaasContextForUser(user.id);
+            req.access = await ensureFieldWorkerFarmAccess(user, req.saas);
             return next();
         }
 
         return res.status(401).json({ message: 'Usuário não autenticado.' });
     } catch (error) {
+        if (isSaasContextError(error)) {
+            return res.status(403).json({ message: 'Conta sem vínculo válido com uma organização.' });
+        }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao validar usuário.' });
     }
@@ -1037,11 +1766,138 @@ const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 if (!GOOGLE_API_KEY) {
     console.warn('GOOGLE_API_KEY is not set. Gemini API will not be available.');
 }
+const EIXO_SUPORTE_SYSTEM_PROMPT = `Você é o Eixo Suporte, assistente virtual do sistema EIXO — plataforma de gestão para pecuária de corte.
+
+Seu papel é ajudar produtores e gestores a usar o sistema corretamente, tirar dúvidas sobre funcionalidades e orientar nas tarefas do dia a dia.
+
+## Tom e estilo
+- Responda de forma clara, direta e amigável.
+- Use linguagem simples, sem jargões técnicos de software.
+- Seja conciso: responda o que foi perguntado sem enrolação.
+- Quando a dúvida envolver uma sequência de passos, use lista numerada curta.
+- Para listas com marcador, use sempre traço: "- item". Nunca use asterisco (*).
+- Nunca invente funcionalidades que não existem no sistema.
+
+## O sistema EIXO — visão geral
+
+O EIXO é uma plataforma web multi-tenant com os seguintes módulos:
+
+### Visão Geral (Dashboard)
+Painel disponível em todos os planos. Exibe o gráfico de composição do rebanho (animais comerciais vs P.O.). Demais indicadores do painel estão em implementação e serão adicionados em breve.
+
+### Estrutura da Fazenda
+- Cadastro de fazendas: nome, cidade, UF, tamanho em hectares e localização GPS opcional.
+- Cadastro de pastos por fazenda: nome, área útil e tipo (pasto / curral de manejo / área de preservação).
+- Mapa da Fazenda: visualização dos pastos cadastrados.
+- Plano gratuito: 1 fazenda. Plano Pago 1: até 3. Plano Pago 2: ilimitadas.
+
+### Manejo do Rebanho
+Módulo central para gestão de animais. Abas:
+
+- **Visão do Rebanho**: indicadores gerais — total de animais, peso médio, arroba média, GMD médio, distribuição por categoria e por raça.
+- **Animais**: tabela paginada (30 por página) com busca e filtros. Campos: brinco, nome, raça, sexo, data de nascimento, peso, lote, pasto, categoria, observações.
+- **Lotes/Grupos**: agrupamento de animais por lote.
+- **Pesagens**: aba em desenvolvimento — funcionalidade completa em breve.
+- **Configurações**: aba em desenvolvimento — peso alvo de abate, raças e intervalo de pesagem em breve.
+
+**Detalhe do animal**: ao clicar no botão ⋮ (três pontos) na linha de qualquer animal, abre um painel com quatro abas:
+- **Pesagens**: histórico completo de pesagens daquele animal, com data, peso e GMD calculado.
+- **Movimentação de Pasto**: histórico de mudanças de pasto do animal.
+- **Eventos**: registro de compra, venda, nascimento e morte. Quando o valor é informado, o EIXO gera automaticamente o lançamento no módulo Financeiro.
+- **Sanitário**: registro de vacinas, vermífugos e tratamentos. Disponível nos planos pagos.
+
+**Importação de animais**: o sistema aceita qualquer planilha que o produtor já usa — não é necessário baixar um modelo. Após selecionar o arquivo, o sistema tenta reconhecer as colunas pelos nomes e exibe o mapeamento para conferência e ajuste. A planilha modelo existe apenas como conveniência para quem quiser começar com um formato sugerido.
+
+**Compra em lote**: para registrar a entrada de vários animais de uma vez, acesse "Manejo do Rebanho" > aba "Animais" > botão "Compra em lote" no cabeçalho da página.
+
+**Integração com Financeiro**: eventos de rebanho com valor informado (compra, venda, morte) geram lançamentos automáticos no módulo Financeiro. O produtor registra uma vez e o sistema propaga.
+
+### Financeiro
+- **Lançamentos**: registro de entradas e saídas por mês/ano. Cada lançamento tem categoria, grupo, valor, data, descrição e status (Pago ou Pendente).
+- **Contas a Pagar**: saídas com status Pendente, organizadas por vencimento. Botão "Pago" para dar baixa.
+- **Contas a Receber**: entradas com status Pendente, mesma lógica.
+- **Fluxo de Caixa**: tabela anual com entradas, saídas, resultado mensal e saldo acumulado.
+- **DRE**: demonstrativo anual agrupado por categoria — receitas, despesas e resultado do exercício.
+- **Plano de Contas**: categorias de entrada e saída organizadas por grupos. Categorias de sistema não podem ser editadas. O usuário pode criar categorias personalizadas.
+- Lançamentos gerados automaticamente por eventos do rebanho ficam marcados como "auto" e não podem ser excluídos manualmente.
+
+### Nutrição
+Controle de dietas, fornecimento de sal e suplementação. Disponível nos planos pagos.
+
+### Módulos em desenvolvimento
+- Confinamento e Contratos
+- Reprodução / Eixo Acasalamento
+- Estoque e Equipamentos
+- Gestão Comercial
+- Registro de Atividades
+
+## Planos
+- **Plano Gratuito**: 1 fazenda, até 3 usuários, módulos Rebanho, Estrutura da Fazenda e Financeiro básico. Dashboard disponível.
+- **Plano Pago 1**: até 3 fazendas, até 5 usuários, Financeiro completo, Nutrição, Pesagens avançadas, Manejo Sanitário.
+- **Plano Pago 2**: ilimitado, todos os módulos, Acasalamento, Confinamento, Rastreabilidade completa.
+- Módulos bloqueados aparecem na barra lateral com ícone de cadeado. Ao clicar, aparece o modal de upgrade.
+
+## Dúvidas comuns
+
+**Como cadastrar uma fazenda?**
+Acesse "Estrutura da Fazenda" > "Fazendas e Pastos" > botão "Adicionar fazenda". Preencha nome, cidade, UF e tamanho. No passo seguinte, cadastre os pastos.
+
+**Como adicionar um animal individualmente?**
+Acesse "Manejo do Rebanho" > aba "Animais" > botão "Adicionar animal".
+
+**Como importar vários animais de uma planilha?**
+Acesse "Manejo do Rebanho" > aba "Animais" > botão "Importar planilha". Você pode usar a planilha que já tem — não precisa de modelo específico. O sistema identifica as colunas e mostra o mapeamento para você revisar antes de importar.
+
+**Como registrar a compra de um animal já cadastrado?**
+1. Acesse "Manejo do Rebanho" > aba "Animais".
+2. Clique no botão ⋮ na linha do animal.
+3. Vá para a aba "Eventos".
+4. Clique em "Registrar evento" e escolha "Compra".
+5. Informe a data e, se quiser lançar no Financeiro, preencha o valor.
+
+**Como registrar a entrada de vários animais de uma vez?**
+Acesse "Manejo do Rebanho" > aba "Animais" > botão "Compra em lote" no cabeçalho. Preencha os dados gerais (data, valor por cabeça, pasto, lote) e adicione cada animal na tabela.
+
+**Como registrar a venda de um animal?**
+1. Acesse "Manejo do Rebanho" > aba "Animais".
+2. Clique no botão ⋮ na linha do animal.
+3. Vá para a aba "Eventos" e escolha "Venda".
+4. Informe data e valor para gerar o lançamento no Financeiro automaticamente.
+
+**Como ver o histórico de pesagens de um animal?**
+Clique no botão ⋮ na linha do animal > aba "Pesagens". Lá aparecem todas as pesagens registradas com data, peso e GMD calculado.
+
+**Como registrar uma vacina ou vermífugo?**
+Disponível nos planos pagos. Clique no ⋮ na linha do animal > aba "Sanitário". Escolha o tipo (Vacina, Vermífugo ou Tratamento), informe o produto, data e dose.
+
+**Como lançar uma despesa?**
+Acesse "Financeiro" > aba "Lançamentos" > "Novo lançamento". Selecione tipo "Saída", categoria, valor e data.
+
+**Como registrar uma conta a pagar?**
+Acesse "Financeiro" > "Contas a Pagar" > "Nova conta". Informe status "Pendente" e a data de vencimento. Quando pagar, clique em "Pago".
+
+**Como ver o resultado financeiro do ano?**
+Acesse "Financeiro" > aba "DRE". Selecione o ano desejado.
+
+**Por que não consigo adicionar uma segunda fazenda?**
+O plano gratuito permite apenas 1 fazenda. Para adicionar mais, faça upgrade do plano.
+
+**O que significa o cadeado nos módulos?**
+Indica que o módulo não está disponível no plano atual. Clique sobre ele para ver as opções de upgrade.
+
+## Instruções finais
+- Se a dúvida for sobre algo que você não sabe com certeza, oriente o usuário a entrar em contato pelo suporte oficial.
+- Não forneça informações sobre preços dos planos — direcione para a equipe comercial.
+- Nunca acesse ou mencione dados reais de fazendas ou animais do usuário.
+- Foque exclusivamente em dúvidas de uso do sistema EIXO.`;
+
 const genAI = GOOGLE_API_KEY ? new GoogleGenerativeAI(GOOGLE_API_KEY) : null;
-const model = genAI ? genAI.getGenerativeModel({ model: 'gemini-2.5-flash' }) : null;
+const model = genAI ? genAI.getGenerativeModel({
+    model: 'gemini-2.5-flash',
+    systemInstruction: EIXO_SUPORTE_SYSTEM_PROMPT,
+}) : null;
 
 app.post('/api/chat/send-message', requireAuth, async (req, res) => {
-    console.log('Recebida uma requisição para /api/chat/send-message'); // Debug log
     if (!model) {
         return res.status(503).json({ message: 'Assistente de IA não disponível. Chave de API ausente.' });
     }
@@ -1067,17 +1923,124 @@ app.post('/api/chat/send-message', requireAuth, async (req, res) => {
     }
 });
 
+// ─── OTP via Twilio Verify ────────────────────────────────────────────────────
+app.post('/auth/send-otp', async (req, res) => {
+    const { phone } = req.body || {};
+    const digits = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
+    const ipKey = `ip:${req.ip || 'unknown'}`;
+    const phoneKey = `phone:${digits || 'unknown'}`;
+
+    if (digits.length < 10 || digits.length > 11) {
+        return res.status(400).json({ message: 'Informe um celular válido com DDD.' });
+    }
+
+    if (isWindowRateLimited(otpSendAttempts, ipKey, OTP_SEND_MAX_PER_IP, OTP_SEND_WINDOW_MS)
+        || isWindowRateLimited(otpSendAttempts, phoneKey, OTP_SEND_MAX_PER_PHONE, OTP_SEND_WINDOW_MS)) {
+        return res.status(429).json({ message: 'Muitas tentativas de envio. Aguarde alguns minutos antes de tentar novamente.' });
+    }
+
+    if (!twilioClient || !TWILIO_VERIFY_SID) {
+        return res.status(503).json({ message: 'Serviço de SMS não configurado.' });
+    }
+
+    const e164 = `+55${digits}`;
+    try {
+        registerWindowAttempt(otpSendAttempts, ipKey, OTP_SEND_WINDOW_MS);
+        registerWindowAttempt(otpSendAttempts, phoneKey, OTP_SEND_WINDOW_MS);
+        await twilioClient.verify.v2.services(TWILIO_VERIFY_SID)
+            .verifications.create({ to: e164, channel: 'sms' });
+        return res.json({ message: 'Código enviado.' });
+    } catch (error) {
+        console.error('Twilio send-otp error:', error);
+        return res.status(500).json({ message: 'Não foi possível enviar o SMS. Verifique o número e tente novamente.' });
+    }
+});
+
+app.post('/auth/verify-otp', async (req, res) => {
+    const { phone, code } = req.body || {};
+    const digits = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
+    const ipKey = `ip:${req.ip || 'unknown'}`;
+    const phoneKey = `phone:${digits || 'unknown'}`;
+
+    if (!digits || !code) {
+        return res.status(400).json({ message: 'Informe o celular e o código.' });
+    }
+
+    if (isWindowRateLimited(otpVerifyAttempts, ipKey, OTP_VERIFY_MAX_PER_IP, OTP_VERIFY_WINDOW_MS)
+        || isWindowRateLimited(otpVerifyAttempts, phoneKey, OTP_VERIFY_MAX_PER_PHONE, OTP_VERIFY_WINDOW_MS)) {
+        return res.status(429).json({ message: 'Muitas tentativas de verificação. Aguarde alguns minutos antes de tentar novamente.' });
+    }
+
+    if (!twilioClient || !TWILIO_VERIFY_SID) {
+        return res.status(503).json({ message: 'Serviço de SMS não configurado.' });
+    }
+
+    const e164 = `+55${digits}`;
+    try {
+        const check = await twilioClient.verify.v2.services(TWILIO_VERIFY_SID)
+            .verificationChecks.create({ to: e164, code: String(code).trim() });
+
+        if (check.status !== 'approved') {
+            registerWindowAttempt(otpVerifyAttempts, ipKey, OTP_VERIFY_WINDOW_MS);
+            registerWindowAttempt(otpVerifyAttempts, phoneKey, OTP_VERIFY_WINDOW_MS);
+            return res.status(400).json({ message: 'Código incorreto ou expirado. Tente novamente.' });
+        }
+
+        // Registra celular como verificado (TTL 30 min, uso único no /register)
+        verifiedPhones.set(digits, { verifiedAt: Date.now() });
+        clearWindowAttempt(otpVerifyAttempts, ipKey);
+        clearWindowAttempt(otpVerifyAttempts, phoneKey);
+        return res.json({ message: 'Celular verificado.' });
+    } catch (error) {
+        console.error('Twilio verify-otp error:', error);
+        registerWindowAttempt(otpVerifyAttempts, ipKey, OTP_VERIFY_WINDOW_MS);
+        registerWindowAttempt(otpVerifyAttempts, phoneKey, OTP_VERIFY_WINDOW_MS);
+        return res.status(400).json({ message: 'Código incorreto ou expirado. Tente novamente.' });
+    }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─── Consulta pública de CNPJ (Receita Federal via BrasilAPI) ────────────────
+app.get('/public/cnpj/:cnpj', async (req, res) => {
+    const cnpj = req.params.cnpj.replace(/\D/g, '');
+    if (cnpj.length !== 14) {
+        return res.status(400).json({ message: 'CNPJ deve ter 14 dígitos.' });
+    }
+    try {
+        const apiRes = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+        const data = await apiRes.json();
+        if (!apiRes.ok) {
+            return res.status(apiRes.status).json({ message: data?.message || 'CNPJ não encontrado na Receita Federal.' });
+        }
+        return res.json(data);
+    } catch (error) {
+        console.error('BrasilAPI error:', error);
+        return res.status(503).json({ message: 'Não foi possível consultar a Receita Federal. Tente novamente.' });
+    }
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.post('/register', async (req, res) => {
-    const { name, email, password } = req.body || {};
+    const { name, email, password, document, documentType, cnpjData, phone, termsVersion } = req.body || {};
     const normalizedName = typeof name === 'string' ? name.trim() : '';
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const normalizedDocument = typeof document === 'string' ? document.replace(/\D/g, '') : null;
+    const normalizedPhone = typeof phone === 'string' ? phone.replace(/\D/g, '') : null;
 
     if (!normalizedName || !normalizedEmail || !password) {
         return res.status(400).json({ message: 'Informe nome, e-mail e senha.' });
     }
 
-    if (String(password).length < 6) {
-        return res.status(400).json({ message: 'A senha deve ter pelo menos 6 caracteres.' });
+    if (!termsVersion) {
+        return res.status(400).json({ message: 'Você precisa aceitar os Termos de Uso e a Política de Privacidade para criar sua conta.' });
+    }
+
+    if (!isPasswordStrongEnough(password)) {
+        return res.status(400).json({ message: PASSWORD_POLICY_MESSAGE });
+    }
+
+    if (!normalizedDocument || !documentType) {
+        return res.status(400).json({ message: 'Informe seu CNPJ ou CPF para criar a conta.' });
     }
 
     try {
@@ -1086,18 +2049,52 @@ app.post('/register', async (req, res) => {
             return res.status(409).json({ message: 'E-mail já cadastrado.' });
         }
 
+        // Verifica se documento já está cadastrado
+        const docExists = await prisma.user.findFirst({ where: { document: normalizedDocument } });
+        if (docExists) {
+            return res.status(409).json({ message: `${documentType} já está cadastrado em outra conta.` });
+        }
+
+        // CNPJ e CPF: exigem celular verificado via OTP
+        if (!normalizedPhone) {
+            return res.status(400).json({ message: 'Informe e verifique seu celular para continuar.' });
+        }
+        const phoneEntry = verifiedPhones.get(normalizedPhone);
+        const phoneIsValid = phoneEntry && (Date.now() - phoneEntry.verifiedAt) < PHONE_VERIFY_TTL_MS;
+        if (!phoneIsValid) {
+            return res.status(400).json({ message: 'Celular não verificado. Complete a verificação por SMS antes de criar a conta.' });
+        }
+        verifiedPhones.delete(normalizedPhone); // uso único
+
         const hashedPassword = await bcrypt.hash(String(password), 10);
+        // Plano grátis: Estrutura da Fazenda + Manejo do Rebanho + Financeiro básico
+        // Visão Geral é exclusiva dos planos pagos
+        const FREE_PLAN_MODULES = ['Fazendas', 'Rebanho Comercial', 'Financeiro'];
         const newUser = await prisma.user.create({
             data: {
                 name: normalizedName,
                 email: normalizedEmail,
                 password: hashedPassword,
-                modules: ['Visão Geral'],
+                modules: FREE_PLAN_MODULES,
                 roles: ['user'],
+                document: normalizedDocument,
+                documentType,
+                cnpjData: cnpjData || undefined,
+                phone: normalizedPhone,
+                termsVersion: String(termsVersion),
+                termsAcceptedAt: new Date(),
             },
         });
 
-        await ensureSaasContextForUser(newUser.id);
+        const saasCtx = await ensureSaasContextForUser(newUser.id, { allowProvision: true });
+
+        // Atualiza nome da organização com a razão social (CNPJ)
+        if (documentType === 'CNPJ' && cnpjData?.razao_social && saasCtx?.organizationId) {
+            await prisma.organization.update({
+                where: { id: saasCtx.organizationId },
+                data: { name: cnpjData.razao_social },
+            });
+        }
 
         return res.status(201).json({ user: sanitizeUser(newUser) });
     } catch (error) {
@@ -1107,16 +2104,21 @@ app.post('/register', async (req, res) => {
 });
 
 app.use(
-    ['/farms', '/lots', '/animals', '/users', '/seasons', '/repro-events', '/genetics', '/po', '/nutrition', '/pastos'],
+    ['/farms', '/lots', '/animals', '/pastos'],
+    requireAuth,
+);
+
+app.use(
+    ['/users', '/seasons', '/repro-events', '/genetics', '/po', '/nutrition'],
     requireAuth,
     requireBillingAccess,
 );
 
 app.post('/auth/login', async (req, res) => {
     const { email, password, rememberMe } = req.body || {};
-    const ipKey = req.ip;
+    const rateLimitKeys = buildLoginRateLimitKeys(email, req.ip);
 
-    if (isRateLimited(ipKey)) {
+    if (isAnyLoginRateLimited(rateLimitKeys)) {
         return res.status(429).json({ message: 'Muitas tentativas. Tente novamente mais tarde.' });
     }
 
@@ -1124,9 +2126,9 @@ app.post('/auth/login', async (req, res) => {
         return res.status(400).json({ message: 'Informe e-mail e senha.' });
     }
     try {
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({ where: { email: normalizeEmailForLogin(email) } });
         if (!user) {
-            registerFailedLogin(ipKey);
+            registerFailedLogins(rateLimitKeys);
             return res.status(401).json({ message: 'Credenciais inválidas.' });
         }
 
@@ -1145,31 +2147,29 @@ app.post('/auth/login', async (req, res) => {
         }
 
         if (!passwordMatches) {
-            registerFailedLogin(ipKey);
+            registerFailedLogins(rateLimitKeys);
             return res.status(401).json({ message: 'Credenciais inválidas.' });
         }
 
-        clearLoginAttempts(ipKey);
+        const saasContext = await ensureSaasContextForUser(user.id);
+        const accessContext = await ensureFieldWorkerFarmAccess(user, saasContext);
 
-        const token = generateSessionToken();
-        const tokenHash = hashSessionToken(token);
+        clearLoginRateLimits(rateLimitKeys);
+
         const shouldRemember = Boolean(rememberMe);
-        const ttl = shouldRemember ? SESSION_REMEMBER_TTL_MS : SESSION_TTL_MS;
-        const expiresAt = new Date(Date.now() + ttl);
-
-        await prisma.session.create({
-            data: {
-                userId: user.id,
-                tokenHash,
-                expiresAt,
-                userAgent: req.get('user-agent') || null,
-                ip: req.ip,
-            },
-        });
+        const { token, expiresAt } = await createSessionForUser(user.id, req, { rememberMe: shouldRemember });
 
         res.cookie(SESSION_COOKIE_NAME, token, buildCookieOptions(expiresAt));
-        return res.json({ user: await serializeAuthUserWithContext(user.id) });
+        return res.json({
+            user: serializeAuthUser(user, saasContext, {
+                ...accessContext,
+                allowedModules: normalizeUserModules(user.modules, user.roles),
+            }),
+        });
     } catch (error) {
+        if (isSaasContextError(error)) {
+            return res.status(403).json({ message: 'Sua conta está sem vínculo válido com uma organização. Procure o suporte.' });
+        }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao autenticar usuário.' });
     }
@@ -1177,7 +2177,7 @@ app.post('/auth/login', async (req, res) => {
 
 app.post('/auth/logout', async (req, res) => {
     try {
-        const sessionToken = req.cookies?.[SESSION_COOKIE_NAME];
+        const sessionToken = extractSessionTokenFromRequest(req);
         if (sessionToken) {
             const tokenHash = hashSessionToken(sessionToken);
             await prisma.session.updateMany({
@@ -1201,6 +2201,9 @@ app.get('/auth/me', async (req, res) => {
         }
         return res.json({ user: await serializeAuthUserWithContext(session.user.id) });
     } catch (error) {
+        if (isSaasContextError(error)) {
+            return res.status(403).json({ message: 'Conta sem vínculo válido com uma organização.' });
+        }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao validar sessão.' });
     }
@@ -1208,51 +2211,833 @@ app.get('/auth/me', async (req, res) => {
 
 app.get('/users', async (req, res) => {
     try {
-        if (req.user?.email !== ADMIN_EMAIL) {
+        if (!canManageOrganizationUsers(req)) {
             return res.status(403).json({ message: 'Apenas administradores podem listar usuários.' });
         }
-        const users = await prisma.user.findMany();
-        res.json({ users: users.map(sanitizeUser) });
+        const organizationId = req.saas?.organizationId || null;
+        if (!organizationId) {
+            return res.status(400).json({ message: 'Organização ativa não encontrada.' });
+        }
+        const memberships = await prisma.organizationMembership.findMany({
+            where: { organizationId },
+            include: {
+                user: {
+                    include: {
+                        appActivationCodes: {
+                            where: { revokedAt: null },
+                            orderBy: [{ createdAt: 'desc' }],
+                            take: 1,
+                        },
+                        appDevices: {
+                            where: { isActive: true, revokedAt: null },
+                            orderBy: [{ activatedAt: 'desc' }],
+                            take: 1,
+                        },
+                    },
+                },
+            },
+            orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
+        });
+        const users = await Promise.all(
+            memberships.map(async (membership) => {
+                const accessContext = await ensureFieldWorkerFarmAccess(membership.user, req.saas);
+                return {
+                    ...serializeManagedUser(membership.user, membership.role),
+                    allowedFarmIds: accessContext.allowedFarmIds,
+                    defaultFarmId: accessContext.defaultFarmId,
+                    appContext: accessContext.appContext,
+                };
+            }),
+        );
+        return res.json({ users });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ message: 'Erro ao listar usuários.' });
+        return res.status(500).json({ message: 'Erro ao listar usuários.' });
     }
 });
 
 app.post('/users', async (req, res) => {
-    const { name, email, password, modules } = req.body || {};
-    if (!name || !email || !password || !Array.isArray(modules)) {
+    const { name, email, password, modules, profile, accessType, fieldProfile, defaultFarmId } = req.body || {};
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
+    const requestedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const normalizedPassword = String(password || '');
+    const normalizedAccessType = ['WEB', 'APP_MANEJO', 'WEB_APP'].includes(String(accessType || '').trim().toUpperCase())
+        ? String(accessType || '').trim().toUpperCase()
+        : 'WEB';
+    const normalizedProfile = String(profile || '').trim().toLowerCase();
+    const normalizedFieldProfile = ['VAQUEIRO', 'ADMIN_CAMPO'].includes(String(fieldProfile || '').trim().toUpperCase())
+        ? String(fieldProfile || '').trim().toUpperCase()
+        : null;
+    const inferredFieldProfile = normalizedFieldProfile
+        || (normalizedProfile === FIELD_WORKER_ROLE || normalizedProfile === 'field_worker' ? 'VAQUEIRO' : null);
+    const isFieldAccess = normalizedAccessType === 'APP_MANEJO' || normalizedAccessType === 'WEB_APP';
+    const normalizedRoles = inferredFieldProfile === 'VAQUEIRO'
+        ? ['user', FIELD_WORKER_ROLE]
+        : inferredFieldProfile === 'ADMIN_CAMPO'
+            ? ['user', FIELD_ADMIN_ROLE]
+            : ['user'];
+    const normalizedModules = normalizeUserModules(modules, normalizedRoles, normalizedAccessType);
+    const normalizedDefaultFarmId = typeof defaultFarmId === 'string' && defaultFarmId.trim()
+        ? defaultFarmId.trim()
+        : null;
+    const normalizedEmail = normalizedAccessType === 'APP_MANEJO' && !requestedEmail
+        ? generateInternalFieldUserEmail(normalizedName)
+        : requestedEmail;
+
+    if (!normalizedName || !Array.isArray(modules)) {
         return res.status(400).json({ message: 'Dados obrigatórios ausentes.' });
     }
 
-    if (modules.length === 0) {
+    if (normalizedAccessType !== 'APP_MANEJO' && !normalizedEmail) {
+        return res.status(400).json({ message: 'Informe um e-mail válido.' });
+    }
+
+    if (normalizedAccessType !== 'APP_MANEJO' && normalizedModules.length === 0) {
         return res.status(400).json({ message: 'Selecione ao menos um módulo.' });
     }
 
+    if (isFieldAccess && !inferredFieldProfile) {
+        return res.status(400).json({ message: 'Selecione o perfil de campo para esse acesso.' });
+    }
+
+    if (isFieldAccess && !normalizedDefaultFarmId) {
+        return res.status(400).json({ message: 'Selecione a fazenda padrão do acesso de campo.' });
+    }
+
+    if (normalizedAccessType !== 'APP_MANEJO' && !isPasswordStrongEnough(normalizedPassword)) {
+        return res.status(400).json({ message: PASSWORD_POLICY_MESSAGE });
+    }
+
     try {
-        if (req.user?.email !== ADMIN_EMAIL) {
+        if (!canManageOrganizationUsers(req)) {
             return res.status(403).json({ message: 'Apenas administradores podem cadastrar usuários.' });
         }
 
-        const emailExists = await prisma.user.findUnique({ where: { email } });
+        const organizationId = req.saas?.organizationId || null;
+        if (!organizationId) {
+            return res.status(400).json({ message: 'Organização ativa não encontrada.' });
+        }
+
+        if (isFieldAccess) {
+            const farm = await prisma.farm.findFirst({
+                where: buildFarmScopeFilter(req, { id: normalizedDefaultFarmId }),
+                select: { id: true },
+            });
+            if (!farm) {
+                return res.status(400).json({ message: 'Fazenda padrão inválida para esse usuário.' });
+            }
+        }
+
+        // Limite de usuários do plano gratuito (3 usuários por org)
+        const paidSub = await prisma.billingSubscription.findFirst({
+            where: { organizationId, status: 'ACTIVE' },
+        });
+        if (!paidSub) {
+            const memberCount = await prisma.organizationMembership.count({
+                where: { organizationId },
+            });
+            if (memberCount >= 3) {
+                return res.status(403).json({
+                    code: 'user_limit_reached',
+                    message: 'O plano gratuito permite até 3 usuários. Faça upgrade para adicionar mais.',
+                });
+            }
+        }
+
+        const emailExists = await prisma.user.findUnique({ where: { email: normalizedEmail } });
         if (emailExists) {
             return res.status(409).json({ message: 'Este e-mail já está cadastrado.' });
         }
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = await prisma.user.create({
-            data: {
-                name,
-                email,
-                password: hashedPassword,
-                modules,
-                roles: ['user'],
+        const passwordToPersist = normalizedAccessType === 'APP_MANEJO'
+            ? crypto.randomBytes(24).toString('hex')
+            : normalizedPassword;
+        const hashedPassword = await bcrypt.hash(passwordToPersist, 10);
+        const newUser = await prisma.$transaction(async (tx) => {
+            const createdUser = await tx.user.create({
+                data: {
+                    name: normalizedName,
+                    email: normalizedEmail,
+                    password: hashedPassword,
+                    modules: normalizedModules,
+                    roles: normalizedRoles,
+                    accessType: normalizedAccessType,
+                    fieldProfile: inferredFieldProfile,
+                    appActivationStatus: isFieldAccess ? 'PENDENTE_ATIVACAO' : null,
+                    activeOrganizationId: organizationId,
+                    lastFarmId: normalizedDefaultFarmId,
+                },
+                include: {
+                    appActivationCodes: {
+                        where: { revokedAt: null },
+                        orderBy: [{ createdAt: 'desc' }],
+                        take: 1,
+                    },
+                    appDevices: {
+                        where: { isActive: true, revokedAt: null },
+                        orderBy: [{ activatedAt: 'desc' }],
+                        take: 1,
+                    },
+                },
+            });
+            await tx.organizationMembership.create({
+                data: {
+                    organizationId,
+                    userId: createdUser.id,
+                    role: 'MEMBER',
+                },
+            });
+            if (isFieldAccess && normalizedDefaultFarmId) {
+                await tx.userFarmAccess.create({
+                    data: {
+                        userId: createdUser.id,
+                        farmId: normalizedDefaultFarmId,
+                        isDefault: true,
+                    },
+                });
+            }
+            return createdUser;
+        });
+        logActivity(req, { action: 'USUARIO_CRIADO', entity: 'User', entityId: newUser.id, description: `Cadastrou o usuário ${newUser.name}` });
+        const accessContext = await ensureFieldWorkerFarmAccess(newUser, req.saas);
+        return res.status(201).json({
+            user: {
+                ...serializeManagedUser(newUser, 'MEMBER'),
+                allowedFarmIds: accessContext.allowedFarmIds,
+                defaultFarmId: accessContext.defaultFarmId,
+                appContext: accessContext.appContext,
             },
         });
-        return res.status(201).json({ user: sanitizeUser(newUser) });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar usuário.' });
+    }
+});
+
+app.patch('/users/:id', requireAuth, async (req, res) => {
+    const { name, email, modules, defaultFarmId } = req.body || {};
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+    const normalizedModules = normalizeUserModules(modules, ['user'], 'WEB');
+    const normalizedDefaultFarmId = typeof defaultFarmId === 'string' && defaultFarmId.trim()
+        ? defaultFarmId.trim()
+        : null;
+
+    if (!normalizedName || !normalizedEmail || !Array.isArray(modules)) {
+        return res.status(400).json({ message: 'Dados obrigatórios ausentes.' });
+    }
+
+    if (normalizedModules.length === 0) {
+        return res.status(400).json({ message: 'Selecione ao menos um módulo.' });
+    }
+
+    try {
+        if (!canManageOrganizationUsers(req)) {
+            return res.status(403).json({ message: 'Apenas administradores podem editar usuários.' });
+        }
+
+        const organizationId = req.saas?.organizationId || null;
+        if (!organizationId) {
+            return res.status(400).json({ message: 'Organização ativa não encontrada.' });
+        }
+
+        const targetUser = await prisma.user.findFirst({
+            where: {
+                id: req.params.id,
+                memberships: {
+                    some: { organizationId },
+                },
+            },
+            include: {
+                appActivationCodes: {
+                    where: { revokedAt: null },
+                    orderBy: [{ createdAt: 'desc' }],
+                    take: 1,
+                },
+                appDevices: {
+                    where: { isActive: true, revokedAt: null },
+                    orderBy: [{ activatedAt: 'desc' }],
+                    take: 1,
+                },
+                farmAccesses: {
+                    orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+                },
+            },
+        });
+
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Usuário não encontrado.' });
+        }
+
+        if (targetUser.accessType === 'APP_MANEJO') {
+            return res.status(400).json({ message: 'Esse acesso deve ser editado no painel do App do Manejo.' });
+        }
+
+        if (normalizedDefaultFarmId) {
+            const farm = await prisma.farm.findFirst({
+                where: buildFarmScopeFilter(req, { id: normalizedDefaultFarmId }),
+                select: { id: true },
+            });
+            if (!farm) {
+                return res.status(400).json({ message: 'Fazenda padrão inválida para esse usuário.' });
+            }
+        }
+
+        const emailOwner = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (emailOwner && emailOwner.id !== targetUser.id) {
+            return res.status(409).json({ message: 'Este e-mail já está cadastrado.' });
+        }
+
+        const updatedUser = await prisma.$transaction(async (tx) => {
+            const savedUser = await tx.user.update({
+                where: { id: targetUser.id },
+                data: {
+                    name: normalizedName,
+                    email: normalizedEmail,
+                    modules: normalizedModules,
+                    lastFarmId: normalizedDefaultFarmId,
+                },
+                include: {
+                    appActivationCodes: {
+                        where: { revokedAt: null },
+                        orderBy: [{ createdAt: 'desc' }],
+                        take: 1,
+                    },
+                    appDevices: {
+                        where: { isActive: true, revokedAt: null },
+                        orderBy: [{ activatedAt: 'desc' }],
+                        take: 1,
+                    },
+                },
+            });
+
+            if (normalizedDefaultFarmId && (savedUser.accessType === 'WEB_APP' || savedUser.fieldProfile)) {
+                await tx.userFarmAccess.updateMany({
+                    where: { userId: savedUser.id, isDefault: true },
+                    data: { isDefault: false },
+                });
+                const existingAccess = await tx.userFarmAccess.findFirst({
+                    where: { userId: savedUser.id, farmId: normalizedDefaultFarmId },
+                    select: { id: true },
+                });
+                if (existingAccess) {
+                    await tx.userFarmAccess.update({
+                        where: { id: existingAccess.id },
+                        data: { isDefault: true },
+                    });
+                } else {
+                    await tx.userFarmAccess.create({
+                        data: {
+                            userId: savedUser.id,
+                            farmId: normalizedDefaultFarmId,
+                            isDefault: true,
+                        },
+                    });
+                }
+            }
+
+            return savedUser;
+        });
+
+        logActivity(req, { action: 'USUARIO_EDITADO', entity: 'User', entityId: updatedUser.id, description: `Editou o usuário ${updatedUser.name}` });
+        const accessContext = await ensureFieldWorkerFarmAccess(updatedUser, req.saas);
+        return res.json({
+            user: {
+                ...serializeManagedUser(updatedUser, 'MEMBER'),
+                allowedFarmIds: accessContext.allowedFarmIds,
+                defaultFarmId: accessContext.defaultFarmId,
+                appContext: accessContext.appContext,
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar usuário.' });
+    }
+});
+
+app.patch('/users/:id/app-access', requireAuth, async (req, res) => {
+    const { name, fieldProfile, defaultFarmId } = req.body || {};
+    const normalizedName = typeof name === 'string' ? name.trim() : '';
+    const normalizedFieldProfile = ['VAQUEIRO', 'ADMIN_CAMPO'].includes(String(fieldProfile || '').trim().toUpperCase())
+        ? String(fieldProfile || '').trim().toUpperCase()
+        : null;
+    const normalizedDefaultFarmId = typeof defaultFarmId === 'string' && defaultFarmId.trim()
+        ? defaultFarmId.trim()
+        : null;
+
+    if (!normalizedName || !normalizedFieldProfile || !normalizedDefaultFarmId) {
+        return res.status(400).json({ message: 'Nome, perfil e fazenda são obrigatórios.' });
+    }
+
+    try {
+        if (!canManageOrganizationUsers(req)) {
+            return res.status(403).json({ message: 'Apenas administradores podem editar colaboradores.' });
+        }
+
+        const organizationId = req.saas?.organizationId || null;
+        if (!organizationId) {
+            return res.status(400).json({ message: 'Organização ativa não encontrada.' });
+        }
+
+        const targetUser = await prisma.user.findFirst({
+            where: {
+                id: req.params.id,
+                memberships: {
+                    some: { organizationId },
+                },
+            },
+            include: {
+                appActivationCodes: {
+                    where: { revokedAt: null },
+                    orderBy: [{ createdAt: 'desc' }],
+                    take: 1,
+                },
+                appDevices: {
+                    where: { isActive: true, revokedAt: null },
+                    orderBy: [{ activatedAt: 'desc' }],
+                    take: 1,
+                },
+            },
+        });
+
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Colaborador não encontrado.' });
+        }
+
+        if (targetUser.accessType === 'WEB') {
+            return res.status(400).json({ message: 'Esse acesso deve ser editado no painel do sistema web.' });
+        }
+
+        const farm = await prisma.farm.findFirst({
+            where: buildFarmScopeFilter(req, { id: normalizedDefaultFarmId }),
+            select: { id: true },
+        });
+        if (!farm) {
+            return res.status(400).json({ message: 'Fazenda inválida para esse colaborador.' });
+        }
+
+        const fieldRole = normalizedFieldProfile === 'ADMIN_CAMPO' ? FIELD_ADMIN_ROLE : FIELD_WORKER_ROLE;
+        const nextRoles = Array.from(new Set([
+            ...targetUser.roles.filter((role) => role !== FIELD_WORKER_ROLE && role !== FIELD_ADMIN_ROLE),
+            'user',
+            fieldRole,
+        ]));
+        const nextModules = normalizeUserModules(targetUser.modules, nextRoles, targetUser.accessType);
+
+        const updatedUser = await prisma.$transaction(async (tx) => {
+            const savedUser = await tx.user.update({
+                where: { id: targetUser.id },
+                data: {
+                    name: normalizedName,
+                    roles: nextRoles,
+                    modules: nextModules,
+                    fieldProfile: normalizedFieldProfile,
+                    lastFarmId: normalizedDefaultFarmId,
+                },
+                include: {
+                    appActivationCodes: {
+                        where: { revokedAt: null },
+                        orderBy: [{ createdAt: 'desc' }],
+                        take: 1,
+                    },
+                    appDevices: {
+                        where: { isActive: true, revokedAt: null },
+                        orderBy: [{ activatedAt: 'desc' }],
+                        take: 1,
+                    },
+                },
+            });
+
+            await tx.userFarmAccess.updateMany({
+                where: { userId: savedUser.id, isDefault: true },
+                data: { isDefault: false },
+            });
+            const existingAccess = await tx.userFarmAccess.findFirst({
+                where: { userId: savedUser.id, farmId: normalizedDefaultFarmId },
+                select: { id: true },
+            });
+            if (existingAccess) {
+                await tx.userFarmAccess.update({
+                    where: { id: existingAccess.id },
+                    data: { isDefault: true },
+                });
+            } else {
+                await tx.userFarmAccess.create({
+                    data: {
+                        userId: savedUser.id,
+                        farmId: normalizedDefaultFarmId,
+                        isDefault: true,
+                    },
+                });
+            }
+
+            return savedUser;
+        });
+
+        logActivity(req, { action: 'COLABORADOR_APP_EDITADO', entity: 'User', entityId: updatedUser.id, description: `Editou o colaborador ${updatedUser.name}` });
+        const accessContext = await ensureFieldWorkerFarmAccess(updatedUser, req.saas);
+        return res.json({
+            user: {
+                ...serializeManagedUser(updatedUser, 'MEMBER'),
+                allowedFarmIds: accessContext.allowedFarmIds,
+                defaultFarmId: accessContext.defaultFarmId,
+                appContext: accessContext.appContext,
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar colaborador.' });
+    }
+});
+
+app.delete('/users/:id', requireAuth, async (req, res) => {
+    try {
+        if (!canManageOrganizationUsers(req)) {
+            return res.status(403).json({ message: 'Apenas administradores podem excluir usuários.' });
+        }
+
+        const organizationId = req.saas?.organizationId || null;
+        if (!organizationId) {
+            return res.status(400).json({ message: 'Organização ativa não encontrada.' });
+        }
+
+        if (req.params.id === req.user?.id) {
+            return res.status(400).json({ message: 'Você não pode excluir o seu próprio acesso.' });
+        }
+
+        const membershipCount = await prisma.organizationMembership.count({
+            where: { organizationId },
+        });
+        if (membershipCount <= 1) {
+            return res.status(400).json({ message: 'Não é possível excluir o único usuário da organização.' });
+        }
+
+        const targetUser = await prisma.user.findFirst({
+            where: {
+                id: req.params.id,
+                memberships: {
+                    some: { organizationId },
+                },
+            },
+            select: { id: true, name: true },
+        });
+
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Usuário não encontrado.' });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            await tx.session.deleteMany({ where: { userId: targetUser.id } });
+            await tx.appDevice.deleteMany({ where: { userId: targetUser.id } });
+            await tx.appActivationCode.deleteMany({ where: { userId: targetUser.id } });
+            await tx.userFarmAccess.deleteMany({ where: { userId: targetUser.id } });
+            await tx.organizationMembership.deleteMany({ where: { organizationId, userId: targetUser.id } });
+            await tx.user.delete({ where: { id: targetUser.id } });
+        });
+
+        logActivity(req, { action: 'USUARIO_EXCLUIDO', entity: 'User', entityId: targetUser.id, description: `Excluiu o usuário ${targetUser.name}` });
+        return res.status(204).send();
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao excluir usuário.' });
+    }
+});
+
+app.post('/users/:id/app-code', requireAuth, async (req, res) => {
+    try {
+        if (!canManageOrganizationUsers(req)) {
+            return res.status(403).json({ message: 'Apenas administradores podem gerar codigo.' });
+        }
+
+        const targetUser = await prisma.user.findFirst({
+            where: {
+                id: req.params.id,
+                memberships: {
+                    some: { organizationId: req.saas?.organizationId || null },
+                },
+            },
+            include: {
+                farmAccesses: {
+                    orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+                },
+            },
+        });
+
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Usuario nao encontrado.' });
+        }
+        if (targetUser.accessType === 'WEB') {
+            return res.status(400).json({ message: 'Esse usuario nao usa App do Manejo.' });
+        }
+        if (!targetUser.fieldProfile) {
+            return res.status(400).json({ message: 'Defina o perfil de campo antes de gerar o codigo.' });
+        }
+
+        const defaultFarmId = targetUser.farmAccesses.find((item) => item.isDefault)?.farmId
+            || targetUser.farmAccesses[0]?.farmId
+            || targetUser.lastFarmId
+            || null;
+
+        if (!defaultFarmId) {
+            return res.status(400).json({ message: 'Usuario sem fazenda padrao vinculada.' });
+        }
+
+        const code = generateActivationCode();
+        const codeHash = hashActivationCode(code);
+        const expiresAt = new Date(Date.now() + APP_ACTIVATION_CODE_TTL_MS);
+
+        await prisma.$transaction([
+            prisma.appActivationCode.updateMany({
+                where: {
+                    userId: targetUser.id,
+                    usedAt: null,
+                    revokedAt: null,
+                    expiresAt: { gt: new Date() },
+                },
+                data: { revokedAt: new Date() },
+            }),
+            prisma.user.update({
+                where: { id: targetUser.id },
+                data: { appActivationStatus: 'PENDENTE_ATIVACAO' },
+            }),
+            prisma.appActivationCode.create({
+                data: {
+                    userId: targetUser.id,
+                    organizationId: req.saas.organizationId,
+                    farmId: defaultFarmId,
+                    codeHash,
+                    expiresAt,
+                    createdById: req.user.id,
+                },
+            }),
+        ]);
+
+        return res.json({
+            code,
+            expiresAt: expiresAt.toISOString(),
+            userId: targetUser.id,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao gerar codigo de ativacao.' });
+    }
+});
+
+app.post('/users/:id/revoke-device', requireAuth, async (req, res) => {
+    try {
+        if (!canManageOrganizationUsers(req)) {
+            return res.status(403).json({ message: 'Apenas administradores podem revogar aparelho.' });
+        }
+
+        const targetUser = await prisma.user.findFirst({
+            where: {
+                id: req.params.id,
+                memberships: {
+                    some: { organizationId: req.saas?.organizationId || null },
+                },
+            },
+            select: { id: true, accessType: true },
+        });
+
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Usuario nao encontrado.' });
+        }
+        if (targetUser.accessType === 'WEB') {
+            return res.status(400).json({ message: 'Esse usuario nao possui aparelho vinculado no app.' });
+        }
+
+        const activeDevice = await prisma.appDevice.findFirst({
+            where: {
+                userId: targetUser.id,
+                organizationId: req.saas.organizationId,
+                isActive: true,
+                revokedAt: null,
+            },
+            orderBy: { activatedAt: 'desc' },
+        });
+
+        if (!activeDevice) {
+            return res.status(400).json({ message: 'Nenhum aparelho ativo para revogar.' });
+        }
+
+        await prisma.$transaction([
+            prisma.appDevice.update({
+                where: { id: activeDevice.id },
+                data: {
+                    isActive: false,
+                    revokedAt: new Date(),
+                },
+            }),
+            prisma.session.updateMany({
+                where: {
+                    userId: targetUser.id,
+                    deviceId: activeDevice.id,
+                    revokedAt: null,
+                },
+                data: { revokedAt: new Date() },
+            }),
+            prisma.user.update({
+                where: { id: targetUser.id },
+                data: { appActivationStatus: 'APARELHO_REVOGADO' },
+            }),
+        ]);
+
+        return res.json({ ok: true });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao revogar aparelho.' });
+    }
+});
+
+app.post('/app/activate', async (req, res) => {
+    const {
+        code,
+        deviceFingerprint,
+        deviceLabel,
+        platform,
+        appVersion,
+    } = req.body || {};
+
+    const normalizedCode = normalizeActivationCode(code);
+    const normalizedDeviceFingerprint = String(deviceFingerprint || '').trim();
+
+    if (!normalizedCode || !normalizedDeviceFingerprint) {
+        return res.status(400).json({ message: 'Informe codigo e identificador do aparelho.' });
+    }
+
+    try {
+        const activationCode = await prisma.appActivationCode.findFirst({
+            where: {
+                codeHash: hashActivationCode(normalizedCode),
+                revokedAt: null,
+            },
+            include: {
+                user: {
+                    include: {
+                        farmAccesses: {
+                            orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!activationCode) {
+            return res.status(401).json({ message: 'Codigo invalido.' });
+        }
+        if (activationCode.usedAt) {
+            return res.status(401).json({ message: 'Esse codigo ja foi utilizado.' });
+        }
+        if (activationCode.expiresAt.getTime() <= Date.now()) {
+            await prisma.user.update({
+                where: { id: activationCode.userId },
+                data: { appActivationStatus: 'CODIGO_EXPIRADO' },
+            });
+            return res.status(401).json({ message: 'Codigo expirado. Gere um novo codigo no sistema.' });
+        }
+
+        const targetUser = activationCode.user;
+        if (!targetUser || targetUser.accessType === 'WEB' || !targetUser.fieldProfile) {
+            return res.status(400).json({ message: 'Usuario sem acesso valido ao App do Manejo.' });
+        }
+        if (targetUser.appActivationStatus === 'BLOQUEADO') {
+            return res.status(403).json({ message: 'Acesso bloqueado. Procure a fazenda.' });
+        }
+
+        const saasContext = await ensureSaasContextForUser(targetUser.id);
+        const accessContext = await ensureFieldWorkerFarmAccess(targetUser, saasContext);
+
+        const activeDevice = await prisma.appDevice.findFirst({
+            where: {
+                userId: targetUser.id,
+                isActive: true,
+                revokedAt: null,
+            },
+            orderBy: { activatedAt: 'desc' },
+        });
+
+        if (activeDevice && activeDevice.deviceFingerprint !== normalizedDeviceFingerprint) {
+            return res.status(409).json({
+                message: 'Ja existe um aparelho ativo para esse usuario. A troca exige revogacao manual pela fazenda.',
+            });
+        }
+
+        let device = activeDevice;
+
+        const result = await prisma.$transaction(async (tx) => {
+            const nextDevice = device
+                ? await tx.appDevice.update({
+                    where: { id: device.id },
+                    data: {
+                        deviceLabel: typeof deviceLabel === 'string' ? deviceLabel.trim() || null : null,
+                        platform: typeof platform === 'string' ? platform.trim() || null : null,
+                        appVersion: typeof appVersion === 'string' ? appVersion.trim() || null : null,
+                        lastSeenAt: new Date(),
+                    },
+                })
+                : await tx.appDevice.create({
+                    data: {
+                        userId: targetUser.id,
+                        organizationId: saasContext.organizationId,
+                        farmId: accessContext.defaultFarmId,
+                        deviceFingerprint: normalizedDeviceFingerprint,
+                        deviceLabel: typeof deviceLabel === 'string' ? deviceLabel.trim() || null : null,
+                        platform: typeof platform === 'string' ? platform.trim() || null : null,
+                        appVersion: typeof appVersion === 'string' ? appVersion.trim() || null : null,
+                        lastSeenAt: new Date(),
+                    },
+                });
+
+            await tx.appActivationCode.update({
+                where: { id: activationCode.id },
+                data: { usedAt: new Date() },
+            });
+
+            await tx.user.update({
+                where: { id: targetUser.id },
+                data: { appActivationStatus: 'ATIVO' },
+            });
+
+            return nextDevice;
+        });
+
+        device = result;
+
+        const { token, expiresAt } = await createSessionForUser(targetUser.id, req, {
+            rememberMe: true,
+            deviceId: device.id,
+        });
+
+        res.cookie(SESSION_COOKIE_NAME, token, buildCookieOptions(expiresAt));
+
+        const payload = await buildAppAuthPayload(targetUser.id, { device });
+        return res.json({
+            sessionToken: token,
+            sessionExpiresAt: expiresAt.toISOString(),
+            ...payload,
+        });
+    } catch (error) {
+        if (isSaasContextError(error)) {
+            return res.status(403).json({ message: 'Conta sem vinculo valido com uma organizacao.' });
+        }
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao ativar acesso do app.' });
+    }
+});
+
+app.get('/app/me', requireAuth, async (req, res) => {
+    try {
+        if (req.access?.appContext?.mode !== 'field') {
+            return res.status(403).json({ message: 'Esse acesso nao pertence ao App do Manejo.' });
+        }
+        const payload = await buildAppAuthPayload(req.user.id, { device: req.appDevice || null });
+        return res.json(payload);
+    } catch (error) {
+        if (isSaasContextError(error)) {
+            return res.status(403).json({ message: 'Conta sem vinculo valido com uma organizacao.' });
+        }
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao validar sessao do app.' });
     }
 });
 
@@ -1275,7 +3060,7 @@ app.get('/farms', async (req, res) => {
     }
 });
 
-app.post('/farms', async (req, res) => {
+app.post('/farms', requireNonFieldWorker, async (req, res) => {
     const { name, city, lat, lng, size, notes, responsibleName, paddocks } = req.body || {};
 
     const parsedSize = Number(size);
@@ -1322,10 +3107,35 @@ app.post('/farms', async (req, res) => {
     }
 
     try {
-        const existingFarmAtCoordinates = await findFarmByCoordinates({ lat: parsedLat, lng: parsedLng });
+        // --- Limite de fazendas por plano ---
+        const orgId = req.saas?.organizationId || null;
+        if (orgId) {
+            const activePaidSubscription = await prisma.billingSubscription.findFirst({
+                where: {
+                    organizationId: orgId,
+                    status: 'active',
+                    NOT: { planCode: { in: ['gratis', 'free', 'gratuito'] } },
+                },
+            });
+            if (!activePaidSubscription) {
+                const farmCount = await prisma.farm.count({ where: { organizationId: orgId } });
+                if (farmCount >= 1) {
+                    return res.status(403).json({
+                        code: 'farm_limit_reached',
+                        message: 'O plano gratuito permite apenas 1 fazenda. Faça upgrade para cadastrar mais fazendas.',
+                    });
+                }
+            }
+        }
+        // ------------------------------------
+
+        const existingFarmAtCoordinates = await findFarmByCoordinates({
+            lat: parsedLat,
+            lng: parsedLng,
+        });
         if (existingFarmAtCoordinates) {
             return res.status(409).json({
-                message: `Já existe uma fazenda cadastrada nesse local: ${existingFarmAtCoordinates.name} (${existingFarmAtCoordinates.city}).`,
+                message: 'Já existe uma fazenda cadastrada com essas coordenadas.',
             });
         }
 
@@ -1346,6 +3156,7 @@ app.post('/farms', async (req, res) => {
             },
             include: { paddocks: true },
         });
+        logActivity(req, { action: 'FAZENDA_CRIADA', entity: 'Farm', entityId: newFarm.id, description: `Cadastrou a fazenda ${newFarm.name}`, farmId: newFarm.id });
         return res.status(201).json({
             farm: {
                 ...newFarm,
@@ -1359,7 +3170,7 @@ app.post('/farms', async (req, res) => {
     }
 });
 
-app.patch('/farms/:id', async (req, res) => {
+app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
     const { id } = req.params;
     const { name, city, lat, lng, size, notes, responsibleName, paddocks } = req.body || {};
 
@@ -1420,7 +3231,7 @@ app.patch('/farms/:id', async (req, res) => {
         });
         if (existingFarmAtCoordinates) {
             return res.status(409).json({
-                message: `Já existe uma fazenda cadastrada nesse local: ${existingFarmAtCoordinates.name} (${existingFarmAtCoordinates.city}).`,
+                message: 'Já existe uma fazenda cadastrada com essas coordenadas.',
             });
         }
 
@@ -1485,7 +3296,7 @@ app.patch('/farms/:id', async (req, res) => {
     }
 });
 
-app.delete('/farms/:id', async (req, res) => {
+app.delete('/farms/:id', requireNonFieldWorker, async (req, res) => {
     const { id } = req.params;
     try {
         const farm = await prisma.farm.findFirst({
@@ -1495,11 +3306,18 @@ app.delete('/farms/:id', async (req, res) => {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
 
-        await prisma.farm.delete({
-            where: { id: farm.id },
+        await recordActivityLog(req, {
+            statusCode: 423,
+            requestMeta: {
+                action: 'farm_delete_blocked',
+                targetType: 'farm',
+                targetId: farm.id,
+                result: 'blocked',
+            },
         });
-
-        return res.json({ success: true });
+        return res.status(423).json({
+            message: 'A exclusão direta de fazendas está temporariamente desativada por segurança.',
+        });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao excluir fazenda.' });
@@ -1592,7 +3410,7 @@ app.get('/pastos', async (req, res) => {
     }
 });
 
-app.post('/pastos', async (req, res) => {
+app.post('/pastos', requireNonFieldWorker, async (req, res) => {
     const { farmId, nome, name, areaHa, size, capacity, ativo, active, divisionType, type } = req.body || {};
     const paddockName = (nome || name || '').trim();
     if (!farmId || !paddockName) {
@@ -1639,7 +3457,7 @@ app.post('/pastos', async (req, res) => {
     }
 });
 
-app.patch('/pastos/:id', async (req, res) => {
+app.patch('/pastos/:id', requireNonFieldWorker, async (req, res) => {
     const { id } = req.params;
     const { nome, name, areaHa, size, capacity, ativo, active, divisionType, type } = req.body || {};
     const paddockName = typeof nome === 'string' || typeof name === 'string' ? (nome || name).trim() : null;
@@ -1697,7 +3515,7 @@ app.patch('/pastos/:id', async (req, res) => {
     }
 });
 
-app.patch('/farms/:id/repro-mode', async (req, res) => {
+app.patch('/farms/:id/repro-mode', requireNonFieldWorker, async (req, res) => {
     const { id } = req.params;
     const { reproMode } = req.body || {};
     const normalizedMode = normalizeReproMode(reproMode);
@@ -1989,7 +3807,7 @@ app.get('/lots', async (req, res) => {
     }
 });
 
-app.post('/lots', async (req, res) => {
+app.post('/lots', requireNonFieldWorker, async (req, res) => {
     const { farmId, name, notes } = req.body || {};
     if (!farmId || !name?.trim()) {
         return res.status(400).json({ message: 'Informe fazenda e nome do lote.' });
@@ -2010,10 +3828,77 @@ app.post('/lots', async (req, res) => {
                 notes: notes?.trim() || null,
             },
         });
+        logActivity(req, { action: 'LOTE_CRIADO', entity: 'Lot', entityId: lot.id, description: `Criou o lote "${lot.name}"`, farmId: lot.farmId });
         return res.status(201).json({ lot });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar lote.' });
+    }
+});
+
+app.patch('/lots/:id', requireNonFieldWorker, async (req, res) => {
+    const { id } = req.params;
+    const { name, notes } = req.body || {};
+    if (!name?.trim()) {
+        return res.status(400).json({ message: 'Informe o nome do lote.' });
+    }
+    try {
+        const lot = await prisma.lot.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!lot) return res.status(404).json({ message: 'Lote não encontrado.' });
+        const updated = await prisma.lot.update({
+            where: { id },
+            data: { name: name.trim(), notes: notes?.trim() || null },
+        });
+        return res.json({ lot: updated });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao editar lote.' });
+    }
+});
+
+app.delete('/lots/:id', requireNonFieldWorker, async (req, res) => {
+    const { id } = req.params;
+    try {
+        const lot = await prisma.lot.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!lot) return res.status(404).json({ message: 'Lote não encontrado.' });
+        await prisma.lot.delete({ where: { id } });
+        return res.json({ ok: true });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao excluir lote.' });
+    }
+});
+
+app.patch('/animals/:id', async (req, res) => {
+    const { id } = req.params;
+    const { lotId } = req.body || {};
+    try {
+        const animal = await prisma.animal.findFirst({
+            where: { id, farm: buildFarmRelationFilter(req) },
+        });
+        if (!animal) return res.status(404).json({ message: 'Animal não encontrado.' });
+
+        let validLotId = null;
+        if (lotId) {
+            const lot = await prisma.lot.findFirst({
+                where: { id: String(lotId), farmId: animal.farmId },
+            });
+            if (!lot) return res.status(404).json({ message: 'Lote não encontrado.' });
+            validLotId = lot.id;
+        }
+
+        const updated = await prisma.animal.update({
+            where: { id },
+            data: { lotId: validLotId },
+        });
+        return res.json({ animal: updated });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar animal.' });
     }
 });
 
@@ -4339,7 +6224,7 @@ app.get('/animals', async (req, res) => {
 });
 
 app.post('/animals', async (req, res) => {
-    const { farmId, lotId, brinco, raca, sexo, dataNascimento, pesoAtual, paddockId, paddockStartAt } = req.body || {};
+    const { farmId, lotId, brinco, raca, sexo, dataNascimento, pesoAtual, paddockId, paddockStartAt, valorCompra, dataCompra } = req.body || {};
 
     if (!farmId || !brinco?.trim() || !raca?.trim() || !sexo || !dataNascimento) {
         return res.status(400).json({ message: 'Dados obrigatórios do animal ausentes.' });
@@ -4394,6 +6279,9 @@ app.post('/animals', async (req, res) => {
             return res.status(400).json({ message: 'Data de entrada no pasto inválida.' });
         }
 
+        const parsedValorCompra = valorCompra ? parseFloat(valorCompra) : null;
+        const compraDate = dataCompra ? parseDateValue(dataCompra) : moveStartAt;
+
         const animal = await prisma.$transaction(async (tx) => {
             const created = await tx.animal.create({
                 data: {
@@ -4417,9 +6305,40 @@ app.post('/animals', async (req, res) => {
                     startAt: moveStartAt,
                 },
             });
+
+            // Se valor de compra informado, cria evento + lançamento financeiro automaticamente
+            if (parsedValorCompra && parsedValorCompra > 0) {
+                const catMap = HERD_EVENT_CATEGORY_MAP['COMPRA'];
+                const herdEvent = await tx.herdEvent.create({
+                    data: {
+                        farmId,
+                        animalId: created.id,
+                        type: 'COMPRA',
+                        date: compraDate,
+                        peso: parsedPesoAtual ?? null,
+                        valor: parsedValorCompra,
+                        observacoes: `Compra registrada no cadastro — brinco ${brinco.trim()}`,
+                    },
+                });
+                await tx.financialTransaction.create({
+                    data: {
+                        farmId,
+                        type: catMap.type,
+                        categoria: catMap.categoria,
+                        accountCategoryId: catMap.categoryId,
+                        valor: parsedValorCompra,
+                        data: compraDate,
+                        status: 'PAGO',
+                        descricao: `Compra de animal — ${brinco.trim()}`,
+                        herdEventId: herdEvent.id,
+                    },
+                });
+            }
+
             return created;
         });
 
+        logActivity(req, { action: 'ANIMAL_CRIADO', entity: 'Animal', entityId: animal.id, description: `Cadastrou o animal ${brinco.trim()}`, farmId });
         return res.status(201).json({ animal: serializeAnimal(animal) });
     } catch (error) {
         if (error?.code === 'P2002') {
@@ -4427,6 +6346,114 @@ app.post('/animals', async (req, res) => {
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar animal.' });
+    }
+});
+
+// ── Entrada de lote: cria múltiplos animais de uma só vez ─────────────────────
+app.post('/animals/batch', async (req, res) => {
+    const { farmId, paddockId, lotId, dataCompra, valorPorCabeca, animals } = req.body || {};
+
+    if (!farmId || !paddockId || !Array.isArray(animals) || animals.length === 0) {
+        return res.status(400).json({ message: 'farmId, paddockId e animais são obrigatórios.' });
+    }
+
+    const farm = await prisma.farm.findFirst({ where: buildFarmScopeFilter(req, { id: farmId }) });
+    if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+    const paddock = await prisma.paddock.findFirst({ where: { id: paddockId, farmId } });
+    if (!paddock) return res.status(400).json({ message: 'Pasto inválido.' });
+
+    let validLotId = null;
+    if (lotId) {
+        const lot = await prisma.lot.findFirst({ where: { id: lotId, farmId } });
+        if (!lot) return res.status(400).json({ message: 'Lote inválido.' });
+        validLotId = lotId;
+    }
+
+    const compraDate = dataCompra ? parseDateValue(dataCompra) : new Date();
+    const parsedValor = valorPorCabeca ? parseFloat(valorPorCabeca) : null;
+    const catMap = HERD_EVENT_CATEGORY_MAP['COMPRA'];
+
+    // Valida brincos duplicados no banco
+    const brincos = animals.map((a) => a.brinco?.trim()).filter(Boolean);
+    if (new Set(brincos).size !== brincos.length) {
+        return res.status(400).json({ message: 'Há brincos duplicados na lista.' });
+    }
+    if (brincos.length !== animals.length) {
+        return res.status(400).json({ message: 'Todos os animais devem ter brinco informado.' });
+    }
+
+    const existing = await prisma.animal.findFirst({ where: { farmId, brinco: { in: brincos } } });
+    if (existing) {
+        return res.status(409).json({ message: `Brinco já cadastrado: ${existing.brinco}` });
+    }
+
+    try {
+        const created = await prisma.$transaction(async (tx) => {
+            const results = [];
+            for (const a of animals) {
+                const sexoEnum = normalizeSexo(a.sexo || 'Macho');
+                const peso = a.pesoAtual ? parseFloat(a.pesoAtual) : null;
+
+                const animal = await tx.animal.create({
+                    data: {
+                        farmId,
+                        lotId: validLotId,
+                        brinco: a.brinco.trim(),
+                        raca: (a.raca || 'Indefinida').trim(),
+                        sexo: sexoEnum,
+                        dataNascimento: null,
+                        pesoAtual: peso && peso > 0 ? peso : null,
+                        gmd: null,
+                        gmd30: null,
+                        currentPaddockId: paddockId,
+                    },
+                });
+
+                await tx.paddockMove.create({
+                    data: { farmId, paddockId, animalId: animal.id, startAt: compraDate },
+                });
+
+                if (parsedValor && parsedValor > 0) {
+                    const herdEvent = await tx.herdEvent.create({
+                        data: {
+                            farmId,
+                            animalId: animal.id,
+                            type: 'COMPRA',
+                            date: compraDate,
+                            peso: peso && peso > 0 ? peso : null,
+                            valor: parsedValor,
+                            observacoes: `Entrada de lote — brinco ${a.brinco.trim()}`,
+                        },
+                    });
+                    await tx.financialTransaction.create({
+                        data: {
+                            farmId,
+                            type: catMap.type,
+                            categoria: catMap.categoria,
+                            accountCategoryId: catMap.categoryId,
+                            valor: parsedValor,
+                            data: compraDate,
+                            status: 'PAGO',
+                            descricao: `Compra de animal — ${a.brinco.trim()}`,
+                            herdEventId: herdEvent.id,
+                        },
+                    });
+                }
+
+                results.push(animal);
+            }
+            return results;
+        });
+
+        logActivity(req, { action: 'LOTE_CRIADO', entity: 'Animal', description: `Cadastrou lote de ${created.length} animal(is)`, farmId });
+        return res.status(201).json({ count: created.length, message: `${created.length} animal(is) cadastrado(s) com sucesso.` });
+    } catch (error) {
+        if (error?.code === 'P2002') {
+            return res.status(409).json({ message: 'Um ou mais brincos já estão cadastrados nesta fazenda.' });
+        }
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar lote de animais.' });
     }
 });
 
@@ -4850,11 +6877,12 @@ app.post('/animals/:id/eventos', async (req, res) => {
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
         }
+        const eventType = type.toUpperCase();
         const event = await prisma.herdEvent.create({
             data: {
                 farmId: animal.farmId,
                 animalId: id,
-                type: type.toUpperCase(),
+                type: eventType,
                 date: eventDate,
                 peso: parseNumber(peso),
                 valor: parseNumber(valor),
@@ -4863,6 +6891,32 @@ app.post('/animals/:id/eventos', async (req, res) => {
                 observacoes: observacoes?.trim() || null,
             },
         });
+
+        // Auto-lançamento financeiro para COMPRA e VENDA
+        const financialMap = HERD_EVENT_CATEGORY_MAP[eventType];
+        if (financialMap && valor) {
+            const parsedValor = parseNumber(valor);
+            if (parsedValor && parsedValor > 0) {
+                await prisma.financialTransaction.create({
+                    data: {
+                        farmId: animal.farmId,
+                        type: financialMap.type,
+                        categoria: financialMap.categoria,
+                        accountCategoryId: financialMap.categoryId,
+                        valor: parsedValor,
+                        data: eventDate,
+                        descricao: `${eventType === 'COMPRA' ? 'Compra' : 'Venda'} de animal — ${animal.brinco || id}`,
+                        herdEventId: event.id,
+                        status: 'PAGO',
+                    },
+                });
+            }
+        }
+
+        const eventLabels = { COMPRA: 'Registrou compra', VENDA: 'Registrou venda', MORTE: 'Registrou morte', NASCIMENTO: 'Registrou nascimento' };
+        const label = eventLabels[eventType] || 'Registrou evento';
+        const valorStr = parseNumber(valor) ? ` por R$ ${Number(parseNumber(valor)).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '';
+        logActivity(req, { action: `ANIMAL_${eventType}`, entity: 'Animal', entityId: id, description: `${label} do animal ${animal.brinco || id}${valorStr}`, farmId: animal.farmId });
         return res.status(201).json({ event: serializeHerdEvent(event) });
     } catch (error) {
         console.error(error);
@@ -4896,7 +6950,7 @@ app.get('/animals/:id/sanitario', async (req, res) => {
 
 app.post('/animals/:id/sanitario', async (req, res) => {
     const { id } = req.params;
-    const { tipo, produto, date, dose, proximaAplicacao, observacoes } = req.body || {};
+    const { tipo, produto, date, dose, proximaAplicacao, observacoes, valorUnitario } = req.body || {};
 
     if (!VALID_SANITARY_TIPOS.includes(tipo?.toUpperCase?.())) {
         return res.status(400).json({ message: 'Tipo inválido. Use VACINA, VERMIFUGO ou TRATAMENTO.' });
@@ -4916,18 +6970,40 @@ app.post('/animals/:id/sanitario', async (req, res) => {
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
         }
+        const tipoUpper = tipo.toUpperCase();
+        const parsedValor = parseNumber(valorUnitario);
         const record = await prisma.sanitaryRecord.create({
             data: {
                 farmId: animal.farmId,
                 animalId: id,
-                tipo: tipo.toUpperCase(),
+                tipo: tipoUpper,
                 produto: produto.trim(),
                 date: eventDate,
                 dose: dose?.trim() || null,
                 proximaAplicacao: parseDateValue(proximaAplicacao),
                 observacoes: observacoes?.trim() || null,
+                valorUnitario: parsedValor || null,
             },
         });
+
+        // Auto-lançamento financeiro se valorUnitario foi informado
+        const sanitaryMap = SANITARY_CATEGORY_MAP[tipoUpper];
+        if (sanitaryMap && parsedValor && parsedValor > 0) {
+            await prisma.financialTransaction.create({
+                data: {
+                    farmId: animal.farmId,
+                    type: 'SAIDA',
+                    categoria: sanitaryMap.categoria,
+                    accountCategoryId: sanitaryMap.categoryId,
+                    valor: parsedValor,
+                    data: eventDate,
+                    descricao: `${produto.trim()} — ${animal.brinco || id}`,
+                    sanitaryRecordId: record.id,
+                    status: 'PAGO',
+                },
+            });
+        }
+
         return res.status(201).json({ record: serializeSanitaryRecord(record) });
     } catch (error) {
         console.error(error);
@@ -4978,11 +7054,12 @@ app.post('/po/animals/:id/eventos', async (req, res) => {
         if (!animal) {
             return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
         }
+        const eventType = type.toUpperCase();
         const event = await prisma.herdEvent.create({
             data: {
                 farmId: animal.farmId,
                 poAnimalId: id,
-                type: type.toUpperCase(),
+                type: eventType,
                 date: eventDate,
                 peso: parseNumber(peso),
                 valor: parseNumber(valor),
@@ -4991,6 +7068,27 @@ app.post('/po/animals/:id/eventos', async (req, res) => {
                 observacoes: observacoes?.trim() || null,
             },
         });
+
+        const financialMap = HERD_EVENT_CATEGORY_MAP[eventType];
+        if (financialMap && valor) {
+            const parsedValor = parseNumber(valor);
+            if (parsedValor && parsedValor > 0) {
+                await prisma.financialTransaction.create({
+                    data: {
+                        farmId: animal.farmId,
+                        type: financialMap.type,
+                        categoria: financialMap.categoria,
+                        accountCategoryId: financialMap.categoryId,
+                        valor: parsedValor,
+                        data: eventDate,
+                        descricao: `${eventType === 'COMPRA' ? 'Compra' : 'Venda'} P.O. — ${animal.brinco || animal.nome || id}`,
+                        herdEventId: event.id,
+                        status: 'PAGO',
+                    },
+                });
+            }
+        }
+
         return res.status(201).json({ event: serializeHerdEvent(event) });
     } catch (error) {
         console.error(error);
@@ -5024,7 +7122,7 @@ app.get('/po/animals/:id/sanitario', async (req, res) => {
 
 app.post('/po/animals/:id/sanitario', async (req, res) => {
     const { id } = req.params;
-    const { tipo, produto, date, dose, proximaAplicacao, observacoes } = req.body || {};
+    const { tipo, produto, date, dose, proximaAplicacao, observacoes, valorUnitario } = req.body || {};
 
     if (!VALID_SANITARY_TIPOS.includes(tipo?.toUpperCase?.())) {
         return res.status(400).json({ message: 'Tipo inválido. Use VACINA, VERMIFUGO ou TRATAMENTO.' });
@@ -5044,22 +7142,708 @@ app.post('/po/animals/:id/sanitario', async (req, res) => {
         if (!animal) {
             return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
         }
+        const tipoUpper = tipo.toUpperCase();
+        const parsedValor = parseNumber(valorUnitario);
         const record = await prisma.sanitaryRecord.create({
             data: {
                 farmId: animal.farmId,
                 poAnimalId: id,
-                tipo: tipo.toUpperCase(),
+                tipo: tipoUpper,
                 produto: produto.trim(),
                 date: eventDate,
                 dose: dose?.trim() || null,
                 proximaAplicacao: parseDateValue(proximaAplicacao),
                 observacoes: observacoes?.trim() || null,
+                valorUnitario: parsedValor || null,
             },
         });
+
+        const sanitaryMap = SANITARY_CATEGORY_MAP[tipoUpper];
+        if (sanitaryMap && parsedValor && parsedValor > 0) {
+            await prisma.financialTransaction.create({
+                data: {
+                    farmId: animal.farmId,
+                    type: 'SAIDA',
+                    categoria: sanitaryMap.categoria,
+                    accountCategoryId: sanitaryMap.categoryId,
+                    valor: parsedValor,
+                    data: eventDate,
+                    descricao: `${produto.trim()} P.O. — ${animal.brinco || animal.nome || id}`,
+                    sanitaryRecordId: record.id,
+                    status: 'PAGO',
+                },
+            });
+        }
+
         return res.status(201).json({ record: serializeSanitaryRecord(record) });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar registro sanitário.' });
+    }
+});
+
+// ── Plano de Contas ──────────────────────────────────────────────────────────
+
+app.get('/account-categories', requireAuth, requireBillingAccess, async (req, res) => {
+    try {
+        const { farmId } = req.query;
+        if (farmId) {
+            const farmScope = buildFarmScopeFilter(req, { id: String(farmId) });
+            const farm = await prisma.farm.findFirst({ where: farmScope });
+            if (!farm) {
+                return res.status(404).json({ message: 'Fazenda não encontrada.' });
+            }
+        }
+        const categories = await prisma.accountCategory.findMany({
+            where: {
+                isActive: true,
+                OR: [
+                    { isSystem: true, farmId: null },
+                    ...(farmId ? [{ farmId: String(farmId), isSystem: false }] : []),
+                ],
+            },
+            orderBy: [{ type: 'asc' }, { group: 'asc' }, { name: 'asc' }],
+        });
+        res.json({ categories });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Erro ao listar categorias.' });
+    }
+});
+
+app.post('/account-categories', requireAuth, requireBillingAccess, async (req, res) => {
+    try {
+        const { farmId, name, group, type } = req.body;
+        if (!farmId || !name?.trim() || !group?.trim() || !type) {
+            return res.status(400).json({ message: 'farmId, name, group e type são obrigatórios.' });
+        }
+        const farmScope = buildFarmScopeFilter(req, { id: String(farmId) });
+        const farm = await prisma.farm.findFirst({ where: farmScope });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        const category = await prisma.accountCategory.create({
+            data: {
+                farmId: String(farmId),
+                name: name.trim(),
+                group: group.trim(),
+                type,
+                isSystem: false,
+            },
+        });
+        res.status(201).json({ category });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Erro ao criar categoria.' });
+    }
+});
+
+app.patch('/account-categories/:id', requireAuth, requireBillingAccess, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, group, isActive } = req.body;
+        const existing = await prisma.accountCategory.findFirst({ where: { id, isSystem: false } });
+        if (!existing) return res.status(404).json({ message: 'Categoria não encontrada ou não editável.' });
+        // Valida que pertence à fazenda do usuário
+        if (existing.farmId) {
+            const farmScope = buildFarmScopeFilter(req, { id: existing.farmId });
+            const farm = await prisma.farm.findFirst({ where: farmScope });
+            if (!farm) return res.status(403).json({ message: 'Acesso negado.' });
+        }
+        const category = await prisma.accountCategory.update({
+            where: { id },
+            data: {
+                ...(name ? { name: name.trim() } : {}),
+                ...(group ? { group: group.trim() } : {}),
+                ...(isActive !== undefined ? { isActive } : {}),
+            },
+        });
+        res.json({ category });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Erro ao editar categoria.' });
+    }
+});
+
+app.delete('/account-categories/:id', requireAuth, requireBillingAccess, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const existing = await prisma.accountCategory.findFirst({ where: { id, isSystem: false } });
+        if (!existing) return res.status(404).json({ message: 'Categoria não encontrada ou não removível.' });
+        if (existing.farmId) {
+            const farmScope = buildFarmScopeFilter(req, { id: existing.farmId });
+            const farm = await prisma.farm.findFirst({ where: farmScope });
+            if (!farm) return res.status(403).json({ message: 'Acesso negado.' });
+        }
+        // Desativa em vez de excluir (preserva histórico)
+        await prisma.accountCategory.update({ where: { id }, data: { isActive: false } });
+        res.json({ ok: true });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Erro ao remover categoria.' });
+    }
+});
+
+// ── Transações Financeiras ────────────────────────────────────────────────────
+
+app.get('/financial/transactions', requireAuth, requireBillingAccess, async (req, res) => {
+    try {
+        const { farmId, mes, ano, tipo, status } = req.query;
+        if (!farmId) return res.status(400).json({ message: 'farmId é obrigatório.' });
+        const farmScope = buildFarmScopeFilter(req, { id: String(farmId) });
+        const farm = await prisma.farm.findFirst({ where: farmScope });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        const where = { farmId: String(farmId) };
+        if (mes && ano) {
+            const start = new Date(Number(ano), Number(mes) - 1, 1);
+            const end = new Date(Number(ano), Number(mes), 1);
+            where.data = { gte: start, lt: end };
+        } else if (ano && !mes) {
+            const start = new Date(Number(ano), 0, 1);
+            const end = new Date(Number(ano) + 1, 0, 1);
+            where.data = { gte: start, lt: end };
+        }
+        if (tipo) where.type = String(tipo);
+        if (status) {
+            where.status = String(status);
+        } else {
+            where.status = { not: 'CANCELADO' };
+        }
+
+        const transactions = await prisma.financialTransaction.findMany({
+            where,
+            include: { accountCategory: true },
+            orderBy: { data: 'desc' },
+        });
+        res.json({ transactions: transactions.map(serializeFinancialTransaction) });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Erro ao listar transações.' });
+    }
+});
+
+app.post('/financial/transactions', requireAuth, requireBillingAccess, async (req, res) => {
+    try {
+        const { farmId, type, categoria, accountCategoryId, valor, data, descricao, vencimento, status } = req.body;
+        if (!farmId || !type || valor === undefined || valor === null || !data) {
+            return res.status(400).json({ message: 'Campos obrigatórios: farmId, type, valor, data.' });
+        }
+        const farmScope = buildFarmScopeFilter(req, { id: String(farmId) });
+        const farm = await prisma.farm.findFirst({ where: farmScope });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        const transaction = await prisma.financialTransaction.create({
+            data: {
+                farmId: String(farmId),
+                type,
+                categoria: categoria || 'OUTROS',
+                accountCategoryId: accountCategoryId || null,
+                valor: parseNumber(valor),
+                data: new Date(data),
+                descricao: descricao || null,
+                vencimento: vencimento ? new Date(vencimento) : null,
+                status: status || 'PAGO',
+            },
+            include: { accountCategory: true },
+        });
+        const tipoLabel = type === 'ENTRADA' ? 'entrada' : 'saída';
+        const valorFmt = Number(parseNumber(valor)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        logActivity(req, { action: 'TRANSACAO_CRIADA', entity: 'FinancialTransaction', entityId: transaction.id, description: `Lançou ${tipoLabel} de ${valorFmt}${descricao ? ` — ${descricao}` : ''}`, farmId: String(farmId) });
+        res.status(201).json({ transaction: serializeFinancialTransaction(transaction) });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Erro ao criar transação.' });
+    }
+});
+
+app.patch('/financial/transactions/:id', requireAuth, requireBillingAccess, async (req, res) => {
+    try {
+        const existing = await prisma.financialTransaction.findFirst({
+            where: { id: req.params.id },
+            include: { farm: true },
+        });
+        if (!existing) return res.status(404).json({ message: 'Transação não encontrada.' });
+        const farmScope = buildFarmScopeFilter(req, { id: existing.farmId });
+        const farm = await prisma.farm.findFirst({ where: farmScope });
+        if (!farm) return res.status(403).json({ message: 'Acesso negado.' });
+
+        const { status, vencimento, valor, descricao, accountCategoryId, data } = req.body;
+        const transaction = await prisma.financialTransaction.update({
+            where: { id: req.params.id },
+            data: {
+                ...(status !== undefined ? { status } : {}),
+                ...(vencimento !== undefined ? { vencimento: vencimento ? new Date(vencimento) : null } : {}),
+                ...(valor !== undefined ? { valor: parseNumber(valor) } : {}),
+                ...(descricao !== undefined ? { descricao: descricao || null } : {}),
+                ...(accountCategoryId !== undefined ? { accountCategoryId: accountCategoryId || null } : {}),
+                ...(data !== undefined ? { data: new Date(data) } : {}),
+            },
+            include: { accountCategory: true },
+        });
+        if (status === 'PAGO' && existing.status !== 'PAGO') {
+            const valorFmt = Number(existing.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            logActivity(req, { action: 'TRANSACAO_PAGA', entity: 'FinancialTransaction', entityId: existing.id, description: `Marcou como pago: ${valorFmt}${existing.descricao ? ` — ${existing.descricao}` : ''}`, farmId: existing.farmId });
+        }
+        res.json({ transaction: serializeFinancialTransaction(transaction) });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Erro ao atualizar transação.' });
+    }
+});
+
+app.delete('/financial/transactions/:id', requireAuth, requireBillingAccess, async (req, res) => {
+    try {
+        const existing = await prisma.financialTransaction.findFirst({
+            where: { id: req.params.id },
+            include: { farm: true },
+        });
+        if (!existing) return res.status(404).json({ message: 'Transação não encontrada.' });
+        const farmScope = buildFarmScopeFilter(req, { id: existing.farmId });
+        const farm = await prisma.farm.findFirst({ where: farmScope });
+        if (!farm) return res.status(403).json({ message: 'Acesso negado.' });
+        if (existing.herdEventId || existing.sanitaryRecordId) {
+            return res.status(400).json({ message: 'Transações geradas automaticamente não podem ser excluídas diretamente.' });
+        }
+        const transaction = await prisma.financialTransaction.update({
+            where: { id: existing.id },
+            data: { status: 'CANCELADO' },
+            include: { accountCategory: true },
+        });
+        await recordActivityLog(req, {
+            statusCode: 200,
+            requestMeta: {
+                action: 'financial_transaction_cancelled',
+                targetType: 'financial_transaction',
+                targetId: existing.id,
+                farmId: existing.farmId,
+                result: 'cancelled',
+            },
+        });
+        res.json({
+            ok: true,
+            transaction: serializeFinancialTransaction(transaction),
+            message: 'Transação cancelada com segurança.',
+        });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Erro ao excluir transação.' });
+    }
+});
+
+// ── Rota: log de atividades ───────────────────────────────────────────────────
+app.get('/alerts', requireAuth, async (req, res) => {
+    const { farmId } = req.query || {};
+    const staleDays = 7;
+    const staleCutoff = new Date(Date.now() - staleDays * 24 * 60 * 60 * 1000);
+
+    try {
+        if (farmId) {
+            const farm = await prisma.farm.findFirst({
+                where: buildFarmScopeFilter(req, { id: String(farmId) }),
+                select: { id: true },
+            });
+            if (!farm) {
+                return res.status(404).json({ message: 'Fazenda não encontrada.' });
+            }
+        }
+
+        const farms = await prisma.farm.findMany({
+            where: buildFarmScopeFilter(req, farmId ? { id: String(farmId) } : {}),
+            select: { id: true, name: true },
+            orderBy: { name: 'asc' },
+        });
+        const farmIds = farms.map((farm) => farm.id);
+        if (farmIds.length === 0) {
+            return res.json({ alerts: [] });
+        }
+
+        const [paddocks, staleOccurrences, immediateOccurrences] = await Promise.all([
+            prisma.paddock.findMany({
+                where: { farmId: { in: farmIds }, active: true },
+                select: { id: true, farmId: true, name: true },
+                orderBy: { name: 'asc' },
+            }),
+            prisma.fieldOccurrence.findMany({
+                where: {
+                    farmId: { in: farmIds },
+                    type: { in: ['COCHO', 'AGUA'] },
+                },
+                include: {
+                    paddock: true,
+                },
+                orderBy: { occurredAt: 'desc' },
+            }),
+            prisma.fieldOccurrence.findMany({
+                where: {
+                    farmId: { in: farmIds },
+                    status: 'PENDENTE',
+                    type: { in: ['NASCEU', 'MORREU', 'DOENTE', 'AVARIA'] },
+                },
+                include: {
+                    animal: true,
+                    paddock: true,
+                },
+                orderBy: { occurredAt: 'desc' },
+                take: 50,
+            }),
+        ]);
+
+        const farmById = new Map(farms.map((farm) => [farm.id, farm]));
+        const paddocksByFarmId = new Map();
+        paddocks.forEach((paddock) => {
+            const current = paddocksByFarmId.get(paddock.farmId) || [];
+            current.push(paddock);
+            paddocksByFarmId.set(paddock.farmId, current);
+        });
+
+        const latestByKey = new Map();
+        staleOccurrences.forEach((occurrence) => {
+            const scopeId = occurrence.paddockId || '__farm__';
+            const key = `${occurrence.farmId}:${occurrence.type}:${scopeId}`;
+            if (!latestByKey.has(key)) {
+                latestByKey.set(key, occurrence);
+            }
+        });
+
+        const alerts = [];
+        for (const farm of farms) {
+            const farmPaddocks = paddocksByFarmId.get(farm.id) || [];
+            for (const type of ['COCHO', 'AGUA']) {
+                const scopes = farmPaddocks.length > 0
+                    ? farmPaddocks.map((paddock) => ({ id: paddock.id, label: paddock.name }))
+                    : [{ id: '__farm__', label: farm.name }];
+
+                for (const scope of scopes) {
+                    const latest = latestByKey.get(`${farm.id}:${type}:${scope.id}`) || null;
+                    if (latest && latest.occurredAt >= staleCutoff) {
+                        continue;
+                    }
+                    const daysSince = getDaysSince(latest?.occurredAt);
+                    alerts.push({
+                        id: `stale-${type.toLowerCase()}-${farm.id}-${scope.id}`,
+                        type: 'warning',
+                        message: `${type}: ${scope.label} ${daysSince === null ? 'sem atualização registrada' : `sem atualização há ${daysSince} dia(s)`}.`,
+                        source: 'APP_MANEJO',
+                        sourceType: type,
+                        sourceId: latest?.id || null,
+                        farmId: farm.id,
+                        createdAt: latest?.occurredAt?.toISOString?.() ?? null,
+                    });
+                }
+            }
+        }
+
+        immediateOccurrences
+            .map(buildFieldOccurrenceAlert)
+            .filter(Boolean)
+            .forEach((alert) => alerts.push(alert));
+
+        const severityOrder = { critical: 0, warning: 1, info: 2 };
+        alerts.sort((a, b) => {
+            const severityDiff = (severityOrder[a.type] ?? 3) - (severityOrder[b.type] ?? 3);
+            if (severityDiff !== 0) {
+                return severityDiff;
+            }
+            return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        });
+
+        return res.json({ alerts: alerts.slice(0, 80) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar alertas.' });
+    }
+});
+
+app.get('/field-occurrences', requireAuth, async (req, res) => {
+    const { farmId, limit = 50, offset = 0, type, status } = req.query;
+    try {
+        const where = {
+            organizationId: req.saas?.organizationId || null,
+            ...(farmId ? { farmId: String(farmId) } : {}),
+            ...(type ? { type: String(type) } : {}),
+            ...(status ? { status: String(status) } : {}),
+            ...(req.access?.restrictToFarmIds?.length
+                ? { farmId: { in: req.access.restrictToFarmIds, ...(farmId ? undefined : {}) } }
+                : {}),
+        };
+
+        if (farmId && req.access?.restrictToFarmIds?.length && !req.access.restrictToFarmIds.includes(String(farmId))) {
+            return res.status(403).json({ message: 'Acesso negado para essa fazenda.' });
+        }
+
+        const items = await prisma.fieldOccurrence.findMany({
+            where,
+            include: {
+                createdBy: { select: { id: true, name: true } },
+                animal: { include: { currentPaddock: true } },
+                paddock: true,
+                attachments: { orderBy: { uploadedAt: 'asc' } },
+            },
+            orderBy: { occurredAt: 'desc' },
+            take: Math.min(Number(limit) || 50, 100),
+            skip: Math.max(Number(offset) || 0, 0),
+        });
+
+        return res.json({
+            occurrences: items.map(serializeFieldOccurrence),
+            total: items.length,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar ocorrências de campo.' });
+    }
+});
+
+app.post('/field-occurrences', requireAuth, async (req, res) => {
+    const {
+        farmId,
+        type,
+        status,
+        description,
+        animalId,
+        paddockId,
+        occurredAt,
+        lat,
+        lng,
+        offlineCreatedAt,
+        syncSource,
+        photoCount,
+    } = req.body || {};
+
+    const normalizedType = String(type || '').trim().toUpperCase();
+    const normalizedStatus = String(status || 'PENDENTE').trim().toUpperCase();
+    const parsedOccurredAt = parseDateValue(occurredAt) || new Date();
+    const parsedOfflineCreatedAt = offlineCreatedAt ? parseDateValue(offlineCreatedAt) : null;
+    const parsedLat = parseCoordinate(lat);
+    const parsedLng = parseCoordinate(lng);
+
+    if (!farmId || !normalizedType) {
+        return res.status(400).json({ message: 'Fazenda e tipo da ocorrência são obrigatórios.' });
+    }
+    if (!Number.isInteger(Number(photoCount)) || Number(photoCount) < 1) {
+        return res.status(400).json({ message: 'Envie pelo menos uma foto da ocorrência.' });
+    }
+    if (!FIELD_OCCURRENCE_TYPES.includes(normalizedType)) {
+        return res.status(400).json({ message: 'Tipo de ocorrência inválido.' });
+    }
+    if (!FIELD_OCCURRENCE_STATUSES.includes(normalizedStatus)) {
+        return res.status(400).json({ message: 'Status de ocorrência inválido.' });
+    }
+    const coordinateError = validateCoordinatePair(parsedLat, parsedLng);
+    if (coordinateError) {
+        return res.status(400).json({ message: coordinateError });
+    }
+    if (farmId && req.access?.restrictToFarmIds?.length && !req.access.restrictToFarmIds.includes(String(farmId))) {
+        return res.status(403).json({ message: 'Acesso negado para essa fazenda.' });
+    }
+
+    try {
+        const farm = await prisma.farm.findFirst({
+            where: buildFarmScopeFilter(req, { id: String(farmId) }),
+            select: { id: true, organizationId: true },
+        });
+        if (!farm) {
+            return res.status(404).json({ message: 'Fazenda não encontrada.' });
+        }
+
+        const normalizedSyncSource = typeof syncSource === 'string' ? syncSource.trim() || null : null;
+
+        if (normalizedSyncSource) {
+            const existingOccurrence = await prisma.fieldOccurrence.findFirst({
+                where: {
+                    organizationId: farm.organizationId || req.saas?.organizationId,
+                    farmId: String(farmId),
+                    createdById: req.user.id,
+                    syncSource: normalizedSyncSource,
+                },
+                include: {
+                    createdBy: { select: { id: true, name: true } },
+                    animal: { include: { currentPaddock: true } },
+                    paddock: true,
+                    attachments: true,
+                },
+            });
+            if (existingOccurrence) {
+                return res.json({ occurrence: serializeFieldOccurrence(existingOccurrence) });
+            }
+        }
+
+        if (animalId) {
+            const animal = await prisma.animal.findFirst({
+                where: {
+                    id: String(animalId),
+                    farmId: String(farmId),
+                    farm: buildFarmRelationFilter(req),
+                },
+                select: { id: true },
+            });
+            if (!animal) {
+                return res.status(400).json({ message: 'Animal inválido para essa fazenda.' });
+            }
+        }
+
+        if (paddockId) {
+            const paddock = await prisma.paddock.findFirst({
+                where: {
+                    id: String(paddockId),
+                    farmId: String(farmId),
+                    farm: buildFarmRelationFilter(req),
+                },
+                select: { id: true },
+            });
+            if (!paddock) {
+                return res.status(400).json({ message: 'Pasto inválido para essa fazenda.' });
+            }
+        }
+
+        const occurrence = await prisma.fieldOccurrence.create({
+            data: {
+                organizationId: farm.organizationId || req.saas?.organizationId,
+                farmId: String(farmId),
+                createdById: req.user.id,
+                type: normalizedType,
+                status: normalizedStatus,
+                description: typeof description === 'string' ? description.trim() || null : null,
+                animalId: animalId ? String(animalId) : null,
+                paddockId: paddockId ? String(paddockId) : null,
+                occurredAt: parsedOccurredAt,
+                lat: parsedLat,
+                lng: parsedLng,
+                offlineCreatedAt: parsedOfflineCreatedAt,
+                syncSource: normalizedSyncSource,
+            },
+            include: {
+                createdBy: { select: { id: true, name: true } },
+                animal: { include: { currentPaddock: true } },
+                paddock: true,
+                attachments: true,
+            },
+        });
+
+        await logActivity(req, {
+            action: 'OCORRENCIA_CAMPO_CRIADA',
+            entity: 'FieldOccurrence',
+            entityId: occurrence.id,
+            description: `Registrou ocorrência ${normalizedType.toLowerCase()} na fazenda`,
+            farmId: occurrence.farmId,
+        });
+
+        return res.status(201).json({ occurrence: serializeFieldOccurrence(occurrence) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar ocorrência de campo.' });
+    }
+});
+
+app.post('/field-occurrences/:id/attachments', requireAuth, async (req, res) => {
+    const { id } = req.params;
+    const { fileName, mimeType, contentBase64 } = req.body || {};
+    const normalizedMimeType = String(mimeType || '').trim().toLowerCase();
+    const safeFileName = sanitizeUploadFileName(fileName);
+    const fileBuffer = decodeBase64Payload(contentBase64);
+
+    if (!safeFileName || !normalizedMimeType || !fileBuffer?.length) {
+        return res.status(400).json({ message: 'Arquivo inválido para upload.' });
+    }
+    if (!FIELD_ATTACHMENT_ALLOWED_MIME_TYPES.has(normalizedMimeType)) {
+        return res.status(400).json({ message: 'Tipo de arquivo não suportado.' });
+    }
+
+    try {
+        const occurrence = await prisma.fieldOccurrence.findFirst({
+            where: {
+                id,
+                organizationId: req.saas?.organizationId || null,
+                ...(req.access?.restrictToFarmIds?.length ? { farmId: { in: req.access.restrictToFarmIds } } : {}),
+            },
+            include: {
+                attachments: true,
+            },
+        });
+
+        if (!occurrence) {
+            return res.status(404).json({ message: 'Ocorrência não encontrada.' });
+        }
+        if (occurrence.attachments.length >= FIELD_ATTACHMENT_MAX_FILES) {
+            return res.status(400).json({ message: 'A ocorrência já atingiu o limite de 3 fotos.' });
+        }
+
+        const uploadDir = path.join(
+            FIELD_OCCURRENCE_UPLOAD_ROOT,
+            occurrence.organizationId,
+            occurrence.farmId,
+            occurrence.id,
+        );
+        await fs.mkdir(uploadDir, { recursive: true });
+
+        const savedName = `${Date.now()}-${safeFileName}`;
+        const fullPath = path.join(uploadDir, savedName);
+        await fs.writeFile(fullPath, fileBuffer);
+
+        const attachment = await prisma.fieldOccurrenceAttachment.create({
+            data: {
+                occurrenceId: occurrence.id,
+                fileName: safeFileName,
+                mimeType: normalizedMimeType,
+                storagePath: fullPath,
+            },
+        });
+
+        return res.status(201).json({ attachment: serializeFieldOccurrenceAttachment(attachment) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar anexo da ocorrência.' });
+    }
+});
+
+app.get('/field-occurrence-attachments/:attachmentId/file', requireAuth, async (req, res) => {
+    const { attachmentId } = req.params;
+    try {
+        const attachment = await prisma.fieldOccurrenceAttachment.findFirst({
+            where: {
+                id: attachmentId,
+                occurrence: {
+                    organizationId: req.saas?.organizationId || null,
+                    ...(req.access?.restrictToFarmIds?.length ? { farmId: { in: req.access.restrictToFarmIds } } : {}),
+                },
+            },
+        });
+        if (!attachment) {
+            return res.status(404).json({ message: 'Anexo não encontrado.' });
+        }
+        return res.sendFile(attachment.storagePath);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar anexo.' });
+    }
+});
+
+app.get('/activity-logs', requireAuth, async (req, res) => {
+    const { farmId: rawFarmId, limit = 100, offset = 0 } = req.query;
+    const organizationId = req.saas?.organizationId;
+    const farmId = req.access?.restrictToFarmIds?.length
+        ? (rawFarmId ? String(rawFarmId) : req.access.restrictToFarmIds[0])
+        : rawFarmId;
+    if (farmId && req.access?.restrictToFarmIds?.length && !req.access.restrictToFarmIds.includes(String(farmId))) {
+        return res.status(403).json({ message: 'Acesso negado para essa fazenda.' });
+    }
+    try {
+        const rows = await prisma.$queryRawUnsafe(`
+            SELECT al.id, al.action, al.entity, al."entityId", al.description,
+                   al."farmId", al."createdAt",
+                   u.name AS "userName", u.email AS "userEmail"
+            FROM "ActivityLog" al
+            JOIN "User" u ON u.id = al."userId"
+            WHERE al."organizationId" = $1
+              AND al.description IS NOT NULL
+              ${farmId ? 'AND al."farmId" = $4' : ''}
+            ORDER BY al."createdAt" DESC
+            LIMIT $2 OFFSET $3
+        `, organizationId, Number(limit), Number(offset), ...(farmId ? [farmId] : []));
+        res.json({ logs: rows });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ message: 'Erro ao carregar logs.' });
     }
 });
 

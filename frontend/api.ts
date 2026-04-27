@@ -5,6 +5,7 @@ const DEFAULT_API_URL = `http://localhost:${DEFAULT_PORT_START}`;
 const envBaseUrl = typeof import.meta.env.VITE_API_URL === 'string'
     ? import.meta.env.VITE_API_URL.trim()
     : '';
+const isProd = import.meta.env.PROD;
 let cachedBaseUrl = '';
 
 const readWindowBaseUrl = () => {
@@ -16,7 +17,7 @@ const readWindowBaseUrl = () => {
 };
 
 const readStoredBaseUrl = () => {
-    if (typeof window === 'undefined') {
+    if (typeof window === 'undefined' || isProd) {
         return '';
     }
     try {
@@ -30,6 +31,9 @@ const readStoredBaseUrl = () => {
 const setBaseUrl = (url: string) => {
     cachedBaseUrl = url;
     (window as any).__EIXO_API_URL__ = url;
+    if (isProd) {
+        return;
+    }
     try {
         localStorage.setItem('eixo_api_url', url);
     } catch {
@@ -77,7 +81,7 @@ const tryHealth = async (port: number) => {
 };
 
 export const detectApiBaseUrl = async () => {
-    if (import.meta.env.PROD) {
+    if (isProd) {
         const base = envBaseUrl || '/api';
         setBaseUrl(base);
         return base;

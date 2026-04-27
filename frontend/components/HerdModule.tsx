@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import Papa from 'papaparse';
 import HerdAnimalModal from './AnimalDetailModal';
 import LotDetailModal from './LotDetailModal';
+import LotePurchaseModal from './LotePurchaseModal';
 import {
     HerdAnimal,
     HerdLot,
@@ -18,10 +20,18 @@ type TabKey = 'overview' | 'lots' | 'animals' | 'weighings' | 'settings';
 
 interface HerdModuleProps {
     farmId?: string | null;
+    farmName?: string | null;
     mode?: HerdType;
     herdType?: HerdType;
+    isFreePlan?: boolean;
+    onUpgradeRequest?: (animalCount?: number) => void;
 }
 
+const LockIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+    </svg>
+);
 const PlusIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -65,10 +75,11 @@ const calculateAge = (birthDateString?: string | null): string => {
         years--;
         months = (months + 12) % 12;
     }
-    if (years > 0) {
-        return `${years}a ${months}m`;
+    const totalMonths = years * 12 + months;
+    if (totalMonths < 24) {
+        return `${totalMonths}m`;
     }
-    return `${months}m`;
+    return `${years}a ${months}m`;
 };
 
 const formatNumber = (value?: number | null) => {
@@ -79,8 +90,11 @@ const formatNumber = (value?: number | null) => {
 };
 
 const PAGE_SIZE = 30;
+const MAX_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
+const MAX_IMPORT_ROWS = 1000;
+const MAX_IMPORT_COLUMNS = 40;
 type SortDirection = 'asc' | 'desc';
-type SortColumn = 'identificacao' | 'raca' | 'sexo' | 'idade' | 'pasto' | 'pesoAtual' | 'gmd';
+type SortColumn = 'identificacao' | 'raca' | 'sexo' | 'idade' | 'pasto' | 'pesoAtual' | 'gmd' | 'lote' | 'categoria';
 
 const FIELD_PLAN: Record<string, 'free' | 'paid1' | 'paid2'> = {
     brinco: 'free',
@@ -132,14 +146,87 @@ const FIELD_LABELS: Record<string, string> = {
     abcz: 'Registro ABCZ 🔒',
 };
 
+const downloadWorkbook = async (fileName: string, sheetName: string, rows: Array<Array<string | number>>) => {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(sheetName);
+    rows.forEach((row) => worksheet.addRow(row));
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob(
+        [buffer],
+        { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+};
+
+const normalizeImportedMatrix = (matrix: string[][]): Record<string, string>[] => {
+    const cleanedRows = matrix
+        .map((row) => row.map((value) => String(value ?? '').trim()))
+        .filter((row) => row.some((value) => value));
+    if (!cleanedRows.length) {
+        return [];
+    }
+
+    const firstRow = cleanedRows[0];
+    const firstFilledCount = firstRow.filter(Boolean).length;
+    const firstLooksLikeTitle = firstFilledCount <= 1;
+    const headerIndex = firstLooksLikeTitle && cleanedRows.length > 1 ? 1 : 0;
+    const headers = cleanedRows[headerIndex].map((value, index) => value || `COLUNA_${index + 1}`);
+
+    return cleanedRows
+        .slice(headerIndex + 1)
+        .filter((row) => row.some((value) => value))
+        .map((row) =>
+            headers.reduce<Record<string, string>>((accumulator, header, index) => {
+                accumulator[header] = row[index] ?? '';
+                return accumulator;
+            }, {}),
+        );
+};
+
+const parseImportedFile = async (file: File): Promise<Record<string, string>[]> => {
+    if (file.name.toLowerCase().endsWith('.csv')) {
+        const csvText = await file.text();
+        const parsed = Papa.parse<string[]>(csvText, {
+            skipEmptyLines: true,
+        });
+        if (parsed.errors.length) {
+            throw new Error('csv_parse_error');
+        }
+        return normalizeImportedMatrix(parsed.data);
+    }
+
+    const buffer = await file.arrayBuffer();
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+        return [];
+    }
+
+    const matrix: string[][] = [];
+    worksheet.eachRow({ includeEmpty: false }, (row) => {
+        const values: string[] = [];
+        for (let index = 1; index <= row.cellCount; index += 1) {
+            values.push(String(row.getCell(index).text ?? '').trim());
+        }
+        matrix.push(values);
+    });
+    return normalizeImportedMatrix(matrix);
+};
+
 const FIELD_KEYWORDS: Record<string, string[]> = {
     brinco: [
-        'brinco', 'id', 'identificacao', 'identificação', 'numero', 'número',
-        'num', 'tag', 'animal', 'cod', 'código', 'codigo', 'ear tag', 'eartag',
-        'nº', 'n°', 'rfid', 'chip', 'matricula', 'matrícula', 'nro',
-        'identificador', 'brinco_animal', 'bringo', 'brinku', 'brco', 'bco',
-        'b.co', 'brn', 'idnt', 'identif', 'indentificacao', 'indentificação',
-        'idenficacao', 'nº animal', 'n animal', 'num.animal',
+        'brinco', 'identificacao', 'identificação', 'numero', 'número',
+        'num', 'tag', 'ear tag', 'eartag', 'rfid', 'chip', 'matricula', 'matrícula', 'nro',
+        'identificador', 'brinco_animal', 'bringo', 'brinku', 'brco', 'brinq',
+        'brn', 'idnt', 'identif', 'indentificacao', 'indentificação',
+        'idenficacao', 'num.animal', 'id animal', 'n animal', 'nº animal',
+        'id brinq', 'brinqu', 'id brinco',
     ],
     nome: [
         'nome', 'name', 'apelido', 'alcunha', 'denominacao', 'denominação',
@@ -154,7 +241,8 @@ const FIELD_KEYWORDS: Record<string, string[]> = {
     sexo: [
         'sexo', 'sex', 'genero', 'gênero', 'macho/femea', 'm/f',
         'categoria sexual', 'sexo_animal', 'tipo sexual', 'macho femea',
-        'm f', 'sxo', 'sxu', 'sexo_', 'sx', 'mac/fem',
+        'm f', 'sxo', 'sxu', 'sexo_', 'mac/fem', 'sequisso', 'sexso',
+        'sxso', 'sxe', 'sexu', 'sex.', 'gen.',
     ],
     dataNascimento: [
         'nascimento', 'nasc', 'data nasc', 'data de nascimento', 'dt nasc',
@@ -168,7 +256,7 @@ const FIELD_KEYWORDS: Record<string, string[]> = {
         'peso_atual', 'peso vivo atual', 'wt', 'arroba', 'arrobas', 'arrb',
         '@', '@s', 'pso', 'ps', 'p/', 'pezo', 'pso atual', 'peso@', 'kg atual',
         'kgs', 'peso_vivo', 'ultimo peso', 'último peso', 'peso_kg',
-        'pesagem atual',
+        'pesagem atual', 'peso agora', 'pezo agora', 'pso agora', 'peso vivo agora',
     ],
     dataPesagem: [
         'data pesagem', 'dt pesagem', 'data peso', 'data_pesagem',
@@ -193,12 +281,13 @@ const FIELD_KEYWORDS: Record<string, string[]> = {
         'lote', 'lot', 'grupo', 'group', 'turma', 'categoria lote',
         'lote_animal', 'num lote', 'número lote', 'lote_id', 'agrupamento',
         'lt', 'lto', 'lt.', 'l.', 'lote n', 'lote nº', 'lt_animal', 'turm', 'trm',
+        'loti', 'lotu', 'lote do animal', 'lote animal',
     ],
     pasto: [
         'pasto', 'divisao', 'divisão', 'paddock', 'retiro', 'curral',
         'invernada', 'potreiro', 'setor', 'pastagem', 'area', 'área', 'campo',
         'talhao', 'talhão', 'psto', 'pst', 'ps.', 'past', 'divs', 'div.',
-        'invernda', 'retro', 'retr',
+        'invernda', 'retro', 'retr', 'pastu', 'pastu do animal', 'pastô', 'past.',
     ],
     categoria: [
         'categoria', 'cat', 'classe', 'tipo', 'finalidade', 'fase',
@@ -211,6 +300,7 @@ const FIELD_KEYWORDS: Record<string, string[]> = {
         'notas', 'nota', 'note', 'notes', 'comentario', 'comentário',
         'detalhes', 'descricao', 'descrição', 'informacoes', 'informações',
         'obss', 'obsv', 'obv', 'obzerv', 'obcerv', 'obss.', 'obs_', 'rem', 'remark',
+        'obs do bixu', 'obs do animal', 'obs bixo', 'observ', 'obzervacao',
     ],
     tatuagem: [
         'tatuagem', 'tatoo', 'tattoo', 'tat', 'tatuagem_animal', 'tatg',
@@ -232,24 +322,38 @@ const FIELD_KEYWORDS: Record<string, string[]> = {
     abcz: ['abcz', 'registro abcz', 'abcz_id', 'reg abcz'],
 };
 
-function detectField(header: string): string | null {
-    const normalized = header
-        .toLowerCase()
+function normalizeStr(s: string) {
+    return s.toLowerCase()
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9 ]/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
+}
+
+function detectField(header: string): string | null {
+    const normalized = normalizeStr(header);
+    const words = normalized.split(' ');
+
     for (const [field, keywords] of Object.entries(FIELD_KEYWORDS)) {
-        if (keywords.some((k) =>
-            normalized === k.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            || normalized.includes(
-                k.normalize('NFD').replace(/[\u0300-\u036f]/g, ''),
-            )
-        )) return field;
+        for (const kw of keywords) {
+            const k = normalizeStr(kw);
+            if (!k) continue;
+            // Match exato da string completa
+            if (normalized === k) return field;
+            // Keyword curta (≤ 2 chars): só aceita como palavra inteira isolada
+            if (k.length <= 2) {
+                if (words.includes(k)) return field;
+                continue;
+            }
+            // Keyword longa: aceita como substring
+            if (normalized.includes(k)) return field;
+        }
     }
     return null;
 }
 
-const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
+const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdType, isFreePlan = false, onUpgradeRequest }) => {
     const resolvedMode = mode ?? herdType ?? 'COMMERCIAL';
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
     const [animals, setAnimals] = useState<HerdAnimal[]>([]);
@@ -271,6 +375,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
     const [selectedLot, setSelectedLot] = useState<HerdLot | null>(null);
     const [lotModalOpen, setLotModalOpen] = useState(false);
     const [animalFormOpen, setAnimalFormOpen] = useState(false);
+    const [loteModalOpen, setLoteModalOpen] = useState(false);
     const [animalFormError, setAnimalFormError] = useState<string | null>(null);
     const [lotFormError, setLotFormError] = useState<string | null>(null);
     const [uploadMessage, setUploadMessage] = useState<string | null>(null);
@@ -299,6 +404,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
         lotId: '',
         paddockId: '',
         paddockStartAt: '',
+        valorCompra: '',
+        dataCompra: '',
     });
     const [lotForm, setLotForm] = useState({ name: '', notes: '' });
     const [paddocks, setPaddocks] = useState<Paddock[]>([]);
@@ -340,16 +447,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
         return [
             { key: 'overview', label: 'Visão do Rebanho' },
             { key: 'animals', label: 'Animais' },
-            { key: 'lots', label: 'Lotes/Grupos' },
+            { key: 'lots', label: 'Lotes' },
             { key: 'weighings', label: 'Pesagens' },
             { key: 'settings', label: 'Configurações' },
         ];
     }, []);
 
-    const title = isPo ? 'Rebanho P.O.' : 'Rebanho Comercial';
-    const subtitle = isPo
-        ? 'Gerencie seu plantel P.O. com o mesmo fluxo do rebanho comercial.'
-        : 'Gerencie seu rebanho comercial de corte.';
+    const title = 'Manejo do Rebanho';
 
     const loadData = useCallback(async () => {
         if (!farmId) {
@@ -536,6 +640,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                 case 'gmd':
                     result = compareNullableNumber(left.gmd, right.gmd);
                     break;
+                case 'lote': {
+                    const leftLot = lots.find((l) => l.id === left.lotId)?.name || '';
+                    const rightLot = lots.find((l) => l.id === right.lotId)?.name || '';
+                    result = compareText(leftLot, rightLot);
+                    break;
+                }
+                case 'categoria':
+                    result = compareText(left.categoria, right.categoria);
+                    break;
             }
 
             return sortDirection === 'asc' ? result : result * -1;
@@ -554,11 +667,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
             ? weights.reduce((s, v) => s + v, 0) / weights.length
             : null;
 
-        const gmds = animals
-            .map((a) => a.gmd)
+        // GMD médio usa gmd30 — mais estável para comparar o rebanho
+        const gmds30 = animals
+            .map((a) => a.gmd30)
             .filter((g): g is number => typeof g === 'number');
-        const avgGmd = gmds.length
-            ? gmds.reduce((s, v) => s + v, 0) / gmds.length
+        const avgGmd = gmds30.length
+            ? gmds30.reduce((s, v) => s + v, 0) / gmds30.length
             : null;
 
         const machos = animals.filter((a) =>
@@ -568,9 +682,43 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
             a.sexo?.toLowerCase() === 'fêmea' ||
             a.sexo?.toLowerCase() === 'femea').length;
 
-        const semPesagem = animals.filter((a) => a.gmd === null).length;
+        const semPesagem = animals.filter((a) => a.gmd30 === null && a.gmdLast === null).length;
 
-        return { total, avgWeight, avgGmd, machos, femeas, semPesagem };
+        const avgArroba = avgWeight !== null ? avgWeight / 15 : null;
+
+        const catMap = new Map<string, { count: number; totalPeso: number }>();
+        for (const a of animals) {
+            const cat = a.categoria?.trim() || 'Sem categoria';
+            const entry = catMap.get(cat) ?? { count: 0, totalPeso: 0 };
+            entry.count++;
+            if (typeof a.pesoAtual === 'number') entry.totalPeso += a.pesoAtual;
+            catMap.set(cat, entry);
+        }
+        const porCategoria = Array.from(catMap.entries())
+            .map(([categoria, { count, totalPeso }]) => ({
+                categoria,
+                count,
+                avgPeso: count > 0 ? totalPeso / count : null,
+            }))
+            .sort((a, b) => b.count - a.count);
+
+        const racaMap = new Map<string, { count: number; totalPeso: number }>();
+        for (const a of animals) {
+            const raca = a.raca?.trim() || 'Sem raça';
+            const entry = racaMap.get(raca) ?? { count: 0, totalPeso: 0 };
+            entry.count++;
+            if (typeof a.pesoAtual === 'number') entry.totalPeso += a.pesoAtual;
+            racaMap.set(raca, entry);
+        }
+        const porRaca = Array.from(racaMap.entries())
+            .map(([raca, { count, totalPeso }]) => ({
+                raca,
+                count,
+                avgPeso: count > 0 ? totalPeso / count : null,
+            }))
+            .sort((a, b) => b.count - a.count);
+
+        return { total, avgWeight, avgArroba, avgGmd, machos, femeas, semPesagem, porCategoria, porRaca };
     }, [animals]);
 
     const resetAnimalForm = () => {
@@ -617,6 +765,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
     };
 
     const handleDownloadTemplate = () => {
+        const fileName = isPo ? 'modelo_rebanho_po.xlsx' : 'modelo_rebanho_comercial.xlsx';
+        const sheetName = isPo ? 'Rebanho P.O.' : 'Rebanho Comercial';
         const headers = isPo
             ? ['Brinco', 'Nome', 'Raça', 'Sexo (Macho|Fêmea)', 'Data Nascimento (DD/MM/AAAA)', 'Peso Atual (kg)', 'Registro', 'Categoria']
             : [
@@ -633,18 +783,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
         const sampleRow = isPo
             ? ['PO001', 'Matriz Top', 'Nelore', 'Fêmea', '01/01/2022', '450', 'ABCZ-123', 'Doadora']
             : ['BR001', 'Nelore', 'Macho', '01/01/2023', '450', '15/02/2024', '455', '', ''];
-        const aoa = [headers, sampleRow];
-        const ws = XLSX.utils.aoa_to_sheet(aoa);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, isPo ? 'Rebanho P.O.' : 'Rebanho Comercial');
-        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = isPo ? 'modelo_rebanho_po.xlsx' : 'modelo_rebanho_comercial.xlsx';
-        link.click();
-        URL.revokeObjectURL(url);
+        void downloadWorkbook(fileName, sheetName, [headers, sampleRow]);
     };
 
     const handleUploadClick = () => {
@@ -659,47 +798,50 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
         event.target.value = '';
 
         const ext = file.name.toLowerCase();
-        if (!ext.endsWith('.xlsx') && !ext.endsWith('.xls') &&
-            !ext.endsWith('.csv')) {
-            setUploadError('Envie um arquivo .xlsx, .xls ou .csv.');
+        if (!ext.endsWith('.xlsx') && !ext.endsWith('.csv')) {
+            setUploadError('Envie um arquivo .xlsx ou .csv.');
             return;
         }
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
+        if (file.size > MAX_IMPORT_FILE_BYTES) {
+            setUploadError('A planilha excede o limite de 2 MB.');
+            return;
+        }
+        void (async () => {
             try {
-                const data = e.target?.result;
-                const wb = XLSX.read(data, { type: 'array', cellDates: true });
-                const ws = wb.Sheets[wb.SheetNames[0]];
-                const rows: Record<string, string>[] = XLSX.utils.sheet_to_json(
-                    ws, { raw: false, defval: '' },
-                );
+                const rows = await parseImportedFile(file);
                 if (!rows.length) {
                     setUploadError('Planilha vazia ou sem dados reconhecíveis.');
                     return;
                 }
-                const headers = Object.keys(rows[0]);
 
-                // Detectar mapeamento automático
+                const headers = Object.keys(rows[0]);
+                if (headers.length > MAX_IMPORT_COLUMNS) {
+                    setUploadError(`A planilha tem muitas colunas. Limite: ${MAX_IMPORT_COLUMNS}.`);
+                    return;
+                }
+                if (rows.length > MAX_IMPORT_ROWS) {
+                    setUploadError(`A planilha tem muitas linhas. Limite: ${MAX_IMPORT_ROWS} animais por importação.`);
+                    return;
+                }
+
                 const autoMapping: Record<string, string> = {};
-                for (const h of headers) {
-                    const detected = detectField(h);
+                for (const header of headers) {
+                    const detected = detectField(header);
                     if (detected && !Object.values(autoMapping).includes(detected)) {
-                        autoMapping[h] = detected;
+                        autoMapping[header] = detected;
                     }
                 }
 
-                // Detectar se peso está em arrobas
                 const pesoCol = Object.entries(autoMapping)
-                    .find(([, v]) => v === 'pesoAtual')?.[0];
+                    .find(([, value]) => value === 'pesoAtual')?.[0];
                 let suggestArroba = false;
                 if (pesoCol) {
                     const vals = rows
                         .slice(0, 20)
-                        .map((r) => parseFloat(r[pesoCol]))
-                        .filter((v) => !isNaN(v));
+                        .map((row) => parseFloat(row[pesoCol]))
+                        .filter((value) => !Number.isNaN(value));
                     const allInArrobaRange = vals.length > 0 &&
-                        vals.every((v) => v >= 8 && v <= 65);
+                        vals.every((value) => value >= 8 && value <= 65);
                     if (allInArrobaRange) suggestArroba = true;
                 }
 
@@ -714,8 +856,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                     'Não foi possível ler o arquivo. Verifique se é uma planilha válida.',
                 );
             }
-        };
-        reader.readAsArrayBuffer(file);
+        })();
     };
 
     const handleImportConfirm = async () => {
@@ -881,6 +1022,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                     lotId: animalForm.lotId || undefined,
                     paddockId: animalForm.paddockId,
                     paddockStartAt: animalForm.paddockStartAt || undefined,
+                    valorCompra: animalForm.valorCompra ? parseFloat(animalForm.valorCompra.replace(',', '.')) || undefined : undefined,
+                    dataCompra: animalForm.dataCompra || undefined,
                 };
             await createAnimal(farmId, resolvedMode, payload);
             closeAnimalForm();
@@ -934,70 +1077,82 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
         const paginatedAnimals = sortedAnimals.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
         return (
-            <div className="overflow-hidden rounded-2xl border border-[#d7cab3] bg-[#fffaf1] shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-[#e7e5e4] bg-white shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-[#6d6558]">
-                        <thead className="bg-[#f1e7d8] text-[10px] font-bold uppercase tracking-[0.12em] text-[#74644e]">
+                    <table className="w-full text-left text-sm text-[#78716c]">
+                        <thead className="bg-[#f5f5f4] text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">
                             <tr>
-                                <th scope="col" className="px-6 py-3">
-                                    <button type="button" onClick={() => handleSort('identificacao')} className="flex cursor-pointer select-none items-center gap-2 hover:bg-[#e8ddd0]">
-                                        <span>Identificação</span>
+                                <th scope="col" className="px-4 py-3">
+                                    <button type="button" onClick={() => handleSort('identificacao')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[#f5f5f4]">
+                                        <span>ID</span>
                                         <span>{getSortIndicator('identificacao')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-6 py-3">
-                                    <button type="button" onClick={() => handleSort('raca')} className="flex cursor-pointer select-none items-center gap-2 hover:bg-[#e8ddd0]">
+                                <th scope="col" className="px-4 py-2.5">
+                                    <button type="button" onClick={() => handleSort('raca')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[#f5f5f4]">
                                         <span>Raça</span>
                                         <span>{getSortIndicator('raca')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-6 py-3">
-                                    <button type="button" onClick={() => handleSort('sexo')} className="flex cursor-pointer select-none items-center gap-2 hover:bg-[#e8ddd0]">
+                                <th scope="col" className="px-4 py-2.5">
+                                    <button type="button" onClick={() => handleSort('sexo')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[#f5f5f4]">
                                         <span>Sexo</span>
                                         <span>{getSortIndicator('sexo')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-6 py-3">
-                                    <button type="button" onClick={() => handleSort('idade')} className="flex cursor-pointer select-none items-center gap-2 hover:bg-[#e8ddd0]">
+                                <th scope="col" className="px-4 py-2.5">
+                                    <button type="button" onClick={() => handleSort('idade')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[#f5f5f4]">
                                         <span>Idade</span>
                                         <span>{getSortIndicator('idade')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-6 py-3">
-                                    <button type="button" onClick={() => handleSort('pasto')} className="flex cursor-pointer select-none items-center gap-2 hover:bg-[#e8ddd0]">
+                                <th scope="col" className="px-4 py-2.5">
+                                    <button type="button" onClick={() => handleSort('pasto')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[#f5f5f4]">
                                         <span>Pasto</span>
                                         <span>{getSortIndicator('pasto')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-6 py-3">
-                                    <button type="button" onClick={() => handleSort('pesoAtual')} className="flex cursor-pointer select-none items-center gap-2 hover:bg-[#e8ddd0]">
+                                <th scope="col" className="px-4 py-2.5">
+                                    <button type="button" onClick={() => handleSort('lote')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[#f5f5f4]">
+                                        <span>Lote</span>
+                                        <span>{getSortIndicator('lote')}</span>
+                                    </button>
+                                </th>
+                                <th scope="col" className="px-4 py-2.5">
+                                    <button type="button" onClick={() => handleSort('categoria')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[#f5f5f4]">
+                                        <span>Categoria</span>
+                                        <span>{getSortIndicator('categoria')}</span>
+                                    </button>
+                                </th>
+                                <th scope="col" className="px-4 py-2.5">
+                                    <button type="button" onClick={() => handleSort('pesoAtual')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[#f5f5f4]">
                                         <span>Peso Atual</span>
                                         <span>{getSortIndicator('pesoAtual')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-6 py-3">
-                                    <button type="button" onClick={() => handleSort('gmd')} className="flex cursor-pointer select-none items-center gap-2 hover:bg-[#e8ddd0]">
+                                <th scope="col" className="px-4 py-2.5">
+                                    <button type="button" onClick={() => handleSort('gmd')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[#f5f5f4]">
                                         <span>GMD</span>
                                         <span>{getSortIndicator('gmd')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-6 py-3">Nutrição</th>
+                                <th scope="col" className="px-4 py-2.5">Nutrição</th>
                                 <th scope="col" className="px-6 py-3 text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={9} className="px-6 py-10 text-center text-sm text-[#6d6558]">
+                                    <td colSpan={11} className="px-6 py-10 text-center text-sm text-[#78716c]">
                                         Carregando animais...
                                     </td>
                                 </tr>
                             ) : sortedAnimals.length === 0 ? (
                                 <tr>
-                                    <td colSpan={9} className="px-6 py-10 text-center text-sm text-[#6d6558]">
+                                    <td colSpan={11} className="px-6 py-10 text-center text-sm text-[#78716c]">
                                         <div className="flex flex-col items-center gap-4">
                                             <div className="space-y-1">
-                                                <p className="text-base font-semibold text-[#2f3a2d]">
+                                                <p className="text-base font-semibold text-[#1c1917]">
                                                     Nenhum animal encontrado
                                                 </p>
                                                 <p>Use os botões acima para adicionar animais.</p>
@@ -1006,7 +1161,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                                 <button
                                                     type="button"
                                                     onClick={openAnimalForm}
-                                                    className="flex items-center rounded-lg bg-primary px-4 py-2 font-bold text-white shadow-md transition-colors duration-200 hover:bg-primary-dark"
+                                                    className="flex items-center rounded-xl bg-[#a8442a] px-4 py-2 font-bold text-white shadow-md transition-colors duration-200 hover:bg-[#933a22]"
                                                 >
                                                     <PlusIcon />
                                                     <span className="ml-2">Adicionar animal</span>
@@ -1019,46 +1174,65 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                 paginatedAnimals.map((animal) => (
                                     <tr
                                         key={animal.id}
-                                        className="cursor-pointer border-b border-[#e8ddd0] bg-[#fffaf1] transition-colors duration-150 hover:bg-[#f5ede2]"
+                                        className="cursor-pointer border-b border-[#e7e5e4] bg-white transition-colors duration-150 hover:bg-white"
                                         onClick={() => {
                                             setSelectedAnimal(animal);
                                         }}
                                     >
-                                        <th scope="row" className="whitespace-nowrap px-6 py-4 font-bold text-[#2f3a2d]">
+                                        <th scope="row" className="whitespace-nowrap px-4 py-3 font-bold text-[#1c1917]">
                                             <div>{animal.identificacao}</div>
                                             {animal.registro && (
-                                                <div className="text-xs text-[#6d6558]">Registro: {animal.registro}</div>
+                                                <div className="text-xs text-[#78716c]">Registro: {animal.registro}</div>
                                             )}
                                         </th>
-                                        <td className="px-6 py-4">{animal.raca}</td>
-                                        <td className="px-6 py-4">{animal.sexo}</td>
-                                        <td className="px-6 py-4">{calculateAge(animal.dataNascimento)}</td>
-                                        <td className="px-6 py-4">{animal.currentPaddockName || '—'}</td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-3">{animal.raca}</td>
+                                        <td className="px-4 py-3">{animal.sexo}</td>
+                                        <td className="px-4 py-3">{calculateAge(animal.dataNascimento)}</td>
+                                        <td className="px-4 py-3">{animal.currentPaddockName || '—'}</td>
+                                        <td className="px-4 py-3">{lots.find((l) => l.id === animal.lotId)?.name || '—'}</td>
+                                        <td className="px-4 py-3">{animal.categoria || '—'}</td>
+                                        <td className="px-4 py-3">
                                             {animal.pesoAtual !== null && animal.pesoAtual !== undefined
                                                 ? `${animal.pesoAtual} kg`
                                                 : '—'}
                                         </td>
-                                        <td className={`px-6 py-4 font-semibold ${
-                                            animal.gmd !== null && animal.gmd !== undefined
-                                                ? animal.gmd >= 0.8
-                                                    ? 'text-[#4a6741]'
-                                                    : animal.gmd >= 0.4
-                                                        ? 'text-[#9d7d4d]'
-                                                        : 'text-[#8c4d39]'
-                                                : 'text-[#b0a090]'
-                                        }`}>
-                                            {animal.gmd !== null && animal.gmd !== undefined
-                                                ? `${formatNumber(animal.gmd)} kg`
-                                                : '—'}
-                                        </td>
                                         <td className="px-6 py-4">
+                                            {(() => {
+                                                const g30 = animal.gmd30 ?? null;
+                                                const gLast = animal.gmdLast ?? animal.gmd ?? null;
+                                                const primary = g30 ?? gLast;
+                                                const colorCls = primary === null
+                                                    ? 'text-[#b0a090]'
+                                                    : primary >= 0.8
+                                                        ? 'text-[#16a34a]'
+                                                        : primary >= 0.4
+                                                            ? 'text-[#1c1917]'
+                                                            : 'text-[#8c4d39]';
+                                                return (
+                                                    <div className="flex flex-col">
+                                                        <span className={`font-semibold ${colorCls}`}>
+                                                            {primary !== null ? `${formatNumber(primary)} kg` : '—'}
+                                                        </span>
+                                                        {/* Linha secundária: mostra gmdLast quando gmd30 é o primário */}
+                                                        {g30 !== null && gLast !== null && Math.abs(g30 - gLast) > 0.001 && (
+                                                            <span className="text-[10px] text-[#78716c]" title="Último intervalo">
+                                                                {`${formatNumber(gLast)} últ.`}
+                                                            </span>
+                                                        )}
+                                                        {g30 === null && gLast !== null && (
+                                                            <span className="text-[10px] text-[#78716c]">*últ. intervalo</span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
+                                        <td className="px-4 py-3">
                                             {animal.nutritionPlan?.nome || '—'}
                                         </td>
                                         <td className="px-6 py-4 text-center" onClick={(event) => event.stopPropagation()}>
                                             <button
                                                 type="button"
-                                                className="rounded-full p-1 text-[#6d6558] hover:bg-[#e8ddd0] hover:text-[#2f3a2d]"
+                                                className="rounded-full p-1 text-[#78716c] hover:bg-[#f5f5f4] hover:text-[#a8442a]"
                                                 onClick={() => setSelectedAnimal(animal)}
                                                 aria-label={actionLabel || 'Abrir detalhes'}
                                             >
@@ -1072,8 +1246,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                     </table>
                 </div>
                 {totalPages > 1 && (
-                    <div className="flex flex-col gap-3 border-t border-[#e8ddd0] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-[#6d6558]">
+                    <div className="flex flex-col gap-3 border-t border-[#e7e5e4] px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-[#78716c]">
                             Página {currentPage} de {totalPages} — mostrando {paginatedAnimals.length} animais
                         </p>
                         <div className="flex gap-3">
@@ -1081,7 +1255,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                 type="button"
                                 onClick={() => setCurrentPage((page) => page - 1)}
                                 disabled={currentPage === 1}
-                                className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-4 py-2 text-sm text-[#4a3f35] hover:bg-[#f1e7d8] disabled:cursor-not-allowed disabled:opacity-40"
+                                className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-2 text-sm text-[#44403c] hover:bg-[#f5f5f4] disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 Anterior
                             </button>
@@ -1089,7 +1263,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                 type="button"
                                 onClick={() => setCurrentPage((page) => page + 1)}
                                 disabled={currentPage === totalPages}
-                                className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-4 py-2 text-sm text-[#4a3f35] hover:bg-[#f1e7d8] disabled:cursor-not-allowed disabled:opacity-40"
+                                className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-2 text-sm text-[#44403c] hover:bg-[#f5f5f4] disabled:cursor-not-allowed disabled:opacity-40"
                             >
                                 Próxima
                             </button>
@@ -1101,90 +1275,157 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
     };
 
     const renderOverview = () => (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <div className="space-y-6">
 
-            <div className="rounded-3xl border border-[#d7cab3] bg-[#fffaf1] p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9d8b77]">Total de animais</p>
-                <p className="mt-2 font-brand text-4xl font-black text-[#2f3a2d]">
-                    {overviewStats.total}
-                </p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+
+                <div className="rounded-3xl border border-[#e7e5e4] bg-white p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">Total de animais</p>
+                    <p className="mt-2 font-brand text-4xl font-black text-[#1c1917]">
+                        {overviewStats.total}
+                    </p>
+                    <p className="mt-1 text-xs text-[#a8a29e]">
+                        {overviewStats.machos}M · {overviewStats.femeas}F
+                    </p>
+                </div>
+
+                <div className="rounded-3xl border border-[#e7e5e4] bg-white p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">Peso médio</p>
+                    <p className="mt-2 font-brand text-4xl font-black text-[#1c1917]">
+                        {overviewStats.avgWeight !== null
+                            ? `${overviewStats.avgWeight.toFixed(1)}`
+                            : '—'}
+                    </p>
+                    <p className="mt-1 text-xs text-[#a8a29e]">kg por animal</p>
+                </div>
+
+                <div className="rounded-3xl border border-[#e7e5e4] bg-white p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">Arroba média</p>
+                    <p className="mt-2 font-brand text-4xl font-black text-[#1c1917]">
+                        {overviewStats.avgArroba !== null
+                            ? `${overviewStats.avgArroba.toFixed(1)}`
+                            : '—'}
+                    </p>
+                    <p className="mt-1 text-xs text-[#a8a29e]">@ por animal</p>
+                </div>
+
             </div>
 
-            <div className="rounded-3xl border border-[#d7cab3] bg-[#fffaf1] p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9d8b77]">Peso médio</p>
-                <p className="mt-2 font-brand text-4xl font-black text-[#2f3a2d]">
-                    {overviewStats.avgWeight
-                        ? `${overviewStats.avgWeight.toFixed(1)}`
-                        : '—'}
-                </p>
-                {overviewStats.avgWeight && (
-                    <p className="text-xs text-[#9d8b77]">kg por animal</p>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                <div className="rounded-3xl border border-[#e7e5e4] bg-white p-5 shadow-sm">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">GMD médio</p>
+                    <p className="mt-2 font-brand text-4xl font-black text-[#1c1917]">
+                        {overviewStats.avgGmd !== null
+                            ? `${overviewStats.avgGmd.toFixed(3)}`
+                            : '—'}
+                    </p>
+                    <p className="mt-1 text-xs text-[#a8a29e]">
+                        {overviewStats.avgGmd !== null ? 'kg/dia · últimos 30 dias' : 'Aguardando pesagens'}
+                    </p>
+                </div>
+
+                {overviewStats.semPesagem > 0 && (
+                    <div className="rounded-3xl border border-[#f0d5ca] bg-[#faeee8] p-5 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#7a2a14]">Sem pesagem</p>
+                        <p className="mt-2 font-brand text-4xl font-black text-[#a8442a]">
+                            {overviewStats.semPesagem}
+                        </p>
+                        <p className="mt-1 text-xs text-[#7a2a14]/70">animais sem registro de peso</p>
+                    </div>
                 )}
+
             </div>
 
-            <div className="rounded-3xl border border-[#d7cab3] bg-[#fffaf1] p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9d8b77]">GMD médio</p>
-                <p className="mt-2 font-brand text-4xl font-black text-[#2f3a2d]">
-                    {overviewStats.avgGmd !== null
-                        ? `${overviewStats.avgGmd.toFixed(3)}`
-                        : '—'}
-                </p>
-                {overviewStats.avgGmd !== null && (
-                    <p className="text-xs text-[#9d8b77]">kg/dia</p>
-                )}
-            </div>
+            {(overviewStats.porCategoria.length > 0 || overviewStats.porRaca.length > 0) && (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
-            <div className="rounded-3xl border border-[#d7cab3] bg-[#fffaf1] p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9d8b77]">Machos</p>
-                <p className="mt-2 font-brand text-4xl font-black text-[#2f3a2d]">
-                    {overviewStats.machos}
-                </p>
-            </div>
+                    {overviewStats.porCategoria.length > 0 && (
+                        <div className="overflow-hidden rounded-3xl border border-[#e7e5e4] bg-white shadow-sm">
+                            <div className="px-5 pt-5 pb-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">Por categoria</p>
+                            </div>
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-[#e7e5e4] bg-[#f5f5f4]">
+                                        <th className="px-5 py-2 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">Categoria</th>
+                                        <th className="px-5 py-2 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">Qtd</th>
+                                        <th className="px-5 py-2 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">Peso médio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {overviewStats.porCategoria.map(({ categoria, count, avgPeso }) => (
+                                        <tr key={categoria} className="border-b border-[#e7e5e4] last:border-0">
+                                            <td className="px-5 py-3 font-medium text-[#1c1917]">{categoria}</td>
+                                            <td className="px-5 py-3 text-right text-[#78716c]">{count}</td>
+                                            <td className="px-5 py-3 text-right text-[#78716c]">
+                                                {avgPeso !== null ? `${avgPeso.toFixed(0)} kg` : '—'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
-            <div className="rounded-3xl border border-[#d7cab3] bg-[#fffaf1] p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9d8b77]">Fêmeas</p>
-                <p className="mt-2 font-brand text-4xl font-black text-[#2f3a2d]">
-                    {overviewStats.femeas}
-                </p>
-            </div>
+                    {overviewStats.porRaca.length > 0 && (
+                        <div className="overflow-hidden rounded-3xl border border-[#e7e5e4] bg-white shadow-sm">
+                            <div className="px-5 pt-5 pb-3">
+                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">Por raça</p>
+                            </div>
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-[#e7e5e4] bg-[#f5f5f4]">
+                                        <th className="px-5 py-2 text-left text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">Raça</th>
+                                        <th className="px-5 py-2 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">Qtd</th>
+                                        <th className="px-5 py-2 text-right text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">Peso médio</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {overviewStats.porRaca.map(({ raca, count, avgPeso }) => (
+                                        <tr key={raca} className="border-b border-[#e7e5e4] last:border-0">
+                                            <td className="px-5 py-3 font-medium text-[#1c1917]">{raca}</td>
+                                            <td className="px-5 py-3 text-right text-[#78716c]">{count}</td>
+                                            <td className="px-5 py-3 text-right text-[#78716c]">
+                                                {avgPeso !== null ? `${avgPeso.toFixed(0)} kg` : '—'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
 
-            <div className="rounded-3xl border border-amber-300/40 bg-amber-50/60 p-5 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-amber-700">Sem pesagem</p>
-                <p className="mt-2 font-brand text-4xl font-black text-amber-700">
-                    {overviewStats.semPesagem}
-                </p>
-                <p className="mt-1 text-xs text-amber-600/70">
-                    animais sem registro de peso
-                </p>
-            </div>
+                </div>
+            )}
 
         </div>
     );
 
     const renderLots = () => {
         return (
-            <div className="overflow-hidden rounded-2xl border border-[#d7cab3] bg-[#fffaf1] shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-[#e7e5e4] bg-white shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-[#6d6558]">
-                        <thead className="bg-[#f1e7d8] text-[10px] font-bold uppercase tracking-[0.12em] text-[#74644e]">
+                    <table className="w-full text-left text-sm text-[#78716c]">
+                        <thead className="bg-[#f5f5f4] text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">
                             <tr>
-                                <th scope="col" className="px-6 py-3">Lote</th>
-                                <th scope="col" className="px-6 py-3">Observações</th>
+                                <th scope="col" className="px-4 py-2.5">Lote</th>
+                                <th scope="col" className="px-4 py-2.5">Observações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-10 text-center text-sm text-[#6d6558]">
+                                    <td colSpan={2} className="px-6 py-10 text-center text-sm text-[#78716c]">
                                         Carregando lotes...
                                     </td>
                                 </tr>
                             ) : lots.length === 0 ? (
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-10 text-center text-sm text-[#6d6558]">
+                                    <td colSpan={2} className="px-6 py-10 text-center text-sm text-[#78716c]">
                                         <div className="flex flex-col items-center gap-4">
                                             <div className="space-y-1">
-                                                <p className="text-base font-semibold text-[#2f3a2d]">
+                                                <p className="text-base font-semibold text-[#1c1917]">
                                                     Nenhum lote cadastrado
                                                 </p>
                                                 <p>Organize seu rebanho criando um lote.</p>
@@ -1192,7 +1433,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                             <button
                                                 type="button"
                                                 onClick={openLotForm}
-                                                className="flex items-center bg-primary hover:bg-primary-dark text-white font-bold py-2 px-4 rounded-lg shadow-md transition-colors duration-200"
+                                                className="flex items-center bg-[#a8442a] hover:bg-[#933a22] text-white font-bold py-2 px-4 rounded-xl shadow-md transition-colors duration-200"
                                             >
                                                 <PlusIcon />
                                                 <span className="ml-2">Adicionar lote</span>
@@ -1204,11 +1445,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                 lots.map((lot) => (
                                     <tr
                                         key={lot.id}
-                                        className="cursor-pointer border-b border-[#e8ddd0] bg-[#fffaf1] transition-colors duration-150 hover:bg-[#f5ede2]"
+                                        className="cursor-pointer border-b border-[#e7e5e4] bg-white transition-colors duration-150 hover:bg-white"
                                         onClick={() => setSelectedLot(lot)}
                                     >
-                                        <td className="px-6 py-4 font-medium text-[#2f3a2d]">{lot.name}</td>
-                                        <td className="px-6 py-4">{lot.notes || '—'}</td>
+                                        <td className="px-6 py-4 font-medium text-[#1c1917]">{lot.name}</td>
+                                        <td className="px-4 py-3">{lot.notes || '—'}</td>
                                     </tr>
                                 ))
                             )}
@@ -1221,64 +1462,79 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
 
     return (
         <div>
-            <div className="mb-4 rounded-3xl border border-[#d7cab3] bg-[#fffaf1] px-6 py-5">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                    <div>
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                            {isPo ? 'Plantel P.O.' : 'Rebanho Comercial'}
+            <div className="mb-4 rounded-3xl border border-[#e7e5e4] bg-white px-6 py-5">
+                <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="min-w-0 flex-1 xl:max-w-[420px]">
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                            {farmName || 'Fazenda'}
                         </div>
-                        <h2 className="font-brand m-0 text-2xl font-extrabold leading-tight text-[#2f3a2d]">{title}</h2>
-                        <p className="mt-1 text-sm leading-relaxed text-[#6d6558]">
-                            {subtitle}
-                        </p>
+                        <h2 className="font-brand m-0 max-w-[12ch] text-2xl font-extrabold leading-tight text-[#1c1917] sm:max-w-none xl:whitespace-nowrap">{title}</h2>
                     </div>
-                    <div className="flex flex-wrap items-center gap-[10px]">
+                    <div className="flex flex-col gap-3 xl:items-end">
                         {activeTab === 'animals' && (
                             <>
-                                <button
-                                    type="button"
-                                    onClick={openAnimalForm}
-                                    className="flex h-10 items-center rounded-[10px] bg-primary px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-primary-dark"
-                                >
-                                    <PlusIcon className="h-[18px] w-[18px]" />
-                                    <span className="ml-2 hidden sm:block">Adicionar animal</span>
-                                </button>
-                                <button
-                                    className="flex h-10 items-center rounded-[10px] border border-[#d7cab3] bg-[#fffaf1] px-[14px] text-sm font-semibold text-[#6d6558] transition-colors duration-200 hover:bg-[#f1e7d8]"
-                                    type="button"
-                                    onClick={handleDownloadTemplate}
-                                >
-                                    <DownloadIcon className="h-[18px] w-[18px]" />
-                                    <span className="ml-2 hidden sm:block">Baixar modelo de exemplo</span>
-                                </button>
-                                <div className="flex flex-col items-end">
+                                <div className="flex flex-wrap items-start gap-[10px] xl:justify-end">
                                     <button
-                                        className="flex h-10 items-center rounded-[10px] bg-[#9d7d4d] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[#8f7144]"
                                         type="button"
-                                        onClick={handleUploadClick}
+                                        onClick={openAnimalForm}
+                                        className="flex h-10 items-center rounded-[10px] bg-[#a8442a] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[#933a22]"
                                     >
-                                        <UploadIcon className="h-[18px] w-[18px]" />
-                                        <span className="ml-2 hidden sm:block">Importar planilha</span>
+                                        <PlusIcon className="h-[18px] w-[18px]" />
+                                        <span className="ml-2 hidden sm:block">Adicionar animal</span>
                                     </button>
-                                    <span className="mt-0.5 hidden text-[10px] text-[#9d8b77] sm:block">
-                                        Funciona com qualquer planilha sua
-                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setLoteModalOpen(true)}
+                                        className="flex h-10 items-center rounded-[10px] border border-[#a8442a] bg-white px-[14px] text-sm font-semibold text-[#1c1917] transition-colors duration-200 hover:bg-white"
+                                    >
+                                        <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        <span className="ml-2 hidden sm:block">Entrada de lote</span>
+                                    </button>
+                                    {!isFreePlan && (
+                                        <>
+                                            <div className="flex flex-col items-center">
+                                                <button
+                                                    className="flex h-10 items-center rounded-[10px] bg-[#a8442a] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[#933a22]"
+                                                    type="button"
+                                                    onClick={handleUploadClick}
+                                                >
+                                                    <UploadIcon className="h-[18px] w-[18px]" />
+                                                    <span className="ml-2 hidden sm:block">Importar planilha</span>
+                                                </button>
+                                                <span className="mt-1 text-center text-xs font-medium text-[#78716c]">
+                                                    Funciona com qualquer planilha sua
+                                                </span>
+                                            </div>
+                                            <button
+                                                className="flex h-10 items-center justify-center rounded-[10px] border border-[#e7e5e4] bg-white px-[10px] text-[13px] font-semibold text-[#78716c] transition-colors duration-200 hover:bg-[#f5f5f4]"
+                                                type="button"
+                                                onClick={handleDownloadTemplate}
+                                            >
+                                                <DownloadIcon className="h-4 w-4" />
+                                                <span className="ml-1.5 hidden sm:block">Baixar modelo</span>
+                                            </button>
+                                        </>
+                                    )}
                                 </div>
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept=".xlsx,.xls,.csv"
-                                    className="hidden"
-                                    onChange={handleFileChange}
-                                />
+                                {!isFreePlan && (
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept=".xlsx,.xls,.csv"
+                                        className="hidden"
+                                        onChange={handleFileChange}
+                                    />
+                                )}
                             </>
                         )}
                         {activeTab === 'lots' && (
                             <button
                                 type="button"
                                 onClick={openLotForm}
-                                className="flex h-10 items-center rounded-[10px] bg-[#9d7d4d] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[#8f7144]"
+                                className="flex h-10 items-center rounded-[10px] bg-[#a8442a] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[#933a22]"
                             >
                                 <LayersIcon className="h-[18px] w-[18px]" />
                                 <span className="ml-2 hidden sm:block">Criar lote</span>
@@ -1290,17 +1546,17 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
 
             {uploadMessage && (
                 <div className="mb-4 rounded-xl border border-[#c8dbc4] bg-[#edf4eb] px-4 py-3">
-                    <p className="text-sm font-medium text-[#4a6741]">{uploadMessage}</p>
+                    <p className="text-sm font-medium text-[#16a34a]">{uploadMessage}</p>
                 </div>
             )}
             {uploadError && (
                 <div className="mb-4">
-                    <p className="text-sm text-red-600">{uploadError}</p>
+                    <p className="text-sm text-[#8c4d39]">{uploadError}</p>
                 </div>
             )}
             {loadError && (
                 <div className="mb-4">
-                    <p className="text-sm text-red-600">{loadError}</p>
+                    <p className="text-sm text-[#8c4d39]">{loadError}</p>
                 </div>
             )}
 
@@ -1312,8 +1568,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                         onClick={() => setActiveTab(tab.key)}
                         className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
                             activeTab === tab.key
-                                ? 'bg-[#9d7d4d] text-white'
-                                : 'bg-[#f1e7d8] text-[#6d6558] hover:bg-[#e8ddd0]'
+                                ? 'bg-[#a8442a] text-white'
+                                : 'bg-[#f5f5f4] text-[#78716c] hover:bg-[#f5f5f4]'
                         }`}
                     >
                         {tab.label}
@@ -1322,10 +1578,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
             </div>
 
             {activeTab === 'animals' && (
-                <div className="mb-6 space-y-3 rounded-2xl border border-[#d7cab3] bg-[#fffaf1] p-4">
+                <div className="mb-6 space-y-3 rounded-2xl border border-[#e7e5e4] bg-white p-4">
                     <div className="relative">
                         <svg
-                            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9d8b77]"
+                            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#78716c]"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -1337,14 +1593,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                             value={searchTerm}
                             onChange={(event) => setSearchTerm(event.target.value)}
                             placeholder="Buscar por identificação, raça ou registro..."
-                            className="w-full rounded-xl border border-[#d7cab3] bg-white py-2 pl-9 pr-3 text-sm text-[#4a3f35] placeholder:text-[#b0a090] focus:border-[#9d7d4d] focus:outline-none focus:ring-1 focus:ring-[#9d7d4d]"
+                            className="w-full rounded-xl border border-[#e7e5e4] bg-white py-2 pl-9 pr-3 text-sm text-[#44403c] placeholder:text-[#b0a090] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10"
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                         <select
                             value={filterSexo}
                             onChange={(event) => setFilterSexo(event.target.value)}
-                            className="rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#4a3f35] placeholder:text-[#b0a090] focus:border-[#9d7d4d] focus:outline-none focus:ring-1 focus:ring-[#9d7d4d]"
+                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] placeholder:text-[#b0a090] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10"
                         >
                             <option value="">Todos os sexos</option>
                             <option value="Macho">Macho</option>
@@ -1353,7 +1609,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                         <select
                             value={filterPaddock}
                             onChange={(event) => setFilterPaddock(event.target.value)}
-                            className="rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#4a3f35] placeholder:text-[#b0a090] focus:border-[#9d7d4d] focus:outline-none focus:ring-1 focus:ring-[#9d7d4d]"
+                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] placeholder:text-[#b0a090] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10"
                         >
                             <option value="">Todos os pastos</option>
                             {paddocks.map((paddock) => (
@@ -1363,7 +1619,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                         <select
                             value={lotFilter}
                             onChange={(event) => setLotFilter(event.target.value)}
-                            className="rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#4a3f35] placeholder:text-[#b0a090] focus:border-[#9d7d4d] focus:outline-none focus:ring-1 focus:ring-[#9d7d4d]"
+                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] placeholder:text-[#b0a090] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10"
                         >
                             <option value="">Todos os lotes</option>
                             {lots.map((lot) => (
@@ -1373,7 +1629,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                         <select
                             value={filterNutrition}
                             onChange={(event) => setFilterNutrition(event.target.value)}
-                            className="rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#4a3f35] placeholder:text-[#b0a090] focus:border-[#9d7d4d] focus:outline-none focus:ring-1 focus:ring-[#9d7d4d]"
+                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] placeholder:text-[#b0a090] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10"
                         >
                             <option value="">Todas as nutrições</option>
                             {nutritionOptions.map((nutritionName) => (
@@ -1387,21 +1643,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                             value={filterGmdMin}
                             onChange={(event) => setFilterGmdMin(event.target.value)}
                             placeholder="GMD mín"
-                            className="rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#4a3f35] placeholder:text-[#b0a090] focus:border-[#9d7d4d] focus:outline-none focus:ring-1 focus:ring-[#9d7d4d]"
+                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] placeholder:text-[#b0a090] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10"
                         />
                         <input
                             type="number"
                             value={filterGmdMax}
                             onChange={(event) => setFilterGmdMax(event.target.value)}
                             placeholder="GMD máx"
-                            className="rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#4a3f35] placeholder:text-[#b0a090] focus:border-[#9d7d4d] focus:outline-none focus:ring-1 focus:ring-[#9d7d4d]"
+                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] placeholder:text-[#b0a090] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10"
                         />
                         <input
                             type="text"
                             value={filterRaca}
                             onChange={(event) => setFilterRaca(event.target.value)}
                             placeholder="Filtrar por raça..."
-                            className="rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#4a3f35] placeholder:text-[#b0a090] focus:border-[#9d7d4d] focus:outline-none focus:ring-1 focus:ring-[#9d7d4d]"
+                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] placeholder:text-[#b0a090] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10"
                         />
                         <button
                             type="button"
@@ -1415,7 +1671,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                 setFilterGmdMax('');
                                 setFilterNutrition('');
                             }}
-                            className="w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm text-[#6d6558] transition-colors hover:bg-[#f1e7d8]"
+                            className="w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#78716c] transition-colors hover:bg-[#f5f5f4]"
                         >
                             Limpar filtros
                         </button>
@@ -1428,7 +1684,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
             {activeTab === 'animals' && renderTable()}
             {activeTab === 'weighings' && renderTable('Registrar pesagem')}
             {activeTab === 'settings' && (
-                <div className="rounded-2xl border border-dashed border-[#d7cab3] bg-[#fffaf1] p-8 text-center text-[#6d6558]">
+                <div className="rounded-2xl border border-dashed border-[#e7e5e4] bg-white p-8 text-center text-[#78716c]">
                     Configurações específicas do rebanho em breve.
                 </div>
             )}
@@ -1440,14 +1696,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                     onClick={closeAnimalForm}
                 >
                     <div
-                        className="w-full max-w-lg rounded-2xl bg-[#f5ede2] shadow-2xl"
+                        className="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <header className="flex items-center justify-between border-b border-[#e3d4c0] p-5">
-                            <h3 className="text-lg font-bold text-[#2f3a2d]">Adicionar animal</h3>
+                        <header className="flex items-center justify-between border-b border-[#e7e5e4] p-5">
+                            <h3 className="text-lg font-bold text-[#1c1917]">Adicionar animal</h3>
                             <button
                                 type="button"
-                                className="rounded-full p-2 text-[#6d6558] hover:bg-[#e8ddd0]"
+                                className="rounded-full p-2 text-[#78716c] hover:bg-[#f5f5f4]"
                                 onClick={closeAnimalForm}
                                 aria-label="Fechar modal"
                             >
@@ -1457,72 +1713,72 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                         <form onSubmit={handleCreateAnimal} className="space-y-4 p-6">
                             {isPo && (
                                 <div>
-                                    <label className="block text-sm font-medium text-[#4a3f35]">Nome</label>
+                                    <label className="block text-sm font-medium text-[#44403c]">Nome</label>
                                     <input
                                         type="text"
                                         value={animalForm.nome}
                                         onChange={(event) => setAnimalForm((prev) => ({ ...prev, nome: event.target.value }))}
-                                        className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                        className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                         required
                                     />
                                 </div>
                             )}
                             <div>
-                                <label className="block text-sm font-medium text-[#4a3f35]">Brinco</label>
+                                <label className="block text-sm font-medium text-[#44403c]">Brinco</label>
                                 <input
                                     type="text"
                                     value={animalForm.brinco}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, brinco: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                     required={!isPo}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#4a3f35]">Raça</label>
+                                <label className="block text-sm font-medium text-[#44403c]">Raça</label>
                                 <input
                                     type="text"
                                     value={animalForm.raca}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, raca: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                     required
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#4a3f35]">Sexo</label>
+                                <label className="block text-sm font-medium text-[#44403c]">Sexo</label>
                                 <select
                                     value={animalForm.sexo}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, sexo: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                 >
                                     <option value="Macho">Macho</option>
                                     <option value="Fêmea">Fêmea</option>
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#4a3f35]">Data de nascimento</label>
+                                <label className="block text-sm font-medium text-[#44403c]">Data de nascimento</label>
                                 <input
                                     type="date"
                                     value={animalForm.dataNascimento}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, dataNascimento: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                     required={!isPo}
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#4a3f35]">Peso atual (kg)</label>
+                                <label className="block text-sm font-medium text-[#44403c]">Peso atual (kg)</label>
                                 <input
                                     type="number"
                                     value={animalForm.pesoAtual}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, pesoAtual: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#4a3f35]">Pasto</label>
+                                <label className="block text-sm font-medium text-[#44403c]">Pasto</label>
                                 <select
                                     value={animalForm.paddockId}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, paddockId: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                     required
                                 >
                                     <option value="">Selecione um pasto</option>
@@ -1537,20 +1793,20 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#4a3f35]">Entrada no pasto</label>
+                                <label className="block text-sm font-medium text-[#44403c]">Entrada no pasto</label>
                                 <input
                                     type="date"
                                     value={animalForm.paddockStartAt}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, paddockStartAt: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#4a3f35]">Lote</label>
+                                <label className="block text-sm font-medium text-[#44403c]">Lote</label>
                                 <select
                                     value={animalForm.lotId}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, lotId: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                 >
                                     <option value="">Sem lote</option>
                                     {lots.map((lot) => (
@@ -1558,51 +1814,80 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                     ))}
                                 </select>
                             </div>
+                            {/* Compra */}
+                            <div className="rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] p-4">
+                                <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-[#78716c]">Compra (opcional)</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <label className="block text-sm font-medium text-[#44403c]">Valor pago (R$)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            value={animalForm.valorCompra}
+                                            onChange={(event) => setAnimalForm((prev) => ({ ...prev, valorCompra: event.target.value }))}
+                                            placeholder="0,00"
+                                            className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-[#44403c]">Data da compra</label>
+                                        <input
+                                            type="date"
+                                            value={animalForm.dataCompra}
+                                            onChange={(event) => setAnimalForm((prev) => ({ ...prev, dataCompra: event.target.value }))}
+                                            className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none"
+                                        />
+                                    </div>
+                                </div>
+                                <p className="mt-2 text-[11px] text-[#78716c]">Se informado, o lançamento cai automaticamente no Financeiro.</p>
+                            </div>
+
                             {isPo && (
                                 <>
                                     <div>
-                                        <label className="block text-sm font-medium text-[#4a3f35]">Registro</label>
+                                        <label className="block text-sm font-medium text-[#44403c]">Registro</label>
                                         <input
                                             type="text"
                                             value={animalForm.registro}
                                             onChange={(event) => setAnimalForm((prev) => ({ ...prev, registro: event.target.value }))}
-                                            className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                            className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-[#4a3f35]">Categoria</label>
+                                        <label className="block text-sm font-medium text-[#44403c]">Categoria</label>
                                         <input
                                             type="text"
                                             value={animalForm.categoria}
                                             onChange={(event) => setAnimalForm((prev) => ({ ...prev, categoria: event.target.value }))}
-                                            className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                            className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-[#4a3f35]">Observações</label>
+                                        <label className="block text-sm font-medium text-[#44403c]">Observações</label>
                                         <textarea
                                             value={animalForm.observacoes}
                                             onChange={(event) => setAnimalForm((prev) => ({ ...prev, observacoes: event.target.value }))}
-                                            className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                            className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                             rows={3}
                                         />
                                     </div>
                                 </>
                             )}
                             {animalFormError && (
-                                <p className="text-sm text-red-600">{animalFormError}</p>
+                                <p className="text-sm text-[#8c4d39]">{animalFormError}</p>
                             )}
                             <div className="flex justify-end gap-3">
                                 <button
                                     type="button"
-                                    className="rounded-xl border border-[#d7cab3] px-4 py-2 text-sm font-semibold text-[#4a3f35] hover:bg-[#e8ddd0]"
+                                    className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#44403c] hover:bg-[#f5f5f4]"
                                     onClick={closeAnimalForm}
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark"
+                                    className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#933a22]"
                                 >
                                     Salvar
                                 </button>
@@ -1620,14 +1905,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                     onClick={closeLotForm}
                 >
                     <div
-                        className="w-full max-w-lg rounded-2xl bg-[#f5ede2] shadow-2xl"
+                        className="w-full max-w-lg rounded-2xl bg-white shadow-2xl"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <header className="flex items-center justify-between border-b border-[#e3d4c0] p-5">
-                            <h3 className="text-lg font-bold text-[#2f3a2d]">Criar lote</h3>
+                        <header className="flex items-center justify-between border-b border-[#e7e5e4] p-5">
+                            <h3 className="text-lg font-bold text-[#1c1917]">Criar lote</h3>
                             <button
                                 type="button"
-                                className="rounded-full p-2 text-[#6d6558] hover:bg-[#e8ddd0]"
+                                className="rounded-full p-2 text-[#78716c] hover:bg-[#f5f5f4]"
                                 onClick={closeLotForm}
                                 aria-label="Fechar modal"
                             >
@@ -1636,38 +1921,38 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                         </header>
                         <form onSubmit={handleCreateLot} className="space-y-4 p-6">
                             <div>
-                                <label className="block text-sm font-medium text-[#4a3f35]">Nome</label>
+                                <label className="block text-sm font-medium text-[#44403c]">Nome</label>
                                 <input
                                     type="text"
                                     value={lotForm.name}
                                     onChange={(event) => setLotForm((prev) => ({ ...prev, name: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                     required
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#4a3f35]">Observações</label>
+                                <label className="block text-sm font-medium text-[#44403c]">Observações</label>
                                 <textarea
                                     value={lotForm.notes}
                                     onChange={(event) => setLotForm((prev) => ({ ...prev, notes: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm shadow-sm focus:border-[#a8442a] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/10"
                                     rows={3}
                                 />
                             </div>
                             {lotFormError && (
-                                <p className="text-sm text-red-600">{lotFormError}</p>
+                                <p className="text-sm text-[#8c4d39]">{lotFormError}</p>
                             )}
                             <div className="flex justify-end gap-3">
                                 <button
                                     type="button"
-                                    className="rounded-xl border border-[#d7cab3] px-4 py-2 text-sm font-semibold text-[#4a3f35] hover:bg-[#e8ddd0]"
+                                    className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#44403c] hover:bg-[#f5f5f4]"
                                     onClick={closeLotForm}
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark"
+                                    className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#933a22]"
                                 >
                                     Salvar
                                 </button>
@@ -1679,14 +1964,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
 
             {importModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-[#d7cab3] bg-[#f5ede2] shadow-xl">
+                    <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-[#e7e5e4] bg-white shadow-xl">
 
-                        <div className="flex items-center justify-between border-b border-[#e3d4c0] px-6 py-4">
+                        <div className="flex items-center justify-between border-b border-[#e7e5e4] px-6 py-4">
                             <div>
-                                <h3 className="text-lg font-bold text-[#2f3a2d]">
+                                <h3 className="text-lg font-bold text-[#1c1917]">
                                     Importar planilha
                                 </h3>
-                                <p className="text-sm text-[#6d6558]">
+                                <p className="text-sm text-[#78716c]">
                                     {importRows.length} animais encontrados ·{' '}
                                     {importHeaders.length} colunas detectadas ·{' '}
                                     {Object.values(importMapping).filter(Boolean).length} mapeadas automaticamente
@@ -1695,7 +1980,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                             {!isImporting && !importProgress && (
                                 <button type="button"
                                     onClick={() => setImportModalOpen(false)}
-                                    className="rounded-lg p-1.5 text-[#6d6558] hover:bg-[#e8ddd0]">
+                                    className="rounded-lg p-1.5 text-[#78716c] hover:bg-[#f5f5f4]">
                                     ✕
                                 </button>
                             )}
@@ -1705,8 +1990,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
 
                             {!importProgress && (
                                 <>
-                                    <div className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] p-4">
-                                        <p className="mb-2 text-sm font-semibold text-[#4a3f35]">
+                                    <div className="rounded-xl border border-[#e7e5e4] bg-white p-4">
+                                        <p className="mb-2 text-sm font-semibold text-[#44403c]">
                                             Unidade de peso
                                         </p>
                                         <div className="flex gap-3">
@@ -1715,38 +2000,50 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                                     onClick={() => setImportWeightUnit(u)}
                                                     className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
                                                         importWeightUnit === u
-                                                            ? 'border-[#9d7d4d] bg-[#9d7d4d] text-white'
-                                                            : 'border-[#d7cab3] text-[#6d6558] hover:bg-[#f1e7d8]'
+                                                            ? 'border-[#a8442a] bg-[#a8442a] text-white'
+                                                            : 'border-[#e7e5e4] text-[#78716c] hover:bg-[#f5f5f4]'
                                                     }`}>
                                                     {u === 'kg' ? 'Quilos (kg)' : 'Arrobas (@) × 15'}
                                                 </button>
                                             ))}
                                         </div>
                                         {importWeightUnit === 'arroba' && (
-                                            <p className="mt-2 text-xs text-[#9d7d4d]">
+                                            <p className="mt-2 text-xs text-[#1c1917]">
                                                 ⚠️ Detectamos valores que podem ser arrobas. Cada arroba será convertida para 15 kg.
                                             </p>
                                         )}
                                     </div>
 
-                                    <div className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] p-4">
-                                        <p className="mb-1 text-sm font-semibold text-[#4a3f35]">
+                                    <div className="rounded-xl border border-[#e7e5e4] bg-white p-4">
+                                        <p className="mb-1 text-sm font-semibold text-[#44403c]">
                                             Mapeamento de colunas
                                         </p>
-                                        <p className="mb-3 text-xs text-[#9d8b77]">
-                                            Campos com 🔒 exigem plano superior. Confirme ou ajuste o mapeamento.
+                                        <p className="mb-3 text-xs text-[#78716c]">
+                                            Confirme os campos detectados automaticamente e ajuste os que ficaram em branco.
                                         </p>
+
+                                        {/* Aviso quando brinco não está mapeado */}
+                                        {!Object.values(importMapping).includes('brinco') && (
+                                            <div className="mb-3 flex items-start gap-2 rounded-xl border border-[#f0d5ca] bg-[#faeee8] px-3 py-2.5">
+                                                <span className="mt-0.5 flex-shrink-0 text-[#a8442a]">⚠️</span>
+                                                <p className="text-xs text-[#7a2a14]">
+                                                    <span className="font-semibold">Campo obrigatório não identificado:</span> selecione qual coluna da planilha contém o <span className="font-semibold">Brinco / ID</span> do animal para continuar.
+                                                </p>
+                                            </div>
+                                        )}
+
                                         <div className="space-y-2">
                                             {importHeaders.map((h) => {
                                                 const mapped = importMapping[h] || '';
                                                 const plan = mapped ? FIELD_PLAN[mapped] : null;
                                                 const isLocked = plan === 'paid1' || plan === 'paid2';
+                                                const isUnmapped = !mapped;
                                                 return (
-                                                <div key={h} className="flex items-center gap-3">
-                                                    <span className="w-44 truncate text-sm text-[#6d6558]" title={h}>
+                                                <div key={h} className={`flex items-center gap-3 rounded-lg px-2 py-1 transition-colors ${isUnmapped ? 'bg-[#faeee8]' : ''}`}>
+                                                    <span className="w-44 truncate text-sm text-[#78716c]" title={h}>
                                                         "{h}"
                                                     </span>
-                                                    <span className="text-[#9d8b77]">→</span>
+                                                    <span className="text-[#78716c]">→</span>
                                                     <select
                                                         value={mapped}
                                                         onChange={(e) => setImportMapping(
@@ -1755,10 +2052,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                                                 [h]: e.target.value,
                                                             }),
                                                         )}
-                                                        className="flex-1 rounded-xl border border-[#d7cab3] bg-white px-3 py-1.5 text-sm text-[#4a3f35] focus:border-[#9d7d4d] focus:outline-none"
+                                                        className={`flex-1 rounded-xl border px-3 py-1.5 text-sm text-[#44403c] focus:border-[#a8442a] focus:outline-none ${
+                                                            isUnmapped
+                                                                ? 'border-[#f0d5ca] bg-[#faeee8]'
+                                                                : 'border-[#e7e5e4] bg-white'
+                                                        }`}
                                                     >
                                                         <option value="">
-                                                            — Ignorar coluna —
+                                                            — Selecionar campo —
                                                         </option>
                                                         <optgroup label="Plano Grátis">
                                                             <option value="brinco">{FIELD_LABELS.brinco}</option>
@@ -1775,25 +2076,25 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                                             <option value="dataEntrada">{FIELD_LABELS.dataEntrada}</option>
                                                             <option value="valorCompra">{FIELD_LABELS.valorCompra}</option>
                                                         </optgroup>
-                                                        <optgroup label="Plano Pago 1 🔒">
-                                                            <option value="tatuagem">{FIELD_LABELS.tatuagem}</option>
-                                                            <option value="mae">{FIELD_LABELS.mae}</option>
-                                                            <option value="pai">{FIELD_LABELS.pai}</option>
-                                                            <option value="sisbov">{FIELD_LABELS.sisbov}</option>
+                                                        <optgroup label="── Plano Pago 1 — faça upgrade para importar ──">
+                                                            <option value="" disabled>{FIELD_LABELS.tatuagem} 🔒</option>
+                                                            <option value="" disabled>{FIELD_LABELS.mae} 🔒</option>
+                                                            <option value="" disabled>{FIELD_LABELS.pai} 🔒</option>
+                                                            <option value="" disabled>{FIELD_LABELS.sisbov} 🔒</option>
                                                         </optgroup>
-                                                        <optgroup label="Plano Pago 2 🔒">
-                                                            <option value="eid">{FIELD_LABELS.eid}</option>
-                                                            <option value="ncf">{FIELD_LABELS.ncf}</option>
-                                                            <option value="rgd">{FIELD_LABELS.rgd}</option>
-                                                            <option value="rgn">{FIELD_LABELS.rgn}</option>
-                                                            <option value="abcz">{FIELD_LABELS.abcz}</option>
+                                                        <optgroup label="── Plano Pago 2 — faça upgrade para importar ──">
+                                                            <option value="" disabled>{FIELD_LABELS.eid} 🔒</option>
+                                                            <option value="" disabled>{FIELD_LABELS.ncf} 🔒</option>
+                                                            <option value="" disabled>{FIELD_LABELS.rgd} 🔒</option>
+                                                            <option value="" disabled>{FIELD_LABELS.rgn} 🔒</option>
+                                                            <option value="" disabled>{FIELD_LABELS.abcz} 🔒</option>
                                                         </optgroup>
                                                     </select>
                                                     {mapped && !isLocked && (
-                                                        <span className="text-[#4a6741] text-sm font-bold">✓</span>
+                                                        <span className="text-[#16a34a] text-sm font-bold">✓</span>
                                                     )}
                                                     {mapped && isLocked && (
-                                                        <span className="text-[#9d7d4d] text-sm">🔒</span>
+                                                        <span className="text-[#1c1917] text-sm">🔒</span>
                                                     )}
                                                 </div>
                                                 );
@@ -1801,11 +2102,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                                         </div>
                                     </div>
 
-                                    <div className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] p-3">
-                                        <p className="mb-1 text-xs font-semibold text-[#4a3f35]">
+                                    <div className="rounded-xl border border-[#e7e5e4] bg-white p-3">
+                                        <p className="mb-1 text-xs font-semibold text-[#44403c]">
                                             Prévia — primeiros 3 animais detectados:
                                         </p>
-                                        <p className="text-xs text-[#6d6558]">
+                                        <p className="text-xs text-[#78716c]">
                                             {importRows.slice(0, 3).map((r, i) => {
                                                 const idCol = Object.entries(importMapping)
                                                     .find(([, v]) => v === 'brinco')?.[0];
@@ -1818,66 +2119,89 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
 
                             {importProgress && (
                                 <div className="space-y-3">
-                                    <div className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] p-6 text-center">
-                                        {isImporting ? (
-                                            <>
-                                                <p className="text-sm text-[#6d6558]">
-                                                    Importando...
-                                                </p>
-                                                <p className="mt-1 text-3xl font-bold text-[#2f3a2d]">
-                                                    {importProgress.success} / {importProgress.total}
-                                                </p>
-                                                <p className="mt-1 text-xs text-[#9d8b77]">animais processados</p>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <p className="text-3xl font-bold text-[#2f3a2d]">
-                                                    ✓ {importProgress.success} animais importados!
-                                                </p>
-                                                {importProgress.errors.length > 0 && (
-                                                    <p className="mt-2 text-sm text-[#8c4d39]">
-                                                        {importProgress.errors.length} linha(s) com problema
-                                                    </p>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-                                    {importProgress.errors.length > 0 && (
-                                        <div className="rounded-xl border border-[#e3d4c0] bg-white p-3 max-h-36 overflow-y-auto">
-                                            <p className="mb-1 text-xs font-semibold text-[#8c4d39]">
-                                                Erros encontrados:
+                                    {/* Progresso durante importação */}
+                                    {isImporting && (
+                                        <div className="rounded-xl border border-[#e7e5e4] bg-white p-6 text-center">
+                                            <p className="text-sm text-[#78716c]">Importando...</p>
+                                            <p className="mt-1 text-3xl font-bold text-[#1c1917]">
+                                                {importProgress.success} / {importProgress.total}
                                             </p>
-                                            {importProgress.errors.map((e, i) => (
-                                                <p key={i} className="text-xs text-[#8c4d39]">{e}</p>
-                                            ))}
+                                            <p className="mt-1 text-xs text-[#78716c]">animais processados</p>
                                         </div>
+                                    )}
+
+                                    {/* Resultado final */}
+                                    {!isImporting && (
+                                        <>
+                                            {/* Card de sucesso */}
+                                            <div className="rounded-xl border border-[#c8ddc4] bg-[#edf4eb] p-4 flex items-center gap-3">
+                                                <span className="text-2xl">✓</span>
+                                                <div>
+                                                    <p className="font-bold text-[#1c1917]">
+                                                        {importProgress.success} {importProgress.success === 1 ? 'animal importado' : 'animais importados'} com sucesso
+                                                    </p>
+                                                    {importProgress.errors.length === 0 && (
+                                                        <p className="text-sm text-[#16a34a]">Todos os registros foram processados sem erros.</p>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Card de erros — só aparece se houver erros */}
+                                            {importProgress.errors.length > 0 && (
+                                                <div className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] p-4">
+                                                    <div className="flex items-center gap-2 mb-3">
+                                                        <span className="text-lg">⚠️</span>
+                                                        <div>
+                                                            <p className="font-bold text-[#8c4d39]">
+                                                                {importProgress.errors.length} {importProgress.errors.length === 1 ? 'linha não foi importada' : 'linhas não foram importadas'}
+                                                            </p>
+                                                            <p className="text-xs text-[#8c4d39]">
+                                                                Corrija os itens abaixo na planilha e reimporte o arquivo.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                                                        {importProgress.errors.map((err, i) => (
+                                                            <div key={i} className="flex gap-2 rounded-lg bg-white/60 px-3 py-2 text-xs text-[#8c4d39]">
+                                                                <span className="flex-shrink-0 font-bold">{i + 1}.</span>
+                                                                <span>{err}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             )}
                         </div>
 
-                        <div className="flex justify-end gap-3 border-t border-[#e3d4c0] px-6 py-4">
+                        <div className="flex justify-end gap-3 border-t border-[#e7e5e4] px-6 py-4">
                             {!importProgress && !isImporting && (
                                 <>
                                     <button type="button"
                                         onClick={() => setImportModalOpen(false)}
-                                        className="rounded-xl border border-[#d7cab3] px-4 py-2 text-sm text-[#4a3f35] hover:bg-[#e8ddd0]">
+                                        className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm text-[#44403c] hover:bg-[#f5f5f4]">
                                         Cancelar
                                     </button>
-                                    <button type="button"
-                                        onClick={handleImportConfirm}
-                                        disabled={!Object.values(importMapping)
-                                            .includes('brinco')}
-                                        className="rounded-xl bg-[#9d7d4d] px-6 py-2 text-sm font-semibold text-white hover:bg-[#8f7144] disabled:cursor-not-allowed disabled:opacity-40">
-                                        Importar {importRows.length} animais
-                                    </button>
+                                    <div className="flex flex-col items-end gap-1">
+                                        {!Object.values(importMapping).includes('brinco') && (
+                                            <p className="text-xs text-[#7a2a14]">Mapeie o Brinco/ID para continuar</p>
+                                        )}
+                                        <button type="button"
+                                            onClick={handleImportConfirm}
+                                            disabled={!Object.values(importMapping).includes('brinco')}
+                                            className="rounded-xl bg-[#a8442a] px-6 py-2 text-sm font-semibold text-white hover:bg-[#933a22] disabled:cursor-not-allowed disabled:opacity-40">
+                                            Importar {importRows.length} animais
+                                        </button>
+                                    </div>
                                 </>
                             )}
                             {importProgress && !isImporting && (
                                 <button type="button"
                                     onClick={() => setImportModalOpen(false)}
-                                    className="rounded-xl bg-[#9d7d4d] px-6 py-2 text-sm font-semibold text-white hover:bg-[#8f7144]">
-                                    Concluir
+                                    className="rounded-xl bg-[#a8442a] px-6 py-2 text-sm font-semibold text-white hover:bg-[#933a22]">
+                                    {importProgress.errors.length > 0 ? 'Fechar' : 'Concluir'}
                                 </button>
                             )}
                         </div>
@@ -1897,9 +2221,19 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, mode, herdType }) => {
                 <LotDetailModal
                     lot={selectedLot}
                     onClose={() => setSelectedLot(null)}
+                    onLotUpdated={loadData}
+                    onLotDeleted={() => { setSelectedLot(null); loadData(); }}
                     mode={resolvedMode}
                 />
             )}
+            <LotePurchaseModal
+                isOpen={loteModalOpen}
+                onClose={() => setLoteModalOpen(false)}
+                farmId={farmId ?? ''}
+                paddocks={paddocks}
+                lots={lots}
+                onSuccess={loadData}
+            />
         </div>
     );
 };

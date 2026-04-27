@@ -1,0 +1,5 @@
+{
+  "name": "App de Manejo",
+  "description": "Sistema de gestão de campo para vaqueiros com suporte offline, registro de ocorrências e geolocalização.",
+  "requestFramePermissions": ["camera", "geolocation"]
+}

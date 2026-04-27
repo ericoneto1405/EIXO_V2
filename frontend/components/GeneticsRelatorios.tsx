@@ -205,7 +205,7 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                 <div className="flex items-center gap-2">
                     {reproMode === 'ESTACAO' && (
                         <select
-                            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:ring-primary dark:border-gray-700 dark:bg-dark-card dark:text-white"
+                            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#1c1917] focus:ring-[#1c1917]/10 dark:border-gray-700 dark:bg-dark-card dark:text-white"
                             value={selectedSeasonId || ''}
                             onChange={(event) => setSelectedSeasonId(event.target.value || null)}
                         >

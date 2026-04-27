@@ -480,7 +480,7 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                                     type="text"
                                     value={seasonForm.name}
                                     onChange={(event) => handleSeasonFormChange('name', event.target.value)}
-                                    className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-600 dark:bg-dark-card"
+                                    className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
                                 />
                             </div>
                             <div className="grid gap-3 sm:grid-cols-2">
@@ -490,7 +490,7 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                                         type="date"
                                         value={seasonForm.startAt}
                                         onChange={(event) => handleSeasonFormChange('startAt', event.target.value)}
-                                        className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-600 dark:bg-dark-card"
+                                        className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
                                     />
                                 </div>
                                 <div>
@@ -499,7 +499,7 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                                         type="date"
                                         value={seasonForm.endAt}
                                         onChange={(event) => handleSeasonFormChange('endAt', event.target.value)}
-                                        className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-600 dark:bg-dark-card"
+                                        className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
                                     />
                                 </div>
                             </div>
@@ -559,7 +559,7 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                         <select
                             value={eventForm.animalId}
                             onChange={(event) => handleEventFormChange('animalId', event.target.value)}
-                            className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-600 dark:bg-dark-card"
+                            className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
                         >
                             <option value="">Selecione</option>
                             {femaleAnimals.map((animal) => (
@@ -575,7 +575,7 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                             <select
                                 value={eventForm.type}
                                 onChange={(event) => handleEventFormChange('type', event.target.value)}
-                                className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-600 dark:bg-dark-card"
+                                className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
                             >
                                 <option value="COBERTURA">Cobertura</option>
                                 <option value="IATF">IATF</option>
@@ -590,7 +590,7 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                                 type="date"
                                 value={eventForm.date}
                                 onChange={(event) => handleEventFormChange('date', event.target.value)}
-                                className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-600 dark:bg-dark-card"
+                                className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
                             />
                         </div>
                     </div>
@@ -600,7 +600,7 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                             <select
                                 value={eventForm.status}
                                 onChange={(event) => handleEventFormChange('status', event.target.value)}
-                                className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-600 dark:bg-dark-card"
+                                className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
                             >
                                 <option value="PRENHE">Prenhe</option>
                                 <option value="VACIA">Vazia</option>
@@ -613,7 +613,7 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                             value={eventForm.notes}
                             onChange={(event) => handleEventFormChange('notes', event.target.value)}
                             rows={3}
-                            className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-600 dark:bg-dark-card"
+                            className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
                         />
                     </div>
                     {eventError && <p className="text-sm text-red-600 dark:text-red-400">{eventError}</p>}

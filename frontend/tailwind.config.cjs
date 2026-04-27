@@ -17,8 +17,8 @@ module.exports = {
         brand: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
       },
       colors: {
-        primary: '#9d7d4d',
-        'primary-dark': '#8f7144',
+        primary: '#a8442a',
+        'primary-dark': '#933a22',
         secondary: '#6d6558',
         light: '#ede3d0',
         dark: '#2f3a2d',

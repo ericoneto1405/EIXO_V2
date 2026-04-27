@@ -35,10 +35,10 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 };
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
-    NASCIMENTO: 'bg-green-100 text-green-800',
-    COMPRA: 'bg-blue-100 text-blue-800',
+    NASCIMENTO: 'bg-[#edf4eb] text-[#3d6b38]',
+    COMPRA: 'bg-[#e8eef8] text-[#3a5799]',
     VENDA: 'bg-amber-100 text-amber-800',
-    MORTE: 'bg-red-100 text-red-800',
+    MORTE: 'bg-[#fef2f2] text-[#8c4d39]',
 };
 
 const SANITARY_TIPO_LABELS: Record<string, string> = {
@@ -48,9 +48,9 @@ const SANITARY_TIPO_LABELS: Record<string, string> = {
 };
 
 const SANITARY_TIPO_COLORS: Record<string, string> = {
-    VACINA: 'bg-teal-100 text-teal-800',
-    VERMIFUGO: 'bg-purple-100 text-purple-800',
-    TRATAMENTO: 'bg-orange-100 text-orange-800',
+    VACINA: 'bg-[#e5f0ef] text-[#2d6b62]',
+    VERMIFUGO: 'bg-[#ede8f5] text-[#5e3d8c]',
+    TRATAMENTO: 'bg-[#fef3e2] text-[#7a5628]',
 };
 
 const calculateAge = (birthDateString?: string | null): string => {
@@ -69,14 +69,8 @@ const calculateAge = (birthDateString?: string | null): string => {
 };
 
 const CloseIcon: React.FC = () => (
-    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-    </svg>
-);
-
-const CattleIcon: React.FC = () => (
-    <svg className="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path d="M18.8 6.2c.5-.5.8-1.2.8-2s-.3-1.5-.8-2c-.5-.5-1.2-.8-2-.8s-1.5.3-2 .8L12 5 9.2 2.2c-.5-.5-1.2-.8-2-.8s-1.5.3-2 .8c-.5-.5-.8 1.2-.8 2s.3 1.5.8 2L8 9v5H7c-1.1 0-2 .9-2 2v1c0 .6.4 1 1 1h10c.6 0 1-.4 1-1v-1c0-1.1-.9-2-2-2h-1V9l2.8-2.8z" />
     </svg>
 );
 
@@ -382,7 +376,8 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             { label: 'Sexo', value: animal.sexo },
             { label: 'Idade', value: calculateAge(animal.dataNascimento) },
             { label: 'Peso Atual', value: animal.pesoAtual !== undefined && animal.pesoAtual !== null ? `${animal.pesoAtual} kg` : '—' },
-            { label: 'GMD atual', value: animal.gmd !== undefined && animal.gmd !== null ? `${animal.gmd.toFixed(2)} kg` : '—' },
+            { label: 'GMD 30 dias', value: (animal as any).gmd30 != null ? `${((animal as any).gmd30 as number).toFixed(2)} kg/dia` : '—' },
+            { label: 'GMD último intervalo', value: ((animal as any).gmdLast ?? animal.gmd) != null ? `${(((animal as any).gmdLast ?? animal.gmd) as number).toFixed(2)} kg/dia` : '—' },
             { label: 'Nascimento', value: animal.dataNascimento ? new Date(animal.dataNascimento).toLocaleDateString('pt-BR') : '—' },
         ];
         if (resolvedMode !== 'PO') return baseItems;
@@ -400,74 +395,84 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         return paddockMoves.find((move) => !move.endAt) || paddockMoves[0];
     }, [paddockMoves]);
 
-    const gmdAtual = typeof (animal as any)?.gmd === 'number' ? (animal as any).gmd : null;
+    // Preferência: gmd30 (mais estável); fallback para gmdLast ou gmd
+    const gmdAtual: number | null =
+        typeof (animal as any)?.gmd30 === 'number' ? (animal as any).gmd30 :
+        typeof (animal as any)?.gmdLast === 'number' ? (animal as any).gmdLast :
+        typeof (animal as any)?.gmd === 'number' ? (animal as any).gmd : null;
     const gmdDelta = gmdAtual !== null && nutritionPlanMeta !== null ? gmdAtual - nutritionPlanMeta : null;
 
-    const inputClass = 'mt-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary dark:border-gray-600 dark:bg-dark-card';
-    const labelClass = 'text-xs font-medium text-gray-500 dark:text-gray-400';
-    const btnPrimary = 'h-10 rounded-lg bg-primary px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-70';
+    const inputClass = 'mt-1 rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#1c1917] placeholder-[#c4b5a0] focus:border-[#a8442a] focus:outline-none';
+    const labelClass = 'text-xs font-medium text-[#78716c]';
+    const btnPrimary = 'h-10 rounded-xl bg-[#a8442a] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#933a22] disabled:cursor-not-allowed disabled:opacity-70';
     const tabClass = (tab: ModalTab) =>
-        `${activeTab === tab ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:hover:text-gray-300'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors`;
+        `${activeTab === tab
+            ? 'border-[#a8442a] text-[#a8442a] font-semibold'
+            : 'border-transparent text-[#78716c] hover:text-[#a8442a] hover:border-[#e7e5e4]'
+        } whitespace-nowrap py-3 px-1 border-b-2 text-sm transition-colors`;
 
     return (
         <div
-            className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
             onClick={onClose}
             aria-modal="true"
             role="dialog"
         >
             <div
-                className="bg-light dark:bg-dark-card rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col animate-scale-in"
+                className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-[#e7e5e4] bg-white shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
+                style={{ animation: 'scale-in 0.18s ease-out forwards' }}
             >
                 {/* Header */}
-                <header className="flex justify-between items-center p-5 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center">
-                        <CattleIcon />
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                            Detalhes:{' '}
-                            <span className="text-primary">
-                                {(animal as HerdAnimal).identificacao || animal.brinco || 'Sem identificação'}
-                            </span>
+                <header className="flex items-center justify-between border-b border-[#e7e5e4] px-6 py-5 flex-shrink-0">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#78716c] mb-0.5">Animal</p>
+                        <h2 className="font-brand text-xl font-extrabold text-[#1c1917]">
+                            {(animal as HerdAnimal).identificacao || animal.brinco || 'Sem identificação'}
                         </h2>
                     </div>
-                    <button onClick={onClose} className="p-2 rounded-full text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700">
+                    <button
+                        onClick={onClose}
+                        aria-label="Fechar"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] text-[#78716c] hover:bg-[#f5f5f4] transition-colors"
+                    >
                         <CloseIcon />
                     </button>
                 </header>
 
                 {/* Body */}
-                <div className="p-6 overflow-y-auto flex-1">
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
                     {/* Informações Gerais */}
                     <section>
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Informações Gerais</h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 bg-gray-100 dark:bg-gray-900/50 p-4 rounded-lg">
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#b0a08a] mb-3">Informações Gerais</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 rounded-2xl bg-white border border-[#e7e5e4] p-4">
                             {detailItems.map((item) => (
                                 <div key={item.label}>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{item.label}</p>
-                                    <p className="font-semibold text-gray-800 dark:text-gray-100">{item.value}</p>
+                                    <p className="text-xs text-[#78716c]">{item.label}</p>
+                                    <p className="font-semibold text-[#1c1917] text-sm">{item.value ?? '—'}</p>
                                 </div>
                             ))}
                         </div>
                     </section>
 
                     {/* Nutrição */}
-                    <section className="mt-6">
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">Nutrição atual</h3>
-                        <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-600 dark:border-gray-700 dark:bg-dark-card dark:text-gray-300">
+                    <section>
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#b0a08a] mb-3">Nutrição atual</p>
+                        <div className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-3 text-sm text-[#78716c]">
                             {isLoadingNutrition ? (
                                 <span>Carregando plano...</span>
                             ) : nutritionError ? (
-                                <span className="text-red-600 dark:text-red-400">{nutritionError}</span>
+                                <span className="text-[#8c4d39]">{nutritionError}</span>
                             ) : nutritionPlanName ? (
                                 <div className="space-y-1">
-                                    <div className="font-semibold text-gray-900 dark:text-white">{nutritionPlanName}</div>
-                                    {nutritionPlanPhase && <div className="text-xs text-gray-500">Fase: {nutritionPlanPhase}</div>}
-                                    {nutritionPlanMeta !== null && <div className="text-xs text-gray-500">Meta GMD: {nutritionPlanMeta.toFixed(2)} kg</div>}
-                                    {gmdAtual !== null && <div className="text-xs text-gray-500">GMD atual: {gmdAtual.toFixed(2)} kg</div>}
+                                    <div className="font-semibold text-[#1c1917]">{nutritionPlanName}</div>
+                                    {nutritionPlanPhase && <div className="text-xs text-[#78716c]">Fase: {nutritionPlanPhase}</div>}
+                                    {nutritionPlanMeta !== null && <div className="text-xs text-[#78716c]">Meta GMD: {nutritionPlanMeta.toFixed(2)} kg/dia</div>}
+                                    {gmdAtual !== null && <div className="text-xs text-[#78716c]">GMD 30 dias: {gmdAtual.toFixed(2)} kg/dia</div>}
                                     {gmdDelta !== null && (
-                                        <div className={`text-xs ${gmdDelta >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                                            Delta: {gmdDelta >= 0 ? '+' : ''}{gmdDelta.toFixed(2)} kg
+                                        <div className={`text-xs font-medium ${gmdDelta >= 0 ? 'text-[#3d6b38]' : 'text-[#8c4d39]'}`}>
+                                            Delta: {gmdDelta >= 0 ? '+' : ''}{gmdDelta.toFixed(2)} kg/dia
                                         </div>
                                     )}
                                 </div>
@@ -478,9 +483,9 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                     </section>
 
                     {/* Abas de Histórico */}
-                    <section className="mt-8">
-                        <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-4">Histórico</h3>
-                        <div className="border-b border-gray-200 dark:border-gray-700">
+                    <section>
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#b0a08a] mb-3">Histórico</p>
+                        <div className="border-b border-[#e7e5e4]">
                             <nav className="-mb-px flex gap-4 overflow-x-auto" aria-label="Abas">
                                 <button onClick={() => setActiveTab('weighing')} className={tabClass('weighing')}>Pesagens</button>
                                 <button onClick={() => setActiveTab('paddock')} className={tabClass('paddock')}>Pasto</button>
@@ -489,7 +494,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                             </nav>
                         </div>
 
-                        <div className="mt-6">
+                        <div className="mt-5">
                             {/* ABA: Pesagens */}
                             {activeTab === 'weighing' && (
                                 <>
@@ -506,26 +511,26 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingWeighing ? 'Salvando...' : 'Salvar pesagem'}
                                         </button>
                                     </form>
-                                    {weighingError && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{weighingError}</p>}
+                                    {weighingError && <p className="mb-4 text-sm text-[#8c4d39]">{weighingError}</p>}
                                     {isLoadingWeighings ? (
-                                        <p className="text-sm text-gray-500">Carregando pesagens...</p>
+                                        <p className="text-sm text-[#78716c]">Carregando pesagens...</p>
                                     ) : weighingHistory.length === 0 ? (
-                                        <p className="text-sm text-gray-500">Nenhuma pesagem registrada.</p>
+                                        <p className="text-sm text-[#78716c]">Nenhuma pesagem registrada.</p>
                                     ) : (
                                         <table className="w-full text-sm text-left">
-                                            <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400">
-                                                <tr>
-                                                    <th className="px-4 py-3">Data</th>
+                                            <thead>
+                                                <tr className="bg-[#f5f5f4] text-[#78716c] text-xs uppercase">
+                                                    <th className="px-4 py-3 rounded-tl-xl">Data</th>
                                                     <th className="px-4 py-3">Peso</th>
-                                                    <th className="px-4 py-3">GMD</th>
+                                                    <th className="px-4 py-3 rounded-tr-xl">GMD</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {weighingHistory.map((item) => (
-                                                    <tr key={item.id} className="border-b dark:border-gray-700">
-                                                        <td className="px-4 py-3">{new Date(item.data).toLocaleDateString('pt-BR')}</td>
-                                                        <td className="px-4 py-3">{item.peso} kg</td>
-                                                        <td className="px-4 py-3 font-medium text-green-500">{item.gmd.toFixed(2)} kg</td>
+                                                    <tr key={item.id} className="border-b border-[#e7e5e4]">
+                                                        <td className="px-4 py-3 text-[#1c1917]">{new Date(item.data).toLocaleDateString('pt-BR')}</td>
+                                                        <td className="px-4 py-3 text-[#1c1917]">{item.peso} kg</td>
+                                                        <td className="px-4 py-3 font-medium text-[#3d6b38]">{item.gmd.toFixed(2)} kg</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -537,10 +542,10 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                             {/* ABA: Pasto */}
                             {activeTab === 'paddock' && (
                                 <>
-                                    <div className="mb-4 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-dark-card">
-                                        <div className="text-xs uppercase text-gray-400">Pasto atual</div>
-                                        <div className="font-semibold text-gray-900 dark:text-white">{currentPaddockMove?.paddockName || '—'}</div>
-                                        <div className="text-xs text-gray-500">
+                                    <div className="mb-4 rounded-xl border border-[#e7e5e4] bg-white px-4 py-3 text-sm">
+                                        <div className="text-xs uppercase text-[#78716c] tracking-wide mb-0.5">Pasto atual</div>
+                                        <div className="font-semibold text-[#1c1917]">{currentPaddockMove?.paddockName || '—'}</div>
+                                        <div className="text-xs text-[#78716c]">
                                             Entrada: {currentPaddockMove?.startAt ? new Date(currentPaddockMove.startAt).toLocaleDateString('pt-BR') : '—'}
                                         </div>
                                     </div>
@@ -564,26 +569,26 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingPaddockMove ? 'Salvando...' : 'Mover'}
                                         </button>
                                     </form>
-                                    {paddockMoveError && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{paddockMoveError}</p>}
+                                    {paddockMoveError && <p className="mb-4 text-sm text-[#8c4d39]">{paddockMoveError}</p>}
                                     {isLoadingPaddockMoves ? (
-                                        <p className="text-sm text-gray-500">Carregando movimentações...</p>
+                                        <p className="text-sm text-[#78716c]">Carregando movimentações...</p>
                                     ) : paddockMoves.length === 0 ? (
-                                        <p className="text-sm text-gray-500">Nenhuma movimentação registrada.</p>
+                                        <p className="text-sm text-[#78716c]">Nenhuma movimentação registrada.</p>
                                     ) : (
                                         <table className="w-full text-sm text-left">
-                                            <thead className="text-xs uppercase bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400">
-                                                <tr>
-                                                    <th className="px-4 py-3">Pasto</th>
+                                            <thead>
+                                                <tr className="bg-[#f5f5f4] text-[#78716c] text-xs uppercase">
+                                                    <th className="px-4 py-3 rounded-tl-xl">Pasto</th>
                                                     <th className="px-4 py-3">Entrada</th>
-                                                    <th className="px-4 py-3">Saída</th>
+                                                    <th className="px-4 py-3 rounded-tr-xl">Saída</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {paddockMoves.map((move) => (
-                                                    <tr key={move.id} className="border-b dark:border-gray-700">
-                                                        <td className="px-4 py-3">{move.paddockName || '—'}</td>
-                                                        <td className="px-4 py-3">{new Date(move.startAt).toLocaleDateString('pt-BR')}</td>
-                                                        <td className="px-4 py-3">{move.endAt ? new Date(move.endAt).toLocaleDateString('pt-BR') : '—'}</td>
+                                                    <tr key={move.id} className="border-b border-[#e7e5e4]">
+                                                        <td className="px-4 py-3 text-[#1c1917]">{move.paddockName || '—'}</td>
+                                                        <td className="px-4 py-3 text-[#1c1917]">{new Date(move.startAt).toLocaleDateString('pt-BR')}</td>
+                                                        <td className="px-4 py-3 text-[#1c1917]">{move.endAt ? new Date(move.endAt).toLocaleDateString('pt-BR') : '—'}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -639,25 +644,25 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingEvent ? 'Salvando...' : 'Registrar evento'}
                                         </button>
                                     </form>
-                                    {eventsError && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{eventsError}</p>}
+                                    {eventsError && <p className="mb-4 text-sm text-[#8c4d39]">{eventsError}</p>}
                                     {isLoadingEvents ? (
-                                        <p className="text-sm text-gray-500">Carregando eventos...</p>
+                                        <p className="text-sm text-[#78716c]">Carregando eventos...</p>
                                     ) : herdEvents.length === 0 ? (
-                                        <p className="text-sm text-gray-500">Nenhum evento registrado para este animal.</p>
+                                        <p className="text-sm text-[#78716c]">Nenhum evento registrado para este animal.</p>
                                     ) : (
                                         <div className="space-y-2">
                                             {herdEvents.map((ev) => (
-                                                <div key={ev.id} className="flex flex-wrap items-start gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-dark-card">
-                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${EVENT_TYPE_COLORS[ev.type] || 'bg-gray-100 text-gray-800'}`}>
+                                                <div key={ev.id} className="flex flex-wrap items-start gap-3 rounded-xl border border-[#e7e5e4] bg-white px-4 py-3">
+                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${EVENT_TYPE_COLORS[ev.type] || 'bg-[#f5f5f4] text-[#78716c]'}`}>
                                                         {EVENT_TYPE_LABELS[ev.type] || ev.type}
                                                     </span>
-                                                    <div className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                                                    <div className="flex-1 text-sm text-[#1c1917]">
                                                         <span className="font-medium">{new Date(ev.date).toLocaleDateString('pt-BR')}</span>
-                                                        {ev.peso !== null && <span className="ml-3 text-gray-500">{ev.peso} kg</span>}
-                                                        {ev.valor !== null && <span className="ml-3 text-gray-500">R$ {ev.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
-                                                        {ev.origem && <span className="ml-3 text-gray-500">Origem: {ev.origem}</span>}
-                                                        {ev.destino && <span className="ml-3 text-gray-500">Destino: {ev.destino}</span>}
-                                                        {ev.observacoes && <p className="mt-1 text-xs text-gray-400">{ev.observacoes}</p>}
+                                                        {ev.peso !== null && <span className="ml-3 text-[#78716c]">{ev.peso} kg</span>}
+                                                        {ev.valor !== null && <span className="ml-3 text-[#78716c]">R$ {ev.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
+                                                        {ev.origem && <span className="ml-3 text-[#78716c]">Origem: {ev.origem}</span>}
+                                                        {ev.destino && <span className="ml-3 text-[#78716c]">Destino: {ev.destino}</span>}
+                                                        {ev.observacoes && <p className="mt-1 text-xs text-[#78716c]">{ev.observacoes}</p>}
                                                     </div>
                                                 </div>
                                             ))}
@@ -702,28 +707,28 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingSanitary ? 'Salvando...' : 'Registrar'}
                                         </button>
                                     </form>
-                                    {sanitaryError && <p className="mb-4 text-sm text-red-600 dark:text-red-400">{sanitaryError}</p>}
+                                    {sanitaryError && <p className="mb-4 text-sm text-[#8c4d39]">{sanitaryError}</p>}
                                     {isLoadingSanitary ? (
-                                        <p className="text-sm text-gray-500">Carregando registros...</p>
+                                        <p className="text-sm text-[#78716c]">Carregando registros...</p>
                                     ) : sanitaryRecords.length === 0 ? (
-                                        <p className="text-sm text-gray-500">Nenhum registro sanitário para este animal.</p>
+                                        <p className="text-sm text-[#78716c]">Nenhum registro sanitário para este animal.</p>
                                     ) : (
                                         <div className="space-y-2">
                                             {sanitaryRecords.map((rec) => (
-                                                <div key={rec.id} className="flex flex-wrap items-start gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-dark-card">
-                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${SANITARY_TIPO_COLORS[rec.tipo] || 'bg-gray-100 text-gray-800'}`}>
+                                                <div key={rec.id} className="flex flex-wrap items-start gap-3 rounded-xl border border-[#e7e5e4] bg-white px-4 py-3">
+                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${SANITARY_TIPO_COLORS[rec.tipo] || 'bg-[#f5f5f4] text-[#78716c]'}`}>
                                                         {SANITARY_TIPO_LABELS[rec.tipo] || rec.tipo}
                                                     </span>
-                                                    <div className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                                                    <div className="flex-1 text-sm text-[#1c1917]">
                                                         <span className="font-medium">{rec.produto}</span>
-                                                        <span className="ml-3 text-gray-500">{new Date(rec.date).toLocaleDateString('pt-BR')}</span>
-                                                        {rec.dose && <span className="ml-3 text-gray-500">Dose: {rec.dose}</span>}
+                                                        <span className="ml-3 text-[#78716c]">{new Date(rec.date).toLocaleDateString('pt-BR')}</span>
+                                                        {rec.dose && <span className="ml-3 text-[#78716c]">Dose: {rec.dose}</span>}
                                                         {rec.proximaAplicacao && (
-                                                            <span className="ml-3 text-gray-500">
+                                                            <span className="ml-3 text-[#78716c]">
                                                                 Próxima: {new Date(rec.proximaAplicacao).toLocaleDateString('pt-BR')}
                                                             </span>
                                                         )}
-                                                        {rec.observacoes && <p className="mt-1 text-xs text-gray-400">{rec.observacoes}</p>}
+                                                        {rec.observacoes && <p className="mt-1 text-xs text-[#78716c]">{rec.observacoes}</p>}
                                                     </div>
                                                 </div>
                                             ))}
@@ -739,9 +744,6 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                 @keyframes scale-in {
                     from { transform: scale(0.95); opacity: 0; }
                     to { transform: scale(1); opacity: 1; }
-                }
-                .animate-scale-in {
-                    animation: scale-in 0.2s ease-out forwards;
                 }
             `}</style>
         </div>

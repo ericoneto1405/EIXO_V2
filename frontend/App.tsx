@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import AssistantChat from './components/AssistantChat';
+import ActivityModule from './components/ActivityModule';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { buildApiUrl } from './api';
 import Sidebar from './components/Sidebar';
@@ -6,10 +8,7 @@ import Dashboard from './components/Dashboard';
 import HerdModule from './components/HerdModule';
 import Operations from './components/Operations';
 import Settings from './components/Settings';
-import AccountsPayable from './components/AccountsPayable';
-import AccountsReceivable from './components/AccountsReceivable';
-import CashFlow from './components/CashFlow';
-import DRE from './components/DRE';
+import FinanceModule from './components/FinanceModule';
 import Header from './components/Header';
 import Farms from './components/Farms';
 import FarmMap from './components/FarmMap';
@@ -26,19 +25,31 @@ import Login from './components/Login';
 import Register from './components/Register';
 import PublicLanding from './components/PublicLanding';
 import UserRegisterModal from './components/UserRegisterModal';
-import { Farm } from './types';
+import TeamPermissions from './components/TeamPermissions';
+import UpgradeScreen from './components/UpgradeScreen';
+import { Farm, WebUserCreatePayload } from './types';
+import { createWebUser } from './adapters/usersApi';
 
 interface User {
     id: string;
     name: string;
     email: string;
     modules: string[];
+    accessType?: 'WEB' | 'APP_MANEJO' | 'WEB_APP';
+    fieldProfile?: 'VAQUEIRO' | 'ADMIN_CAMPO' | null;
+    appActivationStatus?: 'PENDENTE_ATIVACAO' | 'ATIVO' | 'CODIGO_EXPIRADO' | 'BLOQUEADO' | 'APARELHO_REVOGADO' | null;
+    allowedModules?: string[];
     roles?: string[];
+    membershipRole?: string | null;
     lastFarmId?: string | null;
+    allowedFarmIds?: string[];
+    defaultFarmId?: string | null;
+    appContext?: {
+        profile: string;
+        mode: string;
+    };
     entitlements?: string[];
 }
-
-const ADMIN_EMAIL = 'admin@eixo.com';
 
 const MODULE_CATEGORIES = [
     {
@@ -55,11 +66,11 @@ const MODULE_CATEGORIES = [
     },
     {
         title: 'Financeiro',
-        modules: ['Contas a Pagar', 'Contas a Receber', 'Fluxo de Caixa', 'DRE'],
+        modules: ['Financeiro'],
     },
     {
         title: 'Operação',
-        modules: ['Operações', 'Configurações'],
+        modules: ['Operações', 'Configurações', 'Registro de Atividades'],
     },
 ];
 
@@ -67,12 +78,196 @@ const ALL_MODULES = MODULE_CATEGORIES.flatMap((category) => category.modules);
 
 const SUB_VIEW_PARENT: Record<string, string> = {
     'Mapa da Fazenda': 'Fazendas',
+    'Estruturas da Fazenda': 'Fazendas',
+    'Usuários e Permissões': 'Fazendas',
+};
+
+const UpgradeHomeIcon: React.FC = () => (
+    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 3h7v7H3V3zm11 0h7v7h-7V3zM3 14h7v7H3v-7zm11 0h7v7h-7v-7z" />
+    </svg>
+);
+
+const UpgradeNutritionIcon: React.FC = () => (
+    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 4h8M9 4v6a3 3 0 003 3 3 3 0 003-3V4M6 20h12M8 14h8" />
+    </svg>
+);
+
+const UpgradeOperationsIcon: React.FC = () => (
+    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+    </svg>
+);
+
+const UpgradeGeneticsIcon: React.FC = () => (
+    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M9 3h6" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M10 3v4.5l-3.5 9A3.5 3.5 0 009.8 21h4.4a3.5 3.5 0 003.3-4.5l-3.5-9V3" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8.5 14h7" />
+    </svg>
+);
+
+const UpgradeSuppliersIcon: React.FC = () => (
+    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M3 7h11v8H3V7z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M14 10h4.5l2.5 3v2H14v-5z" />
+        <circle cx="6" cy="19" r="1.6" />
+        <circle cx="18" cy="19" r="1.6" />
+    </svg>
+);
+
+const UpgradeFinanceIcon: React.FC = () => (
+    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M12 7v8M8.5 11.5l3.5 3.5 3.5-3.5" />
+    </svg>
+);
+
+const UpgradeChartIcon: React.FC = () => (
+    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M7 7h10M13 3l4 4-4 4M17 17H7M11 21l-4-4 4-4" />
+    </svg>
+);
+
+const UpgradeReportIcon: React.FC = () => (
+    <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M7 4h7l4 4v12a2 2 0 01-2 2H7a2 2 0 01-2-2V6a2 2 0 012-2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M14 4v4h4M9 9h2M9 13h6M9 17h6" />
+    </svg>
+);
+
+const UPGRADE_CONTENT: Record<string, {
+    accessLabels?: string[];
+    requiredPlan: 'PRO' | 'PLUS';
+    moduleName: string;
+    tagline: string;
+    benefits: string[];
+    previewItems: string[];
+    icon: React.ReactNode;
+}> = {
+    'Visão Geral': {
+        accessLabels: ['Visão Geral'],
+        requiredPlan: 'PRO',
+        moduleName: 'Visão Geral',
+        tagline: 'Toda a fazenda em uma tela — rebanho, financeiro e alertas',
+        benefits: [
+            'Veja indicadores do rebanho, da operação e do caixa sem trocar de módulo.',
+            'Acompanhe alertas e pendências logo na abertura do sistema.',
+            'Descubra desvios mais cedo e aja antes de perder dinheiro no campo.',
+        ],
+        previewItems: ['Resumo do rebanho por categoria', 'Fluxo financeiro e alertas do mês', 'Tarefas e pendências em uma única visão'],
+        icon: <UpgradeHomeIcon />,
+    },
+    'Nutrição': {
+        accessLabels: ['Nutrição'],
+        requiredPlan: 'PRO',
+        moduleName: 'Nutrição',
+        tagline: 'Controle o custo do cocho e o ganho de peso do lote',
+        benefits: [
+            'Monitore dietas, custo por lote e consumo planejado.',
+            'Cruze estratégia nutricional com desempenho do rebanho.',
+            'Tenha histórico para comparar safra, lote e fornecedor.',
+        ],
+        previewItems: ['Planos nutricionais por fase', 'Custos e consumo por lote', 'Comparativo de desempenho e meta'],
+        icon: <UpgradeNutritionIcon />,
+    },
+    'Confinamento e Contratos': {
+        accessLabels: ['Operações'],
+        requiredPlan: 'PLUS',
+        moduleName: 'Confinamento e Contratos',
+        tagline: 'Centralize contratos, operações de curral e rotinas críticas da fazenda',
+        benefits: [
+            'Organize contratos, eventos operacionais e responsabilidades em um fluxo único.',
+            'Dê previsibilidade para entradas, saídas e etapas do manejo.',
+            'Reduza falhas de comunicação entre escritório, curral e fornecedores.',
+        ],
+        previewItems: ['Linha do tempo das operações', 'Contratos com status e vencimentos', 'Checklist operacional por etapa'],
+        icon: <UpgradeOperationsIcon />,
+    },
+    'Reprodução': {
+        accessLabels: ['Eixo Genetics'],
+        requiredPlan: 'PLUS',
+        moduleName: 'Reprodução',
+        tagline: 'Acompanhe a reprodução com mais controle e menos papel solto',
+        benefits: [
+            'Registre coberturas, ciclos e decisões reprodutivas no mesmo sistema.',
+            'Ganhe histórico por matriz e mais segurança na tomada de decisão.',
+            'Diminua retrabalho entre curral, escritório e genética.',
+        ],
+        previewItems: ['Agenda reprodutiva por matriz', 'Histórico de eventos e confirmações', 'Acompanhamento de resultados por estação'],
+        icon: <UpgradeGeneticsIcon />,
+    },
+    'Eixo Acasalamento': {
+        accessLabels: ['Eixo Genetics'],
+        requiredPlan: 'PLUS',
+        moduleName: 'Eixo Acasalamento',
+        tagline: 'Planeje acasalamentos com critério e histórico técnico na mesma tela',
+        benefits: [
+            'Compare opções de acasalamento com mais rapidez.',
+            'Apoie a decisão com histórico do plantel e metas genéticas.',
+            'Padronize o processo para não depender só de memória ou planilha paralela.',
+        ],
+        previewItems: ['Sugestões por matriz e objetivo', 'Indicadores genéticos e restrições', 'Histórico consolidado do plantel'],
+        icon: <UpgradeGeneticsIcon />,
+    },
+    'Estoque e Equipamentos': {
+        accessLabels: ['Fornecedores', 'Remédios', 'Rações', 'Suplementos'],
+        requiredPlan: 'PLUS',
+        moduleName: 'Estoque e Equipamentos',
+        tagline: 'Saiba o que entra, o que sai e o que falta antes de travar a operação',
+        benefits: [
+            'Controle insumos, medicamentos e equipamentos em um só lugar.',
+            'Reduza perdas por falta de reposição ou compra fora de hora.',
+            'Tenha histórico confiável para auditoria e negociação com fornecedor.',
+        ],
+        previewItems: ['Saldo por item e almoxarifado', 'Movimentações de entrada e saída', 'Alertas de reposição e consumo'],
+        icon: <UpgradeSuppliersIcon />,
+    },
+    'Registro de Atividades': {
+        accessLabels: ['Registro de Atividades'],
+        requiredPlan: 'PRO',
+        moduleName: 'Registro de Atividades',
+        tagline: 'Padronize o trabalho diário e saiba o que foi feito, por quem e quando',
+        benefits: [
+            'Registre rotinas, tarefas e eventos operacionais com histórico claro.',
+            'Acompanhe execução da equipe sem depender de recado verbal.',
+            'Crie disciplina operacional e rastreabilidade no dia a dia.',
+        ],
+        previewItems: ['Atividades por data e responsável', 'Pendências e execução da equipe', 'Histórico operacional consultável'],
+        icon: <UpgradeReportIcon />,
+    },
+    'Gestão Comercial': {
+        requiredPlan: 'PLUS',
+        moduleName: 'Gestão Comercial',
+        tagline: 'Transforme negociação em decisão com margem, histórico e timing',
+        benefits: [
+            'Acompanhe oportunidades, preços e decisões de venda em contexto.',
+            'Conecte comercial com estoque, operação e estratégia da fazenda.',
+            'Evite vender no escuro ou perder histórico de negociação.',
+        ],
+        previewItems: ['Pipeline de negociações e compradores', 'Margem por lote e cenário de venda', 'Histórico comercial consolidado'],
+        icon: <UpgradeChartIcon />,
+    },
+    'Financeiro PRO': {
+        accessLabels: ['Financeiro'],
+        requiredPlan: 'PRO',
+        moduleName: 'Financeiro completo',
+        tagline: 'Veja para onde vai cada real da sua fazenda',
+        benefits: [
+            'Saia do controle básico e acompanhe o financeiro com profundidade.',
+            'Entenda despesas, receitas e fluxo com visão gerencial.',
+            'Ganhe clareza para decidir compra, venda e investimento.',
+        ],
+        previewItems: ['Fluxo de caixa detalhado', 'Contas a pagar e receber por status', 'Análise mensal de resultado e margem'],
+        icon: <UpgradeFinanceIcon />,
+    },
 };
 
 const AppContent: React.FC = () => {
     const location = useLocation();
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
-    const [activeView, setActiveView] = useState('Visão Geral');
+    const [activeView, setActiveView] = useState('Fazendas');
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [authScreen, setAuthScreen] = useState<'landing' | 'login' | 'register'>('landing');
@@ -80,26 +275,87 @@ const AppContent: React.FC = () => {
     const [registerMessage, setRegisterMessage] = useState<string | null>(null);
     const [registerError, setRegisterError] = useState<string | null>(null);
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+    const [usersRefreshKey, setUsersRefreshKey] = useState(0);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [farms, setFarms] = useState<Farm[]>([]);
     const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+    const canManageUsers = React.useMemo(() => {
+        const normalizedRoles = (currentUser?.roles || []).map((role) => String(role || '').trim().toLowerCase());
+        const membershipRole = String(currentUser?.membershipRole || '').trim().toUpperCase();
+        return normalizedRoles.includes('admin') || ['OWNER', 'ADMIN'].includes(membershipRole);
+    }, [currentUser]);
+    const isFreePlan = !(currentUser?.entitlements?.length);
+    // Módulos exclusivos de planos pagos — bloqueados mesmo que estejam no banco do usuário
+    const PAID_ONLY_MODULES = ['Visão Geral'];
     const currentAllowedModules = React.useMemo(() => {
         const hasNutritionEntitlement = (currentUser?.entitlements || []).some((code) =>
             ['NUTRITION', 'EIXO_NUTRITION'].includes(code),
         );
-        if (!currentUser?.modules?.length) {
-            return hasNutritionEntitlement ? ALL_MODULES : ALL_MODULES.filter((module) => module !== 'Nutrição');
+        const sourceModules = currentUser?.allowedModules?.length
+            ? currentUser.allowedModules
+            : currentUser?.modules || [];
+        if (!sourceModules.length) {
+            return ['Fazendas'];
         }
-        const filtered = currentUser.modules.map((module) => module === 'Rebanho Genética' ? 'Eixo Genetics' : module === 'Rebanho P.O.' ? 'Plantel P.O.' : module).filter((module) => ALL_MODULES.includes(module));
+        const LEGACY_MODULE_MAP: Record<string, string> = {
+            'Rebanho Genética': 'Eixo Genetics',
+            'Rebanho P.O.': 'Plantel P.O.',
+            'Contas a Pagar': 'Financeiro',
+            'Contas a Receber': 'Financeiro',
+            'Fluxo de Caixa': 'Financeiro',
+            'DRE': 'Financeiro',
+        };
+        const filtered = Array.from(new Set(
+            sourceModules
+                .map((module) => LEGACY_MODULE_MAP[module] ?? module)
+                .filter((module) => ALL_MODULES.includes(module))
+                // Bloqueia módulos pagos para usuários do plano grátis
+                .filter((module) => isFreePlan ? !PAID_ONLY_MODULES.includes(module) : true)
+        ));
         const withNutrition = hasNutritionEntitlement && !filtered.includes('Nutrição')
             ? [...filtered, 'Nutrição']
             : filtered;
-        const fallbackModules = hasNutritionEntitlement
-            ? ALL_MODULES
-            : ALL_MODULES.filter((module) => module !== 'Nutrição');
+        const fallbackModules = ['Fazendas'];
         return withNutrition.length ? withNutrition : fallbackModules;
-    }, [currentUser]);
+    }, [currentUser, isFreePlan]);
+    const registerModuleCategories = React.useMemo(
+        () =>
+            MODULE_CATEGORIES.map((category) => ({
+                ...category,
+                modules: category.modules.filter((module) => currentAllowedModules.includes(module)),
+            })).filter((category) => category.modules.length > 0),
+        [currentAllowedModules],
+    );
+    const blockedPlanLabels = React.useMemo(() => {
+        const labels = new Set<string>();
+        Object.values(UPGRADE_CONTENT).forEach((moduleConfig) => {
+            if (!moduleConfig.accessLabels?.length) {
+                return;
+            }
+            const isUnlocked = moduleConfig.accessLabels.some((label) => currentAllowedModules.includes(label));
+            if (!isUnlocked) {
+                moduleConfig.accessLabels.forEach((label) => labels.add(label));
+            }
+        });
+        if (!currentAllowedModules.includes('Gestão Comercial')) {
+            labels.add('Gestão Comercial');
+        }
+        return Array.from(labels);
+    }, [currentAllowedModules]);
     const [openFarmForm, setOpenFarmForm] = useState(false);
+    const [upgradeModal, setUpgradeModal] = useState<string | null>(null); // nome do módulo bloqueado
+    const [isSupportOpen, setIsSupportOpen] = useState(false);
+    const supportRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (supportRef.current && !supportRef.current.contains(e.target as Node)) {
+                setIsSupportOpen(false);
+            }
+        };
+        if (isSupportOpen) document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isSupportOpen]);
     const updateFarmFormQuery = React.useCallback((shouldOpen: boolean) => {
         const url = new URL(window.location.href);
         if (shouldOpen) {
@@ -123,16 +379,17 @@ const AppContent: React.FC = () => {
         [farms, selectedFarmId],
     );
     const hasSelectedFarm = Boolean(selectedFarmId);
+    const hasNoFarms = isAuthenticated && !isAuthLoading && farms.length === 0;
     const FarmRequiredPanel: React.FC<{
         title: string;
         actionLabel?: string;
         onAction?: () => void;
     }> = ({ title, actionLabel, onAction }) => (
         <div className="rounded-[14px] border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.04)] px-6 py-10 text-center">
-            <h2 className="text-[20px] font-bold leading-[24px] text-gray-900 dark:text-white">{title}</h2>
+            <h2 className="text-[20px] font-bold leading-[24px] text-[#1c1917]">{title}</h2>
             {actionLabel && onAction && (
                 <button
-                    className="mt-6 inline-flex h-10 items-center rounded-[10px] bg-primary px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-primary-dark"
+                    className="mt-6 inline-flex h-10 items-center rounded-[10px] bg-[#a8442a] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[#933a22]"
                     type="button"
                     onClick={onAction}
                 >
@@ -142,12 +399,62 @@ const AppContent: React.FC = () => {
         </div>
     );
 
-    // Basic dark mode logic for demonstration
-    React.useEffect(() => {
-        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-        }
-    }, []);
+    const FirstFarmOnboarding: React.FC = () => (
+        <div className="flex h-full flex-col items-center justify-center py-16 text-center">
+            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#f5f5f4]">
+                <svg className="h-10 w-10 text-[#1c1917]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+            </div>
+            <h2 className="font-brand text-2xl font-extrabold text-[#2f3a2d]">
+                Vamos cadastrar sua primeira fazenda
+            </h2>
+            <p className="mt-3 max-w-sm text-sm text-[#6d6558]">
+                Esse é o primeiro passo para começar a usar o sistema com rebanho, financeiro e operação.
+            </p>
+            <button
+                type="button"
+                onClick={handleRegisterFarmView}
+                className="mt-8 flex h-11 items-center gap-2 rounded-xl bg-[#a8442a] px-6 font-brand font-bold text-white shadow-md transition-colors hover:bg-[#933a22]"
+            >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Cadastrar fazenda
+            </button>
+            <p className="mt-4 text-xs text-[#b0a090]">
+                Leva menos de 1 minuto
+            </p>
+        </div>
+    );
+
+    const AppOnlyAccessPanel: React.FC = () => (
+        <div className="flex min-h-screen items-center justify-center bg-[#f5f5f4] px-6 py-10">
+            <div className="w-full max-w-xl rounded-[28px] border border-[#e7e5e4] bg-white p-8 text-center shadow-sm">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#faeee8] text-[#a8442a]">
+                    <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 5h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 8h4M9 17h6M11 20h2" />
+                    </svg>
+                </div>
+                <h1 className="mt-6 text-2xl font-bold text-[#1c1917]">Acesso exclusivo do App do Manejo</h1>
+                <p className="mt-3 text-sm leading-6 text-[#78716c]">
+                    Este usuário foi criado para operação de campo e não possui acesso ao sistema desktop.
+                </p>
+                <div className="mt-6 rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-4 text-sm text-[#78716c]">
+                    Use este acesso apenas no App do Manejo, no celular do colaborador vinculado.
+                </div>
+                <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="mt-8 inline-flex h-11 items-center justify-center rounded-xl bg-[#a8442a] px-6 font-bold text-white transition-colors hover:bg-[#933a22]"
+                >
+                    Sair
+                </button>
+            </div>
+        </div>
+    );
 
     React.useEffect(() => {
         if (hasFarmFormQuery()) {
@@ -156,7 +463,7 @@ const AppContent: React.FC = () => {
         }
     }, [hasFarmFormQuery]);
 
-    const loadFarms = React.useCallback(async () => {
+    const loadFarms = React.useCallback(async (preferredFarmId?: string | null) => {
         try {
             const response = await fetch(buildApiUrl('/farms'), {
                 credentials: 'include',
@@ -174,6 +481,10 @@ const AppContent: React.FC = () => {
                 if (!nextFarms.length) {
                     return null;
                 }
+                const preferredId = preferredFarmId || currentUser?.defaultFarmId || null;
+                if (preferredId && nextFarms.some((farm) => farm.id === preferredId)) {
+                    return preferredId;
+                }
                 if (current && nextFarms.some((farm) => farm.id === current)) {
                     return current;
                 }
@@ -184,7 +495,7 @@ const AppContent: React.FC = () => {
             setFarms([]);
             setSelectedFarmId(null);
         }
-    }, []);
+    }, [currentUser?.defaultFarmId]);
 
     const handleFarmCreated = React.useCallback(
         (farm: Farm) => {
@@ -196,7 +507,7 @@ const AppContent: React.FC = () => {
                 return [...current, farm];
             });
             setSelectedFarmId(farm.id);
-            setActiveView('Fazendas');
+            setActiveView('Visão Geral');
         },
         [],
     );
@@ -227,7 +538,7 @@ const AppContent: React.FC = () => {
                     const foundUser: User = payload.user;
                     setIsAuthenticated(true);
                     setCurrentUser(foundUser);
-                    await loadFarms();
+                    await loadFarms(foundUser.defaultFarmId || foundUser.lastFarmId || null);
                 }
             } catch (error) {
                 console.error(error);
@@ -246,7 +557,7 @@ const AppContent: React.FC = () => {
             currentAllowedModules.length &&
             !currentAllowedModules.includes(parentView)
         ) {
-            const fallbackView = currentAllowedModules[0] || 'Visão Geral';
+            const fallbackView = currentAllowedModules[0] || 'Fazendas';
             setActiveView(fallbackView);
         }
     }, [isAuthenticated, currentAllowedModules, activeView]);
@@ -272,16 +583,18 @@ const AppContent: React.FC = () => {
             setAuthError(null);
             setRegisterMessage(null);
             setRegisterError(null);
-            await loadFarms();
+            await loadFarms(foundUser.defaultFarmId || foundUser.lastFarmId || null);
 
-            const allowedModules = foundUser.modules.length ? foundUser.modules : ALL_MODULES;
+            const allowedModules = foundUser.allowedModules?.length
+                ? foundUser.allowedModules
+                : (foundUser.modules.length ? foundUser.modules : ALL_MODULES);
             if (hasFarmFormQuery()) {
                 setActiveView('Fazendas');
                 setOpenFarmForm(true);
             } else {
                 const defaultView = allowedModules.includes(activeView)
                     ? activeView
-                    : allowedModules[0] || 'Visão Geral';
+                    : allowedModules[0] || 'Fazendas';
                 setActiveView(defaultView);
             }
         } catch (error) {
@@ -297,13 +610,13 @@ const AppContent: React.FC = () => {
         setRegisterMessage('Conta criada com sucesso! Faça login para continuar.');
     }, []);
 
-    const handleRegister = async (name: string, email: string, password: string, modules: string[]) => {
-        if (currentUser?.email !== ADMIN_EMAIL) {
+    const handleRegister = async (payload: WebUserCreatePayload) => {
+        if (!canManageUsers) {
             setRegisterMessage(null);
             setRegisterError('Apenas administradores podem cadastrar usuários.');
             return;
         }
-        if (!modules.length) {
+        if (!payload.modules.length) {
             setRegisterMessage(null);
             setRegisterError('Selecione pelo menos um módulo para liberar o acesso.');
             return;
@@ -311,21 +624,18 @@ const AppContent: React.FC = () => {
         setRegisterMessage(null);
         setRegisterError(null);
         try {
-            const response = await fetch(buildApiUrl('/users'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ name, email, password, modules }),
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                setRegisterError(payload?.message || 'Erro ao cadastrar usuário.');
-                return;
-            }
+            await createWebUser(payload);
             setRegisterMessage('Usuário cadastrado com sucesso!');
+            setUsersRefreshKey((current) => current + 1);
         } catch (error) {
             console.error(error);
-            setRegisterError('Não foi possível salvar o usuário.');
+            const errorWithCode = error as Error & { code?: string };
+            if (errorWithCode?.code === 'user_limit_reached') {
+                setIsRegisterModalOpen(false);
+                setUpgradeModal('Múltiplos usuários');
+                return;
+            }
+            setRegisterError(error instanceof Error ? error.message : 'Não foi possível salvar o usuário.');
         }
     };
 
@@ -352,9 +662,21 @@ const AppContent: React.FC = () => {
         setIsRegisterModalOpen(false);
     };
 
+    const getUpgradeModuleForView = React.useCallback((view: string) => {
+        const moduleConfig = UPGRADE_CONTENT[view];
+        if (!moduleConfig) {
+            return null;
+        }
+        if (!moduleConfig.accessLabels?.length) {
+            return moduleConfig;
+        }
+        const isUnlocked = moduleConfig.accessLabels.some((label) => currentAllowedModules.includes(label));
+        return isUnlocked ? null : moduleConfig;
+    }, [currentAllowedModules]);
+
     if (isAuthLoading) {
         return (
-            <div className="min-h-screen bg-light dark:bg-dark text-gray-800 dark:text-gray-200 flex items-center justify-center">
+            <div className="flex min-h-screen items-center justify-center bg-[#f5f5f4] text-[#78716c]">
                 Carregando...
             </div>
         );
@@ -400,9 +722,28 @@ const AppContent: React.FC = () => {
         );
     }
 
+    if (currentUser?.accessType === 'APP_MANEJO') {
+        return <AppOnlyAccessPanel />;
+    }
+
     const renderContent = () => {
         // The selectedFarm state can be passed down to children components to filter data
         console.log(`Rendering view "${activeView}" for farm: "${selectedFarm?.name ?? 'Nenhuma'}"`);
+
+        const upgradeModule = getUpgradeModuleForView(activeView);
+        if (upgradeModule) {
+            return (
+                <UpgradeScreen
+                    moduleName={upgradeModule.moduleName}
+                    icon={upgradeModule.icon}
+                    tagline={upgradeModule.tagline}
+                    benefits={upgradeModule.benefits}
+                    requiredPlan={upgradeModule.requiredPlan}
+                    previewItems={upgradeModule.previewItems}
+                    onUpgrade={() => setUpgradeModal(upgradeModule.moduleName)}
+                />
+            );
+        }
 
         if (isGeneticsRoute) {
             const withFarmGuard = (content: React.ReactNode) =>
@@ -452,7 +793,7 @@ const AppContent: React.FC = () => {
                         />
                     );
                 }
-                return <NutritionModule farmId={selectedFarmId} currentUser={currentUser} />;
+                return <NutritionModule farmId={selectedFarmId} farmName={selectedFarm?.name} currentUser={currentUser} />;
             case 'Mapa da Fazenda':
                 if (!hasSelectedFarm || !selectedFarm) {
                     return (
@@ -495,7 +836,7 @@ const AppContent: React.FC = () => {
                         />
                     );
                 }
-                return <HerdModule farmId={selectedFarmId} mode="COMMERCIAL" />;
+                return <HerdModule farmId={selectedFarmId} farmName={selectedFarm?.name} mode="COMMERCIAL" isFreePlan={isFreePlan} onUpgradeRequest={() => setUpgradeModal('Plano pago')} />;
             case 'Plantel P.O.':
                 if (!hasSelectedFarm) {
                     return (
@@ -506,21 +847,38 @@ const AppContent: React.FC = () => {
                         />
                     );
                 }
-                return <HerdModule farmId={selectedFarmId} mode="PO" />;
+                return <HerdModule farmId={selectedFarmId} farmName={selectedFarm?.name} mode="PO" isFreePlan={isFreePlan} onUpgradeRequest={() => setUpgradeModal('Plano pago')} />;
             case 'Eixo Genetics':
                 return <Navigate to="/genetics/plantel" replace />;
-            case 'Contas a Pagar':
-                return <AccountsPayable />;
-            case 'Contas a Receber':
-                return <AccountsReceivable />;
-            case 'Fluxo de Caixa':
-                return <CashFlow />;
-            case 'DRE':
-                return <DRE />;
+            case 'Financeiro':
+                return <FinanceModule farmId={selectedFarmId} farmName={selectedFarm?.name} isFreePlan={isFreePlan} onUpgradeRequest={() => setUpgradeModal('Financeiro completo')} />;
+            case 'Registro de Atividades':
+                return <ActivityModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
             case 'Operações':
+            case 'Confinamento e Contratos':
                 return <Operations />;
+            case 'Estoque e Equipamentos':
+                return <Suppliers />;
             case 'Configurações':
                 return <Settings />;
+            case 'Usuários e Permissões':
+                return (
+                    <TeamPermissions
+                        farms={farms}
+                        canManageUsers={canManageUsers}
+                        currentUserId={currentUser?.id || null}
+                        isFreePlan={isFreePlan}
+                        moduleCategories={registerModuleCategories}
+                        onOpenUserRegister={() => {
+                            if (isFreePlan) {
+                                setUpgradeModal('Múltiplos usuários');
+                                return;
+                            }
+                            setIsRegisterModalOpen(true);
+                        }}
+                        refreshKey={usersRefreshKey}
+                    />
+                );
             case 'Visão Geral':
             default:
                 return <Dashboard farmId={selectedFarmId} />;
@@ -529,18 +887,13 @@ const AppContent: React.FC = () => {
 
     return (
         <>
-            <div className="relative min-h-screen overflow-hidden bg-stone-100 font-sans text-stone-900">
-                <div
-                    className="pointer-events-none absolute inset-0 opacity-24"
-                    style={{ backgroundColor: '#ede3d0' }}
-                />
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-stone-100/92 via-stone-100/95 to-stone-200/94" />
-
+            <div className="relative min-h-screen overflow-hidden bg-[#f5f5f4] font-sans text-stone-900">
                 <div className="relative flex min-h-screen">
                     <Sidebar
                         activeItem={activeView}
                         setActiveItem={setActiveView}
                         allowedModules={currentAllowedModules}
+                        lockedModules={blockedPlanLabels}
                     />
                     <main className="flex min-h-screen flex-1 flex-col overflow-hidden px-4 pb-4 pt-4 lg:px-6 lg:pb-6 lg:pt-6">
                         <Header
@@ -549,12 +902,18 @@ const AppContent: React.FC = () => {
                             onSelectFarm={setSelectedFarmId}
                             currentUser={currentUser}
                             onLogout={handleLogout}
-                            canRegisterUsers={currentUser?.email === ADMIN_EMAIL}
-                            onOpenUserRegister={() => setIsRegisterModalOpen(true)}
+                            canRegisterUsers={canManageUsers}
+                            onOpenUserRegister={() => {
+                                if (isFreePlan) {
+                                    setUpgradeModal('Múltiplos usuários');
+                                    return;
+                                }
+                                setIsRegisterModalOpen(true);
+                            }}
                         />
-                        <div className="mt-[10px] flex-1 overflow-hidden rounded-[28px] border border-stone-300 bg-white/96 backdrop-blur">
+                        <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[#e7e5e4] bg-white">
                             <div className={activeView === 'Mapa da Fazenda' ? 'h-full' : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'}>
-                                {renderContent()}
+                                {hasNoFarms && !(activeView === 'Fazendas' && openFarmForm) ? <FirstFarmOnboarding /> : renderContent()}
                             </div>
                         </div>
                     </main>
@@ -568,10 +927,110 @@ const AppContent: React.FC = () => {
                     setRegisterError(null);
                 }}
                 onRegister={handleRegister}
-                moduleCategories={MODULE_CATEGORIES}
+                farms={farms}
+                moduleCategories={registerModuleCategories}
                 error={registerError}
                 successMessage={registerMessage}
             />
+
+            {/* Modal de upgrade — módulo bloqueado */}
+            {upgradeModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                    onClick={() => setUpgradeModal(null)}>
+                    <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl"
+                        onClick={e => e.stopPropagation()}>
+                        <div className="p-6">
+                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#f5f5f4]">
+                                <svg className="h-6 w-6 text-[#1c1917]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                </svg>
+                            </div>
+                            <h3 className="font-brand text-lg font-bold text-[#1c1917]">
+                                {upgradeModal} — plano pago
+                            </h3>
+                            <p className="mt-2 text-sm text-[#78716c]">
+                                Este módulo está disponível nos planos pagos do EIXO. Faça upgrade para desbloquear{' '}
+                                <span className="font-semibold text-[#1c1917]">{upgradeModal}</span> e muito mais.
+                            </p>
+                            <div className="mt-5 rounded-xl border border-[#e7e5e4] bg-[#f5f5f4] p-4 text-sm text-[#78716c]">
+                                <p className="mb-2 font-semibold text-[#44403c]">Seu plano atual inclui:</p>
+                                <ul className="space-y-1">
+                                    <li className="flex items-center gap-2"><span className="text-[#16a34a]">✓</span> Animais ilimitados</li>
+                                    <li className="flex items-center gap-2"><span className="text-[#16a34a]">✓</span> Manejo do Rebanho</li>
+                                    <li className="flex items-center gap-2"><span className="text-[#16a34a]">✓</span> Financeiro básico</li>
+                                    <li className="flex items-center gap-2"><span className="text-[#16a34a]">✓</span> Estrutura da Fazenda</li>
+                                </ul>
+                            </div>
+                            <div className="mt-5 flex gap-3">
+                                <button type="button" onClick={() => setUpgradeModal(null)}
+                                    className="flex-1 rounded-xl border border-[#e7e5e4] py-2 text-sm font-semibold text-[#44403c] hover:bg-[#f5f5f4]">
+                                    Fechar
+                                </button>
+                                <button type="button"
+                                    onClick={() => setUpgradeModal(null)}
+                                    className="flex-1 rounded-xl bg-[#a8442a] py-2 text-sm font-semibold text-white hover:bg-[#933a22]">
+                                    Ver planos
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Modal de lock-in de exportação ── */}
+
+            {/* ── Eixo Suporte — botão flutuante + painel ── */}
+            {isAuthenticated && (
+                <div ref={supportRef} className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+                    {/* Painel de chat */}
+                    {isSupportOpen && (
+                        <div className="w-[360px] h-[560px]">
+                            <AssistantChat
+                                onClose={() => setIsSupportOpen(false)}
+                                farmId={selectedFarmId}
+                            />
+                        </div>
+                    )}
+
+                    {/* Botão FAB — balão de fala */}
+                    <div className="relative">
+                        {/* Corpo do balão */}
+                        <button
+                            type="button"
+                            onClick={() => setIsSupportOpen(prev => !prev)}
+                            className="relative flex flex-col items-center justify-center rounded-[16px] bg-[#1c1917] px-4 py-2.5 shadow-xl transition-all duration-200 hover:bg-[#292524] active:scale-95"
+                            aria-label="Abrir Eixo Suporte"
+                            style={{ minWidth: '88px' }}
+                        >
+                            {/* Logo eixo */}
+                            <img src="/logo_eixo_white.svg" alt="eixo" className="h-4 w-auto" />
+                            <span className="mt-1 border-t border-white/10 pt-1 text-[10px] font-bold uppercase leading-none tracking-[0.1em] text-[#faeee8]">
+                                suporte
+                            </span>
+
+                            {/* Ponto verde — ativo */}
+                            <span className="absolute right-2 top-1.5 flex h-2.5 w-2.5 items-center justify-center">
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
+                                <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400 ring-2 ring-[#1c1917]" />
+                            </span>
+                        </button>
+
+                        {/* Perna longa do balão — inclinada para direita */}
+                        <div
+                            className="absolute right-[18px]"
+                            style={{
+                                bottom: '-18px',
+                                width: 0,
+                                height: 0,
+                                borderLeft: '12px solid transparent',
+                                borderRight: '3px solid transparent',
+                                borderTop: '20px solid #4c4030',
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
         </>
     );
 };

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EIXO — Brand Sheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #f0e9dc;
+    --card:     #fffaf1;
+    --border:   #ddd3c0;
+    --dark:     #2a1f14;
+    --amber:    #9d7d4d;
+    --gold:     #c9a96e;
+    --muted:    #b0a08a;
+    --text:     #6d6558;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: var(--dark);
+    padding: 48px 36px;
+    min-height: 100vh;
+  }
+
+  /* ── Cabeçalho ── */
+  .doc-header { margin-bottom: 56px; }
+  .doc-header h1 {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: .22em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  .doc-header p { font-size: 12px; color: var(--text); }
+
+  /* ── Seção ── */
+  .section { margin-bottom: 60px; }
+  .section-label {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .2em; text-transform: uppercase;
+    color: var(--muted); padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+
+  /* ── Grid de logos ── */
+  .logo-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+
+  .logo-cell {
+    display: flex; flex-direction: column;
+    align-items: flex-start; gap: 14px;
+    padding: 28px 32px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    min-width: 220px;
+  }
+  .logo-cell.bg-dark   { background: var(--dark);  border-color: #4a3828; }
+  .logo-cell.bg-amber  { background: var(--amber);  border-color: #8a6d3f; }
+  .logo-cell.bg-field  { background: #e8dfd0; border-color: #cfc2ad; }
+
+  .cell-label {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .16em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  .logo-cell.bg-dark  .cell-label,
+  .logo-cell.bg-amber .cell-label { color: rgba(255,255,255,.45); }
+
+  /* ── Wordmark ── */
+  .wordmark {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 900;
+    font-size: 36px;
+    letter-spacing: -.03em;
+    line-height: 1;
+    color: var(--dark);
+    position: relative;
+    display: inline-block;
+  }
+  /* Ponto do "i" elevado — âncora visual */
+  .wordmark .dot {
+    display: inline-block;
+    position: relative;
+  }
+  /* ── Logo horizontal: símbolo + wordmark ── */
+  .logo-h {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo-v {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  /* ── Ícone de app ── */
+  .app-icon-row {
+    display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+  }
+  .app-icon-wrap {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .app-icon-wrap span {
+    font-size: 10px; font-weight: 700;
+    letter-spacing: .12em; text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── Mockup de app ── */
+  .mockup-row { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
+  .mockup-card {
+    border-radius: 20px; overflow: hidden;
+    border: 1px solid var(--border);
+    width: 260px;
+  }
+  .mockup-top {
+    padding: 28px 24px 24px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .mockup-top.dark-bg  { background: var(--dark); }
+  .mockup-top.amber-bg { background: var(--amber); }
+  .mockup-top.light-bg { background: var(--card); border-bottom: 1px solid var(--border); }
+  .mockup-body {
+    background: var(--card); padding: 16px 20px 20px;
+  }
+  .mockup-tagline {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: .06em;
+    margin-top: 4px;
+  }
+
+  hr.divider {
+    border: none; border-top: 1px solid var(--border); margin: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <h1>EIXO — Brand Sheet · Direção A: Ponto do "i"</h1>
+  <p>Como o símbolo se integra ao wordmark real em diferentes contextos</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SÍMBOLOS SVG — definidos uma vez, reutilizados
+     ════════════════════════════════════════════════════════ -->
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+
+    <!-- A1: Ponto Puro -->
+    <symbol id="sym-a1-gold" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="10" fill="#c9a96e"/>
+    </symbol>
+    <symbol id="sym-a1-white" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="10" fill="#fffaf1"/>
+    </symbol>
+    <symbol id="sym-a1-dark" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="10" fill="#2a1f14"/>
+    </symbol>
+
+    <!-- A2: Ponto + Anéis -->
+    <symbol id="sym-a2-gold" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="18" stroke="#c9a96e" stroke-width="1.2" opacity="0.25" fill="none"/>
+      <circle cx="20" cy="20" r="12" stroke="#c9a96e" stroke-width="1.4" opacity="0.55" fill="none"/>
+      <circle cx="20" cy="20" r="6"  fill="#c9a96e"/>
+    </symbol>
+    <symbol id="sym-a2-white" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="18" stroke="#fffaf1" stroke-width="1.2" opacity="0.25" fill="none"/>
+      <circle cx="20" cy="20" r="12" stroke="#fffaf1" stroke-width="1.4" opacity="0.55" fill="none"/>
+      <circle cx="20" cy="20" r="6"  fill="#fffaf1"/>
+    </symbol>
+    <symbol id="sym-a2-dark" viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="18" stroke="#2a1f14" stroke-width="1.2" opacity="0.15" fill="none"/>
+      <circle cx="20" cy="20" r="12" stroke="#2a1f14" stroke-width="1.4" opacity="0.4" fill="none"/>
+      <circle cx="20" cy="20" r="6"  fill="#2a1f14"/>
+    </symbol>
+
+    <!-- A3: Ponto + Pulso -->
+    <symbol id="sym-a3-gold" viewBox="0 0 40 40">
+      <polyline points="2,20 8,20 11,11 15,28 18,15 20,20 22,20 25,14 29,26 32,20 38,20"
+        stroke="#c9a96e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.65"/>
+      <circle cx="20" cy="20" r="4" fill="#c9a96e"/>
+    </symbol>
+    <symbol id="sym-a3-white" viewBox="0 0 40 40">
+      <polyline points="2,20 8,20 11,11 15,28 18,15 20,20 22,20 25,14 29,26 32,20 38,20"
+        stroke="#fffaf1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.65"/>
+      <circle cx="20" cy="20" r="4" fill="#fffaf1"/>
+    </symbol>
+    <symbol id="sym-a3-dark" viewBox="0 0 40 40">
+      <polyline points="2,20 8,20 11,11 15,28 18,15 20,20 22,20 25,14 29,26 32,20 38,20"
+        stroke="#2a1f14" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.4"/>
+      <circle cx="20" cy="20" r="4" fill="#2a1f14"/>
+    </symbol>
+
+    <!-- A4: Ponto + Arco -->
+    <symbol id="sym-a4-gold" viewBox="0 0 40 40">
+      <path d="M8 17 Q20 5 32 17"  stroke="#c9a96e" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.3"/>
+      <path d="M13 23 Q20 14 27 23" stroke="#c9a96e" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.65"/>
+      <circle cx="20" cy="31" r="5" fill="#c9a96e"/>
+    </symbol>
+    <symbol id="sym-a4-white" viewBox="0 0 40 40">
+      <path d="M8 17 Q20 5 32 17"  stroke="#fffaf1" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.3"/>
+      <path d="M13 23 Q20 14 27 23" stroke="#fffaf1" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.65"/>
+      <circle cx="20" cy="31" r="5" fill="#fffaf1"/>
+    </symbol>
+    <symbol id="sym-a4-dark" viewBox="0 0 40 40">
+      <path d="M8 17 Q20 5 32 17"  stroke="#2a1f14" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.2"/>
+      <path d="M13 23 Q20 14 27 23" stroke="#2a1f14" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.45"/>
+      <circle cx="20" cy="31" r="5" fill="#2a1f14"/>
+    </symbol>
+
+  </defs>
+</svg>
+
+
+<!-- ════════════════════════════════════════════
+     A1 — PONTO PURO
+     ════════════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">A1 — Ponto Puro</p>
+  <div class="logo-grid">
+
+    <div class="logo-cell">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a1-dark"/></svg>
+        <span class="wordmark" style="color:#2a1f14">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Light</span>
+    </div>
+
+    <div class="logo-cell bg-dark">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a1-gold"/></svg>
+        <span class="wordmark" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Dark</span>
+    </div>
+
+    <div class="logo-cell bg-amber">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a1-white"/></svg>
+        <span class="wordmark" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Amber</span>
+    </div>
+
+    <div class="logo-cell" style="justify-content:center; align-items:center; min-width:120px;">
+      <div class="logo-v" style="align-items:center;">
+        <svg width="44" height="44" viewBox="0 0 40 40"><use href="#sym-a1-dark"/></svg>
+        <span class="wordmark" style="color:#2a1f14; font-size:24px">eixo</span>
+      </div>
+      <span class="cell-label">Vertical</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     A2 — PONTO + ANÉIS
+     ════════════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">A2 — Ponto + Anéis &nbsp;·&nbsp; <em style="font-style:normal;color:var(--amber);font-weight:700;">Recomendada</em></p>
+  <div class="logo-grid">
+
+    <div class="logo-cell">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a2-dark"/></svg>
+        <span class="wordmark" style="color:#2a1f14">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Light</span>
+    </div>
+
+    <div class="logo-cell bg-dark">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a2-gold"/></svg>
+        <span class="wordmark" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Dark</span>
+    </div>
+
+    <div class="logo-cell bg-amber">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a2-white"/></svg>
+        <span class="wordmark" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Amber</span>
+    </div>
+
+    <div class="logo-cell bg-field">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a2-dark"/></svg>
+        <span class="wordmark" style="color:#2a1f14">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Field</span>
+    </div>
+
+    <div class="logo-cell" style="justify-content:center; align-items:center; min-width:120px;">
+      <div class="logo-v" style="align-items:center;">
+        <svg width="48" height="48" viewBox="0 0 40 40"><use href="#sym-a2-dark"/></svg>
+        <span class="wordmark" style="color:#2a1f14; font-size:24px">eixo</span>
+      </div>
+      <span class="cell-label">Vertical</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     A3 — PONTO + PULSO
+     ════════════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">A3 — Ponto + Pulso</p>
+  <div class="logo-grid">
+
+    <div class="logo-cell">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a3-dark"/></svg>
+        <span class="wordmark" style="color:#2a1f14">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Light</span>
+    </div>
+
+    <div class="logo-cell bg-dark">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a3-gold"/></svg>
+        <span class="wordmark" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Dark</span>
+    </div>
+
+    <div class="logo-cell bg-amber">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a3-white"/></svg>
+        <span class="wordmark" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Amber</span>
+    </div>
+
+    <div class="logo-cell" style="justify-content:center; align-items:center; min-width:120px;">
+      <div class="logo-v" style="align-items:center;">
+        <svg width="48" height="48" viewBox="0 0 40 40"><use href="#sym-a3-dark"/></svg>
+        <span class="wordmark" style="color:#2a1f14; font-size:24px">eixo</span>
+      </div>
+      <span class="cell-label">Vertical</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     A4 — PONTO + ARCO
+     ════════════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">A4 — Ponto + Arco</p>
+  <div class="logo-grid">
+
+    <div class="logo-cell">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a4-dark"/></svg>
+        <span class="wordmark" style="color:#2a1f14">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Light</span>
+    </div>
+
+    <div class="logo-cell bg-dark">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a4-gold"/></svg>
+        <span class="wordmark" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Dark</span>
+    </div>
+
+    <div class="logo-cell bg-amber">
+      <div class="logo-h">
+        <svg width="38" height="38" viewBox="0 0 40 40"><use href="#sym-a4-white"/></svg>
+        <span class="wordmark" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Amber</span>
+    </div>
+
+    <div class="logo-cell" style="justify-content:center; align-items:center; min-width:120px;">
+      <div class="logo-v" style="align-items:center;">
+        <svg width="48" height="48" viewBox="0 0 40 40"><use href="#sym-a4-dark"/></svg>
+        <span class="wordmark" style="color:#2a1f14; font-size:24px">eixo</span>
+      </div>
+      <span class="cell-label">Vertical</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════════
+     MOCKUPS — como aparece na sidebar do sistema
+     ════════════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">Mockup — Sidebar do sistema (A2 recomendada)</p>
+  <div class="mockup-row">
+
+    <!-- Sidebar atual sem símbolo -->
+    <div class="mockup-card">
+      <div class="mockup-top dark-bg">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.35);">Atual</span>
+        <span style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:900;font-size:42px;letter-spacing:-.03em;color:#f4eadb;line-height:1;">eixo</span>
+        <span style="font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#cdbfa8;margin-top:4px;">Gestão Pecuária de Corte</span>
+      </div>
+      <div class="mockup-body">
+        <p style="font-size:11px;color:var(--text);">Apenas o wordmark, sem símbolo</p>
+      </div>
+    </div>
+
+    <!-- Sidebar com A2 -->
+    <div class="mockup-card">
+      <div class="mockup-top dark-bg">
+        <span style="font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.35);">Com símbolo A2</span>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:4px;">
+          <svg width="44" height="44" viewBox="0 0 40 40"><use href="#sym-a2-gold"/></svg>
+          <span style="font-family:'Plus Jakarta Sans',sans-serif;font-weight:900;font-size:38px;letter-spacing:-.03em;color:#f4eadb;line-height:1;">eixo</span>
+        </div>
+        <span style="font-size:10px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#cdbfa8;margin-top:6px;">Gestão Pecuária de Corte</span>
+      </div>
+      <div class="mockup-body">
+        <p style="font-size:11px;color:var(--text);">Símbolo + wordmark horizontais</p>
+      </div>
+    </div>
+
+    <!-- Sidebar com A2 versão só símbolo (sidebar recolhida) -->
+    <div class="mockup-card" style="width:100px;">
+      <div class="mockup-top dark-bg" style="align-items:center;padding:20px 16px;">
+        <span style="font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.35);text-align:center;">Recolhida</span>
+        <svg width="48" height="48" viewBox="0 0 40 40" style="margin-top:8px;"><use href="#sym-a2-gold"/></svg>
+      </div>
+      <div class="mockup-body" style="padding:12px 14px;">
+        <p style="font-size:10px;color:var(--text);text-align:center;">Só o símbolo</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     ÍCONES DE APP — escala
+     ════════════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">Ícones de app — A2 em escala</p>
+  <div class="app-icon-row">
+
+    <!-- 120px -->
+    <div class="app-icon-wrap">
+      <svg width="120" height="120" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+        <circle cx="36" cy="36" r="26" stroke="#c9a96e" stroke-width="1.6" opacity="0.25" fill="none"/>
+        <circle cx="36" cy="36" r="18" stroke="#c9a96e" stroke-width="1.8" opacity="0.55" fill="none"/>
+        <circle cx="36" cy="36" r="9"  fill="#c9a96e"/>
+      </svg>
+      <span>120px</span>
+    </div>
+
+    <!-- 80px -->
+    <div class="app-icon-wrap">
+      <svg width="80" height="80" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+        <circle cx="36" cy="36" r="26" stroke="#c9a96e" stroke-width="1.6" opacity="0.25" fill="none"/>
+        <circle cx="36" cy="36" r="18" stroke="#c9a96e" stroke-width="1.8" opacity="0.55" fill="none"/>
+        <circle cx="36" cy="36" r="9"  fill="#c9a96e"/>
+      </svg>
+      <span>80px</span>
+    </div>
+
+    <!-- 60px -->
+    <div class="app-icon-wrap">
+      <svg width="60" height="60" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+        <circle cx="36" cy="36" r="26" stroke="#c9a96e" stroke-width="1.6" opacity="0.25" fill="none"/>
+        <circle cx="36" cy="36" r="18" stroke="#c9a96e" stroke-width="1.8" opacity="0.55" fill="none"/>
+        <circle cx="36" cy="36" r="9"  fill="#c9a96e"/>
+      </svg>
+      <span>60px</span>
+    </div>
+
+    <!-- 44px -->
+    <div class="app-icon-wrap">
+      <svg width="44" height="44" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+        <circle cx="36" cy="36" r="26" stroke="#c9a96e" stroke-width="1.6" opacity="0.25" fill="none"/>
+        <circle cx="36" cy="36" r="18" stroke="#c9a96e" stroke-width="1.8" opacity="0.55" fill="none"/>
+        <circle cx="36" cy="36" r="9"  fill="#c9a96e"/>
+      </svg>
+      <span>44px</span>
+    </div>
+
+    <!-- 32px -->
+    <div class="app-icon-wrap">
+      <svg width="32" height="32" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+        <circle cx="36" cy="36" r="18" stroke="#c9a96e" stroke-width="2" opacity="0.5" fill="none"/>
+        <circle cx="36" cy="36" r="9"  fill="#c9a96e"/>
+      </svg>
+      <span>32px</span>
+    </div>
+
+    <!-- 24px -->
+    <div class="app-icon-wrap">
+      <svg width="24" height="24" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+        <circle cx="36" cy="36" r="9" fill="#c9a96e"/>
+      </svg>
+      <span>24px</span>
+    </div>
+
+    <!-- Amber -->
+    <div class="app-icon-wrap" style="margin-left:24px;">
+      <svg width="80" height="80" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#9d7d4d"/>
+        <circle cx="36" cy="36" r="26" stroke="#fffaf1" stroke-width="1.6" opacity="0.25" fill="none"/>
+        <circle cx="36" cy="36" r="18" stroke="#fffaf1" stroke-width="1.8" opacity="0.55" fill="none"/>
+        <circle cx="36" cy="36" r="9"  fill="#fffaf1"/>
+      </svg>
+      <span>Amber</span>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

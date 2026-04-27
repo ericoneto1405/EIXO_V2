@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import type { Farm, WebUserCreatePayload } from '../types';
 
 interface ModuleCategory {
     title: string;
@@ -8,15 +9,22 @@ interface ModuleCategory {
 interface UserRegisterModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onRegister: (name: string, email: string, password: string, modules: string[]) => void;
+    farms: Farm[];
+    onRegister: (payload: WebUserCreatePayload) => void;
     moduleCategories: ModuleCategory[];
     error?: string | null;
     successMessage?: string | null;
 }
 
+const PASSWORD_POLICY_MESSAGE = 'A senha deve ter pelo menos 8 caracteres, com ao menos 1 letra e 1 número.';
+
+const isPasswordStrongEnough = (value: string) =>
+    value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value);
+
 const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
     isOpen,
     onClose,
+    farms,
     onRegister,
     moduleCategories,
     error,
@@ -26,7 +34,10 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [selectedModules, setSelectedModules] = useState<string[]>([]);
+    const [defaultFarmId, setDefaultFarmId] = useState('');
     const [modulesError, setModulesError] = useState<string | null>(null);
+    const [passwordError, setPasswordError] = useState<string | null>(null);
+    const [farmError, setFarmError] = useState<string | null>(null);
 
     const allModules = React.useMemo(
         () => moduleCategories.flatMap((category) => category.modules),
@@ -39,64 +50,85 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
             setEmail('');
             setPassword('');
             setSelectedModules(allModules);
+            setDefaultFarmId('');
             setModulesError(null);
+            setPasswordError(null);
+            setFarmError(null);
             return;
         }
         setSelectedModules(allModules);
+        setModulesError(null);
+        setPasswordError(null);
+        setFarmError(null);
     }, [isOpen, allModules]);
 
     if (!isOpen) return null;
 
     const toggleModule = (module: string) => {
-        setSelectedModules((prev) => {
-            if (prev.includes(module)) {
-                return prev.filter((item) => item !== module);
-            }
-            return [...prev, module];
-        });
+        setSelectedModules((prev) =>
+            prev.includes(module) ? prev.filter((item) => item !== module) : [...prev, module],
+        );
     };
 
     const toggleAll = () => {
-        if (selectedModules.length === allModules.length) {
-            setSelectedModules([]);
-        } else {
-            setSelectedModules(allModules);
-        }
+        setSelectedModules(selectedModules.length === allModules.length ? [] : allModules);
     };
 
     const handleSubmit = (event: React.FormEvent) => {
         event.preventDefault();
-
         if (selectedModules.length === 0) {
             setModulesError('Selecione pelo menos um módulo para liberar.');
             return;
         }
-
+        if (!defaultFarmId) {
+            setFarmError('Selecione a fazenda padrão do usuário.');
+            return;
+        }
+        if (!isPasswordStrongEnough(password)) {
+            setPasswordError(PASSWORD_POLICY_MESSAGE);
+            return;
+        }
         setModulesError(null);
-        onRegister(name, email, password, selectedModules);
+        setPasswordError(null);
+        setFarmError(null);
+        onRegister({
+            name,
+            email,
+            password,
+            modules: selectedModules,
+            defaultFarmId,
+        });
     };
 
+    const inputClass =
+        'mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-4 py-2.5 text-sm text-[#1c1917] placeholder-[#c4b5a0] focus:border-[#a8442a] focus:outline-none';
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-            <div className="bg-white dark:bg-dark-card rounded-3xl shadow-2xl max-w-lg w-full border border-gray-200 dark:border-gray-800">
-                <div className="flex items-center justify-between p-6 border-b border-gray-100 dark:border-gray-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+            <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-[#e7e5e4] bg-white shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[#e7e5e4] px-6 py-5">
                     <div>
-                        <p className="text-xs uppercase tracking-[0.3em] text-primary">Admin</p>
-                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white">Cadastrar novo usuário</h3>
+                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                            Sistema web
+                        </div>
+                        <h3 className="font-brand text-xl font-extrabold text-[#1c1917]">Novo usuário</h3>
                     </div>
                     <button
                         type="button"
-                        className="h-8 w-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700"
                         onClick={onClose}
                         aria-label="Fechar"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] text-[#78716c] hover:bg-[#f5f5f4]"
                     >
-                        X
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
                     <div>
-                        <label htmlFor="user-name" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+                        <label htmlFor="user-name" className="block text-sm font-medium text-[#78716c]">
                             Nome completo
                         </label>
                         <input
@@ -104,110 +136,150 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="mt-1 w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark px-4 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                            className={inputClass}
                             placeholder="Maria Andrade"
                             required
                         />
                     </div>
+
                     <div>
-                        <label htmlFor="user-email" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                            E-mail corporativo
+                        <label htmlFor="user-email" className="block text-sm font-medium text-[#78716c]">
+                            E-mail
                         </label>
                         <input
                             id="user-email"
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="mt-1 w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark px-4 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                            className={inputClass}
                             placeholder="nome@fazenda.com"
                             required
                         />
                     </div>
+
                     <div>
-                        <label htmlFor="user-password" className="block text-sm font-medium text-gray-700 dark:text-gray-200">
-                            Senha temporária
+                        <label htmlFor="user-password" className="block text-sm font-medium text-[#78716c]">
+                            Senha
                         </label>
                         <input
                             id="user-password"
                             type="password"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="mt-1 w-full rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-dark px-4 py-3 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                            onChange={(e) => {
+                                setPassword(e.target.value);
+                                setPasswordError(null);
+                            }}
+                            className={inputClass}
                             placeholder="••••••••"
                             required
                         />
+                        <p className="mt-1 text-xs text-[#78716c]">{PASSWORD_POLICY_MESSAGE}</p>
+                        {passwordError && (
+                            <p className="mt-2 text-xs font-medium text-[#8c4d39]">{passwordError}</p>
+                        )}
                     </div>
 
-                    <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-4">
-                        <div className="flex items-center justify-between mb-3">
+                    <div>
+                        <label htmlFor="user-default-farm" className="block text-sm font-medium text-[#78716c]">
+                            Fazenda padrão
+                        </label>
+                        <select
+                            id="user-default-farm"
+                            value={defaultFarmId}
+                            onChange={(e) => {
+                                setDefaultFarmId(e.target.value);
+                                setFarmError(null);
+                            }}
+                            className={inputClass}
+                            required
+                        >
+                            <option value="">Selecione a fazenda</option>
+                            {farms.map((farm) => (
+                                <option key={farm.id} value={farm.id}>
+                                    {farm.name}
+                                </option>
+                            ))}
+                        </select>
+                        {farmError && (
+                            <p className="mt-2 text-xs font-medium text-[#8c4d39]">{farmError}</p>
+                        )}
+                    </div>
+
+                    <div className="rounded-2xl border border-[#e7e5e4] bg-white p-4">
+                        <div className="mb-3 flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-semibold text-gray-900 dark:text-white">Liberar módulos</p>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">Escolha quais áreas o usuário poderá acessar.</p>
+                                <p className="text-sm font-semibold text-[#1c1917]">Liberar módulos</p>
+                                <p className="text-xs text-[#78716c]">Escolha quais áreas o usuário poderá acessar.</p>
                             </div>
                             <button
                                 type="button"
                                 onClick={toggleAll}
-                                className="text-xs font-semibold text-primary hover:underline"
+                                className="text-xs font-semibold text-[#1c1917] hover:text-[#292524] hover:underline"
                             >
                                 {selectedModules.length === allModules.length ? 'Remover todos' : 'Selecionar todos'}
                             </button>
                         </div>
-                        <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
+
+                        <div className="max-h-56 space-y-3 overflow-y-auto pr-1">
                             {moduleCategories.map((category) => (
                                 <div key={category.title}>
-                                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-1">
+                                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#b0a08a]">
                                         {category.title}
                                     </p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {category.modules.map((module) => (
-                                            <label
-                                                key={module}
-                                                className={`flex items-center space-x-2 rounded-xl border px-3 py-2 text-sm ${
-                                                    selectedModules.includes(module)
-                                                        ? 'border-primary bg-primary/5 text-primary'
-                                                        : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
-                                                }`}
-                                            >
-                                                <input
-                                                    type="checkbox"
-                                                    className="rounded text-primary focus:ring-primary"
-                                                    checked={selectedModules.includes(module)}
-                                                    onChange={() => toggleModule(module)}
-                                                />
-                                                <span>{module}</span>
-                                            </label>
-                                        ))}
+                                    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                                        {category.modules.map((module) => {
+                                            const isSelected = selectedModules.includes(module);
+                                            return (
+                                                <label
+                                                    key={module}
+                                                    className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm transition-colors ${
+                                                        isSelected
+                                                            ? 'border-[#a8442a] bg-[#faeee8] text-[#7a2a14]'
+                                                            : 'border-[#e7e5e4] bg-white text-[#78716c] hover:border-[#c4b5a0]'
+                                                    }`}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        className="accent-[#a8442a]"
+                                                        checked={isSelected}
+                                                        onChange={() => toggleModule(module)}
+                                                    />
+                                                    <span className="font-medium">{module}</span>
+                                                </label>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ))}
                         </div>
+
                         {modulesError && (
-                            <p className="mt-3 text-xs text-red-500">{modulesError}</p>
+                            <p className="mt-3 text-xs font-medium text-[#8c4d39]">{modulesError}</p>
                         )}
                     </div>
 
                     {error && (
-                        <div className="rounded-2xl bg-red-50 text-red-600 text-sm px-4 py-3 dark:bg-red-500/10 dark:text-red-300">
+                        <div className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-4 py-3 text-sm text-[#8c4d39]">
                             {error}
                         </div>
                     )}
                     {successMessage && !error && (
-                        <div className="rounded-2xl bg-green-50 text-green-700 text-sm px-4 py-3 dark:bg-green-500/10 dark:text-green-300">
+                        <div className="rounded-xl border border-[#b6d4b0] bg-[#edf4eb] px-4 py-3 text-sm text-[#16a34a]">
                             {successMessage}
                         </div>
                     )}
 
-                    <div className="flex items-center justify-end space-x-3 pt-2">
+                    <div className="flex items-center justify-end gap-3 pt-1">
                         <button
                             type="button"
-                            className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"
                             onClick={onClose}
+                            className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#78716c] hover:bg-[#f5f5f4]"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
-                            className="px-6 py-2 rounded-xl bg-primary text-white font-semibold hover:bg-primary-dark transition-colors"
+                            className="rounded-xl bg-[#a8442a] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#933a22]"
                         >
                             Salvar usuário
                         </button>

@@ -50,6 +50,11 @@ export interface Alert {
     id: string;
     message: string;
     type: 'info' | 'warning' | 'critical';
+    source?: string;
+    sourceType?: string;
+    sourceId?: string | null;
+    farmId?: string;
+    createdAt?: string | null;
 }
 
 export interface WeighingHistory {
@@ -143,4 +148,71 @@ export interface Farm {
     paddocks: Paddock[];
     createdAt: string;
     userId?: string;
+}
+
+export interface ManagedUser {
+    id: string;
+    name: string;
+    email: string;
+    modules: string[];
+    roles: string[];
+    accessType: 'WEB' | 'APP_MANEJO' | 'WEB_APP';
+    fieldProfile: 'VAQUEIRO' | 'ADMIN_CAMPO' | null;
+    appActivationStatus: 'PENDENTE_ATIVACAO' | 'ATIVO' | 'CODIGO_EXPIRADO' | 'BLOQUEADO' | 'APARELHO_REVOGADO' | null;
+    membershipRole: string | null;
+    lastFarmId: string | null;
+    allowedFarmIds: string[];
+    defaultFarmId: string | null;
+    activeAppCode?: {
+        createdAt?: string | null;
+        expiresAt?: string | null;
+        usedAt?: string | null;
+        revokedAt?: string | null;
+    } | null;
+    activeAppDevice?: {
+        id: string;
+        deviceLabel?: string | null;
+        platform?: string | null;
+        appVersion?: string | null;
+        activatedAt?: string | null;
+        lastSeenAt?: string | null;
+    } | null;
+    appContext?: {
+        profile?: string;
+        mode?: string;
+    } | null;
+    createdAt?: string | null;
+}
+
+export interface WebUserCreatePayload {
+    name: string;
+    email: string;
+    password: string;
+    modules: string[];
+    defaultFarmId?: string | null;
+}
+
+export interface WebUserUpdatePayload {
+    name: string;
+    email: string;
+    modules: string[];
+    defaultFarmId?: string | null;
+}
+
+export interface FieldCollaboratorCreatePayload {
+    name: string;
+    fieldProfile: 'VAQUEIRO' | 'ADMIN_CAMPO';
+    defaultFarmId: string;
+}
+
+export interface FieldCollaboratorUpdatePayload {
+    name: string;
+    fieldProfile: 'VAQUEIRO' | 'ADMIN_CAMPO';
+    defaultFarmId: string;
+}
+
+export interface AppActivationCodePayload {
+    code: string;
+    expiresAt: string;
+    userId: string;
 }

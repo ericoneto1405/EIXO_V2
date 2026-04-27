@@ -310,3 +310,50 @@ export const createSanitaryRecord = async (
     }
     return data.record;
 };
+
+export const updateLot = async (
+    lotId: string,
+    herdType: HerdType,
+    payload: { name: string; notes?: string },
+): Promise<HerdLot> => {
+    const endpoint = herdType === 'PO' ? `/po/lots/${lotId}` : `/lots/${lotId}`;
+    const response = await fetch(buildApiUrl(endpoint), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data?.message || 'Erro ao editar lote.');
+    return data.lot;
+};
+
+export const deleteLot = async (lotId: string, herdType: HerdType): Promise<void> => {
+    const endpoint = herdType === 'PO' ? `/po/lots/${lotId}` : `/lots/${lotId}`;
+    const response = await fetch(buildApiUrl(endpoint), {
+        method: 'DELETE',
+        credentials: 'include',
+    });
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.message || 'Erro ao excluir lote.');
+    }
+};
+
+export const updateAnimalLot = async (
+    animalId: string,
+    herdType: HerdType,
+    lotId: string | null,
+): Promise<void> => {
+    const endpoint = herdType === 'PO' ? `/po/animals/${animalId}` : `/animals/${animalId}`;
+    const response = await fetch(buildApiUrl(endpoint), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ lotId }),
+    });
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.message || 'Erro ao atualizar animal.');
+    }
+};

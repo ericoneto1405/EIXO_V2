@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>EIXO — Direção B: o "x"</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #f0e9dc;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #2a1f14;
+    padding: 48px 36px;
+    min-height: 100vh;
+  }
+  .doc-header { margin-bottom: 52px; }
+  .doc-header h1 { font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #b0a08a; margin-bottom: 4px; }
+  .doc-header p { font-size: 12px; color: #6d6558; max-width: 480px; line-height: 1.6; }
+
+  .section { margin-bottom: 64px; }
+  .section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase;
+    color: #b0a08a; padding-bottom: 12px; border-bottom: 1px solid #ddd3c0; margin-bottom: 28px;
+  }
+  .concept {
+    font-size: 12px; color: #9d8b77; margin-bottom: 22px; line-height: 1.6; max-width: 520px;
+  }
+
+  .logo-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+  .logo-cell {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+    padding: 28px 32px; border-radius: 20px;
+    border: 1px solid #ddd3c0; background: #fffaf1;
+    min-width: 220px;
+  }
+  .logo-cell.dark  { background: #2a1f14; border-color: #4a3828; }
+  .logo-cell.amber { background: #9d7d4d; border-color: #8a6d3f; }
+  .logo-cell.field { background: #e8dfd0; border-color: #cfc2ad; }
+
+  .cell-label { font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #b0a08a; }
+  .logo-cell.dark .cell-label,
+  .logo-cell.amber .cell-label { color: rgba(255,255,255,.35); }
+
+  .logo-h { display: flex; align-items: center; gap: 14px; }
+  .logo-v { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  .wm { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 900; font-size: 36px; letter-spacing: -.03em; line-height: 1; }
+
+  /* Escala */
+  .scale-row { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+  .scale-item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .scale-item span { font-size: 10px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #b0a08a; }
+
+  /* Nota */
+  .note { padding: 20px 24px; background: #fffaf1; border: 1px solid #ddd3c0; border-radius: 16px; max-width: 600px; margin-top: 8px; }
+  .note-title { font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #b0a08a; margin-bottom: 10px; }
+  .note p { font-size: 13px; color: #6d6558; line-height: 1.7; }
+  .note strong { color: #2a1f14; }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <h1>EIXO — Direção B · O "x" como símbolo</h1>
+  <p>Quatro variações que evoluem a letra "x" do wordmark em símbolo autônomo, com referência ao cruzamento genético do rebanho.</p>
+</div>
+
+<!-- SVG defs -->
+<svg width="0" height="0" style="position:absolute">
+<defs>
+
+  <!-- B1: X Geométrico puro — bold, limpo, direto -->
+  <symbol id="b1-gold" viewBox="0 0 60 60">
+    <line x1="14" y1="14" x2="46" y2="46" stroke="#c9a96e" stroke-width="9" stroke-linecap="round"/>
+    <line x1="46" y1="14" x2="14" y2="46" stroke="#c9a96e" stroke-width="9" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="b1-white" viewBox="0 0 60 60">
+    <line x1="14" y1="14" x2="46" y2="46" stroke="#fffaf1" stroke-width="9" stroke-linecap="round"/>
+    <line x1="46" y1="14" x2="14" y2="46" stroke="#fffaf1" stroke-width="9" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="b1-dark" viewBox="0 0 60 60">
+    <line x1="14" y1="14" x2="46" y2="46" stroke="#2a1f14" stroke-width="9" stroke-linecap="round"/>
+    <line x1="46" y1="14" x2="14" y2="46" stroke="#2a1f14" stroke-width="9" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- B2: X Cromossomo — braços com espessura variável, como cromossomo X -->
+  <symbol id="b2-gold" viewBox="0 0 60 60">
+    <!-- Braço superior esquerdo → centro -->
+    <path d="M13 13 Q24 24 30 30" stroke="#c9a96e" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <!-- Braço superior direito → centro -->
+    <path d="M47 13 Q36 24 30 30" stroke="#c9a96e" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <!-- Braço inferior esquerdo → centro -->
+    <path d="M13 47 Q24 36 30 30" stroke="#c9a96e" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <!-- Braço inferior direito → centro -->
+    <path d="M47 47 Q36 36 30 30" stroke="#c9a96e" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <!-- Centrômero — ponto de cruzamento -->
+    <circle cx="30" cy="30" r="5" fill="#c9a96e"/>
+  </symbol>
+  <symbol id="b2-white" viewBox="0 0 60 60">
+    <path d="M13 13 Q24 24 30 30" stroke="#fffaf1" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M47 13 Q36 24 30 30" stroke="#fffaf1" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M13 47 Q24 36 30 30" stroke="#fffaf1" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M47 47 Q36 36 30 30" stroke="#fffaf1" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <circle cx="30" cy="30" r="5" fill="#fffaf1"/>
+  </symbol>
+  <symbol id="b2-dark" viewBox="0 0 60 60">
+    <path d="M13 13 Q24 24 30 30" stroke="#2a1f14" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M47 13 Q36 24 30 30" stroke="#2a1f14" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M13 47 Q24 36 30 30" stroke="#2a1f14" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <path d="M47 47 Q36 36 30 30" stroke="#2a1f14" stroke-width="7" stroke-linecap="round" fill="none"/>
+    <circle cx="30" cy="30" r="5" fill="#2a1f14"/>
+  </symbol>
+
+  <!-- B3: X dentro do círculo — ferro de marcar -->
+  <symbol id="b3-gold" viewBox="0 0 60 60">
+    <circle cx="30" cy="30" r="22" stroke="#c9a96e" stroke-width="2.5" fill="none"/>
+    <line x1="18" y1="18" x2="42" y2="42" stroke="#c9a96e" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="42" y1="18" x2="18" y2="42" stroke="#c9a96e" stroke-width="4.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="b3-white" viewBox="0 0 60 60">
+    <circle cx="30" cy="30" r="22" stroke="#fffaf1" stroke-width="2.5" fill="none"/>
+    <line x1="18" y1="18" x2="42" y2="42" stroke="#fffaf1" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="42" y1="18" x2="18" y2="42" stroke="#fffaf1" stroke-width="4.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="b3-dark" viewBox="0 0 60 60">
+    <circle cx="30" cy="30" r="22" stroke="#2a1f14" stroke-width="2.5" fill="none"/>
+    <line x1="18" y1="18" x2="42" y2="42" stroke="#2a1f14" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="42" y1="18" x2="18" y2="42" stroke="#2a1f14" stroke-width="4.5" stroke-linecap="round"/>
+  </symbol>
+
+  <!-- B4: X com dupla hélice — cruzamento + DNA -->
+  <symbol id="b4-gold" viewBox="0 0 60 60">
+    <!-- Fio 1: diagonal descendente esquerda→direita -->
+    <path d="M12 12 C20 18, 25 22, 30 30 C35 38, 40 42, 48 48"
+      stroke="#c9a96e" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <!-- Fio 2: diagonal descendente direita→esquerda -->
+    <path d="M48 12 C40 18, 35 22, 30 30 C25 38, 20 42, 12 48"
+      stroke="#c9a96e" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <!-- Barras transversais da hélice — pontes -->
+    <line x1="19" y1="19" x2="41" y2="19" stroke="#c9a96e" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+    <line x1="14" y1="25" x2="46" y2="35" stroke="#c9a96e" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+    <line x1="46" y1="25" x2="14" y2="35" stroke="#c9a96e" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+    <line x1="19" y1="41" x2="41" y2="41" stroke="#c9a96e" stroke-width="2" stroke-linecap="round" opacity="0.45"/>
+    <!-- Ponto de cruzamento central -->
+    <circle cx="30" cy="30" r="4" fill="#2a1f14"/>
+    <circle cx="30" cy="30" r="2.5" fill="#c9a96e"/>
+  </symbol>
+  <symbol id="b4-white" viewBox="0 0 60 60">
+    <path d="M12 12 C20 18, 25 22, 30 30 C35 38, 40 42, 48 48"
+      stroke="#fffaf1" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M48 12 C40 18, 35 22, 30 30 C25 38, 20 42, 12 48"
+      stroke="#fffaf1" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <line x1="19" y1="19" x2="41" y2="19" stroke="#fffaf1" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+    <line x1="14" y1="25" x2="46" y2="35" stroke="#fffaf1" stroke-width="2" stroke-linecap="round" opacity="0.25"/>
+    <line x1="46" y1="25" x2="14" y2="35" stroke="#fffaf1" stroke-width="2" stroke-linecap="round" opacity="0.25"/>
+    <line x1="19" y1="41" x2="41" y2="41" stroke="#fffaf1" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+    <circle cx="30" cy="30" r="4" fill="#9d7d4d"/>
+    <circle cx="30" cy="30" r="2.5" fill="#fffaf1"/>
+  </symbol>
+  <symbol id="b4-dark" viewBox="0 0 60 60">
+    <path d="M12 12 C20 18, 25 22, 30 30 C35 38, 40 42, 48 48"
+      stroke="#2a1f14" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <path d="M48 12 C40 18, 35 22, 30 30 C25 38, 20 42, 12 48"
+      stroke="#2a1f14" stroke-width="4" stroke-linecap="round" fill="none"/>
+    <line x1="19" y1="19" x2="41" y2="19" stroke="#2a1f14" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
+    <line x1="14" y1="25" x2="46" y2="35" stroke="#2a1f14" stroke-width="2" stroke-linecap="round" opacity="0.2"/>
+    <line x1="46" y1="25" x2="14" y2="35" stroke="#2a1f14" stroke-width="2" stroke-linecap="round" opacity="0.2"/>
+    <line x1="19" y1="41" x2="41" y2="41" stroke="#2a1f14" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
+    <circle cx="30" cy="30" r="4" fill="#f0e9dc"/>
+    <circle cx="30" cy="30" r="2.5" fill="#2a1f14"/>
+  </symbol>
+
+</defs>
+</svg>
+
+
+<!-- ══════════════════════════════════════
+     B1 — X GEOMÉTRICO PURO
+     ══════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">B1 — X Geométrico Puro</p>
+  <p class="concept">O "x" do wordmark como símbolo direto. Força máxima, sem ambiguidade. Remete ao cruzamento de raças e ao próprio nome da marca.</p>
+  <div class="logo-grid">
+
+    <div class="logo-cell">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b1-dark"/></svg>
+        <span class="wm" style="color:#2a1f14">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Light</span>
+    </div>
+
+    <div class="logo-cell dark">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b1-gold"/></svg>
+        <span class="wm" style="color:#f4eadb">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Dark</span>
+    </div>
+
+    <div class="logo-cell amber">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b1-white"/></svg>
+        <span class="wm" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Amber</span>
+    </div>
+
+    <div class="logo-cell" style="align-items:center; min-width:130px;">
+      <div class="logo-v">
+        <svg width="48" height="48" viewBox="0 0 60 60"><use href="#b1-dark"/></svg>
+        <span class="wm" style="color:#2a1f14; font-size:26px">eixo</span>
+      </div>
+      <span class="cell-label">Vertical</span>
+    </div>
+
+    <!-- Ícone app -->
+    <div class="logo-cell" style="align-items:center; min-width:100px;">
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+        <line x1="20" y1="20" x2="52" y2="52" stroke="#c9a96e" stroke-width="9" stroke-linecap="round"/>
+        <line x1="52" y1="20" x2="20" y2="52" stroke="#c9a96e" stroke-width="9" stroke-linecap="round"/>
+      </svg>
+      <span class="cell-label">App Icon</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     B2 — X CROMOSSOMO
+     ══════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">B2 — X Cromossomo &nbsp;·&nbsp; <span style="color:#9d7d4d;font-weight:700;">Recomendada</span></p>
+  <p class="concept">Os quatro braços convergem para um centrômero central — estrutura real do cromossomo X. Referência genética precisa e elegante. Quem conhece reconhece; quem não conhece vê apenas um símbolo de força.</p>
+  <div class="logo-grid">
+
+    <div class="logo-cell">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b2-dark"/></svg>
+        <span class="wm" style="color:#2a1f14">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Light</span>
+    </div>
+
+    <div class="logo-cell dark">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b2-gold"/></svg>
+        <span class="wm" style="color:#f4eadb">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Dark</span>
+    </div>
+
+    <div class="logo-cell amber">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b2-white"/></svg>
+        <span class="wm" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Amber</span>
+    </div>
+
+    <div class="logo-cell field">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b2-dark"/></svg>
+        <span class="wm" style="color:#2a1f14">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Field</span>
+    </div>
+
+    <div class="logo-cell" style="align-items:center; min-width:130px;">
+      <div class="logo-v">
+        <svg width="52" height="52" viewBox="0 0 60 60"><use href="#b2-dark"/></svg>
+        <span class="wm" style="color:#2a1f14; font-size:26px">eixo</span>
+      </div>
+      <span class="cell-label">Vertical</span>
+    </div>
+
+    <div class="logo-cell" style="align-items:center; min-width:100px;">
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+        <path d="M16 16 Q27 27 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+        <path d="M56 16 Q45 27 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+        <path d="M16 56 Q27 45 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+        <path d="M56 56 Q45 45 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+        <circle cx="36" cy="36" r="6" fill="#c9a96e"/>
+      </svg>
+      <span class="cell-label">App Icon</span>
+    </div>
+
+  </div>
+
+  <!-- Escala B2 -->
+  <div style="margin-top:28px;">
+    <p class="concept" style="margin-bottom:18px;">Teste de escala</p>
+    <div class="scale-row">
+      <div class="scale-item">
+        <svg width="120" height="120" viewBox="0 0 72 72" fill="none">
+          <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+          <path d="M16 16 Q27 27 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M56 16 Q45 27 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M16 56 Q27 45 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M56 56 Q45 45 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <circle cx="36" cy="36" r="6" fill="#c9a96e"/>
+        </svg>
+        <span>120px</span>
+      </div>
+      <div class="scale-item">
+        <svg width="80" height="80" viewBox="0 0 72 72" fill="none">
+          <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+          <path d="M16 16 Q27 27 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M56 16 Q45 27 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M16 56 Q27 45 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M56 56 Q45 45 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <circle cx="36" cy="36" r="6" fill="#c9a96e"/>
+        </svg>
+        <span>80px</span>
+      </div>
+      <div class="scale-item">
+        <svg width="60" height="60" viewBox="0 0 72 72" fill="none">
+          <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+          <path d="M16 16 Q27 27 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M56 16 Q45 27 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M16 56 Q27 45 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M56 56 Q45 45 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <circle cx="36" cy="36" r="6" fill="#c9a96e"/>
+        </svg>
+        <span>60px</span>
+      </div>
+      <div class="scale-item">
+        <svg width="44" height="44" viewBox="0 0 72 72" fill="none">
+          <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+          <path d="M16 16 Q27 27 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M56 16 Q45 27 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M16 56 Q27 45 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M56 56 Q45 45 36 36" stroke="#c9a96e" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <circle cx="36" cy="36" r="6" fill="#c9a96e"/>
+        </svg>
+        <span>44px</span>
+      </div>
+      <div class="scale-item">
+        <svg width="32" height="32" viewBox="0 0 72 72" fill="none">
+          <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+          <path d="M16 16 Q27 27 36 36" stroke="#c9a96e" stroke-width="9" stroke-linecap="round" fill="none"/>
+          <path d="M56 16 Q45 27 36 36" stroke="#c9a96e" stroke-width="9" stroke-linecap="round" fill="none"/>
+          <path d="M16 56 Q27 45 36 36" stroke="#c9a96e" stroke-width="9" stroke-linecap="round" fill="none"/>
+          <path d="M56 56 Q45 45 36 36" stroke="#c9a96e" stroke-width="9" stroke-linecap="round" fill="none"/>
+          <circle cx="36" cy="36" r="7" fill="#c9a96e"/>
+        </svg>
+        <span>32px</span>
+      </div>
+      <div class="scale-item">
+        <svg width="24" height="24" viewBox="0 0 72 72" fill="none">
+          <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+          <path d="M18 18 Q27 27 36 36" stroke="#c9a96e" stroke-width="10" stroke-linecap="round" fill="none"/>
+          <path d="M54 18 Q45 27 36 36" stroke="#c9a96e" stroke-width="10" stroke-linecap="round" fill="none"/>
+          <path d="M18 54 Q27 45 36 36" stroke="#c9a96e" stroke-width="10" stroke-linecap="round" fill="none"/>
+          <path d="M54 54 Q45 45 36 36" stroke="#c9a96e" stroke-width="10" stroke-linecap="round" fill="none"/>
+        </svg>
+        <span>24px</span>
+      </div>
+      <div class="scale-item" style="margin-left:20px;">
+        <svg width="80" height="80" viewBox="0 0 72 72" fill="none">
+          <rect width="72" height="72" rx="18" fill="#9d7d4d"/>
+          <path d="M16 16 Q27 27 36 36" stroke="#fffaf1" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M56 16 Q45 27 36 36" stroke="#fffaf1" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M16 56 Q27 45 36 36" stroke="#fffaf1" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <path d="M56 56 Q45 45 36 36" stroke="#fffaf1" stroke-width="8" stroke-linecap="round" fill="none"/>
+          <circle cx="36" cy="36" r="6" fill="#fffaf1"/>
+        </svg>
+        <span>Amber</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     B3 — X + CÍRCULO (FERRO DE MARCAR)
+     ══════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">B3 — X + Círculo · Ferro de Marcar</p>
+  <p class="concept">O X inscrito num círculo replica a linguagem visual dos ferros de marcar gado — prática centenária da pecuária brasileira. Dupla referência: cruzamento genético + identidade do rebanho.</p>
+  <div class="logo-grid">
+
+    <div class="logo-cell">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b3-dark"/></svg>
+        <span class="wm" style="color:#2a1f14">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Light</span>
+    </div>
+
+    <div class="logo-cell dark">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b3-gold"/></svg>
+        <span class="wm" style="color:#f4eadb">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Dark</span>
+    </div>
+
+    <div class="logo-cell amber">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b3-white"/></svg>
+        <span class="wm" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Amber</span>
+    </div>
+
+    <div class="logo-cell" style="align-items:center; min-width:130px;">
+      <div class="logo-v">
+        <svg width="52" height="52" viewBox="0 0 60 60"><use href="#b3-dark"/></svg>
+        <span class="wm" style="color:#2a1f14; font-size:26px">eixo</span>
+      </div>
+      <span class="cell-label">Vertical</span>
+    </div>
+
+    <div class="logo-cell" style="align-items:center; min-width:100px;">
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+        <circle cx="36" cy="36" r="24" stroke="#c9a96e" stroke-width="2.5" fill="none"/>
+        <line x1="20" y1="20" x2="52" y2="52" stroke="#c9a96e" stroke-width="5" stroke-linecap="round"/>
+        <line x1="52" y1="20" x2="20" y2="52" stroke="#c9a96e" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+      <span class="cell-label">App Icon</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════
+     B4 — X DUPLA HÉLICE
+     ══════════════════════════════════════ -->
+<div class="section">
+  <p class="section-label">B4 — X + Dupla Hélice · DNA do Rebanho</p>
+  <p class="concept">Os dois fios do X se curvam levemente, como uma dupla hélice de DNA. Pequenas "pontes" entre os fios reforçam a referência genética. O mais técnico e específico das variações.</p>
+  <div class="logo-grid">
+
+    <div class="logo-cell">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b4-dark"/></svg>
+        <span class="wm" style="color:#2a1f14">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Light</span>
+    </div>
+
+    <div class="logo-cell dark">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b4-gold"/></svg>
+        <span class="wm" style="color:#f4eadb">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Dark</span>
+    </div>
+
+    <div class="logo-cell amber">
+      <div class="logo-h">
+        <svg width="40" height="40" viewBox="0 0 60 60"><use href="#b4-white"/></svg>
+        <span class="wm" style="color:#fffaf1">eixo</span>
+      </div>
+      <span class="cell-label">Horizontal · Amber</span>
+    </div>
+
+    <div class="logo-cell" style="align-items:center; min-width:130px;">
+      <div class="logo-v">
+        <svg width="52" height="52" viewBox="0 0 60 60"><use href="#b4-dark"/></svg>
+        <span class="wm" style="color:#2a1f14; font-size:26px">eixo</span>
+      </div>
+      <span class="cell-label">Vertical</span>
+    </div>
+
+    <div class="logo-cell" style="align-items:center; min-width:100px;">
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none">
+        <rect width="72" height="72" rx="18" fill="#2a1f14"/>
+        <path d="M14 14 C24 22, 30 26, 36 36 C42 46, 48 50, 58 58"
+          stroke="#c9a96e" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M58 14 C48 22, 42 26, 36 36 C30 46, 24 50, 14 58"
+          stroke="#c9a96e" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <line x1="22" y1="22" x2="50" y2="22" stroke="#c9a96e" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+        <line x1="18" y1="30" x2="54" y2="42" stroke="#c9a96e" stroke-width="2" stroke-linecap="round" opacity="0.25"/>
+        <line x1="54" y1="30" x2="18" y2="42" stroke="#c9a96e" stroke-width="2" stroke-linecap="round" opacity="0.25"/>
+        <line x1="22" y1="50" x2="50" y2="50" stroke="#c9a96e" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+        <circle cx="36" cy="36" r="5" fill="#2a1f14"/>
+        <circle cx="36" cy="36" r="3" fill="#c9a96e"/>
+      </svg>
+      <span class="cell-label">App Icon</span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- NOTA FINAL -->
+<div class="note">
+  <p class="note-title">Análise comparativa</p>
+  <p>
+    <strong>B1 — X Puro</strong>: direto e assertivo, mas genérico demais. Sem contexto, não diz nada sobre pecuária ou genética.<br><br>
+    <strong>B2 — X Cromossomo</strong>: a mais inteligente. A estrutura real de um cromossomo X — quatro braços convergindo para um centrômero — é visualmente elegante e carrega significado preciso. Quem trabalha com melhoramento genético vai reconhecer imediatamente. Escala muito bem. <strong>Recomendada.</strong><br><br>
+    <strong>B3 — X + Círculo</strong>: forte referência cultural ao ferro de marcar gado. Comunica pecuária sem precisar de texto. Tem personalidade e história. Risco: pode parecer um "proibido" em contexto errado.<br><br>
+    <strong>B4 — X Hélice</strong>: o mais técnico. Funciona melhor em tamanhos grandes onde as pontes da hélice aparecem. Perde os detalhes abaixo de 44px.
+  </p>
+</div>
+
+</body>
+</html>

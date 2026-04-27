@@ -10,22 +10,22 @@ interface StatCardProps {
 }
 
 const StatCard: React.FC<StatCardProps> = ({ title, value, change, changeType, icon }) => {
-    const changeColor = changeType === 'increase' ? 'text-green-500' : 'text-red-500';
+    const changeColor = changeType === 'increase' ? 'text-[#16a34a]' : 'text-[#8c4d39]';
     const changeIcon = changeType === 'increase' ? '↑' : '↓';
 
     return (
-        <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-6 flex items-center justify-between transition-transform transform hover:-translate-y-1">
+        <div className="flex items-center justify-between rounded-2xl border border-[#e7e5e4] bg-white p-6 shadow-lg transition-transform transform hover:-translate-y-1">
             <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{title}</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
+                <p className="text-sm font-medium uppercase tracking-wider text-[#78716c]">{title}</p>
+                <p className="mt-1 text-3xl font-bold text-[#1c1917]">{value}</p>
                 {change && (
-                    <div className={`text-sm font-semibold mt-2 flex items-center ${changeColor}`}>
+                    <div className={`mt-2 flex items-center text-sm font-semibold ${changeColor}`}>
                         <span>{changeIcon} {change}</span>
-                        <span className="ml-1 text-gray-500 dark:text-gray-400 font-normal">vs. mês passado</span>
+                        <span className="ml-1 font-normal text-[#78716c]">vs. mês passado</span>
                     </div>
                 )}
             </div>
-            <div className="bg-green-100 dark:bg-green-900/50 p-3 rounded-full">
+            <div className="rounded-full bg-[#edf4eb] p-3 text-[#16a34a]">
                 {icon}
             </div>
         </div>

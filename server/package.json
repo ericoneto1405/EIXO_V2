@@ -13,15 +13,16 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "@prisma/client": "^6.9.0",
-    "bcrypt": "^5.1.1",
+    "@prisma/client": "^6.19.3",
+    "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "express": "^4.21.1"
+    "cors": "^2.8.6",
+    "express": "^4.22.1",
+    "prisma": "^6.19.3",
+    "twilio": "^5.7.0"
   },
   "devDependencies": {
     "dotenv": "^16.6.1",
-    "nodemon": "^3.1.9",
-    "prisma": "^6.9.0"
+    "nodemon": "^3.1.9"
   }
 }

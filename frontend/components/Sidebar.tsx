@@ -1,11 +1,11 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import AssistantChat from './AssistantChat'; // Added AssistantChat import
 
 interface SidebarProps {
     activeItem: string;
     setActiveItem: (item: string) => void;
     allowedModules?: string[];
+    lockedModules?: string[];
 }
 
 interface NavSubItem {
@@ -13,6 +13,9 @@ interface NavSubItem {
     value: string;
     path?: string;
     allowedLabels?: string[];
+    badge?: string;
+    disabled?: boolean;
+    requiredPlanBadge?: 'PRO' | 'PLUS';
 }
 
 interface NavItem {
@@ -24,6 +27,7 @@ interface NavItem {
     path?: string;
     allowedLabels?: string[];
     disabled?: boolean;
+    requiredPlanBadge?: 'PRO' | 'PLUS';
 }
 
 const HomeIcon: React.FC = () => (
@@ -164,33 +168,31 @@ const geneticsSubItems: NavSubItem[] = [
 ];
 
 const navItems: NavItem[] = [
-    { label: 'Visão Geral', icon: <HomeIcon />, value: 'Visão Geral' },
+    { label: 'Visão Geral', icon: <HomeIcon />, value: 'Visão Geral', requiredPlanBadge: 'PRO' },
     { label: 'Estrutura da Fazenda', icon: <FarmIcon />, value: 'Fazendas', allowedLabels: ['Fazendas'] },
     {
         label: 'Manejo do Rebanho',
         icon: <HerdCommercialIcon />,
         value: 'Rebanho Comercial',
-        allowedLabels: ['Rebanho Comercial', 'Plantel P.O.'],
-        subItems: [
-            { label: 'Rebanho', value: 'Rebanho Comercial', allowedLabels: ['Rebanho Comercial'] },
-            { label: 'Plantel P.O.', value: 'Plantel P.O.', allowedLabels: ['Plantel P.O.'] },
-        ],
+        allowedLabels: ['Rebanho Comercial'],
     },
-    { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição' },
-    { label: 'Confinamento e Contratos', icon: <OperationsIcon />, value: 'Operações', allowedLabels: ['Operações'] },
-    { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Eixo Genetics', path: '/genetics/reproducao', allowedLabels: ['Eixo Genetics'] },
+    { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição', allowedLabels: ['Nutrição'], requiredPlanBadge: 'PRO' },
+    { label: 'Confinamento e Contratos', icon: <OperationsIcon />, value: 'Confinamento e Contratos', allowedLabels: ['Operações'], requiredPlanBadge: 'PLUS' },
+    { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Reprodução', path: '/genetics/reproducao', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
     {
         label: 'Eixo Acasalamento',
         icon: <HerdGeneticIcon />,
-        value: 'Eixo Genetics',
+        value: 'Eixo Acasalamento',
         allowedLabels: ['Eixo Genetics'],
+        requiredPlanBadge: 'PLUS',
         subItems: geneticsSubItems,
     },
     {
         label: 'Estoque e Equipamentos',
         icon: <SuppliersIcon />,
-        value: 'Fornecedores',
+        value: 'Estoque e Equipamentos',
         allowedLabels: ['Fornecedores', 'Remédios', 'Rações', 'Suplementos'],
+        requiredPlanBadge: 'PLUS',
         subItems: [
             { label: 'Fornecedores', value: 'Fornecedores', allowedLabels: ['Fornecedores'] },
             { label: 'Remédios', value: 'Remédios', allowedLabels: ['Remédios'] },
@@ -201,17 +203,11 @@ const navItems: NavItem[] = [
     {
         label: 'Financeiro',
         icon: <MoneyDownIcon />,
-        value: 'Contas a Pagar',
-        allowedLabels: ['Contas a Pagar', 'Contas a Receber', 'Fluxo de Caixa', 'DRE'],
-        subItems: [
-            { label: 'Contas a Pagar', value: 'Contas a Pagar', allowedLabels: ['Contas a Pagar'] },
-            { label: 'Contas a Receber', value: 'Contas a Receber', allowedLabels: ['Contas a Receber'] },
-            { label: 'Fluxo de Caixa', value: 'Fluxo de Caixa', allowedLabels: ['Fluxo de Caixa'] },
-            { label: 'DRE', value: 'DRE', allowedLabels: ['DRE'] },
-        ],
+        value: 'Financeiro',
+        allowedLabels: ['Financeiro'],
     },
-    { label: 'Gestão Comercial', icon: <ChartIcon />, badge: 'Em breve', disabled: true },
-    { label: 'Registro de Atividades', icon: <ReportIcon />, badge: 'Em breve', disabled: true },
+    { label: 'Gestão Comercial', icon: <ChartIcon />, value: 'Gestão Comercial', allowedLabels: ['Gestão Comercial'], requiredPlanBadge: 'PLUS' },
+    { label: 'Registro de Atividades', icon: <ReportIcon />, value: 'Registro de Atividades', allowedLabels: ['Registro de Atividades'], requiredPlanBadge: 'PRO' },
 ];
 
 const navItemsWithStructureSubItems: NavItem[] = navItems.map((item) =>
@@ -220,9 +216,9 @@ const navItemsWithStructureSubItems: NavItem[] = navItems.map((item) =>
               ...item,
               subItems: [
                   { label: 'Fazendas e Pastos', value: 'Fazendas', allowedLabels: ['Fazendas'] },
-                  { label: 'Mapa da Fazenda', value: 'Mapa da Fazenda', allowedLabels: ['Fazendas'] },
-                  { label: 'Estruturas da Fazenda', value: 'Estruturas da Fazenda' },
-                  { label: 'Equipe e Permissões', value: 'Equipe e Permissões' },
+                  { label: 'Mapa da Fazenda', value: 'Mapa da Fazenda', badge: 'Em breve', disabled: true },
+                  { label: 'Estruturas da Fazenda', value: 'Estruturas da Fazenda', badge: 'Em breve', disabled: true },
+                  { label: 'Usuários e Permissões', value: 'Usuários e Permissões', allowedLabels: ['Fazendas'] },
               ],
           }
         : item,
@@ -255,17 +251,17 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
     isSubItem,
     disabled,
 }) => {
-    const baseClasses = `w-full flex items-center ${
+    const baseClasses = `w-full flex items-center font-brand ${
         isCollapsed ? 'justify-center' : 'justify-start'
     } ${isSubItem ? 'py-1.5' : 'py-2.5'} ${isSubItem ? (isCollapsed ? 'px-3' : 'pl-11 pr-3') : 'px-3.5'} ${
         isSubItem ? 'text-[13px]' : 'text-sm'
-    } font-medium transition-all duration-150 rounded-2xl ${disabled ? 'cursor-not-allowed opacity-70' : 'active:translate-y-[2px]'} ${
+    } ${isSubItem ? 'font-medium' : 'font-semibold'} transition-all duration-150 rounded-2xl ${disabled ? 'cursor-not-allowed opacity-70' : 'active:translate-y-[2px]'} ${
         disabled
-            ? 'border border-dashed border-[#8b765d] bg-[#5f503d]/55 text-[#e3d7c1]'
+            ? 'border border-dashed border-[#3c3a38] bg-transparent text-[#57534e]'
             :
         isActive
-            ? 'translate-y-[2px] border border-[#c7a56a] bg-[#d9b878] text-[#3e3122] shadow-[inset_0_3px_7px_rgba(120,95,58,0.22),0_1px_1px_rgba(255,255,255,0.20)]'
-            : 'border border-transparent text-[#f1e7d7] shadow-[inset_0_0_0_rgba(0,0,0,0)] hover:translate-y-[2px] hover:border-[#6e5e47] hover:bg-[#5a4c39] hover:text-white hover:shadow-[inset_0_3px_7px_rgba(34,24,16,0.24)] active:bg-[#5a4c39]'
+            ? 'translate-y-[2px] border border-transparent bg-[#a8442a] text-[#fafaf9] font-bold'
+            : 'border border-transparent text-[#a8a29e] hover:translate-y-[2px] hover:border-transparent hover:bg-[#292524] hover:text-[#e7e5e4] active:bg-[#292524]'
     }`;
 
     return (
@@ -285,7 +281,11 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
                 <>
                     <span className="flex-1 text-left">{label}</span>
                     {badge && (
-                        <span className="ml-2 text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                        <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                            badge === 'Em breve'
+                                ? 'bg-[#292524] text-[#a8a29e]'
+                                : 'bg-[#faeee8] text-[#a8442a]'
+                        }`}>
                             {badge}
                         </span>
                     )}
@@ -299,15 +299,13 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
     );
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedModules }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedModules, lockedModules }) => {
     const [isCollapsed, setIsCollapsed] = React.useState(false);
-    const [isAssistantPanelVisible, setIsAssistantPanelVisible] = React.useState(true);
-    const [isAssistantMinimized, setIsAssistantMinimized] = React.useState(false);
-    const [isChatOpen, setIsChatOpen] = React.useState(false);
     const location = useLocation();
     const navigate = useNavigate();
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
     const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({});
+    const comingSoonItems = navItemsWithStructureSubItems.filter((item) => item.disabled);
 
     const handleSelect = (value: string, path?: string) => {
         setActiveItem(value);
@@ -330,11 +328,28 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
         return labels.some((label) => allowedModules.includes(label));
     };
 
+    // Retorna true se o módulo deve aparecer com cadeado (plano pago necessário)
+    const isModuleLockedByPlan = (labels?: string[]) => {
+        if (!lockedModules?.length || !labels?.length) return false;
+        return labels.some((label) => lockedModules.includes(label));
+    };
+
     React.useEffect(() => {
         if (isGeneticsRoute) {
             setOpenGroups((current) => ({ ...current, 'Eixo Genetics': true }));
         }
     }, [isGeneticsRoute]);
+
+    // Auto-expandir o grupo pai quando um subitem está ativo
+    React.useEffect(() => {
+        navItemsWithStructureSubItems.forEach((item) => {
+            if (!item.subItems) return;
+            const hasActiveChild = item.subItems.some((sub) => sub.value === activeItem);
+            if (hasActiveChild) {
+                setOpenGroups((current) => ({ ...current, [item.label]: true }));
+            }
+        });
+    }, [activeItem]);
 
     return (
         <>
@@ -343,13 +358,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                     isCollapsed ? 'w-20' : 'w-72'
                 }`}
             >
-                <div className="flex h-full flex-col rounded-[30px] border border-[#6a5a46] bg-[#4c4030] shadow-[0_14px_40px_rgba(66,46,24,0.14)] backdrop-blur">
-                <div className="flex items-start justify-between px-5 pb-2 pt-6">
+                <div className="flex h-full flex-col rounded-[30px] border border-[#292524] bg-[#1c1917]">
+                <div className="flex items-start justify-between px-5 pb-2 pt-0">
                     <div className="flex-1">
                         {!isCollapsed && (
                             <div className="min-h-[124px]">
-                                <p className="text-[3.6rem] font-black leading-[0.9] text-[#f4eadb]">eixo</p>
-                                <p className="mt-3 pl-[2px] text-[11px] uppercase tracking-[0.16em] text-[#cdbfa8]">
+                                <img src="/logo_eixo_white.svg" alt="eixo" className="w-full h-auto" />
+                                <p className="mt-1 whitespace-nowrap pl-1 text-[13px] font-semibold uppercase tracking-[0.05em] text-[#c4bdb5]">
                                     Gestão Pecuária de Corte
                                 </p>
                             </div>
@@ -358,7 +373,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                     <button
                         type="button"
                         onClick={() => setIsCollapsed((prev) => !prev)}
-                        className="rounded-md border border-[#6e5e47] bg-[#5a4c39] p-1.5 text-[#e8dcc7] transition-colors hover:bg-[#665742] hover:text-white"
+                        className="rounded-md border border-[#3c3a38] bg-[#292524] p-1.5 text-[#a8a29e] transition-colors hover:bg-[#3c3a38] hover:text-white"
                         aria-label={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
                     >
                         <SidebarPanelIcon collapsed={isCollapsed} />
@@ -367,16 +382,15 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
 
                 <nav className="flex-1 overflow-y-auto px-3 pb-6 pt-0">
                     <ul className="space-y-1.5">
-                        {navItemsWithStructureSubItems.map((item) => {
-                            if (!item.disabled && !isModuleAllowed(item.allowedLabels || (item.value ? [item.value] : undefined))) {
-                                return null;
-                            }
-
+                        {navItemsWithStructureSubItems.filter(item => !item.disabled).map((item) => {
+                            const itemLabels = item.allowedLabels || (item.value ? [item.value] : undefined);
+                            const isPlanLocked = !item.disabled && isModuleLockedByPlan(itemLabels);
                             const visibleSubItems = item.subItems?.filter((subItem) => {
-                                if (!subItem.allowedLabels?.length && !subItem.path) {
+                                const subItemPlanLocked = isModuleLockedByPlan(subItem.allowedLabels || [subItem.value]);
+                                if (!subItem.allowedLabels?.length && !subItem.path && !subItemPlanLocked) {
                                     return true;
                                 }
-                                return isModuleAllowed(subItem.allowedLabels || [subItem.value]);
+                                return subItemPlanLocked || isModuleAllowed(subItem.allowedLabels || [subItem.value]);
                             }) || [];
                             const hasSubItems = visibleSubItems.length > 0;
                             const isExpanded = isGeneticsRoute && item.label === 'Eixo Acasalamento'
@@ -391,33 +405,33 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                                     : activeItem === subItem.value,
                             );
                             const isParentActive = isDirectPathActive || isSubItemActive || (!!item.value && activeItem === item.value);
-
                             return (
                                 <li key={item.label}>
                                     <SidebarButton
                                         label={item.label}
                                         icon={item.icon}
-                                        isActive={isParentActive}
+                                        isActive={isParentActive && !isSubItemActive}
                                         isCollapsed={isCollapsed}
-                                        badge={item.badge}
+                                        badge={item.badge || (isPlanLocked ? item.requiredPlanBadge : undefined)}
                                         disabled={item.disabled}
                                         suffix={hasSubItems ? <ChevronIndicator isOpen={isExpanded} /> : undefined}
                                         onClick={() => {
-                                            if (item.disabled) {
-                                                return;
-                                            }
+                                            if (item.disabled) return;
                                             if (hasSubItems) {
                                                 setOpenGroups((current) => ({ ...current, [item.label]: !isExpanded }));
                                             }
                                             if (item.value) {
-                                                handleSelect(item.value, item.path || visibleSubItems[0]?.path);
+                                                handleSelect(item.value, isPlanLocked ? undefined : (item.path || visibleSubItems[0]?.path));
                                             }
                                         }}
                                     />
                                     {!isCollapsed && hasSubItems && isExpanded && (
                                         <ul className="mt-1 space-y-1">
                                             {visibleSubItems.map((subItem) => {
-                                                const isComingSoon = !subItem.path && !isModuleAllowed(subItem.allowedLabels || [subItem.value]);
+                                                const isPlanLockedSubItem = isModuleLockedByPlan(subItem.allowedLabels || [subItem.value]);
+                                                const isComingSoon =
+                                                    Boolean(subItem.disabled) ||
+                                                    (!subItem.path && !isPlanLockedSubItem && !isModuleAllowed(subItem.allowedLabels || [subItem.value]));
                                                 const isSubActive = subItem.path
                                                     ? location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`)
                                                     : activeItem === subItem.value;
@@ -428,13 +442,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                                                             isActive={isSubActive}
                                                             isCollapsed={isCollapsed}
                                                             isSubItem
-                                                            badge={isComingSoon ? 'Em breve' : undefined}
+                                                            badge={subItem.badge || (isComingSoon ? 'Em breve' : isPlanLockedSubItem ? (subItem.requiredPlanBadge || item.requiredPlanBadge) : undefined)}
                                                             disabled={isComingSoon}
                                                             onClick={() => {
                                                                 if (isComingSoon) {
                                                                     return;
                                                                 }
-                                                                handleSelect(subItem.value, subItem.path);
+                                                                handleSelect(isPlanLockedSubItem ? (item.value || subItem.value) : subItem.value, isPlanLockedSubItem ? undefined : subItem.path);
                                                             }}
                                                         />
                                                     </li>
@@ -446,60 +460,36 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                             );
                         })}
                     </ul>
+
+                    {/* Módulos em desenvolvimento */}
+                    {!isCollapsed && comingSoonItems.length > 0 && (
+                        <div className="mt-4 border-t border-[#292524] pt-4">
+                            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#57534e]">
+                                Em desenvolvimento
+                            </p>
+                            <ul className="space-y-1">
+                                {comingSoonItems.map((item) => {
+                                    return (
+                                        <li key={item.label}>
+                                            <SidebarButton
+                                                label={item.label}
+                                                icon={item.icon}
+                                                isActive={false}
+                                                isCollapsed={isCollapsed}
+                                                disabled={item.disabled}
+                                                onClick={() => { if (item.disabled) return; }}
+                                            />
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    )}
                 </nav>
 
-                {!isCollapsed && isAssistantPanelVisible && (
-                    <div className="px-5 pb-6">
-                        <div className="rounded-3xl border border-[#6e5e47] bg-[#2f261d] p-4 text-white shadow-lg">
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <p className="text-sm font-semibold">Assistente Virtual</p>
-                                    {!isAssistantMinimized && (
-                                        <p className="mt-1 text-xs text-white/75">
-                                            Tire dúvidas sobre o rebanho, finanças ou cadastros com o Eixo Copiloto.
-                                        </p>
-                                    )}
-                                </div>
-                                <div className="flex space-x-1">
-                                    <button
-                                        type="button"
-                                        className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-xs font-bold transition-colors hover:bg-white/25"
-                                        onClick={() => setIsAssistantMinimized((prev) => !prev)}
-                                        aria-label={isAssistantMinimized ? 'Expandir assistente' : 'Minimizar assistente'}
-                                    >
-                                        _
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="flex h-6 w-6 items-center justify-center rounded-md bg-white/15 text-xs font-bold transition-colors hover:bg-white/25"
-                                        onClick={() => setIsAssistantPanelVisible(false)}
-                                        aria-label="Fechar assistente"
-                                    >
-                                        x
-                                    </button>
-                                </div>
-                            </div>
-                            {!isAssistantMinimized && (
-                                <button
-                                    className="mt-4 w-full py-2 rounded-xl bg-white/15 text-sm font-semibold hover:bg-white/25 transition-colors"
-                                    onClick={() => setIsChatOpen(true)}
-                                >
-                                    Abrir chat
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                )}
                 </div>
             </aside>
 
-            {isChatOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-                    <div className="relative w-full max-w-md h-[80vh] flex flex-col">
-                        <AssistantChat onClose={() => setIsChatOpen(false)} farmId={null} />
-                    </div>
-                </div>
-            )}
         </>
     );
 };

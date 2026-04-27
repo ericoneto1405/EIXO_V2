@@ -14,13 +14,26 @@ model User {
   password             String
   modules              String[]
   roles                String[]                @default([])
+  accessType           AppAccessType           @default(WEB)
+  fieldProfile         FieldProfile?
+  appActivationStatus  AppActivationStatus?
   lastFarmId           String?
   activeOrganizationId String?
+  document             String?
+  documentType         String?
+  cnpjData             Json?
+  phone                String?
+  termsAcceptedAt      DateTime?
+  termsVersion         String?
   createdAt            DateTime                @default(now())
   farms                Farm[]
   sessions             Session[]
   memberships          OrganizationMembership[]
+  farmAccesses         UserFarmAccess[]
+  appActivationCodes   AppActivationCode[]
+  appDevices           AppDevice[]
   activityLogs         ActivityLog[]
+  fieldOccurrences     FieldOccurrence[]       @relation("FieldOccurrenceCreatedBy")
   geneticsAnalysisRuns GeneticsAnalysisRun[]   @relation("GeneticsAnalysisCreatedBy")
   externalOperations   ExternalOperation[]     @relation("ExternalOperationCreatedBy")
   externalOperationLedgerEntries ExternalOperationLedgerEntry[] @relation("ExternalOperationLedgerCreatedBy")
@@ -71,9 +84,13 @@ model Farm {
   nutritionCostEntries NutritionCostEntry[]
   financialPayables  FinancialPayable[]
   financialReceivables FinancialReceivable[]
+  financialTransactions FinancialTransaction[]
+  accountCategories  AccountCategory[]
   criaMortalities    CriaMortality[]
   geneticsAnalysisRuns GeneticsAnalysisRun[]
   herdImportPendings HerdImportPending[]
+  userAccesses       UserFarmAccess[]
+  fieldOccurrences   FieldOccurrence[]
   externalOperations ExternalOperation[]
   feedlotContracts   FeedlotContract[]
   reproCheckupSessions ReproCheckupSession[]
@@ -105,6 +122,7 @@ model Paddock {
   paddockMoves     PaddockMove[]
   currentAnimals   Animal[]      @relation("AnimalCurrentPaddock")
   currentPoAnimals PoAnimal[]    @relation("PoAnimalCurrentPaddock")
+  fieldOccurrences FieldOccurrence[]
 
   @@index([farmId])
 }
@@ -167,6 +185,7 @@ model Animal {
   criaMortalities CriaMortality[]
   herdEvents     HerdEvent[]
   sanitaryRecords SanitaryRecord[]
+  fieldOccurrences FieldOccurrence[]
 
   @@index([farmId, brinco], map: "Animal_farmId_brinco_idx")
   @@unique([farmId, identityKey], map: "Animal_farmId_identityKey_key")
@@ -223,17 +242,20 @@ model CriaMortality {
 }
 
 model Session {
-  id        String   @id @default(uuid())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
-  tokenHash String   @unique
-  createdAt DateTime @default(now())
+  deviceId  String?
+  tokenHash String    @unique
+  createdAt DateTime  @default(now())
   expiresAt DateTime
   revokedAt DateTime?
   userAgent String?
   ip        String?
+  device    AppDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([deviceId])
   @@index([expiresAt])
 }
 
@@ -440,6 +462,21 @@ model OrganizationMembership {
 enum ReproMode {
   CONTINUO
   ESTACAO
+}
+
+enum FieldOccurrenceType {
+  COCHO
+  AGUA
+  DOENTE
+  AVARIA
+  NASCEU
+  MORREU
+}
+
+enum FieldOccurrenceStatus {
+  PENDENTE
+  CONFIRMADO
+  CANCELADO
 }
 
 enum ReviewStatus {
@@ -1167,8 +1204,13 @@ model ActivityLog {
   id             String        @id
   userId         String
   organizationId String?
-  method         String
-  path           String
+  farmId         String?
+  action         String?
+  entity         String?
+  entityId       String?
+  description    String?
+  method         String?
+  path           String?
   statusCode     Int?
   ip             String?
   userAgent      String?
@@ -1178,6 +1220,124 @@ model ActivityLog {
 
   @@index([organizationId, createdAt], map: "ActivityLog_organizationId_createdAt_idx")
   @@index([userId, createdAt], map: "ActivityLog_userId_createdAt_idx")
+  @@index([farmId, createdAt], map: "ActivityLog_farmId_createdAt_idx")
+}
+
+model UserFarmAccess {
+  id        String   @id @default(uuid())
+  userId    String
+  farmId    String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, farmId])
+  @@index([userId])
+  @@index([farmId])
+}
+
+enum AppAccessType {
+  WEB
+  APP_MANEJO
+  WEB_APP
+}
+
+enum FieldProfile {
+  VAQUEIRO
+  ADMIN_CAMPO
+}
+
+enum AppActivationStatus {
+  PENDENTE_ATIVACAO
+  ATIVO
+  CODIGO_EXPIRADO
+  BLOQUEADO
+  APARELHO_REVOGADO
+}
+
+model AppActivationCode {
+  id            String   @id @default(uuid())
+  userId        String
+  organizationId String
+  farmId        String
+  codeHash      String
+  expiresAt     DateTime
+  usedAt        DateTime?
+  revokedAt     DateTime?
+  createdById   String
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([organizationId, expiresAt])
+  @@index([farmId, expiresAt])
+}
+
+model AppDevice {
+  id                String   @id @default(uuid())
+  userId            String
+  organizationId    String
+  farmId            String
+  deviceFingerprint String
+  deviceLabel       String?
+  platform          String?
+  appVersion        String?
+  activatedAt       DateTime @default(now())
+  lastSeenAt        DateTime?
+  revokedAt         DateTime?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions          Session[]
+
+  @@index([userId, isActive])
+  @@index([organizationId, farmId, isActive])
+  @@index([deviceFingerprint])
+}
+
+model FieldOccurrence {
+  id              String                 @id @default(uuid())
+  organizationId  String
+  farmId          String
+  createdById     String
+  type            FieldOccurrenceType
+  status          FieldOccurrenceStatus  @default(PENDENTE)
+  description     String?
+  animalId        String?
+  paddockId       String?
+  occurredAt      DateTime
+  lat             Float?
+  lng             Float?
+  offlineCreatedAt DateTime?
+  syncSource      String?
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  farm            Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  createdBy       User                   @relation("FieldOccurrenceCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  animal          Animal?                @relation(fields: [animalId], references: [id], onDelete: SetNull)
+  paddock         Paddock?               @relation(fields: [paddockId], references: [id], onDelete: SetNull)
+  attachments     FieldOccurrenceAttachment[]
+
+  @@index([organizationId, farmId, occurredAt])
+  @@index([createdById, occurredAt])
+  @@index([farmId, status, occurredAt])
+  @@index([animalId])
+  @@index([paddockId])
+}
+
+model FieldOccurrenceAttachment {
+  id           String          @id @default(uuid())
+  occurrenceId String
+  fileName     String
+  mimeType     String
+  storagePath  String
+  uploadedAt   DateTime        @default(now())
+  occurrence   FieldOccurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+
+  @@index([occurrenceId])
 }
 
 model BillingSubscription {
@@ -1287,6 +1447,71 @@ model FinancialReceivable {
 
   @@index([farmId, dueDate], map: "FinancialReceivable_farmId_dueDate_idx")
   @@index([farmId, status], map: "FinancialReceivable_farmId_status_idx")
+}
+
+enum FinancialTransactionType {
+  ENTRADA
+  SAIDA
+}
+
+enum FinancialTransactionCategoria {
+  VENDA_ANIMAIS
+  COMPRA_ANIMAIS
+  MEDICAMENTOS
+  ALIMENTACAO
+  MAO_DE_OBRA
+  OUTROS
+}
+
+enum AccountCategoryType {
+  ENTRADA
+  SAIDA
+}
+
+model AccountCategory {
+  id           String              @id @default(cuid())
+  farmId       String?
+  name         String
+  group        String
+  type         AccountCategoryType
+  isSystem     Boolean             @default(false)
+  isActive     Boolean             @default(true)
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  farm         Farm?               @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  transactions FinancialTransaction[]
+
+  @@index([farmId])
+  @@index([type])
+  @@index([isSystem])
+}
+
+model FinancialTransaction {
+  id                String                         @id @default(cuid())
+  farmId            String
+  type              FinancialTransactionType
+  categoria         FinancialTransactionCategoria  @default(OUTROS)
+  accountCategoryId String?
+  valor             Decimal                        @db.Decimal(12, 2)
+  data              DateTime
+  descricao         String?
+  vencimento        DateTime?
+  status            String                         @default("PAGO")
+  herdEventId       String?
+  sanitaryRecordId  String?
+  createdAt         DateTime                       @default(now())
+  updatedAt         DateTime                       @updatedAt
+  farm              Farm                           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  herdEvent         HerdEvent?                     @relation(fields: [herdEventId], references: [id], onDelete: SetNull)
+  sanitaryRecord    SanitaryRecord?                @relation(fields: [sanitaryRecordId], references: [id], onDelete: SetNull)
+  accountCategory   AccountCategory?               @relation(fields: [accountCategoryId], references: [id], onDelete: SetNull)
+
+  @@index([farmId, data])
+  @@index([farmId, type])
+  @@index([farmId, status])
+  @@index([herdEventId])
+  @@index([sanitaryRecordId])
+  @@index([accountCategoryId])
 }
 
 
@@ -1635,6 +1860,7 @@ model HerdEvent {
   farm         Farm      @relation(fields: [farmId], references: [id])
   animal       Animal?   @relation(fields: [animalId], references: [id])
   poAnimal     PoAnimal? @relation(fields: [poAnimalId], references: [id])
+  financialTransactions FinancialTransaction[]
 
   @@index([farmId])
   @@index([animalId])
@@ -1642,21 +1868,23 @@ model HerdEvent {
 }
 
 model SanitaryRecord {
-  id               String    @id @default(cuid())
-  farmId           String
-  animalId         String?
-  poAnimalId       String?
-  tipo             String
-  produto          String
-  date             DateTime
-  dose             String?
-  proximaAplicacao DateTime?
-  observacoes      String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  farm             Farm      @relation(fields: [farmId], references: [id])
-  animal           Animal?   @relation(fields: [animalId], references: [id])
-  poAnimal         PoAnimal? @relation(fields: [poAnimalId], references: [id])
+  id                   String               @id @default(cuid())
+  farmId               String
+  animalId             String?
+  poAnimalId           String?
+  tipo                 String
+  produto              String
+  date                 DateTime
+  dose                 String?
+  proximaAplicacao     DateTime?
+  observacoes          String?
+  valorUnitario        Decimal?             @db.Decimal(12, 2)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  farm                 Farm                 @relation(fields: [farmId], references: [id])
+  animal               Animal?              @relation(fields: [animalId], references: [id])
+  poAnimal             PoAnimal?            @relation(fields: [poAnimalId], references: [id])
+  financialTransactions FinancialTransaction[]
 
   @@index([farmId])
   @@index([animalId])

@@ -1,136 +1,264 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { buildApiUrl } from '../api';
 
 interface ChatMessage {
-  role: 'user' | 'model';
-  text: string;
+    role: 'user' | 'model';
+    text: string;
 }
 
 interface AssistantChatProps {
-  onClose: () => void;
-  farmId: string | null; // Assuming chat might be context-aware
+    onClose: () => void;
+    farmId: string | null;
 }
 
-const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputMessage, setInputMessage] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+const SUGESTOES = [
+    'Como importar/trazer meus animais para o sistema?',
+    'Como cadastrar minha fazenda?',
+    'Como registrar uma pesagem?',
+    'Como registrar compra ou venda de animais?',
+    'Como lançar uma despesa?',
+    'Como criar lotes e grupos?',
+    'O que significa o cadeado nos módulos?',
+    'Como acompanhar o financeiro da minha fazenda?',
+];
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+const MAX_CHARS = 150;
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim() || isLoading) return;
+const SendIcon: React.FC = () => (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+    </svg>
+);
 
-    const userMessage: ChatMessage = { role: 'user', text: inputMessage };
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
-    setInputMessage('');
-    setIsLoading(true);
+const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
+    const [inputMessage, setInputMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    try {
-      // Prepare history in the format expected by Gemini (e.g., role: 'user', parts: [{text: '...'}] or role: 'model', parts: [{text: '...'}])
-      // For simplicity, we'll send a flattened history as string messages to the backend,
-      // and let the backend reformat for Gemini's `startChat({ history: ... })`
-      const chatHistoryForBackend = messages.map(msg => ({ role: msg.role, parts: [{ text: msg.text }] }));
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, []);
 
-      const response = await fetch('/api/chat/send-message', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include', // Ensure cookies are sent for authentication
-        body: JSON.stringify({ message: inputMessage, history: chatHistoryForBackend }),
-      });
+    const sendMessage = async (text?: string) => {
+        const msgText = (text ?? inputMessage).trim();
+        if (!msgText || isLoading) return;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao obter resposta do assistente.');
-      }
+        const userMessage: ChatMessage = { role: 'user', text: msgText };
+        setMessages(prev => [...prev, userMessage]);
+        setInputMessage('');
+        setIsLoading(true);
 
-      const data = await response.json();
-      const aiMessage: ChatMessage = { role: 'model', text: data.response };
-      setMessages((prevMessages) => [...prevMessages, aiMessage]);
-    } catch (error) {
-      console.error('Erro ao enviar mensagem para o assistente:', error);
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { role: 'model', text: 'Desculpe, ocorreu um erro ao se comunicar com o assistente.' },
-      ]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+        try {
+            const history = messages.map(msg => ({
+                role: msg.role,
+                parts: [{ text: msg.text }],
+            }));
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      sendMessage();
-    }
-  };
+            const response = await fetch(buildApiUrl('/api/chat/send-message'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ message: msgText, history }),
+            });
 
-  return (
-    <div className="flex flex-col h-full bg-white rounded-lg shadow-lg">
-      <div className="flex justify-between items-center p-4 border-b border-gray-200">
-        <h3 className="text-lg font-semibold">Assistente Virtual</h3>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {messages.length === 0 && (
-          <div className="text-center text-gray-500 italic">
-            Olá! Como posso ajudar você hoje?
-            {farmId && <p className="text-sm mt-1">Contexto atual: Fazenda ID {farmId}</p>}
-          </div>
-        )}
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-xs px-4 py-2 rounded-lg ${
-                msg.role === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200 text-gray-800'
-              }`}
-            >
-              {msg.text}
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.message || 'Erro ao obter resposta.');
+            }
+
+            const data = await response.json();
+            setMessages(prev => [...prev, { role: 'model', text: data.response }]);
+        } catch (error: any) {
+            setMessages(prev => [...prev, {
+                role: 'model',
+                text: 'Desculpe, não consegui processar sua pergunta agora. Tente novamente em instantes.',
+            }]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            void sendMessage();
+        }
+    };
+
+    const renderInlineText = (value: string, keyPrefix: string) =>
+        value.split(/\*\*(.*?)\*\*/g).map((part, index) =>
+            index % 2 === 1 ? <strong key={`${keyPrefix}-${index}`}>{part}</strong> : part,
+        );
+
+    // Converte markdown básico (**negrito**, listas numeradas e com bullet)
+    const renderText = (text: string) => {
+        const lines = text.split('\n');
+        return lines.map((line, i) => {
+            // Lista numerada
+            const numbered = line.match(/^(\d+)\.\s(.+)/);
+            if (numbered) {
+                return (
+                    <li key={i} className="ml-4 list-decimal">
+                        {renderInlineText(numbered[2], `numbered-${i}`)}
+                    </li>
+                );
+            }
+            // Lista com traço/bullet
+            const bulleted = line.match(/^[-•]\s(.+)/);
+            if (bulleted) {
+                return (
+                    <li key={i} className="ml-4 list-disc">
+                        {renderInlineText(bulleted[1], `bulleted-${i}`)}
+                    </li>
+                );
+            }
+            // Linha vazia
+            if (!line.trim()) return <br key={i} />;
+            return <p key={i}>{renderInlineText(line, `paragraph-${i}`)}</p>;
+        });
+    };
+
+    return (
+        <div className="flex flex-col h-full rounded-[24px] border border-[#e7e5e4] bg-white shadow-2xl overflow-hidden">
+
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-[#e7e5e4] bg-[#f5f5f4] px-5 py-4">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1c1917]">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <p className="text-[15px] font-bold leading-none text-[#1c1917]">
+                            Eixo <span className="text-[#a8442a]">Suporte</span>
+                        </p>
+                        <p className="mt-1 text-xs text-[#78716c]">Ajuda rápida sobre o sistema</p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-[#78716c] transition-colors hover:bg-[#f5f5f4] hover:text-[#1c1917]"
+                    aria-label="Fechar"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div className="flex justify-start">
-            <div className="max-w-xs px-4 py-2 rounded-lg bg-gray-200 text-gray-800 animate-pulse">
-              Digitando...
+
+            {/* Área de mensagens */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+
+                {/* Estado vazio — boas-vindas + sugestões */}
+                {messages.length === 0 && (
+                    <div className="flex flex-col items-center pt-4 text-center">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f5f5f4] mb-4">
+                            <svg className="w-7 h-7 text-[#1c1917]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
+                            </svg>
+                        </div>
+                        <p className="text-sm font-semibold text-[#1c1917]">Olá! Sou o Eixo Suporte.</p>
+                        <p className="mt-1 text-xs text-[#78716c] max-w-[220px]">
+                            Tire suas dúvidas sobre como usar o sistema EIXO.
+                        </p>
+                        <div className="mt-5 flex flex-col gap-2 w-full">
+                            {SUGESTOES.map((s) => (
+                                <button
+                                    key={s}
+                                    type="button"
+                                    onClick={() => void sendMessage(s)}
+                                    className="rounded-xl border border-[#e7e5e4] bg-[#f5f5f4] px-3 py-2 text-left text-xs font-medium text-[#44403c] transition-colors hover:bg-[#eedfc8] hover:text-[#1c1917]"
+                                >
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Mensagens */}
+                {messages.map((msg, index) => (
+                    <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        {msg.role === 'model' && (
+                            <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#1c1917]">
+                                <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                        d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
+                                </svg>
+                            </div>
+                        )}
+                        <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                            msg.role === 'user'
+                                ? 'bg-[#1c1917] text-white rounded-br-sm'
+                                : 'bg-[#f5f5f4] text-[#1c1917] rounded-bl-sm'
+                        }`}>
+                            <div className="space-y-1">
+                                {renderText(msg.text)}
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+                {/* Indicador de digitando */}
+                {isLoading && (
+                    <div className="flex justify-start">
+                        <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#1c1917]">
+                            <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
+                            </svg>
+                        </div>
+                        <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-[#f5f5f4] px-4 py-3">
+                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#78716c]" style={{ animationDelay: '0ms' }} />
+                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#78716c]" style={{ animationDelay: '150ms' }} />
+                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#78716c]" style={{ animationDelay: '300ms' }} />
+                        </div>
+                    </div>
+                )}
+
+                <div ref={messagesEndRef} />
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-      <div className="p-4 border-t border-gray-200 flex">
-        <input
-          type="text"
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          onKeyPress={handleKeyPress}
-          className="flex-1 border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Digite sua mensagem..."
-          disabled={isLoading}
-        />
-        <button
-          onClick={sendMessage}
-          className="ml-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-          disabled={isLoading}
-        >
-          Enviar
-        </button>
-      </div>
-    </div>
-  );
+
+            {/* Input */}
+            <div className="border-t border-[#e7e5e4] bg-white px-4 py-3">
+                <div className={`flex items-center gap-2 rounded-2xl border bg-[#f5f5f4] px-3 py-2 transition-colors ${inputMessage.length >= MAX_CHARS ? 'border-[#c0644a]' : 'border-[#e7e5e4]'}`}>
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={inputMessage}
+                        onChange={(e) => setInputMessage(e.target.value.slice(0, MAX_CHARS))}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Digite sua dúvida..."
+                        disabled={isLoading}
+                        maxLength={MAX_CHARS}
+                        className="flex-1 bg-transparent text-sm text-[#1c1917] placeholder-[#b0a090] focus:outline-none disabled:opacity-50"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => void sendMessage()}
+                        disabled={isLoading || !inputMessage.trim()}
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-[#1c1917] text-white transition-colors hover:bg-[#292524] disabled:opacity-40"
+                        aria-label="Enviar"
+                    >
+                        <SendIcon />
+                    </button>
+                </div>
+                <p className="mt-2 text-center text-[10px] text-[#b0a090]">
+                    Eixo Suporte responde dúvidas sobre o uso do sistema.
+                </p>
+            </div>
+        </div>
+    );
 };
 
 export default AssistantChat;

@@ -115,16 +115,16 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                         className="absolute inset-0 bg-stone-900/50 backdrop-blur-sm"
                         onClick={handleDeleteCancel}
                     />
-                    <div className="relative w-full max-w-md rounded-3xl border border-[#d7cab3] bg-[#fffaf1] p-8 shadow-2xl">
-                        <h2 className="text-xl font-bold text-[#2f3a2d]">Excluir fazenda</h2>
-                        <p className="mt-3 text-sm leading-relaxed text-[#6d6558]">
+                    <div className="relative w-full max-w-md rounded-3xl border border-[#e7e5e4] bg-white p-8 shadow-2xl">
+                        <h2 className="text-xl font-bold text-[#1c1917]">Excluir fazenda</h2>
+                        <p className="mt-3 text-sm leading-relaxed text-[#78716c]">
                             Tem certeza que deseja excluir a fazenda{' '}
-                            <span className="font-semibold text-[#2f3a2d]">"{farmToDelete.name}"</span>?
+                            <span className="font-semibold text-[#1c1917]">"{farmToDelete.name}"</span>?
                             Essa ação não pode ser desfeita.
                         </p>
 
                         {deleteError && (
-                            <p className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                            <p className="mt-4 rounded-2xl bg-[#fbede8] px-4 py-3 text-sm text-[#8c4d39]">
                                 {deleteError}
                             </p>
                         )}
@@ -134,7 +134,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                                 type="button"
                                 onClick={handleDeleteCancel}
                                 disabled={isDeleting}
-                                className="rounded-2xl border border-[#c7b59b] bg-[#f3ebde] px-5 py-2.5 text-sm font-semibold text-[#5f5648] transition-colors hover:bg-[#eadfcd] disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-5 py-2.5 text-sm font-semibold text-[#44403c] transition-colors hover:bg-[#ece9e6] disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 Cancelar
                             </button>
@@ -142,7 +142,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                                 type="button"
                                 onClick={handleDeleteConfirm}
                                 disabled={isDeleting}
-                                className="rounded-2xl bg-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                className="rounded-2xl border border-[#d9b6a8] bg-[#fbede8] px-5 py-2.5 text-sm font-semibold text-[#8c4d39] transition-colors hover:bg-[#f5ddd4] disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 {isDeleting ? 'Excluindo...' : 'Excluir'}
                             </button>
@@ -151,17 +151,21 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                 </div>
             )}
 
-            <div className="rounded-[24px] border border-[#d7cab3] bg-[#fbf7ef] p-5">
+            <div className="rounded-3xl border border-[#e7e5e4] bg-white px-6 py-5">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
-                        <h1 className="text-[24px] font-semibold text-[#2f3a2d]">Fazendas e Pastos</h1>
-                        <p className="mt-1 text-sm text-[#6d6558]">Gerencie as fazendas cadastradas e a base territorial da operação.</p>
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                            Estrutura da Fazenda
+                        </div>
+                        <h1 className="font-brand text-2xl font-extrabold leading-tight text-[#1c1917]">Fazendas e Pastos</h1>
+                        <p className="mt-1 text-sm leading-relaxed text-[#78716c]">Gerencie as fazendas cadastradas e a base territorial da operação.</p>
                     </div>
                     {!showForm && (
                         <button
                             type="button"
                             onClick={handleToggleForm}
-                            className="inline-flex items-center rounded-2xl border border-[#8a734f] bg-[#9d7d4d] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#8f7144]"
+                            className="inline-flex items-center rounded-2xl border border-[#a8442a] bg-[#a8442a] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#933a22]"
                         >
                             <PlusIcon />
                             <span className="ml-2">Adicionar fazenda</span>
@@ -191,33 +195,36 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                 </div>
             )}
 
-            <div className="overflow-hidden rounded-[24px] border border-[#d7cab3] bg-[#fffaf1]">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-[#6d6558]">
-                        <thead className="bg-[#f1e7d8] text-[11px] uppercase tracking-[0.14em] text-[#74644e]">
-                            <tr>
-                                <th scope="col" className="px-6 py-3">Nome da Fazenda</th>
-                                <th scope="col" className="px-6 py-3">Cidade</th>
-                                <th scope="col" className="px-6 py-3">UF</th>
-                                <th scope="col" className="px-6 py-3">Tamanho (ha)</th>
-                                <th scope="col" className="px-6 py-3">Pastos</th>
-                                <th scope="col" className="px-6 py-3 text-center">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {farms.length === 0 && !showForm ? (
+            {farms.length > 0 && (
+                <div className="overflow-hidden rounded-[24px] border border-[#e7e5e4] bg-white">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left text-[#78716c]">
+                            <thead className="bg-[#f5f5f4] text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">
                                 <tr>
-                                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-[#7d7467]">
-                                        <p className="text-base font-semibold text-[#2f3a2d]">
-                                            Comece cadastrando uma fazenda
-                                        </p>
-                                    </td>
+                                    <th scope="col" className="px-6 py-3">Nome da Fazenda</th>
+                                    <th scope="col" className="px-6 py-3">Cidade</th>
+                                    <th scope="col" className="px-6 py-3">UF</th>
+                                    <th scope="col" className="px-6 py-3">Tamanho (ha)</th>
+                                    <th scope="col" className="px-6 py-3">Pastos</th>
+                                    <th scope="col" className="px-6 py-3 text-center">Ações</th>
                                 </tr>
-                            ) : (
-                                farms.map((farm) => (
-                                    <tr key={farm.id} className="border-b border-[#eadfcf] bg-[#fffaf1] transition-colors duration-150 hover:bg-[#f7f0e3]">
-                                        <th scope="row" className="whitespace-nowrap px-6 py-4 font-bold text-[#2f3a2d]">
-                                            {farm.name}
+                            </thead>
+                            <tbody>
+                                {farms.map((farm) => (
+                                    <tr key={farm.id} className="border-b border-[#e7e5e4] bg-white transition-colors duration-150 hover:bg-[#f5f5f4]">
+                                        <th scope="row" className="whitespace-nowrap px-6 py-4 font-bold text-[#1c1917]">
+                                            <div className="flex items-center gap-2">
+                                                {farm.name}
+                                                {farm.lat && farm.lng ? (
+                                                    <span title="Localização cadastrada" className="text-[#16a34a]">
+                                                        <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                                    </span>
+                                                ) : (
+                                                    <span title="Localização não cadastrada" className="text-[#c4b8a5]">
+                                                        <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                                    </span>
+                                                )}
+                                            </div>
                                         </th>
                                         <td className="px-6 py-4">{farm.city?.split('/')[0]?.trim() || '—'}</td>
                                         <td className="px-6 py-4">{farm.city?.split('/')[1]?.trim() || '—'}</td>
@@ -228,26 +235,47 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                                                 <button
                                                     type="button"
                                                     onClick={() => handleEdit(farm)}
-                                                    className="rounded-xl border border-[#c7b59b] bg-[#f3ebde] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#5f5648] transition-colors hover:bg-[#eadfcd]"
+                                                    className="rounded-xl border border-[#e7e5e4] bg-[#f5f5f4] px-3 py-1.5 text-xs font-semibold text-[#44403c] transition-colors hover:bg-[#ece9e6]"
                                                 >
                                                     Editar
                                                 </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => handleDeleteRequest(farm)}
-                                                    className="rounded-xl border border-[#d9b6a8] bg-[#fbede8] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[#8c4d39] transition-colors hover:bg-[#f5ddd4]"
+                                                    className="rounded-xl border border-[#d9b6a8] bg-[#fbede8] px-3 py-1.5 text-xs font-semibold text-[#8c4d39] transition-colors hover:bg-[#f5ddd4]"
                                                 >
                                                     Excluir
                                                 </button>
                                             </div>
                                         </td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {/* Card de próximo passo — aparece quando alguma fazenda tem 0 pastos */}
+            {farms.length > 0 && farms.some(f => (f.paddocks?.length ?? 0) === 0) && (
+                <div className="mt-4 flex items-start gap-4 rounded-[20px] border border-[#e7e5e4] bg-white px-5 py-4">
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#f5f5f4]">
+                        <svg className="h-4 w-4 text-[#1c1917]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#1c1917]">Cadastre os pastos da sua fazenda</p>
+                        <p className="mt-0.5 text-xs leading-relaxed text-[#78716c]">
+                            Com os pastos cadastrados você consegue alocar animais, acompanhar lotação e organizar o manejo.
+                        </p>
+                    </div>
+                    <div className="flex-shrink-0 self-center">
+                        <span className="text-xs font-semibold text-[#1c1917]">Mapa da Fazenda →</span>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

@@ -305,7 +305,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                 <div className="lg:col-span-2">
                     <label className="text-xs uppercase text-gray-500">Buscar por brinco</label>
                     <input
-                        className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:ring-primary dark:border-gray-700 dark:bg-dark-card dark:text-white"
+                        className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#1c1917] focus:ring-[#1c1917]/10 dark:border-gray-700 dark:bg-dark-card dark:text-white"
                         placeholder="Ex: F001"
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
@@ -317,7 +317,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                         <input
                             id="only-alert-toggle"
                             type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-[#1c1917]/10"
                             checked={onlyAlert}
                             onChange={(event) => setOnlyAlert(event.target.checked)}
                         />
@@ -330,7 +330,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                     <label className="text-xs uppercase text-gray-500">Estação</label>
                     {reproMode === 'ESTACAO' ? (
                         <select
-                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:ring-primary dark:border-gray-700 dark:bg-dark-card dark:text-white"
+                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#1c1917] focus:ring-[#1c1917]/10 dark:border-gray-700 dark:bg-dark-card dark:text-white"
                             value={selectedSeasonId || ''}
                             onChange={(event) => setSelectedSeasonId(event.target.value || null)}
                         >
@@ -481,7 +481,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                         <p className="text-sm text-gray-500 mt-1">Informe o motivo para descartar a matriz {decisionAnimal.animal.brinco}.</p>
                         <form className="mt-4 space-y-3" onSubmit={handleDiscardSubmit}>
                             <textarea
-                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary focus:ring-primary dark:border-gray-700 dark:bg-dark-card dark:text-white"
+                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#1c1917] focus:ring-[#1c1917]/10 dark:border-gray-700 dark:bg-dark-card dark:text-white"
                                 rows={3}
                                 value={decisionReason}
                                 onChange={(event) => setDecisionReason(event.target.value)}

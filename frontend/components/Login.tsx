@@ -33,7 +33,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
 
                 <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-10 pt-8 lg:px-8">
                     <div className="mb-10">
-                        <div className="text-[2rem] font-black leading-none text-stone-900">eixo</div>
+                        <img src="/logo_eixo_black.svg" alt="eixo" className="h-10 w-auto" />
                         <div className="text-[11px] uppercase tracking-[0.18em] text-stone-500">Plataforma de Gestão Pecuária</div>
                     </div>
 
@@ -51,8 +51,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                             </button>
                         )}
                         <div className="mb-6">
-                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-100/70 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
-                                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
                                 Acesso seguro
                             </div>
                             <div>
@@ -73,7 +73,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="mt-1 w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-stone-900 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-3 text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#a8442a]"
                                     placeholder="nome@fazenda.com"
                                     required
                                 />
@@ -90,7 +90,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="mt-1 w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3 text-stone-900 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="mt-1 w-full rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-3 text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#a8442a]"
                                     placeholder="••••••••"
                                     required
                                 />
@@ -101,7 +101,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                                         type="checkbox"
                                         checked={rememberMe}
                                         onChange={(e) => setRememberMe(e.target.checked)}
-                                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                                        className="h-4 w-4 rounded border-[#e7e5e4] text-[#a8442a] focus:ring-[#a8442a]"
                                     />
                                     <span>Lembrar de mim</span>
                                 </label>
@@ -111,25 +111,25 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                                 <button
                                     type="button"
                                     onClick={() => {}}
-                                    className="text-sm text-amber-700 hover:underline"
+                                    className="text-sm text-[#78716c] hover:underline"
                                 >
                                     Esqueci minha senha
                                 </button>
                             </div>
 
                             {success && (
-                                <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                                <div className="rounded-2xl bg-[#edf4eb] px-4 py-3 text-sm text-[#16a34a]">
                                     {success}
                                 </div>
                             )}
                             {error && (
-                                <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-600">
+                                <div className="rounded-2xl bg-[#fbede8] px-4 py-3 text-sm text-[#8c4d39]">
                                     {error}
                                 </div>
                             )}
                             <button
                                 type="submit"
-                                className="w-full rounded-2xl bg-primary py-3 font-semibold text-white transition-colors hover:bg-primary-dark"
+                                className="w-full rounded-2xl bg-[#a8442a] py-3 font-semibold text-white transition-colors hover:bg-[#933a22]"
                             >
                                 Entrar
                             </button>

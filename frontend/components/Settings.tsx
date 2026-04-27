@@ -74,7 +74,7 @@ const Settings: React.FC = () => {
                                 id="currentPassword"
                                 value={currentPassword}
                                 onChange={(e) => setCurrentPassword(e.target.value)}
-                                className="block w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-colors"
+                                className="block w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#1c1917]/10 focus:border-transparent dark:text-white transition-colors"
                                 placeholder="Digite sua senha atual"
                             />
                         </div>
@@ -88,7 +88,7 @@ const Settings: React.FC = () => {
                                 id="newPassword"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                className="block w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-colors"
+                                className="block w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#1c1917]/10 focus:border-transparent dark:text-white transition-colors"
                                 placeholder="Digite a nova senha"
                             />
                         </div>
@@ -102,7 +102,7 @@ const Settings: React.FC = () => {
                                 id="confirmPassword"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="block w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent dark:text-white transition-colors"
+                                className="block w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-[#1c1917]/10 focus:border-transparent dark:text-white transition-colors"
                                 placeholder="Confirme a nova senha"
                             />
                         </div>
@@ -110,7 +110,7 @@ const Settings: React.FC = () => {
                         <div className="pt-2">
                             <button
                                 type="submit"
-                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors disabled:opacity-50"
+                                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1c1917]/10 transition-colors disabled:opacity-50"
                             >
                                 Atualizar Senha
                             </button>

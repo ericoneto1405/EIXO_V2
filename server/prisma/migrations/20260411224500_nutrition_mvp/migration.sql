@@ -113,31 +113,7 @@ END $$;
 -- AlterTable
 ALTER TABLE "NutritionAssignment" ADD COLUMN     "unitId" TEXT;
 
--- AlterTable
-ALTER TABLE "NutritionExecution" ADD COLUMN     "actualNaturalKg" DOUBLE PRECISION,
-ADD COLUMN     "approvedAt" TIMESTAMP(3),
-ADD COLUMN     "approvedByName" TEXT,
-ADD COLUMN     "approvedByUserId" TEXT,
-ADD COLUMN     "cancelReason" TEXT,
-ADD COLUMN     "canceledAt" TIMESTAMP(3),
-ADD COLUMN     "canceledByName" TEXT,
-ADD COLUMN     "canceledByUserId" TEXT,
-ADD COLUMN     "costPerHeadDay" DOUBLE PRECISION,
-ADD COLUMN     "createdByName" TEXT,
-ADD COLUMN     "createdByUserId" TEXT,
-ADD COLUMN     "fabricationId" TEXT,
-ADD COLUMN     "feedingSlot" TEXT,
-ADD COLUMN     "headCountSnapshot" INTEGER,
-ADD COLUMN     "planId" TEXT,
-ADD COLUMN     "plannedNaturalKg" DOUBLE PRECISION,
-ADD COLUMN     "preparedFeedId" TEXT,
-ADD COLUMN     "refusalNaturalKg" DOUBLE PRECISION,
-ADD COLUMN     "rejectedAt" TIMESTAMP(3),
-ADD COLUMN     "rejectedByName" TEXT,
-ADD COLUMN     "rejectedByUserId" TEXT,
-ADD COLUMN     "rejectionReason" TEXT,
-ADD COLUMN     "totalCost" DOUBLE PRECISION,
-ADD COLUMN     "unitId" TEXT;
+-- AlterTable NutritionExecution: columns merged into CREATE TABLE below (shadow DB compat)
 
 -- AlterTable
 ALTER TABLE "NutritionPlan" ADD COLUMN     "estimatedCostPerHeadDay" DOUBLE PRECISION,
@@ -358,6 +334,31 @@ CREATE TABLE "NutritionExecution" (
     "reviewStatus" "ReviewStatus" NOT NULL DEFAULT 'APPROVED',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
+    -- columns from ALTER TABLE block (merged for shadow DB compatibility)
+    "actualNaturalKg" DOUBLE PRECISION,
+    "approvedAt" TIMESTAMP(3),
+    "approvedByName" TEXT,
+    "approvedByUserId" TEXT,
+    "cancelReason" TEXT,
+    "canceledAt" TIMESTAMP(3),
+    "canceledByName" TEXT,
+    "canceledByUserId" TEXT,
+    "costPerHeadDay" DOUBLE PRECISION,
+    "createdByName" TEXT,
+    "createdByUserId" TEXT,
+    "fabricationId" TEXT,
+    "feedingSlot" TEXT,
+    "headCountSnapshot" INTEGER,
+    "planId" TEXT,
+    "plannedNaturalKg" DOUBLE PRECISION,
+    "preparedFeedId" TEXT,
+    "refusalNaturalKg" DOUBLE PRECISION,
+    "rejectedAt" TIMESTAMP(3),
+    "rejectedByName" TEXT,
+    "rejectedByUserId" TEXT,
+    "rejectionReason" TEXT,
+    "totalCost" DOUBLE PRECISION,
+    "unitId" TEXT,
 
     CONSTRAINT "NutritionExecution_pkey" PRIMARY KEY ("id")
 );
