@@ -23,7 +23,7 @@ const CashFlowChart: React.FC<CashFlowChartProps> = ({ farmId }) => {
     if (!data.length) {
         return (
             <ChartCard title="Fluxo de Caixa (Últimos 6 Meses)">
-                <p className="text-sm text-[#78716c]">
+                <p className="text-sm text-[var(--eixo-text-muted)]">
                     Nenhum movimento financeiro disponível.
                 </p>
             </ChartCard>
@@ -41,13 +41,13 @@ const CashFlowChart: React.FC<CashFlowChartProps> = ({ farmId }) => {
                         cursor={{ fill: 'rgba(231, 229, 228, 0.5)' }}
                         contentStyle={{
                             backgroundColor: '#ffffff',
-                            borderColor: '#e7e5e4',
+                            borderColor: 'var(--eixo-border)',
                             borderRadius: '0.5rem'
                         }}
                     />
                     <Legend />
                     <Bar dataKey="receita" fill="#22c55e" name="Receita" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="despesa" fill="#a8442a" name="Despesa" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="despesa" fill="var(--eixo-green)" name="Despesa" radius={[4, 4, 0, 0]} />
                 </BarChart>
             </ResponsiveContainer>
         </ChartCard>

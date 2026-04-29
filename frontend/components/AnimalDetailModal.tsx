@@ -25,7 +25,7 @@ interface AnimalDetailModalProps {
     onAnimalUpdated?: () => void;
 }
 
-type ModalTab = 'weighing' | 'paddock' | 'events' | 'sanitary';
+type ModalTab = 'edit' | 'weighing' | 'paddock' | 'events' | 'sanitary';
 
 const EVENT_TYPE_LABELS: Record<string, string> = {
     NASCIMENTO: 'Nascimento',
@@ -35,10 +35,10 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
 };
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
-    NASCIMENTO: 'bg-[#edf4eb] text-[#3d6b38]',
+    NASCIMENTO: 'bg-[var(--eixo-green-soft)] text-[#3d6b38]',
     COMPRA: 'bg-[#e8eef8] text-[#3a5799]',
-    VENDA: 'bg-amber-100 text-amber-800',
-    MORTE: 'bg-[#fef2f2] text-[#8c4d39]',
+    VENDA: 'bg-[#f7f1df] text-amber-800',
+    MORTE: 'bg-[#fff2ef] text-[var(--eixo-danger)]',
 };
 
 const SANITARY_TIPO_LABELS: Record<string, string> = {
@@ -134,6 +134,17 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const [sanitaryObs, setSanitaryObs] = useState('');
     const [isSavingSanitary, setIsSavingSanitary] = useState(false);
 
+    // Edição de dados básicos
+    const [editBrinco, setEditBrinco] = useState('');
+    const [editRaca, setEditRaca] = useState('');
+    const [breedSuggestions, setBreedSuggestions] = useState<string[]>([]);
+    const [editSexo, setEditSexo] = useState('');
+    const [editCategoria, setEditCategoria] = useState('');
+    const [editDataNasc, setEditDataNasc] = useState('');
+    const [editRegistro, setEditRegistro] = useState('');
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
+    const [editMsg, setEditMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
     const animalId = animal?.id;
 
     // ---- Loaders ----
@@ -181,6 +192,20 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         }
     }, [animal]);
 
+    const loadBreedSuggestions = useCallback(async () => {
+        const farmId = (animal as any)?.farmId;
+        if (!farmId) { setBreedSuggestions([]); return; }
+        try {
+            const response = await fetch(buildApiUrl(`/farms/${farmId}/breeds`), { credentials: 'include' });
+            const payload = await response.json().catch(() => ({}));
+            if (response.ok) {
+                setBreedSuggestions((payload.breeds || []).map((b: { name: string }) => b.name));
+            }
+        } catch {
+            // silently fail
+        }
+    }, [animal]);
+
     const loadHerdEvents = useCallback(async () => {
         if (!animalId) { setHerdEvents([]); return; }
         setIsLoadingEvents(true);
@@ -216,19 +241,30 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             loadWeighings();
             loadPaddockMoves();
             loadPaddockOptions();
+            loadBreedSuggestions();
             loadHerdEvents();
             loadSanitaryRecords();
             setMovePaddockId('');
             setMoveStartAt(new Date().toISOString().slice(0, 10));
             setMoveNotes('');
+            // Pré-preencher campos de edição
+            const a = animal as HerdAnimal;
+            setEditBrinco(a.brinco ?? '');
+            setEditRaca(a.raca ?? '');
+            setEditSexo((a as any).sexoRaw ?? (a.sexo === 'Macho' ? 'MACHO' : a.sexo === 'Fêmea' ? 'FEMEA' : ''));
+            setEditCategoria(a.categoria ?? '');
+            setEditDataNasc(a.dataNascimento ? a.dataNascimento.slice(0, 10) : '');
+            setEditRegistro(a.registro ?? '');
+            setEditMsg(null);
         } else {
             setWeighingHistory([]);
             setPaddockMoves([]);
             setPaddockOptions([]);
+            setBreedSuggestions([]);
             setHerdEvents([]);
             setSanitaryRecords([]);
         }
-    }, [animalId, loadWeighings, loadPaddockMoves, loadPaddockOptions, loadHerdEvents, loadSanitaryRecords]);
+    }, [animalId, loadWeighings, loadPaddockMoves, loadPaddockOptions, loadBreedSuggestions, loadHerdEvents, loadSanitaryRecords]);
 
     useEffect(() => {
         const farmId = (animal as HerdAnimal)?.farmId;
@@ -367,25 +403,60 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         }
     };
 
+    const handleSaveEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!animalId) return;
+        setEditMsg(null);
+        if (!editBrinco.trim()) {
+            setEditMsg({ text: 'O brinco não pode ser vazio.', type: 'error' });
+            return;
+        }
+        setIsSavingEdit(true);
+        try {
+            const res = await fetch(buildApiUrl(`/animals/${animalId}`), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    brinco: editBrinco.trim(),
+                    raca: editRaca || null,
+                    sexo: editSexo || null,
+                    categoria: editCategoria || null,
+                    dataNascimento: editDataNasc || null,
+                    registro: editRegistro || null,
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data?.message || 'Erro ao salvar.');
+            setEditMsg({ text: 'Dados atualizados com sucesso!', type: 'success' });
+            onAnimalUpdated?.();
+        } catch (err: any) {
+            setEditMsg({ text: err?.message ?? 'Erro ao salvar.', type: 'error' });
+        } finally {
+            setIsSavingEdit(false);
+        }
+    };
+
     if (!animal) return null;
 
     const detailItems = useMemo(() => {
         if (!animal) return [];
+        const a = animal as HerdAnimal;
         const baseItems = [
-            { label: 'Raça', value: animal.raca },
-            { label: 'Sexo', value: animal.sexo },
-            { label: 'Idade', value: calculateAge(animal.dataNascimento) },
-            { label: 'Peso Atual', value: animal.pesoAtual !== undefined && animal.pesoAtual !== null ? `${animal.pesoAtual} kg` : '—' },
-            { label: 'GMD 30 dias', value: (animal as any).gmd30 != null ? `${((animal as any).gmd30 as number).toFixed(2)} kg/dia` : '—' },
-            { label: 'GMD último intervalo', value: ((animal as any).gmdLast ?? animal.gmd) != null ? `${(((animal as any).gmdLast ?? animal.gmd) as number).toFixed(2)} kg/dia` : '—' },
-            { label: 'Nascimento', value: animal.dataNascimento ? new Date(animal.dataNascimento).toLocaleDateString('pt-BR') : '—' },
+            { label: 'Raça', value: a.raca || '—' },
+            { label: 'Sexo', value: a.sexo || '—' },
+            { label: 'Categoria', value: a.categoria || '—' },
+            { label: 'Nascimento', value: a.dataNascimento ? new Date(a.dataNascimento).toLocaleDateString('pt-BR') : '—' },
+            { label: 'Idade', value: calculateAge(a.dataNascimento) },
+            { label: 'Peso Atual', value: a.pesoAtual != null ? `${a.pesoAtual} kg` : '—' },
+            { label: 'GMD 30 dias', value: (a as any).gmd30 != null ? `${((a as any).gmd30 as number).toFixed(2)} kg/dia` : '—' },
+            { label: 'GMD último intervalo', value: ((a as any).gmdLast ?? a.gmd) != null ? `${(((a as any).gmdLast ?? a.gmd) as number).toFixed(2)} kg/dia` : '—' },
+            { label: 'Pasto atual', value: a.currentPaddockName || '—' },
         ];
         if (resolvedMode !== 'PO') return baseItems;
-        const poAnimal = animal as HerdAnimal;
         return [
-            { label: 'Nome', value: poAnimal.nome || '—' },
-            { label: 'Registro', value: poAnimal.registro || '—' },
-            { label: 'Categoria', value: poAnimal.categoria || '—' },
+            { label: 'Nome', value: a.nome || '—' },
+            { label: 'Registro', value: a.registro || '—' },
             ...baseItems,
         ];
     }, [animal, resolvedMode]);
@@ -402,13 +473,13 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         typeof (animal as any)?.gmd === 'number' ? (animal as any).gmd : null;
     const gmdDelta = gmdAtual !== null && nutritionPlanMeta !== null ? gmdAtual - nutritionPlanMeta : null;
 
-    const inputClass = 'mt-1 rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#1c1917] placeholder-[#c4b5a0] focus:border-[#a8442a] focus:outline-none';
-    const labelClass = 'text-xs font-medium text-[#78716c]';
-    const btnPrimary = 'h-10 rounded-xl bg-[#a8442a] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#933a22] disabled:cursor-not-allowed disabled:opacity-70';
+    const inputClass = 'mt-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none';
+    const labelClass = 'text-xs font-medium text-[var(--eixo-text-muted)]';
+    const btnPrimary = 'h-10 rounded-xl bg-[var(--eixo-green)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-70';
     const tabClass = (tab: ModalTab) =>
         `${activeTab === tab
-            ? 'border-[#a8442a] text-[#a8442a] font-semibold'
-            : 'border-transparent text-[#78716c] hover:text-[#a8442a] hover:border-[#e7e5e4]'
+            ? 'border-[var(--eixo-green)] text-[var(--eixo-green)] font-semibold'
+            : 'border-transparent text-[var(--eixo-text-muted)] hover:text-[var(--eixo-green)] hover:border-[var(--eixo-border)]'
         } whitespace-nowrap py-3 px-1 border-b-2 text-sm transition-colors`;
 
     return (
@@ -419,22 +490,22 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             role="dialog"
         >
             <div
-                className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-[#e7e5e4] bg-white shadow-2xl"
+                className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
                 style={{ animation: 'scale-in 0.18s ease-out forwards' }}
             >
                 {/* Header */}
-                <header className="flex items-center justify-between border-b border-[#e7e5e4] px-6 py-5 flex-shrink-0">
+                <header className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5 flex-shrink-0">
                     <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#78716c] mb-0.5">Animal</p>
-                        <h2 className="font-brand text-xl font-extrabold text-[#1c1917]">
+                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)] mb-0.5">Animal</p>
+                        <h2 className="font-brand text-xl font-extrabold text-[var(--eixo-text)]">
                             {(animal as HerdAnimal).identificacao || animal.brinco || 'Sem identificação'}
                         </h2>
                     </div>
                     <button
                         onClick={onClose}
                         aria-label="Fechar"
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] text-[#78716c] hover:bg-[#f5f5f4] transition-colors"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)] transition-colors"
                     >
                         <CloseIcon />
                     </button>
@@ -446,11 +517,11 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                     {/* Informações Gerais */}
                     <section>
                         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#b0a08a] mb-3">Informações Gerais</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 rounded-2xl bg-white border border-[#e7e5e4] p-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4 rounded-2xl bg-[var(--eixo-surface)] border border-[var(--eixo-border)] p-4">
                             {detailItems.map((item) => (
                                 <div key={item.label}>
-                                    <p className="text-xs text-[#78716c]">{item.label}</p>
-                                    <p className="font-semibold text-[#1c1917] text-sm">{item.value ?? '—'}</p>
+                                    <p className="text-xs text-[var(--eixo-text-muted)]">{item.label}</p>
+                                    <p className="font-semibold text-[var(--eixo-text)] text-sm">{item.value ?? '—'}</p>
                                 </div>
                             ))}
                         </div>
@@ -459,19 +530,19 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                     {/* Nutrição */}
                     <section>
                         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#b0a08a] mb-3">Nutrição atual</p>
-                        <div className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-3 text-sm text-[#78716c]">
+                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm text-[var(--eixo-text-muted)]">
                             {isLoadingNutrition ? (
                                 <span>Carregando plano...</span>
                             ) : nutritionError ? (
-                                <span className="text-[#8c4d39]">{nutritionError}</span>
+                                <span className="text-[var(--eixo-danger)]">{nutritionError}</span>
                             ) : nutritionPlanName ? (
                                 <div className="space-y-1">
-                                    <div className="font-semibold text-[#1c1917]">{nutritionPlanName}</div>
-                                    {nutritionPlanPhase && <div className="text-xs text-[#78716c]">Fase: {nutritionPlanPhase}</div>}
-                                    {nutritionPlanMeta !== null && <div className="text-xs text-[#78716c]">Meta GMD: {nutritionPlanMeta.toFixed(2)} kg/dia</div>}
-                                    {gmdAtual !== null && <div className="text-xs text-[#78716c]">GMD 30 dias: {gmdAtual.toFixed(2)} kg/dia</div>}
+                                    <div className="font-semibold text-[var(--eixo-text)]">{nutritionPlanName}</div>
+                                    {nutritionPlanPhase && <div className="text-xs text-[var(--eixo-text-muted)]">Fase: {nutritionPlanPhase}</div>}
+                                    {nutritionPlanMeta !== null && <div className="text-xs text-[var(--eixo-text-muted)]">Meta GMD: {nutritionPlanMeta.toFixed(2)} kg/dia</div>}
+                                    {gmdAtual !== null && <div className="text-xs text-[var(--eixo-text-muted)]">GMD 30 dias: {gmdAtual.toFixed(2)} kg/dia</div>}
                                     {gmdDelta !== null && (
-                                        <div className={`text-xs font-medium ${gmdDelta >= 0 ? 'text-[#3d6b38]' : 'text-[#8c4d39]'}`}>
+                                        <div className={`text-xs font-medium ${gmdDelta >= 0 ? 'text-[#3d6b38]' : 'text-[var(--eixo-danger)]'}`}>
                                             Delta: {gmdDelta >= 0 ? '+' : ''}{gmdDelta.toFixed(2)} kg/dia
                                         </div>
                                     )}
@@ -485,8 +556,9 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                     {/* Abas de Histórico */}
                     <section>
                         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#b0a08a] mb-3">Histórico</p>
-                        <div className="border-b border-[#e7e5e4]">
+                        <div className="border-b border-[var(--eixo-border)]">
                             <nav className="-mb-px flex gap-4 overflow-x-auto" aria-label="Abas">
+                                <button onClick={() => setActiveTab('edit')} className={tabClass('edit')}>Editar</button>
                                 <button onClick={() => setActiveTab('weighing')} className={tabClass('weighing')}>Pesagens</button>
                                 <button onClick={() => setActiveTab('paddock')} className={tabClass('paddock')}>Pasto</button>
                                 <button onClick={() => setActiveTab('events')} className={tabClass('events')}>Eventos</button>
@@ -495,6 +567,98 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                         </div>
 
                         <div className="mt-5">
+                            {/* ABA: Editar */}
+                            {activeTab === 'edit' && (
+                                <form onSubmit={handleSaveEdit} className="space-y-4">
+                                    {editMsg && (
+                                        <div className={`rounded-xl border px-4 py-3 text-sm ${
+                                            editMsg.type === 'success'
+                                                ? 'border-green-200 bg-green-50 text-green-700'
+                                                : 'border-red-200 bg-red-50 text-red-700'
+                                        }`}>
+                                            {editMsg.text}
+                                        </div>
+                                    )}
+                                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                        <div>
+                                            <label className={labelClass}>Brinco *</label>
+                                            <input
+                                                type="text"
+                                                value={editBrinco}
+                                                onChange={e => setEditBrinco(e.target.value)}
+                                                className={`${inputClass} w-full`}
+                                                placeholder="Ex: 1234"
+                                                required
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Registro</label>
+                                            <input
+                                                type="text"
+                                                value={editRegistro}
+                                                onChange={e => setEditRegistro(e.target.value)}
+                                                className={`${inputClass} w-full`}
+                                                placeholder="Opcional"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Raça</label>
+                                            <input
+                                                type="text"
+                                                list="breed-suggestions-modal"
+                                                value={editRaca}
+                                                onChange={e => setEditRaca(e.target.value)}
+                                                className={`${inputClass} w-full`}
+                                                placeholder="Digite ou selecione a raça"
+                                            />
+                                            {breedSuggestions.length > 0 && (
+                                                <datalist id="breed-suggestions-modal">
+                                                    {breedSuggestions.map((name) => (
+                                                        <option key={name} value={name} />
+                                                    ))}
+                                                </datalist>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Sexo</label>
+                                            <select
+                                                value={editSexo}
+                                                onChange={e => setEditSexo(e.target.value)}
+                                                className={`${inputClass} w-full`}
+                                            >
+                                                <option value="">Não informado</option>
+                                                <option value="MACHO">Macho</option>
+                                                <option value="FEMEA">Fêmea</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Categoria</label>
+                                            <input
+                                                type="text"
+                                                value={editCategoria}
+                                                onChange={e => setEditCategoria(e.target.value)}
+                                                className={`${inputClass} w-full`}
+                                                placeholder="Ex: Boi, Vaca, Novilha…"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className={labelClass}>Data de Nascimento</label>
+                                            <input
+                                                type="date"
+                                                value={editDataNasc}
+                                                onChange={e => setEditDataNasc(e.target.value)}
+                                                className={`${inputClass} w-full`}
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="pt-1">
+                                        <button type="submit" className={btnPrimary} disabled={isSavingEdit}>
+                                            {isSavingEdit ? 'Salvando…' : 'Salvar alterações'}
+                                        </button>
+                                    </div>
+                                </form>
+                            )}
+
                             {/* ABA: Pesagens */}
                             {activeTab === 'weighing' && (
                                 <>
@@ -511,15 +675,15 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingWeighing ? 'Salvando...' : 'Salvar pesagem'}
                                         </button>
                                     </form>
-                                    {weighingError && <p className="mb-4 text-sm text-[#8c4d39]">{weighingError}</p>}
+                                    {weighingError && <p className="mb-4 text-sm text-[var(--eixo-danger)]">{weighingError}</p>}
                                     {isLoadingWeighings ? (
-                                        <p className="text-sm text-[#78716c]">Carregando pesagens...</p>
+                                        <p className="text-sm text-[var(--eixo-text-muted)]">Carregando pesagens...</p>
                                     ) : weighingHistory.length === 0 ? (
-                                        <p className="text-sm text-[#78716c]">Nenhuma pesagem registrada.</p>
+                                        <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma pesagem registrada.</p>
                                     ) : (
                                         <table className="w-full text-sm text-left">
                                             <thead>
-                                                <tr className="bg-[#f5f5f4] text-[#78716c] text-xs uppercase">
+                                                <tr className="bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] text-xs uppercase">
                                                     <th className="px-4 py-3 rounded-tl-xl">Data</th>
                                                     <th className="px-4 py-3">Peso</th>
                                                     <th className="px-4 py-3 rounded-tr-xl">GMD</th>
@@ -527,9 +691,9 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             </thead>
                                             <tbody>
                                                 {weighingHistory.map((item) => (
-                                                    <tr key={item.id} className="border-b border-[#e7e5e4]">
-                                                        <td className="px-4 py-3 text-[#1c1917]">{new Date(item.data).toLocaleDateString('pt-BR')}</td>
-                                                        <td className="px-4 py-3 text-[#1c1917]">{item.peso} kg</td>
+                                                    <tr key={item.id} className="border-b border-[var(--eixo-border)]">
+                                                        <td className="px-4 py-3 text-[var(--eixo-text)]">{new Date(item.data).toLocaleDateString('pt-BR')}</td>
+                                                        <td className="px-4 py-3 text-[var(--eixo-text)]">{item.peso} kg</td>
                                                         <td className="px-4 py-3 font-medium text-[#3d6b38]">{item.gmd.toFixed(2)} kg</td>
                                                     </tr>
                                                 ))}
@@ -542,10 +706,10 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                             {/* ABA: Pasto */}
                             {activeTab === 'paddock' && (
                                 <>
-                                    <div className="mb-4 rounded-xl border border-[#e7e5e4] bg-white px-4 py-3 text-sm">
-                                        <div className="text-xs uppercase text-[#78716c] tracking-wide mb-0.5">Pasto atual</div>
-                                        <div className="font-semibold text-[#1c1917]">{currentPaddockMove?.paddockName || '—'}</div>
-                                        <div className="text-xs text-[#78716c]">
+                                    <div className="mb-4 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm">
+                                        <div className="text-xs uppercase text-[var(--eixo-text-muted)] tracking-wide mb-0.5">Pasto atual</div>
+                                        <div className="font-semibold text-[var(--eixo-text)]">{currentPaddockMove?.paddockName || '—'}</div>
+                                        <div className="text-xs text-[var(--eixo-text-muted)]">
                                             Entrada: {currentPaddockMove?.startAt ? new Date(currentPaddockMove.startAt).toLocaleDateString('pt-BR') : '—'}
                                         </div>
                                     </div>
@@ -569,15 +733,15 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingPaddockMove ? 'Salvando...' : 'Mover'}
                                         </button>
                                     </form>
-                                    {paddockMoveError && <p className="mb-4 text-sm text-[#8c4d39]">{paddockMoveError}</p>}
+                                    {paddockMoveError && <p className="mb-4 text-sm text-[var(--eixo-danger)]">{paddockMoveError}</p>}
                                     {isLoadingPaddockMoves ? (
-                                        <p className="text-sm text-[#78716c]">Carregando movimentações...</p>
+                                        <p className="text-sm text-[var(--eixo-text-muted)]">Carregando movimentações...</p>
                                     ) : paddockMoves.length === 0 ? (
-                                        <p className="text-sm text-[#78716c]">Nenhuma movimentação registrada.</p>
+                                        <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma movimentação registrada.</p>
                                     ) : (
                                         <table className="w-full text-sm text-left">
                                             <thead>
-                                                <tr className="bg-[#f5f5f4] text-[#78716c] text-xs uppercase">
+                                                <tr className="bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] text-xs uppercase">
                                                     <th className="px-4 py-3 rounded-tl-xl">Pasto</th>
                                                     <th className="px-4 py-3">Entrada</th>
                                                     <th className="px-4 py-3 rounded-tr-xl">Saída</th>
@@ -585,10 +749,10 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             </thead>
                                             <tbody>
                                                 {paddockMoves.map((move) => (
-                                                    <tr key={move.id} className="border-b border-[#e7e5e4]">
-                                                        <td className="px-4 py-3 text-[#1c1917]">{move.paddockName || '—'}</td>
-                                                        <td className="px-4 py-3 text-[#1c1917]">{new Date(move.startAt).toLocaleDateString('pt-BR')}</td>
-                                                        <td className="px-4 py-3 text-[#1c1917]">{move.endAt ? new Date(move.endAt).toLocaleDateString('pt-BR') : '—'}</td>
+                                                    <tr key={move.id} className="border-b border-[var(--eixo-border)]">
+                                                        <td className="px-4 py-3 text-[var(--eixo-text)]">{move.paddockName || '—'}</td>
+                                                        <td className="px-4 py-3 text-[var(--eixo-text)]">{new Date(move.startAt).toLocaleDateString('pt-BR')}</td>
+                                                        <td className="px-4 py-3 text-[var(--eixo-text)]">{move.endAt ? new Date(move.endAt).toLocaleDateString('pt-BR') : '—'}</td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -644,25 +808,25 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingEvent ? 'Salvando...' : 'Registrar evento'}
                                         </button>
                                     </form>
-                                    {eventsError && <p className="mb-4 text-sm text-[#8c4d39]">{eventsError}</p>}
+                                    {eventsError && <p className="mb-4 text-sm text-[var(--eixo-danger)]">{eventsError}</p>}
                                     {isLoadingEvents ? (
-                                        <p className="text-sm text-[#78716c]">Carregando eventos...</p>
+                                        <p className="text-sm text-[var(--eixo-text-muted)]">Carregando eventos...</p>
                                     ) : herdEvents.length === 0 ? (
-                                        <p className="text-sm text-[#78716c]">Nenhum evento registrado para este animal.</p>
+                                        <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum evento registrado para este animal.</p>
                                     ) : (
                                         <div className="space-y-2">
                                             {herdEvents.map((ev) => (
-                                                <div key={ev.id} className="flex flex-wrap items-start gap-3 rounded-xl border border-[#e7e5e4] bg-white px-4 py-3">
-                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${EVENT_TYPE_COLORS[ev.type] || 'bg-[#f5f5f4] text-[#78716c]'}`}>
+                                                <div key={ev.id} className="flex flex-wrap items-start gap-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3">
+                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${EVENT_TYPE_COLORS[ev.type] || 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>
                                                         {EVENT_TYPE_LABELS[ev.type] || ev.type}
                                                     </span>
-                                                    <div className="flex-1 text-sm text-[#1c1917]">
+                                                    <div className="flex-1 text-sm text-[var(--eixo-text)]">
                                                         <span className="font-medium">{new Date(ev.date).toLocaleDateString('pt-BR')}</span>
-                                                        {ev.peso !== null && <span className="ml-3 text-[#78716c]">{ev.peso} kg</span>}
-                                                        {ev.valor !== null && <span className="ml-3 text-[#78716c]">R$ {ev.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
-                                                        {ev.origem && <span className="ml-3 text-[#78716c]">Origem: {ev.origem}</span>}
-                                                        {ev.destino && <span className="ml-3 text-[#78716c]">Destino: {ev.destino}</span>}
-                                                        {ev.observacoes && <p className="mt-1 text-xs text-[#78716c]">{ev.observacoes}</p>}
+                                                        {ev.peso !== null && <span className="ml-3 text-[var(--eixo-text-muted)]">{ev.peso} kg</span>}
+                                                        {ev.valor !== null && <span className="ml-3 text-[var(--eixo-text-muted)]">R$ {ev.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
+                                                        {ev.origem && <span className="ml-3 text-[var(--eixo-text-muted)]">Origem: {ev.origem}</span>}
+                                                        {ev.destino && <span className="ml-3 text-[var(--eixo-text-muted)]">Destino: {ev.destino}</span>}
+                                                        {ev.observacoes && <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">{ev.observacoes}</p>}
                                                     </div>
                                                 </div>
                                             ))}
@@ -707,28 +871,28 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingSanitary ? 'Salvando...' : 'Registrar'}
                                         </button>
                                     </form>
-                                    {sanitaryError && <p className="mb-4 text-sm text-[#8c4d39]">{sanitaryError}</p>}
+                                    {sanitaryError && <p className="mb-4 text-sm text-[var(--eixo-danger)]">{sanitaryError}</p>}
                                     {isLoadingSanitary ? (
-                                        <p className="text-sm text-[#78716c]">Carregando registros...</p>
+                                        <p className="text-sm text-[var(--eixo-text-muted)]">Carregando registros...</p>
                                     ) : sanitaryRecords.length === 0 ? (
-                                        <p className="text-sm text-[#78716c]">Nenhum registro sanitário para este animal.</p>
+                                        <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum registro sanitário para este animal.</p>
                                     ) : (
                                         <div className="space-y-2">
                                             {sanitaryRecords.map((rec) => (
-                                                <div key={rec.id} className="flex flex-wrap items-start gap-3 rounded-xl border border-[#e7e5e4] bg-white px-4 py-3">
-                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${SANITARY_TIPO_COLORS[rec.tipo] || 'bg-[#f5f5f4] text-[#78716c]'}`}>
+                                                <div key={rec.id} className="flex flex-wrap items-start gap-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3">
+                                                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${SANITARY_TIPO_COLORS[rec.tipo] || 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>
                                                         {SANITARY_TIPO_LABELS[rec.tipo] || rec.tipo}
                                                     </span>
-                                                    <div className="flex-1 text-sm text-[#1c1917]">
+                                                    <div className="flex-1 text-sm text-[var(--eixo-text)]">
                                                         <span className="font-medium">{rec.produto}</span>
-                                                        <span className="ml-3 text-[#78716c]">{new Date(rec.date).toLocaleDateString('pt-BR')}</span>
-                                                        {rec.dose && <span className="ml-3 text-[#78716c]">Dose: {rec.dose}</span>}
+                                                        <span className="ml-3 text-[var(--eixo-text-muted)]">{new Date(rec.date).toLocaleDateString('pt-BR')}</span>
+                                                        {rec.dose && <span className="ml-3 text-[var(--eixo-text-muted)]">Dose: {rec.dose}</span>}
                                                         {rec.proximaAplicacao && (
-                                                            <span className="ml-3 text-[#78716c]">
+                                                            <span className="ml-3 text-[var(--eixo-text-muted)]">
                                                                 Próxima: {new Date(rec.proximaAplicacao).toLocaleDateString('pt-BR')}
                                                             </span>
                                                         )}
-                                                        {rec.observacoes && <p className="mt-1 text-xs text-[#78716c]">{rec.observacoes}</p>}
+                                                        {rec.observacoes && <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">{rec.observacoes}</p>}
                                                     </div>
                                                 </div>
                                             ))}

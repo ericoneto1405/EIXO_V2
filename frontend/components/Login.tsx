@@ -19,7 +19,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
     };
 
     return (
-        <div className="min-h-screen bg-stone-50 text-stone-900">
+        <div className="min-h-screen bg-[var(--eixo-bg)] text-[var(--eixo-text)]">
             <div className="relative overflow-hidden min-h-screen">
                 <div
                     className="absolute inset-0 opacity-40"
@@ -29,43 +29,43 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                         backgroundSize: 'cover',
                     }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-stone-50 via-stone-50/80 to-stone-50/55" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[var(--eixo-surface)] via-[var(--eixo-bg)]/82 to-[var(--eixo-bg)]/60" />
 
                 <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-10 pt-8 lg:px-8">
                     <div className="mb-10">
-                        <img src="/logo_eixo_black.svg" alt="eixo" className="h-10 w-auto" />
-                        <div className="text-[11px] uppercase tracking-[0.18em] text-stone-500">Plataforma de Gestão Pecuária</div>
+                        <img src="/eixo-logo-render.png" alt="eixo" className="h-10 w-auto opacity-95 contrast-110" />
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--eixo-text)]/72">Plataforma de Gestão Pecuária</div>
                     </div>
 
                     <div className="flex flex-1 items-center justify-center">
-                        <div className="w-full max-w-xl rounded-3xl border border-stone-200 bg-white/95 shadow-xl backdrop-blur">
+                        <div className="w-full max-w-xl rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]/95 shadow-xl backdrop-blur">
                 <div className="p-8 lg:p-10 flex flex-col justify-center">
                     <div className="max-w-md mx-auto w-full">
                         {onBack && (
                             <button
                                 type="button"
                                 onClick={onBack}
-                                className="mb-6 inline-flex items-center text-sm font-medium text-stone-700 transition-colors hover:text-stone-900"
+                                className="mb-6 inline-flex items-center text-sm font-medium text-[var(--eixo-text)] transition-colors hover:text-[var(--eixo-text)]"
                             >
                                 ← VOLTAR
                             </button>
                         )}
                         <div className="mb-6">
-                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite-dark)]">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                                 Acesso seguro
                             </div>
                             <div>
-                                <p className="text-sm uppercase tracking-[0.18em] text-stone-500">Bem-vindo</p>
-                                <h2 className="mt-2 text-3xl font-black text-stone-900">Entrar na conta</h2>
-                                <p className="mt-3 text-sm leading-relaxed text-stone-600">
+                                <p className="text-sm uppercase tracking-[0.16em] text-[var(--eixo-text)]/72">Bem-vindo</p>
+                                <h2 className="mt-2 text-3xl font-black text-[var(--eixo-text)]">Entrar na conta</h2>
+                                <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text)]/72">
                                     Acesse sua fazenda com segurança e continue de onde parou.
                                 </p>
                             </div>
                         </div>
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div>
-                                <label htmlFor="email" className="block text-sm font-medium text-stone-700">
+                                <label htmlFor="email" className="block text-sm font-medium text-[var(--eixo-text)]">
                                     E-mail
                                 </label>
                                 <input
@@ -73,7 +73,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
-                                    className="mt-1 w-full rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-3 text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#a8442a]"
+                                    className="mt-1 w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
                                     placeholder="nome@fazenda.com"
                                     required
                                 />
@@ -81,7 +81,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                             <div>
                                 <label
                                     htmlFor="password"
-                                    className="block text-sm font-medium text-stone-700"
+                                    className="block text-sm font-medium text-[var(--eixo-text)]"
                                 >
                                     Senha
                                 </label>
@@ -90,46 +90,44 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="mt-1 w-full rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-3 text-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#a8442a]"
+                                    className="mt-1 w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
                                     placeholder="••••••••"
                                     required
                                 />
                             </div>
-                            <div className="flex items-center justify-between text-sm text-stone-600">
+                            <div className="flex items-center justify-between gap-4 text-sm">
                                 <label className="flex items-center gap-2">
                                     <input
                                         type="checkbox"
                                         checked={rememberMe}
                                         onChange={(e) => setRememberMe(e.target.checked)}
-                                        className="h-4 w-4 rounded border-[#e7e5e4] text-[#a8442a] focus:ring-[#a8442a]"
+                                        className="h-4 w-4 rounded border-[var(--eixo-border)] text-[var(--eixo-green)] focus:ring-[var(--eixo-green)]"
                                     />
-                                    <span>Lembrar de mim</span>
+                                    <span className="text-[var(--eixo-text)]/72">Lembrar de mim</span>
                                 </label>
-                            </div>
-                            <div className="flex justify-end">
                                 {/* TODO: implementar recuperação de senha */}
                                 <button
                                     type="button"
                                     onClick={() => {}}
-                                    className="text-sm text-[#78716c] hover:underline"
+                                    className="text-sm font-medium text-[var(--eixo-text)]/72 transition-colors hover:text-[var(--eixo-text)] hover:underline"
                                 >
                                     Esqueci minha senha
                                 </button>
                             </div>
 
                             {success && (
-                                <div className="rounded-2xl bg-[#edf4eb] px-4 py-3 text-sm text-[#16a34a]">
+                                <div className="rounded-2xl bg-[var(--eixo-green-soft)] px-4 py-3 text-sm text-[var(--eixo-success)]">
                                     {success}
                                 </div>
                             )}
                             {error && (
-                                <div className="rounded-2xl bg-[#fbede8] px-4 py-3 text-sm text-[#8c4d39]">
+                                <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                                     {error}
                                 </div>
                             )}
                             <button
                                 type="submit"
-                                className="w-full rounded-2xl bg-[#a8442a] py-3 font-semibold text-white transition-colors hover:bg-[#933a22]"
+                                className="w-full rounded-2xl bg-[var(--eixo-green)] py-3 font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]"
                             >
                                 Entrar
                             </button>
@@ -138,14 +136,24 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                                 <button
                                     type="button"
                                     onClick={onRegister}
-                                    className="w-full text-center text-sm font-medium text-stone-700 transition-colors hover:text-stone-900"
+                                    className="w-full text-center text-sm text-[var(--eixo-text)]/72 transition-colors hover:text-[var(--eixo-text)]/78"
                                 >
-                                    Ainda nao tem conta? Criar conta gratis
+                                    <span>Ainda não tem conta? </span>
+                                    <span className="font-semibold text-[var(--eixo-green-dark)] underline decoration-[var(--eixo-green)]/45 underline-offset-2">
+                                        Criar conta grátis
+                                    </span>
                                 </button>
                             )}
 
-                            <p className="text-center text-xs text-stone-500">
-                                Ao continuar, você concorda com os Termos de Uso e Política de Privacidade.
+                            <p className="text-center text-xs leading-relaxed text-[var(--eixo-text)]/66">
+                                Ao continuar, você concorda com os{' '}
+                                <span className="font-medium text-[var(--eixo-text)]/72 underline decoration-[var(--eixo-border-strong)]/70 underline-offset-2">
+                                    Termos de Uso
+                                </span>{' '}
+                                e{' '}
+                                <span className="font-medium text-[var(--eixo-text)]/72 underline decoration-[var(--eixo-border-strong)]/70 underline-offset-2">
+                                    Política de Privacidade
+                                </span>.
                             </p>
                         </form>
                     </div>

@@ -1,0 +1,236 @@
+import React from 'react';
+
+// ─── Dados dos planos ─────────────────────────────────────────────────────────
+
+interface PlanFeature {
+    text: string;
+    included: boolean;
+}
+
+interface Plan {
+    id: string;
+    name: string;
+    badge?: string;
+    price: string;
+    priceNote: string;
+    description: string;
+    cta: string;
+    ctaVariant: 'outline' | 'primary' | 'dark';
+    features: PlanFeature[];
+}
+
+const PLANS: Plan[] = [
+    {
+        id: 'gratis',
+        name: 'Plano Grátis',
+        price: 'R$ 0',
+        priceNote: 'para sempre',
+        description: 'Entre, sinta o valor e comece a organizar seu rebanho.',
+        cta: 'Seu plano atual',
+        ctaVariant: 'outline',
+        features: [
+            { text: 'Animais ilimitados', included: true },
+            { text: '1 fazenda', included: true },
+            { text: 'Até 3 usuários', included: true },
+            { text: 'Manejo do Rebanho (básico)', included: true },
+            { text: 'Estrutura da Fazenda', included: true },
+            { text: 'Financeiro básico', included: true },
+            { text: 'Importação de planilha própria', included: true },
+            { text: 'Dashboard (Visão Geral)', included: false },
+            { text: 'Nutrição avançada', included: false },
+            { text: 'Exportação de dados (Excel/PDF)', included: false },
+            { text: 'Múltiplas fazendas', included: false },
+        ],
+    },
+    {
+        id: 'gestao',
+        name: 'Eixo Gestão',
+        badge: 'Mais popular',
+        price: 'Em breve',
+        priceNote: 'por fazenda / mês',
+        description: 'Gestão completa com controle financeiro e múltiplas fazendas.',
+        cta: 'Quero saber mais',
+        ctaVariant: 'primary',
+        features: [
+            { text: 'Animais ilimitados', included: true },
+            { text: 'Até 3 fazendas', included: true },
+            { text: 'Até 5 usuários', included: true },
+            { text: 'Tudo do Plano Grátis', included: true },
+            { text: 'Dashboard (Visão Geral)', included: true },
+            { text: 'Nutrição avançada', included: true },
+            { text: 'Pesagens avançadas', included: true },
+            { text: 'Exportação de dados (Excel/PDF)', included: true },
+            { text: 'Campos avançados de importação', included: true },
+            { text: 'Eixo Acasalamento', included: false },
+            { text: 'Confinamento e rastreabilidade', included: false },
+        ],
+    },
+    {
+        id: 'decisao',
+        name: 'Eixo Decisão',
+        price: 'Em breve',
+        priceNote: 'por fazenda / mês',
+        description: 'Operação profissional, P.O. e exportação sem limites.',
+        cta: 'Quero saber mais',
+        ctaVariant: 'dark',
+        features: [
+            { text: 'Animais ilimitados', included: true },
+            { text: 'Fazendas ilimitadas', included: true },
+            { text: 'Usuários ilimitados', included: true },
+            { text: 'Tudo do Eixo Gestão', included: true },
+            { text: 'Eixo Acasalamento', included: true },
+            { text: 'Confinamento e contratos', included: true },
+            { text: 'Rastreabilidade completa', included: true },
+            { text: 'Mapeamento de planilha por IA', included: true },
+            { text: 'Integração com balanças eletrônicas', included: true },
+            { text: 'Relatório de erros auditável', included: true },
+        ],
+    },
+];
+
+// ─── Componente ───────────────────────────────────────────────────────────────
+
+interface PlansPageProps {
+    onBack?: () => void;
+    isAuthenticated?: boolean;
+}
+
+const CheckIcon: React.FC = () => (
+    <svg className="h-4 w-4 flex-shrink-0 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+    </svg>
+);
+
+const XIcon: React.FC = () => (
+    <svg className="h-4 w-4 flex-shrink-0 text-[#a8a29e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+    </svg>
+);
+
+const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
+    const handleBack = () => {
+        if (onBack) {
+            onBack();
+            return;
+        }
+        if (window.history.length > 1) {
+            window.history.back();
+            return;
+        }
+        window.location.href = '/';
+    };
+
+    const handleCta = (plan: Plan) => {
+        if (plan.id === 'gratis') return; // já é o plano atual
+        // Futuramente: abrir formulário de interesse ou redirecionar para Asaas
+        window.open('mailto:contato@eixo.ag?subject=Interesse no ' + plan.name, '_blank');
+    };
+
+    return (
+        <div className="min-h-screen bg-[var(--eixo-surface-soft)]">
+            {/* Header */}
+            <header className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-4">
+                <div className="mx-auto flex max-w-5xl items-center justify-between">
+                    <button
+                        type="button"
+                        onClick={handleBack}
+                        className="inline-flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
+                    >
+                        <span aria-hidden="true">←</span>
+                        Voltar
+                    </button>
+                    <img src="/eixo-logo-render.png" alt="eixo" className="h-7" />
+                    <div className="w-[92px]" aria-hidden="true" />
+                </div>
+            </header>
+
+            {/* Hero */}
+            <div className="mx-auto max-w-5xl px-6 py-12 text-center">
+                <h1 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] md:text-4xl">
+                    Planos e preços
+                </h1>
+                <p className="mt-3 text-base text-[var(--eixo-text-muted)]">
+                    Comece gratuitamente e faça upgrade quando precisar de mais.
+                </p>
+            </div>
+
+            {/* Cards */}
+            <div className="mx-auto max-w-5xl px-6 pb-16">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    {PLANS.map((plan) => (
+                        <div
+                            key={plan.id}
+                            className={`relative flex flex-col rounded-2xl border bg-[var(--eixo-surface)] p-6 ${
+                                plan.id === 'gestao'
+                                    ? 'border-[var(--eixo-green)] shadow-lg shadow-[var(--eixo-green)]/10'
+                                    : 'border-[var(--eixo-border)]'
+                            }`}
+                        >
+                            {/* Badge */}
+                            {plan.badge && (
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                                    <span className="rounded-full bg-[var(--eixo-green)] px-3 py-1 text-xs font-semibold text-white">
+                                        {plan.badge}
+                                    </span>
+                                </div>
+                            )}
+
+                            {/* Nome e preço */}
+                            <div className="mb-5">
+                                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--eixo-text-muted)]">
+                                    {plan.name}
+                                </p>
+                                <div className="mt-2 flex items-baseline gap-1">
+                                    <span className={`font-brand text-3xl font-extrabold ${
+                                        plan.price === 'Em breve' ? 'text-[var(--eixo-text-muted)] text-xl' : 'text-[var(--eixo-text)]'
+                                    }`}>
+                                        {plan.price}
+                                    </span>
+                                </div>
+                                <p className="mt-0.5 text-xs text-[#a8a29e]">{plan.priceNote}</p>
+                                <p className="mt-3 text-sm text-[var(--eixo-text-muted)]">{plan.description}</p>
+                            </div>
+
+                            {/* CTA */}
+                            <button
+                                onClick={() => handleCta(plan)}
+                                disabled={plan.id === 'gratis'}
+                                className={`mb-6 w-full rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-default ${
+                                    plan.ctaVariant === 'primary'
+                                        ? 'bg-[var(--eixo-green)] text-white hover:bg-[var(--eixo-green-dark)]'
+                                        : plan.ctaVariant === 'dark'
+                                        ? 'bg-[var(--eixo-text)] text-white hover:bg-[var(--eixo-graphite)]'
+                                        : 'border border-[var(--eixo-border)] text-[var(--eixo-text-muted)]'
+                                }`}
+                            >
+                                {plan.cta}
+                            </button>
+
+                            {/* Divider */}
+                            <div className="mb-4 border-t border-[var(--eixo-border)]" />
+
+                            {/* Features */}
+                            <ul className="flex-1 space-y-2.5">
+                                {plan.features.map((f) => (
+                                    <li key={f.text} className="flex items-start gap-2.5">
+                                        {f.included ? <CheckIcon /> : <XIcon />}
+                                        <span className={`text-sm ${f.included ? 'text-[var(--eixo-text)]' : 'text-[#a8a29e] line-through'}`}>
+                                            {f.text}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Nota de preços */}
+                <p className="mt-8 text-center text-sm text-[#a8a29e]">
+                    Preços em breve. Para saber mais, entre em contato: <a href="mailto:contato@eixo.ag" className="text-[var(--eixo-green)] hover:underline">contato@eixo.ag</a>
+                </p>
+            </div>
+        </div>
+    );
+};
+
+export default PlansPage;

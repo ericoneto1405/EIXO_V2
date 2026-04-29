@@ -24,10 +24,12 @@ import NutritionModule from './components/NutritionModule';
 import Login from './components/Login';
 import Register from './components/Register';
 import PublicLanding from './components/PublicLanding';
+import PlansPage from './components/PlansPage';
+import OnboardingChecklist from './components/OnboardingChecklist';
 import UserRegisterModal from './components/UserRegisterModal';
 import TeamPermissions from './components/TeamPermissions';
 import UpgradeScreen from './components/UpgradeScreen';
-import { Farm, WebUserCreatePayload } from './types';
+import { Alert, Farm, WebUserCreatePayload } from './types';
 import { createWebUser } from './adapters/usersApi';
 
 interface User {
@@ -75,6 +77,7 @@ const MODULE_CATEGORIES = [
 ];
 
 const ALL_MODULES = MODULE_CATEGORIES.flatMap((category) => category.modules);
+type HerdNavigationTab = 'overview' | 'lots' | 'animals' | 'weighings' | 'settings';
 
 const SUB_VIEW_PARENT: Record<string, string> = {
     'Mapa da Fazenda': 'Fazendas',
@@ -267,7 +270,9 @@ const UPGRADE_CONTENT: Record<string, {
 const AppContent: React.FC = () => {
     const location = useLocation();
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
+    const isPlansRoute = location.pathname === '/planos';
     const [activeView, setActiveView] = useState('Fazendas');
+    const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number } | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [authScreen, setAuthScreen] = useState<'landing' | 'login' | 'register'>('landing');
@@ -284,7 +289,8 @@ const AppContent: React.FC = () => {
         const membershipRole = String(currentUser?.membershipRole || '').trim().toUpperCase();
         return normalizedRoles.includes('admin') || ['OWNER', 'ADMIN'].includes(membershipRole);
     }, [currentUser]);
-    const isFreePlan = !(currentUser?.entitlements?.length);
+    const PAID_ENTITLEMENTS = ['GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'];
+    const isFreePlan = !(currentUser?.entitlements?.some(e => PAID_ENTITLEMENTS.includes(e)));
     // Módulos exclusivos de planos pagos — bloqueados mesmo que estejam no banco do usuário
     const PAID_ONLY_MODULES = ['Visão Geral'];
     const currentAllowedModules = React.useMemo(() => {
@@ -370,10 +376,15 @@ const AppContent: React.FC = () => {
         return new URLSearchParams(window.location.search).get('new') === '1';
     }, []);
     const handleRegisterFarmView = React.useCallback(() => {
+        // Plano grátis com fazenda já cadastrada — bloquear
+        if (isFreePlan && farms.length >= 1) {
+            window.location.href = '/planos';
+            return;
+        }
         updateFarmFormQuery(true);
         setActiveView('Fazendas');
         setOpenFarmForm(true);
-    }, [updateFarmFormQuery]);
+    }, [updateFarmFormQuery, isFreePlan, farms.length]);
     const selectedFarm = React.useMemo(
         () => farms.find((farm) => farm.id === selectedFarmId) || null,
         [farms, selectedFarmId],
@@ -386,10 +397,10 @@ const AppContent: React.FC = () => {
         onAction?: () => void;
     }> = ({ title, actionLabel, onAction }) => (
         <div className="rounded-[14px] border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.04)] px-6 py-10 text-center">
-            <h2 className="text-[20px] font-bold leading-[24px] text-[#1c1917]">{title}</h2>
+            <h2 className="text-[20px] font-bold leading-[24px] text-[var(--eixo-text)]">{title}</h2>
             {actionLabel && onAction && (
                 <button
-                    className="mt-6 inline-flex h-10 items-center rounded-[10px] bg-[#a8442a] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[#933a22]"
+                    className="mt-6 inline-flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                     type="button"
                     onClick={onAction}
                 >
@@ -401,54 +412,54 @@ const AppContent: React.FC = () => {
 
     const FirstFarmOnboarding: React.FC = () => (
         <div className="flex h-full flex-col items-center justify-center py-16 text-center">
-            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[#f5f5f4]">
-                <svg className="h-10 w-10 text-[#1c1917]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--eixo-surface-soft)]">
+                <svg className="h-10 w-10 text-[var(--eixo-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                         d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
             </div>
-            <h2 className="font-brand text-2xl font-extrabold text-[#2f3a2d]">
+            <h2 className="font-brand text-2xl font-extrabold text-[var(--eixo-graphite-dark)]">
                 Vamos cadastrar sua primeira fazenda
             </h2>
-            <p className="mt-3 max-w-sm text-sm text-[#6d6558]">
+            <p className="mt-3 max-w-sm text-sm text-[var(--eixo-text-muted)]">
                 Esse é o primeiro passo para começar a usar o sistema com rebanho, financeiro e operação.
             </p>
             <button
                 type="button"
                 onClick={handleRegisterFarmView}
-                className="mt-8 flex h-11 items-center gap-2 rounded-xl bg-[#a8442a] px-6 font-brand font-bold text-white shadow-md transition-colors hover:bg-[#933a22]"
+                className="mt-8 flex h-11 items-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 font-brand font-bold text-white shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
             >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
                 Cadastrar fazenda
             </button>
-            <p className="mt-4 text-xs text-[#b0a090]">
+            <p className="mt-4 text-xs text-[var(--eixo-text-soft)]">
                 Leva menos de 1 minuto
             </p>
         </div>
     );
 
     const AppOnlyAccessPanel: React.FC = () => (
-        <div className="flex min-h-screen items-center justify-center bg-[#f5f5f4] px-6 py-10">
-            <div className="w-full max-w-xl rounded-[28px] border border-[#e7e5e4] bg-white p-8 text-center shadow-sm">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#faeee8] text-[#a8442a]">
+        <div className="flex min-h-screen items-center justify-center bg-[var(--eixo-surface-soft)] px-6 py-10">
+            <div className="w-full max-w-xl rounded-[28px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-8 text-center shadow-sm">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--eixo-green-soft)] text-[var(--eixo-green)]">
                     <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 5h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 8h4M9 17h6M11 20h2" />
                     </svg>
                 </div>
-                <h1 className="mt-6 text-2xl font-bold text-[#1c1917]">Acesso exclusivo do App do Manejo</h1>
-                <p className="mt-3 text-sm leading-6 text-[#78716c]">
+                <h1 className="mt-6 text-2xl font-bold text-[var(--eixo-text)]">Acesso exclusivo do App do Manejo</h1>
+                <p className="mt-3 text-sm leading-6 text-[var(--eixo-text-muted)]">
                     Este usuário foi criado para operação de campo e não possui acesso ao sistema desktop.
                 </p>
-                <div className="mt-6 rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-4 text-sm text-[#78716c]">
+                <div className="mt-6 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-4 text-sm text-[var(--eixo-text-muted)]">
                     Use este acesso apenas no App do Manejo, no celular do colaborador vinculado.
                 </div>
                 <button
                     type="button"
                     onClick={handleLogout}
-                    className="mt-8 inline-flex h-11 items-center justify-center rounded-xl bg-[#a8442a] px-6 font-bold text-white transition-colors hover:bg-[#933a22]"
+                    className="mt-8 inline-flex h-11 items-center justify-center rounded-xl bg-[var(--eixo-green)] px-6 font-bold text-white transition-colors hover:bg-[var(--eixo-green-dark)]"
                 >
                     Sair
                 </button>
@@ -458,6 +469,11 @@ const AppContent: React.FC = () => {
 
     React.useEffect(() => {
         if (hasFarmFormQuery()) {
+            if (isFreePlan && farms.length >= 1) {
+                // Limpar query sem abrir o form
+                updateFarmFormQuery(false);
+                return;
+            }
             setActiveView('Fazendas');
             setOpenFarmForm(true);
         }
@@ -588,7 +604,9 @@ const AppContent: React.FC = () => {
             const allowedModules = foundUser.allowedModules?.length
                 ? foundUser.allowedModules
                 : (foundUser.modules.length ? foundUser.modules : ALL_MODULES);
-            if (hasFarmFormQuery()) {
+            const userIsFreePlan = !(foundUser.entitlements?.length);
+            const currentFarmCount = farms.length;
+            if (hasFarmFormQuery() && !(userIsFreePlan && currentFarmCount >= 1)) {
                 setActiveView('Fazendas');
                 setOpenFarmForm(true);
             } else {
@@ -656,6 +674,7 @@ const AppContent: React.FC = () => {
         setOpenFarmForm(false);
         updateFarmFormQuery(false);
         setActiveView('Visão Geral');
+        setHerdTabRequest(null);
         setAuthError(null);
         setRegisterMessage(null);
         setRegisterError(null);
@@ -674,9 +693,44 @@ const AppContent: React.FC = () => {
         return isUnlocked ? null : moduleConfig;
     }, [currentAllowedModules]);
 
+    const handleHeaderAlertAction = React.useCallback((alert: Alert) => {
+        if (alert.farmId) {
+            setSelectedFarmId(alert.farmId);
+        }
+
+        if (alert.sourceType === 'WEIGHING' || alert.sourceType === 'GMD') {
+            setHerdTabRequest({ tab: 'weighings', nonce: Date.now() });
+            setActiveView('Rebanho Comercial');
+            return true;
+        }
+
+        if (alert.sourceType === 'FINANCEIRO') {
+            setActiveView('Financeiro');
+            return true;
+        }
+
+        return false;
+    }, []);
+
+    const handleOnboardingNavigate = React.useCallback((view: string, options?: { herdTab?: HerdNavigationTab }) => {
+        if (options?.herdTab) {
+            setHerdTabRequest({ tab: options.herdTab, nonce: Date.now() });
+        }
+        setActiveView(view);
+    }, []);
+
+    if (isPlansRoute) {
+        return (
+            <PlansPage
+                isAuthenticated={isAuthenticated}
+                onBack={isAuthenticated ? () => window.history.back() : undefined}
+            />
+        );
+    }
+
     if (isAuthLoading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[#f5f5f4] text-[#78716c]">
+            <div className="flex min-h-screen items-center justify-center bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]">
                 Carregando...
             </div>
         );
@@ -819,6 +873,7 @@ const AppContent: React.FC = () => {
                         onFarmUpdated={handleFarmUpdated}
                         onFarmDeleted={handleFarmDeleted}
                         openForm={openFarmForm}
+                        isFreePlan={isFreePlan}
                         onFormOpened={() => {
                             setOpenFarmForm(false);
                             updateFarmFormQuery(true);
@@ -836,7 +891,16 @@ const AppContent: React.FC = () => {
                         />
                     );
                 }
-                return <HerdModule farmId={selectedFarmId} farmName={selectedFarm?.name} mode="COMMERCIAL" isFreePlan={isFreePlan} onUpgradeRequest={() => setUpgradeModal('Plano pago')} />;
+                return (
+                    <HerdModule
+                        farmId={selectedFarmId}
+                        farmName={selectedFarm?.name}
+                        mode="COMMERCIAL"
+                        isFreePlan={isFreePlan}
+                        initialTabRequest={herdTabRequest}
+                        onUpgradeRequest={() => setUpgradeModal('Plano pago')}
+                    />
+                );
             case 'Plantel P.O.':
                 if (!hasSelectedFarm) {
                     return (
@@ -881,13 +945,13 @@ const AppContent: React.FC = () => {
                 );
             case 'Visão Geral':
             default:
-                return <Dashboard farmId={selectedFarmId} />;
+                return <Dashboard farmId={selectedFarmId} farmSize={selectedFarm?.size ?? null} />;
         }
     };
 
     return (
         <>
-            <div className="relative min-h-screen overflow-hidden bg-[#f5f5f4] font-sans text-stone-900">
+            <div className="relative min-h-screen overflow-hidden bg-[var(--eixo-surface-soft)] font-sans text-[var(--eixo-text)]">
                 <div className="relative flex min-h-screen">
                     <Sidebar
                         activeItem={activeView}
@@ -903,6 +967,7 @@ const AppContent: React.FC = () => {
                             currentUser={currentUser}
                             onLogout={handleLogout}
                             canRegisterUsers={canManageUsers}
+                            onAlertAction={handleHeaderAlertAction}
                             onOpenUserRegister={() => {
                                 if (isFreePlan) {
                                     setUpgradeModal('Múltiplos usuários');
@@ -911,9 +976,21 @@ const AppContent: React.FC = () => {
                                 setIsRegisterModalOpen(true);
                             }}
                         />
-                        <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[#e7e5e4] bg-white">
+                        <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                             <div className={activeView === 'Mapa da Fazenda' ? 'h-full' : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'}>
-                                {hasNoFarms && !(activeView === 'Fazendas' && openFarmForm) ? <FirstFarmOnboarding /> : renderContent()}
+                                {hasNoFarms && !(activeView === 'Fazendas' && openFarmForm) ? <FirstFarmOnboarding /> : (
+                                    <>
+                                        {currentUser && activeView !== 'Mapa da Fazenda' && (
+                                            <OnboardingChecklist
+                                                userId={currentUser.id}
+                                                farmId={selectedFarmId}
+                                                farms={farms}
+                                                onNavigate={handleOnboardingNavigate}
+                                            />
+                                        )}
+                                        {renderContent()}
+                                    </>
+                                )}
                             </div>
                         </div>
                     </main>
@@ -937,39 +1014,39 @@ const AppContent: React.FC = () => {
             {upgradeModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
                     onClick={() => setUpgradeModal(null)}>
-                    <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl"
+                    <div className="w-full max-w-sm rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
                         onClick={e => e.stopPropagation()}>
                         <div className="p-6">
-                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#f5f5f4]">
-                                <svg className="h-6 w-6 text-[#1c1917]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--eixo-surface-soft)]">
+                                <svg className="h-6 w-6 text-[var(--eixo-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
                             </div>
-                            <h3 className="font-brand text-lg font-bold text-[#1c1917]">
+                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">
                                 {upgradeModal} — plano pago
                             </h3>
-                            <p className="mt-2 text-sm text-[#78716c]">
+                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
                                 Este módulo está disponível nos planos pagos do EIXO. Faça upgrade para desbloquear{' '}
-                                <span className="font-semibold text-[#1c1917]">{upgradeModal}</span> e muito mais.
+                                <span className="font-semibold text-[var(--eixo-text)]">{upgradeModal}</span> e muito mais.
                             </p>
-                            <div className="mt-5 rounded-xl border border-[#e7e5e4] bg-[#f5f5f4] p-4 text-sm text-[#78716c]">
-                                <p className="mb-2 font-semibold text-[#44403c]">Seu plano atual inclui:</p>
+                            <div className="mt-5 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4 text-sm text-[var(--eixo-text-muted)]">
+                                <p className="mb-2 font-semibold text-[var(--eixo-text)]">Seu plano atual inclui:</p>
                                 <ul className="space-y-1">
-                                    <li className="flex items-center gap-2"><span className="text-[#16a34a]">✓</span> Animais ilimitados</li>
-                                    <li className="flex items-center gap-2"><span className="text-[#16a34a]">✓</span> Manejo do Rebanho</li>
-                                    <li className="flex items-center gap-2"><span className="text-[#16a34a]">✓</span> Financeiro básico</li>
-                                    <li className="flex items-center gap-2"><span className="text-[#16a34a]">✓</span> Estrutura da Fazenda</li>
+                                    <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Animais ilimitados</li>
+                                    <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Manejo do Rebanho</li>
+                                    <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Financeiro básico</li>
+                                    <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Estrutura da Fazenda</li>
                                 </ul>
                             </div>
                             <div className="mt-5 flex gap-3">
                                 <button type="button" onClick={() => setUpgradeModal(null)}
-                                    className="flex-1 rounded-xl border border-[#e7e5e4] py-2 text-sm font-semibold text-[#44403c] hover:bg-[#f5f5f4]">
+                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
                                     Fechar
                                 </button>
                                 <button type="button"
-                                    onClick={() => setUpgradeModal(null)}
-                                    className="flex-1 rounded-xl bg-[#a8442a] py-2 text-sm font-semibold text-white hover:bg-[#933a22]">
+                                    onClick={() => { setUpgradeModal(null); window.location.href = '/planos'; }}
+                                    className="flex-1 rounded-xl bg-[var(--eixo-green)] py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)]">
                                     Ver planos
                                 </button>
                             </div>
@@ -999,20 +1076,20 @@ const AppContent: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => setIsSupportOpen(prev => !prev)}
-                            className="relative flex flex-col items-center justify-center rounded-[16px] bg-[#1c1917] px-4 py-2.5 shadow-xl transition-all duration-200 hover:bg-[#292524] active:scale-95"
+                            className="relative flex flex-col items-center justify-center rounded-[16px] bg-[var(--eixo-text)] px-4 py-2.5 shadow-xl transition-all duration-200 hover:bg-[var(--eixo-graphite)] active:scale-95"
                             aria-label="Abrir Eixo Suporte"
                             style={{ minWidth: '88px' }}
                         >
                             {/* Logo eixo */}
-                            <img src="/logo_eixo_white.svg" alt="eixo" className="h-4 w-auto" />
-                            <span className="mt-1 border-t border-white/10 pt-1 text-[10px] font-bold uppercase leading-none tracking-[0.1em] text-[#faeee8]">
+                            <img src="/logo_eixo_negative.svg" alt="eixo" className="h-4 w-auto" />
+                            <span className="mt-1 border-t border-white/10 pt-1 text-[10px] font-bold uppercase leading-none tracking-[0.1em] text-[var(--eixo-green-soft)]">
                                 suporte
                             </span>
 
                             {/* Ponto verde — ativo */}
                             <span className="absolute right-2 top-1.5 flex h-2.5 w-2.5 items-center justify-center">
-                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50" />
-                                <span className="relative h-1.5 w-1.5 rounded-full bg-emerald-400 ring-2 ring-[#1c1917]" />
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--eixo-success)] opacity-50" />
+                                <span className="relative h-1.5 w-1.5 rounded-full bg-[var(--eixo-success)] ring-2 ring-[var(--eixo-graphite-dark)]" />
                             </span>
                         </button>
 
@@ -1025,7 +1102,7 @@ const AppContent: React.FC = () => {
                                 height: 0,
                                 borderLeft: '12px solid transparent',
                                 borderRight: '3px solid transparent',
-                                borderTop: '20px solid #4c4030',
+                                borderTop: '20px solid var(--eixo-graphite)',
                             }}
                         />
                     </div>

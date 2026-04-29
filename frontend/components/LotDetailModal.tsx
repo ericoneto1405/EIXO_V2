@@ -170,8 +170,8 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
 
     const tabClass = (tab: ModalTab) =>
         `${activeTab === tab
-            ? 'border-[#a8442a] text-[#a8442a] font-semibold'
-            : 'border-transparent text-[#78716c] hover:text-[#a8442a] hover:border-[#e7e5e4]'
+            ? 'border-[var(--eixo-green)] text-[var(--eixo-green)] font-semibold'
+            : 'border-transparent text-[var(--eixo-text-muted)] hover:text-[var(--eixo-green)] hover:border-[var(--eixo-border)]'
         } whitespace-nowrap py-3 px-1 border-b-2 text-sm transition-colors`;
 
     return (
@@ -182,14 +182,14 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
             onClick={onClose}
         >
             <div
-                className="flex w-full max-w-lg flex-col rounded-2xl border border-[#e7e5e4] bg-white shadow-2xl"
+                className="flex w-full max-w-lg flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
                 style={{ maxHeight: '90vh', animation: 'scale-in 0.18s ease-out forwards' }}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <header className="flex flex-shrink-0 items-center justify-between border-b border-[#e7e5e4] px-6 py-5">
+                <header className="flex flex-shrink-0 items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5">
                     <div className="flex-1 min-w-0 mr-3">
-                        <p className="mb-0.5 text-xs font-semibold uppercase tracking-[0.16em] text-[#78716c]">
+                        <p className="mb-0.5 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)]">
                             Lote / Grupo
                         </p>
                         {isEditing ? (
@@ -197,11 +197,11 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
                                 type="text"
                                 value={editName}
                                 onChange={(e) => setEditName(e.target.value)}
-                                className="w-full border-b-2 border-[#a8442a] bg-transparent font-brand text-xl font-extrabold text-[#1c1917] outline-none"
+                                className="w-full border-b-2 border-[var(--eixo-green)] bg-transparent font-brand text-xl font-extrabold text-[var(--eixo-text)] outline-none"
                                 autoFocus
                             />
                         ) : (
-                            <h3 className="font-brand text-xl font-extrabold text-[#1c1917] truncate">
+                            <h3 className="font-brand text-xl font-extrabold text-[var(--eixo-text)] truncate">
                                 {lot.name}
                             </h3>
                         )}
@@ -212,14 +212,14 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
                                 <button
                                     type="button"
                                     onClick={() => setIsEditing(true)}
-                                    className="rounded-xl border border-[#e7e5e4] px-3 py-1.5 text-xs font-semibold text-[#78716c] transition-colors hover:bg-[#f5f5f4]"
+                                    className="rounded-xl border border-[var(--eixo-border)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                                 >
                                     Editar
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setShowDeleteConfirm(true)}
-                                    className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-3 py-1.5 text-xs font-semibold text-[#8c4d39] transition-colors hover:bg-[#f5ddd8]"
+                                    className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f7ddd7]"
                                 >
                                     Excluir
                                 </button>
@@ -229,7 +229,7 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
                             type="button"
                             onClick={onClose}
                             aria-label="Fechar"
-                            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] text-[#78716c] transition-colors hover:bg-[#f5f5f4]"
+                            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                         >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -240,24 +240,24 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
 
                 {/* Confirmação de exclusão */}
                 {showDeleteConfirm && (
-                    <div className="flex-shrink-0 border-b border-[#e7e5e4] bg-[#fef2f2] px-6 py-4">
-                        <p className="mb-3 text-sm font-medium text-[#8c4d39]">
+                    <div className="flex-shrink-0 border-b border-[var(--eixo-border)] bg-[#fff2ef] px-6 py-4">
+                        <p className="mb-3 text-sm font-medium text-[var(--eixo-danger)]">
                             Excluir este lote? Os animais são mantidos — apenas o agrupamento é removido.
                         </p>
-                        {deleteError && <p className="mb-2 text-xs text-[#8c4d39]">{deleteError}</p>}
+                        {deleteError && <p className="mb-2 text-xs text-[var(--eixo-danger)]">{deleteError}</p>}
                         <div className="flex gap-2">
                             <button
                                 type="button"
                                 onClick={handleDelete}
                                 disabled={isDeleting}
-                                className="rounded-xl bg-[#8c4d39] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#7a3f2d] disabled:opacity-60"
+                                className="rounded-xl bg-[var(--eixo-danger)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-danger)] disabled:opacity-60"
                             >
                                 {isDeleting ? 'Excluindo...' : 'Confirmar exclusão'}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => { setShowDeleteConfirm(false); setDeleteError(null); }}
-                                className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#78716c] transition-colors hover:bg-[#f5f5f4]"
+                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                             >
                                 Cancelar
                             </button>
@@ -267,31 +267,31 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
 
                 {/* Modo edição */}
                 {isEditing && (
-                    <div className="flex-shrink-0 space-y-3 border-b border-[#e7e5e4] px-6 py-4">
+                    <div className="flex-shrink-0 space-y-3 border-b border-[var(--eixo-border)] px-6 py-4">
                         <div>
-                            <label className="text-xs font-medium text-[#78716c]">Observações</label>
+                            <label className="text-xs font-medium text-[var(--eixo-text-muted)]">Observações</label>
                             <textarea
                                 value={editNotes}
                                 onChange={(e) => setEditNotes(e.target.value)}
                                 rows={2}
-                                className="mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#1c1917] placeholder-[#c4b5a0] focus:border-[#a8442a] focus:outline-none"
+                                className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none"
                                 placeholder="Opcional"
                             />
                         </div>
-                        {editError && <p className="text-xs text-[#8c4d39]">{editError}</p>}
+                        {editError && <p className="text-xs text-[var(--eixo-danger)]">{editError}</p>}
                         <div className="flex gap-2">
                             <button
                                 type="button"
                                 onClick={handleSaveEdit}
                                 disabled={isSavingEdit}
-                                className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#933a22] disabled:opacity-60"
+                                className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-60"
                             >
                                 {isSavingEdit ? 'Salvando...' : 'Salvar'}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => { setIsEditing(false); setEditError(null); }}
-                                className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#78716c] transition-colors hover:bg-[#f5f5f4]"
+                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                             >
                                 Cancelar
                             </button>
@@ -300,12 +300,12 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
                 )}
 
                 {/* Abas */}
-                <div className="flex-shrink-0 border-b border-[#e7e5e4] px-6">
+                <div className="flex-shrink-0 border-b border-[var(--eixo-border)] px-6">
                     <nav className="-mb-px flex gap-4">
                         <button onClick={() => setActiveTab('animals')} className={tabClass('animals')}>
                             Animais
                             {lotAnimals.length > 0 && (
-                                <span className="ml-1.5 rounded-full bg-[#f5f5f4] px-1.5 py-0.5 text-xs font-bold text-[#78716c]">
+                                <span className="ml-1.5 rounded-full bg-[var(--eixo-surface-soft)] px-1.5 py-0.5 text-xs font-bold text-[var(--eixo-text-muted)]">
                                     {lotAnimals.length}
                                 </span>
                             )}
@@ -327,7 +327,7 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
                                 <select
                                     value={addAnimalId}
                                     onChange={(e) => setAddAnimalId(e.target.value)}
-                                    className="flex-1 rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none"
+                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                                 >
                                     <option value="">Selecionar animal para adicionar...</option>
                                     {availableToAdd.map((a) => (
@@ -341,20 +341,20 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
                                     type="button"
                                     onClick={handleAddAnimal}
                                     disabled={!addAnimalId || isAddingAnimal}
-                                    className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#933a22] disabled:opacity-50"
+                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-50"
                                 >
                                     {isAddingAnimal ? '...' : 'Adicionar'}
                                 </button>
                             </div>
 
                             {animalsError && (
-                                <p className="text-xs text-[#8c4d39]">{animalsError}</p>
+                                <p className="text-xs text-[var(--eixo-danger)]">{animalsError}</p>
                             )}
 
                             {isLoadingAnimals ? (
-                                <p className="text-sm text-[#78716c]">Carregando animais...</p>
+                                <p className="text-sm text-[var(--eixo-text-muted)]">Carregando animais...</p>
                             ) : lotAnimals.length === 0 ? (
-                                <p className="text-sm text-[#78716c]">
+                                <p className="text-sm text-[var(--eixo-text-muted)]">
                                     Nenhum animal neste lote ainda. Use o seletor acima para adicionar.
                                 </p>
                             ) : (
@@ -362,20 +362,20 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
                                     {lotAnimals.map((animal) => (
                                         <div
                                             key={animal.id}
-                                            className="flex items-center justify-between rounded-xl border border-[#e7e5e4] bg-white px-4 py-2.5"
+                                            className="flex items-center justify-between rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5"
                                         >
                                             <div>
-                                                <p className="text-sm font-semibold text-[#1c1917]">
+                                                <p className="text-sm font-semibold text-[var(--eixo-text)]">
                                                     {animal.identificacao || animal.brinco}
                                                 </p>
-                                                <p className="text-xs text-[#78716c]">
+                                                <p className="text-xs text-[var(--eixo-text-muted)]">
                                                     {[animal.raca, animal.sexo].filter(Boolean).join(' · ')}
                                                 </p>
                                             </div>
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveAnimal(animal.id)}
-                                                className="rounded-lg border border-[#d9b6a8] bg-[#fef2f2] px-2.5 py-1 text-xs font-semibold text-[#8c4d39] transition-colors hover:bg-[#f5ddd8]"
+                                                className="rounded-lg border border-[#efc2ba] bg-[#fff2ef] px-2.5 py-1 text-xs font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f7ddd7]"
                                             >
                                                 Remover
                                             </button>
@@ -388,19 +388,19 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
 
                     {/* ABA: Nutrição */}
                     {activeTab === 'nutrition' && (
-                        <div className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-3 text-sm text-[#78716c]">
+                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm text-[var(--eixo-text-muted)]">
                             {isLoadingNutrition ? (
                                 <span>Carregando plano...</span>
                             ) : nutritionError ? (
-                                <span className="text-[#8c4d39]">{nutritionError}</span>
+                                <span className="text-[var(--eixo-danger)]">{nutritionError}</span>
                             ) : planName ? (
                                 <div className="space-y-1">
-                                    <div className="font-semibold text-[#1c1917]">{planName}</div>
+                                    <div className="font-semibold text-[var(--eixo-text)]">{planName}</div>
                                     {planPhase && (
-                                        <div className="text-xs text-[#78716c]">Fase: {planPhase}</div>
+                                        <div className="text-xs text-[var(--eixo-text-muted)]">Fase: {planPhase}</div>
                                     )}
                                     {planMeta !== null && (
-                                        <div className="text-xs text-[#78716c]">Meta GMD: {planMeta.toFixed(2)} kg</div>
+                                        <div className="text-xs text-[var(--eixo-text-muted)]">Meta GMD: {planMeta.toFixed(2)} kg</div>
                                     )}
                                 </div>
                             ) : (

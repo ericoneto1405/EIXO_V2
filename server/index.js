@@ -3875,25 +3875,54 @@ app.delete('/lots/:id', requireNonFieldWorker, async (req, res) => {
 
 app.patch('/animals/:id', async (req, res) => {
     const { id } = req.params;
-    const { lotId } = req.body || {};
+    const { lotId, brinco, raca, sexo, categoria, dataNascimento, registro } = req.body || {};
     try {
         const animal = await prisma.animal.findFirst({
             where: { id, farm: buildFarmRelationFilter(req) },
         });
         if (!animal) return res.status(404).json({ message: 'Animal não encontrado.' });
 
-        let validLotId = null;
-        if (lotId) {
-            const lot = await prisma.lot.findFirst({
-                where: { id: String(lotId), farmId: animal.farmId },
-            });
-            if (!lot) return res.status(404).json({ message: 'Lote não encontrado.' });
-            validLotId = lot.id;
+        const updateData = {};
+
+        // lotId
+        if (lotId !== undefined) {
+            if (lotId) {
+                const lot = await prisma.lot.findFirst({
+                    where: { id: String(lotId), farmId: animal.farmId },
+                });
+                if (!lot) return res.status(404).json({ message: 'Lote não encontrado.' });
+                updateData.lotId = lot.id;
+            } else {
+                updateData.lotId = null;
+            }
         }
+
+        // Campos básicos editáveis
+        if (brinco !== undefined) {
+            const trimmed = String(brinco).trim();
+            if (!trimmed) return res.status(400).json({ message: 'Brinco não pode ser vazio.' });
+            // Verificar duplicidade dentro da fazenda (exceto o próprio animal)
+            const duplicate = await prisma.animal.findFirst({
+                where: { farmId: animal.farmId, brinco: trimmed, id: { not: id } },
+            });
+            if (duplicate) return res.status(409).json({ message: `Já existe um animal com o brinco "${trimmed}" nesta fazenda.` });
+            updateData.brinco = trimmed;
+            updateData.identityKey = trimmed;
+        }
+        if (raca !== undefined) updateData.raca = raca ? String(raca).trim() : null;
+        if (sexo !== undefined) {
+            const validSexo = ['MACHO', 'FEMEA'];
+            updateData.sexo = validSexo.includes(sexo) ? sexo : null;
+        }
+        if (categoria !== undefined) updateData.categoria = categoria ? String(categoria).trim() : null;
+        if (dataNascimento !== undefined) {
+            updateData.dataNascimento = dataNascimento ? new Date(dataNascimento) : null;
+        }
+        if (registro !== undefined) updateData.registro = registro ? String(registro).trim() : null;
 
         const updated = await prisma.animal.update({
             where: { id },
-            data: { lotId: validLotId },
+            data: updateData,
         });
         return res.json({ animal: updated });
     } catch (error) {
@@ -6622,6 +6651,259 @@ app.post('/animals/:id/pesagens', async (req, res) => {
     }
 });
 
+
+// ── Pesagens da fazenda (listagem central) ──────────────────────────────────
+app.get('/farms/:farmId/weighings', async (req, res) => {
+    const { farmId } = req.params;
+    const { limit = 50, offset = 0, animalId, startDate, endDate, lotId } = req.query;
+
+    try {
+        const farm = await prisma.farm.findFirst({
+            where: { id: farmId, ...buildFarmRelationFilter(req) },
+        });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        const where = { animal: { farmId } };
+        if (animalId) where.animalId = String(animalId);
+        if (lotId) where.animal = { ...where.animal, currentLotId: String(lotId) };
+        if (startDate || endDate) {
+            where.data = {};
+            if (startDate) where.data.gte = new Date(String(startDate));
+            if (endDate) {
+                const end = new Date(String(endDate));
+                end.setHours(23, 59, 59, 999);
+                where.data.lte = end;
+            }
+        }
+
+        const take = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
+        const skip = Math.max(parseInt(String(offset), 10) || 0, 0);
+
+        const [total, weighings] = await Promise.all([
+            prisma.weighing.count({ where }),
+            prisma.weighing.findMany({
+                where,
+                orderBy: { data: 'desc' },
+                take,
+                skip,
+                include: {
+                    animal: {
+                        select: { id: true, brinco: true, raca: true, sexo: true, categoria: true },
+                    },
+                },
+            }),
+        ]);
+
+        // Para cada pesagem, buscar o peso anterior do mesmo animal
+        const animalIds = [...new Set(weighings.map((w) => w.animalId))];
+        const previousMap = {};
+        await Promise.all(
+            animalIds.map(async (aid) => {
+                const allForAnimal = await prisma.weighing.findMany({
+                    where: { animalId: aid },
+                    orderBy: { data: 'asc' },
+                    select: { id: true, data: true, peso: true },
+                });
+                previousMap[aid] = allForAnimal;
+            }),
+        );
+
+        return res.json({
+            total,
+            weighings: weighings.map((w) => {
+                const animalHistory = previousMap[w.animalId] || [];
+                const idx = animalHistory.findIndex((h) => h.id === w.id);
+                const prev = idx > 0 ? animalHistory[idx - 1] : null;
+                return {
+                    id: w.id,
+                    date: w.data.toISOString(),
+                    weightKg: w.peso,
+                    gmd: w.gmd,
+                    previousWeightKg: prev ? prev.peso : null,
+                    gainKg: prev ? w.peso - prev.peso : null,
+                    animal: {
+                        id: w.animal.id,
+                        brinco: w.animal.brinco,
+                        raca: w.animal.raca,
+                        sexo: w.animal.sexo,
+                        categoria: w.animal.categoria,
+                    },
+                };
+            }),
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Erro ao listar pesagens da fazenda.' });
+    }
+});
+
+
+// ── HerdSettings ─────────────────────────────────────────────────────────────
+
+app.get('/farms/:farmId/herd-settings', async (req, res) => {
+    const { farmId } = req.params;
+    try {
+        const farm = await prisma.farm.findFirst({
+            where: { id: farmId, ...buildFarmRelationFilter(req) },
+        });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        const [settings, targets] = await Promise.all([
+            prisma.herdSettings.findUnique({ where: { farmId } }),
+            prisma.herdCategoryTarget.findMany({ where: { farmId }, orderBy: { categoria: 'asc' } }),
+        ]);
+
+        return res.json({
+            weighingIntervalDays: settings?.weighingIntervalDays ?? 30,
+            categoryTargets: targets.map(t => ({
+                id: t.id,
+                categoria: t.categoria,
+                pesoAlvoKg: t.pesoAlvoKg,
+            })),
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Erro ao buscar configurações do rebanho.' });
+    }
+});
+
+app.put('/farms/:farmId/herd-settings', async (req, res) => {
+    const { farmId } = req.params;
+    const { weighingIntervalDays } = req.body;
+    try {
+        const farm = await prisma.farm.findFirst({
+            where: { id: farmId, ...buildFarmRelationFilter(req) },
+        });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        const intervalVal = parseInt(weighingIntervalDays, 10);
+        if (isNaN(intervalVal) || intervalVal < 1 || intervalVal > 365) {
+            return res.status(400).json({ message: 'Intervalo inválido (1–365 dias).' });
+        }
+
+        const settings = await prisma.herdSettings.upsert({
+            where: { farmId },
+            create: { farmId, weighingIntervalDays: intervalVal },
+            update: { weighingIntervalDays: intervalVal },
+        });
+
+        return res.json({ weighingIntervalDays: settings.weighingIntervalDays });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Erro ao salvar configurações do rebanho.' });
+    }
+});
+
+app.put('/farms/:farmId/herd-settings/category-targets', async (req, res) => {
+    const { farmId } = req.params;
+    const { targets } = req.body; // [{ categoria, pesoAlvoKg }]
+    try {
+        const farm = await prisma.farm.findFirst({
+            where: { id: farmId, ...buildFarmRelationFilter(req) },
+        });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        if (!Array.isArray(targets)) {
+            return res.status(400).json({ message: 'targets deve ser um array.' });
+        }
+
+        // Upsert cada categoria
+        const upserts = targets.map(({ categoria, pesoAlvoKg }) =>
+            prisma.herdCategoryTarget.upsert({
+                where: { farmId_categoria: { farmId, categoria } },
+                create: { farmId, categoria, pesoAlvoKg: pesoAlvoKg ?? null },
+                update: { pesoAlvoKg: pesoAlvoKg ?? null },
+            })
+        );
+        await Promise.all(upserts);
+
+        const updated = await prisma.herdCategoryTarget.findMany({
+            where: { farmId },
+            orderBy: { categoria: 'asc' },
+        });
+
+        return res.json({
+            categoryTargets: updated.map(t => ({
+                id: t.id,
+                categoria: t.categoria,
+                pesoAlvoKg: t.pesoAlvoKg,
+            })),
+        });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Erro ao salvar pesos alvo.' });
+    }
+});
+
+// ─── Raças por fazenda ────────────────────────────────────────────────────────
+
+app.get('/farms/:farmId/breeds', async (req, res) => {
+    const { farmId } = req.params;
+    try {
+        const farm = await prisma.farm.findFirst({
+            where: { id: farmId, ...buildFarmRelationFilter(req) },
+        });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        const breeds = await prisma.breed.findMany({
+            where: { farmId },
+            orderBy: { name: 'asc' },
+        });
+        return res.json({ breeds: breeds.map(b => ({ id: b.id, name: b.name })) });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Erro ao listar raças.' });
+    }
+});
+
+app.post('/farms/:farmId/breeds', async (req, res) => {
+    const { farmId } = req.params;
+    const { name } = req.body || {};
+    if (!name?.trim()) {
+        return res.status(400).json({ message: 'Nome da raça é obrigatório.' });
+    }
+    try {
+        const farm = await prisma.farm.findFirst({
+            where: { id: farmId, ...buildFarmRelationFilter(req) },
+        });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        const breed = await prisma.breed.create({
+            data: { farmId, name: name.trim() },
+        });
+        return res.status(201).json({ breed: { id: breed.id, name: breed.name } });
+    } catch (err) {
+        if (err.code === 'P2002') {
+            return res.status(409).json({ message: 'Raça já cadastrada nesta fazenda.' });
+        }
+        console.error(err);
+        return res.status(500).json({ message: 'Erro ao cadastrar raça.' });
+    }
+});
+
+app.delete('/farms/:farmId/breeds/:breedId', async (req, res) => {
+    const { farmId, breedId } = req.params;
+    try {
+        const breed = await prisma.breed.findFirst({
+            where: { id: breedId, farmId },
+        });
+        if (!breed) return res.status(404).json({ message: 'Raça não encontrada.' });
+
+        const farm = await prisma.farm.findFirst({
+            where: { id: farmId, ...buildFarmRelationFilter(req) },
+        });
+        if (!farm) return res.status(403).json({ message: 'Sem permissão.' });
+
+        await prisma.breed.delete({ where: { id: breedId } });
+        return res.json({ ok: true });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ message: 'Erro ao remover raça.' });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 app.get('/animals/:id/paddock-moves', async (req, res) => {
     const { id } = req.params;
     try {
@@ -7543,6 +7825,110 @@ app.get('/alerts', requireAuth, async (req, res) => {
             .map(buildFieldOccurrenceAlert)
             .filter(Boolean)
             .forEach((alert) => alerts.push(alert));
+
+        // ── Alertas de pesagem ────────────────────────────────────────────────
+        try {
+            for (const farm of farms) {
+                const herdSettings = await prisma.herdSettings.findUnique({
+                    where: { farmId: farm.id },
+                    select: { weighingIntervalDays: true },
+                });
+                const weighingIntervalDays = herdSettings?.weighingIntervalDays ?? 30;
+                const weighingCutoff = new Date(Date.now() - weighingIntervalDays * 24 * 60 * 60 * 1000);
+
+                const farmAnimals = await prisma.animal.findMany({
+                    where: { farmId: farm.id },
+                    select: { id: true },
+                });
+                if (farmAnimals.length === 0) continue;
+
+                const animalIds = farmAnimals.map((a) => a.id);
+                const lastWeighings = await prisma.weighing.findMany({
+                    where: { animalId: { in: animalIds } },
+                    orderBy: { data: 'desc' },
+                    select: { animalId: true, data: true, gmd: true },
+                });
+
+                const lastByAnimal = new Map();
+                for (const w of lastWeighings) {
+                    if (!lastByAnimal.has(w.animalId)) lastByAnimal.set(w.animalId, w);
+                }
+
+                const semPesagem = farmAnimals.filter((a) => {
+                    const last = lastByAnimal.get(a.id);
+                    return !last || last.data < weighingCutoff;
+                });
+
+                if (semPesagem.length > 0) {
+                    alerts.push({
+                        id: `sem-pesagem-${farm.id}`,
+                        type: 'warning',
+                        message: `${semPesagem.length} ${semPesagem.length === 1 ? 'animal sem pesagem' : 'animais sem pesagem'} nos últimos ${weighingIntervalDays} dias${farms.length > 1 ? ` (${farm.name})` : ''}.`,
+                        source: 'SISTEMA',
+                        sourceType: 'WEIGHING',
+                        sourceId: null,
+                        farmId: farm.id,
+                        createdAt: new Date().toISOString(),
+                    });
+                }
+
+                const gmdNegativo = Array.from(lastByAnimal.values()).filter(
+                    (w) => w.gmd !== null && w.gmd < 0,
+                );
+                if (gmdNegativo.length > 0) {
+                    alerts.push({
+                        id: `gmd-negativo-${farm.id}`,
+                        type: 'critical',
+                        message: `${gmdNegativo.length} ${gmdNegativo.length === 1 ? 'animal com GMD negativo' : 'animais com GMD negativo'} na última pesagem${farms.length > 1 ? ` (${farm.name})` : ''}.`,
+                        source: 'SISTEMA',
+                        sourceType: 'GMD',
+                        sourceId: null,
+                        farmId: farm.id,
+                        createdAt: new Date().toISOString(),
+                    });
+                }
+            }
+        } catch (weighingErr) {
+            console.error('Erro ao calcular alertas de pesagem:', weighingErr);
+        }
+
+        // ── Alertas financeiros ───────────────────────────────────────────────
+        const billingBlocked = BILLING_BLOCKED_STATES.has(req.saas?.billingAccessState || '');
+        if (!billingBlocked && !isFieldWorkerRequest(req)) {
+            try {
+                const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+                const pendingTxs = await prisma.financialTransaction.findMany({
+                    where: {
+                        farmId: { in: farmIds },
+                        status: 'PENDENTE',
+                        vencimento: { lte: sevenDaysFromNow },
+                    },
+                    select: { farmId: true },
+                });
+                if (pendingTxs.length > 0) {
+                    const countByFarm = new Map();
+                    for (const tx of pendingTxs) {
+                        countByFarm.set(tx.farmId, (countByFarm.get(tx.farmId) || 0) + 1);
+                    }
+                    for (const [fid, count] of countByFarm) {
+                        const farm = farmById.get(fid);
+                        if (!farm) continue;
+                        alerts.push({
+                            id: `contas-vencer-${fid}`,
+                            type: 'warning',
+                            message: `${count} ${count === 1 ? 'conta a vencer' : 'contas a vencer'} nos próximos 7 dias${farms.length > 1 ? ` (${farm.name})` : ''}.`,
+                            source: 'FINANCEIRO',
+                            sourceType: 'FINANCEIRO',
+                            sourceId: null,
+                            farmId: fid,
+                            createdAt: new Date().toISOString(),
+                        });
+                    }
+                }
+            } catch (finErr) {
+                console.error('Erro ao calcular alertas financeiros:', finErr);
+        }
+        }
 
         const severityOrder = { critical: 0, warning: 1, info: 2 };
         alerts.sort((a, b) => {

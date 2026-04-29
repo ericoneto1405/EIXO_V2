@@ -4,7 +4,7 @@ import { ComposicaoRebanhoData } from '../types';
 import { buildApiUrl } from '../api';
 import ChartCard from './ChartCard';
 
-const COLORS = ['#16a34a', '#22c55e', '#4ade80', '#86efac'];
+const COLORS = ['var(--eixo-green)', '#d97706', '#0369a1', '#6d28d9'];
 
 interface HerdCompositionChartProps {
     farmId?: string | null;
@@ -71,7 +71,7 @@ const HerdCompositionChart: React.FC<HerdCompositionChartProps> = ({ farmId }) =
     if (isLoading) {
         return (
             <ChartCard title="Composição do Rebanho">
-                <p className="text-sm text-[#78716c]">Carregando composição do rebanho...</p>
+                <p className="text-sm text-[var(--eixo-text-muted)]">Carregando composição do rebanho...</p>
             </ChartCard>
         );
     }
@@ -79,7 +79,7 @@ const HerdCompositionChart: React.FC<HerdCompositionChartProps> = ({ farmId }) =
     if (!data.length) {
         return (
             <ChartCard title="Composição do Rebanho">
-                <p className="text-sm text-[#78716c]">Nenhum dado de rebanho disponível.</p>
+                <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum dado de rebanho disponível.</p>
             </ChartCard>
         );
     }
@@ -105,7 +105,7 @@ const HerdCompositionChart: React.FC<HerdCompositionChartProps> = ({ farmId }) =
                     <Tooltip
                          contentStyle={{
                             backgroundColor: '#ffffff',
-                            borderColor: '#e7e5e4',
+                            borderColor: 'var(--eixo-border)',
                             borderRadius: '0.5rem'
                         }}
                     />

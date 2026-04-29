@@ -9,16 +9,16 @@ const ChevronDownIcon: React.FC<{ isOpen: boolean }> = ({ isOpen }) => (
     </svg>
 );
 
-const BellIcon: React.FC = () => (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6 6 0 00-5-5.917V5a2 2 0 10-4 0v.083A6 6 0 004 11v3.159c0 .538-.214 1.055-.595 1.436L2 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-    </svg>
-);
-
 const LocationIcon: React.FC = () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+const HouseIcon: React.FC = () => (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
     </svg>
 );
 
@@ -41,8 +41,14 @@ const UsersIcon: React.FC = () => (
 );
 
 const CheckIcon: React.FC = () => (
-    <svg className="w-4 h-4 text-[#1c1917]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+    </svg>
+);
+
+const BellIcon: React.FC = () => (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
     </svg>
 );
 
@@ -50,17 +56,7 @@ const CheckIcon: React.FC = () => (
 const getInitials = (name: string) =>
     name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() || '').join('');
 
-const ALERT_TYPE_COLORS: Record<string, string> = {
-    critical: 'bg-red-100 text-red-700 border-red-200',
-    warning: 'bg-amber-100 text-amber-700 border-amber-200',
-    info: 'bg-blue-100 text-blue-700 border-blue-200',
-};
-
-const ALERT_TYPE_DOT: Record<string, string> = {
-    critical: 'bg-red-500',
-    warning: 'bg-amber-400',
-    info: 'bg-blue-400',
-};
+const getFirstName = (name: string) => String(name || '').trim().split(/\s+/)[0] || '';
 
 // ---- Types ----
 interface Farm {
@@ -76,7 +72,200 @@ interface HeaderProps {
     onLogout?: () => void;
     canRegisterUsers?: boolean;
     onOpenUserRegister?: () => void;
+    onAlertAction?: (alert: Alert) => boolean;
 }
+
+type AlertSeverity = 'high' | 'medium' | 'info';
+
+interface OperationalAlert extends Alert {
+    severity: AlertSeverity;
+    chipLabel: string;
+    title: string;
+    description: string;
+    sourceLabel: string;
+    hoursToRespond?: number;
+    actionLabel: string;
+}
+
+const ALERT_PANEL_STYLE: Record<AlertSeverity, string> = {
+    high: 'border-[rgba(184,66,50,0.18)] bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]',
+    medium: 'border-[rgba(197,138,32,0.18)] bg-[rgba(197,138,32,0.10)] text-[#966d1f]',
+    info: 'border-[rgba(109,101,88,0.16)] bg-[rgba(255,250,241,0.72)] text-[var(--eixo-text)]',
+};
+
+const ALERT_PANEL_DOT: Record<AlertSeverity, string> = {
+    high: 'bg-[var(--eixo-danger)]',
+    medium: 'bg-[var(--eixo-warning)]',
+    info: 'bg-[var(--eixo-text-muted)]',
+};
+
+const ALERT_PANEL_BADGE: Record<AlertSeverity, string> = {
+    high: 'border-[rgba(184,66,50,0.18)] bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]',
+    medium: 'border-[rgba(197,138,32,0.18)] bg-[rgba(197,138,32,0.10)] text-[#966d1f]',
+    info: 'border-[var(--eixo-border)] bg-[rgba(255,250,241,0.88)] text-[var(--eixo-text-muted)]',
+};
+
+const cleanTrailingPeriod = (value: string) => value.trim().replace(/\.$/, '');
+
+const normalizeWeighingLabel = (message: string) => {
+    const match = message.match(/^(\d+)\s+(animal sem pesagem|animais sem pesagem)\s+nos últimos\s+(\d+)\s+dias(?:\s+\((.+)\))?/i);
+    if (!match) return cleanTrailingPeriod(message);
+    const [, count, label, days, farmName] = match;
+    return `${count} ${label} há ${days}+ dias${farmName ? ` (${farmName})` : ''}`;
+};
+
+const normalizeShortAlertText = (alert: Alert) => {
+    const message = cleanTrailingPeriod(alert.message);
+    switch (alert.sourceType) {
+        case 'WEIGHING':
+            return normalizeWeighingLabel(message);
+        case 'COCHO':
+            return message
+                .replace(/^COCHO:\s*/i, '')
+                .replace(/\s+sem atualização registrada$/i, '')
+                .replace(/\s+sem atualização há \d+ dia\(s\)$/i, '')
+                .trim()
+                .replace(/^(.+)$/, 'Cocho sem atualização: $1');
+        case 'AGUA':
+            return message
+                .replace(/^AGUA:\s*/i, '')
+                .replace(/\s+sem atualização registrada$/i, '')
+                .replace(/\s+sem atualização há \d+ dia\(s\)$/i, '')
+                .trim()
+                .replace(/^(.+)$/, 'Água sem atualização: $1');
+        case 'NASCEU':
+            return message.replace(/^NASCEU:\s*/i, 'Nascimento: ');
+        case 'MORREU':
+            return message.replace(/^MORREU:\s*/i, 'Morte: ');
+        case 'DOENTE':
+            return message.replace(/^DOENTE:\s*/i, 'Doença: ');
+        case 'AVARIA':
+            return message.replace(/^AVARIA:\s*/i, 'Avaria: ');
+        default:
+            return message;
+    }
+};
+
+const normalizeAlertMeta = (alert: Alert): OperationalAlert => {
+    const severity: AlertSeverity = alert.type === 'critical'
+        ? 'high'
+        : alert.type === 'warning'
+            ? 'medium'
+            : 'info';
+
+    const sourceLabel = alert.source === 'APP_MANEJO' ? 'App do Manejo' : alert.source === 'FINANCEIRO' ? 'Financeiro' : 'Sistema';
+    const chipLabel = normalizeShortAlertText(alert);
+    const baseDescription = cleanTrailingPeriod(alert.message);
+
+    switch (alert.sourceType) {
+        case 'WEIGHING':
+            return {
+                ...alert,
+                severity,
+                chipLabel,
+                title: 'Animais sem pesagem',
+                description: `${baseDescription}. Abra a área de Pesagens para revisar as pendências.`,
+                sourceLabel,
+                actionLabel: 'Abrir Pesagens',
+            };
+        case 'GMD':
+            return {
+                ...alert,
+                severity: 'high',
+                chipLabel,
+                title: 'Peso fora do esperado',
+                description: `${baseDescription}. Vale revisar a última pesagem desses animais.`,
+                sourceLabel,
+                actionLabel: 'Abrir Pesagens',
+            };
+        case 'COCHO':
+            return {
+                ...alert,
+                severity,
+                chipLabel,
+                title: 'Cocho sem atualização',
+                description: `${baseDescription}. Água e comida precisam andar juntas na rotina operacional.`,
+                sourceLabel,
+                hoursToRespond: 24,
+                actionLabel: 'Entendido',
+            };
+        case 'AGUA':
+            return {
+                ...alert,
+                severity,
+                chipLabel,
+                title: 'Bebedouro sem atualização',
+                description: `${baseDescription}. Sem registro de água no período, o alerta precisa de resposta rápida.`,
+                sourceLabel,
+                hoursToRespond: 24,
+                actionLabel: 'Entendido',
+            };
+        case 'NASCEU':
+            return {
+                ...alert,
+                severity: 'info',
+                chipLabel,
+                title: 'Nascimento informado',
+                description: `${baseDescription}. Esse registro veio do campo e aguarda conferência da fazenda.`,
+                sourceLabel,
+                hoursToRespond: 24,
+                actionLabel: 'Entendido',
+            };
+        case 'MORREU':
+            return {
+                ...alert,
+                severity: 'high',
+                chipLabel,
+                title: 'Morte informada aguardando confirmação',
+                description: `${baseDescription}. Revise o caso e registre a confirmação quando a área estiver pronta.`,
+                sourceLabel,
+                hoursToRespond: 24,
+                actionLabel: 'Entendido',
+            };
+        case 'DOENTE':
+            return {
+                ...alert,
+                severity: 'high',
+                chipLabel,
+                title: 'Doença informada no campo',
+                description: `${baseDescription}. A fazenda precisa revisar esse registro com prioridade.`,
+                sourceLabel,
+                hoursToRespond: 24,
+                actionLabel: 'Entendido',
+            };
+        case 'AVARIA':
+            return {
+                ...alert,
+                severity: 'high',
+                chipLabel,
+                title: 'Ocorrência operacional aguardando análise',
+                description: `${baseDescription}. Essa pendência veio do campo e precisa de retorno da operação.`,
+                sourceLabel,
+                hoursToRespond: 24,
+                actionLabel: 'Entendido',
+            };
+        case 'FINANCEIRO':
+            return {
+                ...alert,
+                severity,
+                chipLabel,
+                title: 'Pendência financeira próxima do vencimento',
+                description: `${baseDescription}. Use o módulo Financeiro para revisar os lançamentos.`,
+                sourceLabel,
+                actionLabel: 'Ver detalhes',
+            };
+        default:
+            return {
+                ...alert,
+                severity,
+                chipLabel,
+                title: 'Alerta operacional',
+                description: `${baseDescription}.`,
+                sourceLabel,
+                actionLabel: 'Entendido',
+            };
+    }
+};
 
 // ---- Header ----
 const Header: React.FC<HeaderProps> = ({
@@ -87,251 +276,393 @@ const Header: React.FC<HeaderProps> = ({
     onLogout,
     canRegisterUsers,
     onOpenUserRegister,
+    onAlertAction,
 }) => {
     const [farmOpen, setFarmOpen] = useState(false);
-    const [alertOpen, setAlertOpen] = useState(false);
     const [userOpen, setUserOpen] = useState(false);
     const [alerts, setAlerts] = useState<Alert[]>([]);
-    const [alertsError, setAlertsError] = useState<string | null>(null);
+    const [selectedAlert, setSelectedAlert] = useState<OperationalAlert | null>(null);
+    const [selectedAlertAnchor, setSelectedAlertAnchor] = useState<{ top: number; left: number } | null>(null);
+    const [canScrollLeft, setCanScrollLeft] = useState(false);
+    const [canScrollRight, setCanScrollRight] = useState(false);
+    const alertsRowRef = useRef<HTMLDivElement>(null);
+    const alertPopoverRef = useRef<HTMLDivElement>(null);
 
     const farmRef = useRef<HTMLDivElement>(null);
-    const alertRef = useRef<HTMLDivElement>(null);
     const userRef = useRef<HTMLDivElement>(null);
 
-    const selectedFarm = farms.find((f) => f.id === selectedFarmId) || null;
     const hasFarms = farms.length > 0;
+    const hasMultipleFarms = farms.length > 1;
+    const selectedFarm = farms.find((f) => f.id === selectedFarmId) ?? null;
+    // "Todas as fazendas" só é válido quando o usuário escolheu explicitamente
+    // (selectedFarmId===null) e há mais de uma fazenda cadastrada
+    const allFarmsSelected = hasMultipleFarms && selectedFarmId === null;
 
-    const hasAlerts = alerts.length > 0;
+    // Rótulo do botão de seleção de fazenda
+    const farmLabel = allFarmsSelected
+        ? 'Todas as fazendas'
+        : selectedFarm?.name
+        ?? (hasFarms ? farms[0]?.name : 'Nenhuma cadastrada');
 
+    const farmSubLabel = allFarmsSelected ? 'Visualizando' : 'Fazenda selecionada';
+
+    const farmAvatar = allFarmsSelected ? (
+        <HouseIcon />
+    ) : selectedFarm ? (
+        getInitials(selectedFarm.name)
+    ) : (
+        <LocationIcon />
+    );
+
+    const operationalAlerts = alerts.map(normalizeAlertMeta);
+
+    const updateScrollState = () => {
+        const el = alertsRowRef.current;
+        if (!el) return;
+        setCanScrollLeft(el.scrollLeft > 4);
+        setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    };
+
+    // Alertas — recarrega quando muda a fazenda selecionada
     useEffect(() => {
-        let isMounted = true;
-        const loadAlerts = async () => {
-            setAlertsError(null);
+        let active = true;
+        const load = async () => {
             try {
-                const query = selectedFarmId ? `?farmId=${encodeURIComponent(selectedFarmId)}` : '';
-                const response = await fetch(buildApiUrl(`/alerts${query}`), {
-                    credentials: 'include',
-                });
-                const payload = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    throw new Error(payload?.message || 'Erro ao carregar alertas.');
-                }
-                if (isMounted) {
+                const q = selectedFarmId ? `?farmId=${encodeURIComponent(selectedFarmId)}` : '';
+                const res = await fetch(buildApiUrl(`/alerts${q}`), { credentials: 'include' });
+                const payload = await res.json().catch(() => ({}));
+                if (active && res.ok) {
                     setAlerts(Array.isArray(payload?.alerts) ? payload.alerts : []);
                 }
-            } catch (error) {
-                console.error(error);
-                if (isMounted) {
-                    setAlerts([]);
-                    setAlertsError(error instanceof Error ? error.message : 'Erro ao carregar alertas.');
-                }
+            } catch {
+                if (active) setAlerts([]);
             }
         };
-
-        void loadAlerts();
-        const intervalId = window.setInterval(loadAlerts, 60_000);
-        return () => {
-            isMounted = false;
-            window.clearInterval(intervalId);
-        };
+        void load();
+        const id = window.setInterval(load, 60_000);
+        return () => { active = false; window.clearInterval(id); };
     }, [selectedFarmId]);
+
+    // Atualiza visibilidade das setas quando os alertas mudam
+    useEffect(() => {
+        const el = alertsRowRef.current;
+        if (!el) return;
+        requestAnimationFrame(updateScrollState);
+    }, [alerts]);
+
+    useEffect(() => {
+        const handleResize = () => updateScrollState();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     // Fechar dropdowns ao clicar fora
     useEffect(() => {
-        const handleClick = (e: MouseEvent) => {
+        const handle = (e: MouseEvent) => {
             if (farmRef.current && !farmRef.current.contains(e.target as Node)) setFarmOpen(false);
-            if (alertRef.current && !alertRef.current.contains(e.target as Node)) setAlertOpen(false);
             if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
+            if (alertPopoverRef.current && !alertPopoverRef.current.contains(e.target as Node)) {
+                setSelectedAlert(null);
+                setSelectedAlertAnchor(null);
+            }
         };
-        document.addEventListener('mousedown', handleClick);
-        return () => document.removeEventListener('mousedown', handleClick);
+        document.addEventListener('mousedown', handle);
+        return () => document.removeEventListener('mousedown', handle);
     }, []);
 
+    const handleAlertClick = (alert: OperationalAlert, event: React.MouseEvent<HTMLButtonElement>) => {
+        if (onAlertAction?.(alert)) {
+            setSelectedAlert(null);
+            setSelectedAlertAnchor(null);
+            return;
+        }
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        const width = 320;
+        const viewportPadding = 16;
+        const preferredLeft = rect.left;
+        const left = Math.min(
+            Math.max(viewportPadding, preferredLeft),
+            window.innerWidth - width - viewportPadding,
+        );
+
+        setSelectedAlert(alert);
+        setSelectedAlertAnchor({
+            top: rect.bottom + 10,
+            left,
+        });
+    };
+
     return (
-        <header className="relative z-20 rounded-[28px] border border-[#e7e5e4] bg-white px-4 py-3 lg:px-6">
-            <div className="flex items-center justify-between gap-3">
+        <header className="relative z-20 rounded-[28px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+
+            {/* ── Linha principal ──────────────────────────────────────────── */}
+            <div className="flex items-center gap-3 px-4 py-3 lg:px-6">
 
                 {/* Seletor de Fazenda */}
-                <div className="relative" ref={farmRef}>
+                <div className="relative shrink-0" ref={farmRef}>
                     <button
                         onClick={() => setFarmOpen((v) => !v)}
-                        className="flex items-center gap-3 rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-2.5 transition-colors hover:bg-[#ece9e6]"
+                        className="flex max-w-[270px] items-center gap-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 transition-colors hover:bg-[#ece9e6]"
                     >
-                        {/* Avatar com iniciais */}
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#1c1917] text-sm font-bold text-white">
-                            {selectedFarm ? getInitials(selectedFarm.name) : <LocationIcon />}
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--eixo-text)] text-sm font-bold text-white">
+                            {farmAvatar}
                         </div>
-                        <div className="hidden min-w-0 text-left sm:block">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#78716c]">
-                                Fazenda selecionada
+                        <div className="hidden min-w-0 flex-1 text-left sm:block">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)]">
+                                {farmSubLabel}
                             </p>
-                            <p className="max-w-[180px] truncate text-sm font-bold text-[#1c1917]">
-                                {selectedFarm?.name || (hasFarms ? 'Selecione uma fazenda' : 'Nenhuma cadastrada')}
+                            <p className="max-w-[180px] truncate text-sm font-bold text-[var(--eixo-text)]">
+                                {farmLabel}
                             </p>
                         </div>
                         <ChevronDownIcon isOpen={farmOpen} />
                     </button>
 
                     {farmOpen && (
-                        <div className="absolute left-0 z-30 mt-2 w-72 rounded-2xl border border-[#e7e5e4] bg-white shadow-xl">
-                            <div className="border-b border-[#e7e5e4] px-4 py-3">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-[#78716c]">Suas fazendas</p>
+                        <div className="absolute left-0 z-30 mt-2 w-72 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
+                            <div className="border-b border-[var(--eixo-border)] px-4 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Suas fazendas</p>
                             </div>
                             <ul className="max-h-64 overflow-y-auto py-2">
                                 {hasFarms ? (
-                                    farms.map((farm) => (
-                                        <li key={farm.id}>
-                                            <button
-                                                type="button"
-                                                onClick={() => { onSelectFarm(farm.id); setFarmOpen(false); }}
-                                                className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-[#1c1917] transition-colors hover:bg-[#f5f5f4]"
-                                            >
-                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#1c1917] text-xs font-bold text-white">
-                                                    {getInitials(farm.name)}
-                                                </div>
-                                                <span className="flex-1 font-medium">{farm.name}</span>
-                                                {farm.id === selectedFarmId && <CheckIcon />}
-                                            </button>
-                                        </li>
-                                    ))
+                                    <>
+                                        {/* "Todas as fazendas" — só aparece quando há mais de uma */}
+                                        {hasMultipleFarms && (
+                                            <>
+                                                <li>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => { onSelectFarm(null); setFarmOpen(false); }}
+                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                                                    >
+                                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--eixo-text)] text-white">
+                                                            <HouseIcon />
+                                                        </div>
+                                                        <span className="flex-1 font-medium">Todas as fazendas</span>
+                                                        {allFarmsSelected && <CheckIcon />}
+                                                    </button>
+                                                </li>
+                                                <li className="mx-4 my-1 border-t border-[var(--eixo-border)]" />
+                                            </>
+                                        )}
+                                        {farms.map((farm) => (
+                                            <li key={farm.id}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { onSelectFarm(farm.id); setFarmOpen(false); }}
+                                                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                                                >
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--eixo-text)] text-xs font-bold text-white">
+                                                        {getInitials(farm.name)}
+                                                    </div>
+                                                    <span className="flex-1 font-medium">{farm.name}</span>
+                                                    {farm.id === selectedFarmId && <CheckIcon />}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </>
                                 ) : (
-                                    <li className="px-4 py-3 text-sm text-[#78716c]">Nenhuma fazenda cadastrada.</li>
+                                    <li className="px-4 py-3 text-sm text-[var(--eixo-text-muted)]">Nenhuma fazenda cadastrada.</li>
                                 )}
                             </ul>
                         </div>
                     )}
                 </div>
 
-                {/* Lado direito */}
-                <div className="flex items-center gap-2">
+                {/* Central de alertas */}
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5">
+                        <div className="flex shrink-0 items-center gap-2 pr-1">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[rgba(47,58,45,0.08)] text-[var(--eixo-text-muted)]">
+                                <BellIcon />
+                            </span>
+                            <div className="min-w-0">
+                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)]">
+                                    Alertas
+                                </p>
+                                <p className="text-xs font-medium text-[var(--eixo-text-muted)]">
+                                    {operationalAlerts.length > 0
+                                        ? `${operationalAlerts.length} ${operationalAlerts.length === 1 ? 'pendente' : 'pendentes'}`
+                                        : 'Nenhum alerta no momento'}
+                                </p>
+                            </div>
+                        </div>
 
-                    {/* Sino de alertas */}
-                    <div className="relative" ref={alertRef}>
-                        <button
-                            onClick={() => setAlertOpen((v) => !v)}
-                            className="relative flex items-center justify-center rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] p-3 text-[#78716c] transition-colors hover:bg-[#ece9e6] hover:text-[#1c1917]"
+                        <div className="h-7 w-px shrink-0 bg-[var(--eixo-border)]" />
+
+                        {canScrollLeft && (
+                            <button
+                                type="button"
+                                onClick={() => alertsRowRef.current?.scrollBy({ left: -220, behavior: 'smooth' })}
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--eixo-border)]/70 bg-[var(--eixo-surface)]/88 text-[var(--eixo-text-soft)] transition-colors hover:bg-[#ece9e6] hover:text-[var(--eixo-text-muted)]"
+                                aria-label="Rolar alertas para a esquerda"
+                            >
+                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                        )}
+
+                        <div
+                            ref={alertsRowRef}
+                            className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto"
+                            style={{ scrollbarWidth: 'none' }}
+                            onScroll={updateScrollState}
                         >
-                            <BellIcon />
-                            {hasAlerts && (
-                                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+                            {operationalAlerts.length > 0 ? operationalAlerts.map((alert) => (
+                                <button
+                                    key={alert.id}
+                                    type="button"
+                                    onClick={(event) => handleAlertClick(alert, event)}
+                                    title={alert.description}
+                                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none transition-colors hover:brightness-[0.98] ${ALERT_PANEL_STYLE[alert.severity]}`}
+                                >
+                                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${ALERT_PANEL_DOT[alert.severity]}`} />
+                                    <span className="whitespace-nowrap">{alert.chipLabel}</span>
+                                </button>
+                            )) : (
+                                <span className="whitespace-nowrap text-sm text-[var(--eixo-text-muted)]">
+                                    Nenhum alerta no momento
+                                </span>
                             )}
+                        </div>
+
+                        {canScrollRight && (
+                            <button
+                                type="button"
+                                onClick={() => alertsRowRef.current?.scrollBy({ left: 220, behavior: 'smooth' })}
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--eixo-border)]/70 bg-[var(--eixo-surface)]/88 text-[var(--eixo-text-soft)] transition-colors hover:bg-[#ece9e6] hover:text-[var(--eixo-text-muted)]"
+                                aria-label="Rolar alertas para a direita"
+                            >
+                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                                </svg>
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Lado direito — usuário */}
+                {currentUser && (
+                    <div className="relative shrink-0" ref={userRef}>
+                        <button
+                            onClick={() => setUserOpen((v) => !v)}
+                            className="flex max-w-[138px] items-center gap-2.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 transition-colors hover:bg-[#ece9e6]"
+                        >
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--eixo-text)] text-xs font-bold text-[#f5f0e8]">
+                                {getInitials(currentUser.name)}
+                            </div>
+                            <div className="hidden min-w-0 flex-1 text-left sm:block">
+                                <p className="max-w-[62px] truncate text-sm font-semibold leading-tight text-[var(--eixo-text)]">
+                                    {getFirstName(currentUser.name)}
+                                </p>
+                            </div>
+                            <ChevronDownIcon isOpen={userOpen} />
                         </button>
 
-                        {alertOpen && (
-                            <div className="absolute right-0 z-30 mt-2 w-80 rounded-2xl border border-[#e7e5e4] bg-white shadow-xl">
-                                <div className="flex items-center justify-between border-b border-[#e7e5e4] px-4 py-3">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-[#78716c]">Alertas</p>
-                                    {hasAlerts && (
-                                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-600">
-                                            {alerts.length}
-                                        </span>
-                                    )}
+                        {userOpen && (
+                            <div className="absolute right-0 z-30 mt-2 w-56 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
+                                <div className="border-b border-[var(--eixo-border)] px-4 py-3">
+                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{currentUser.name}</p>
+                                    <p className="truncate text-xs text-[var(--eixo-text-muted)]">{currentUser.email}</p>
                                 </div>
-                                <div className="max-h-80 overflow-y-auto py-3">
-                                    {hasAlerts ? (
-                                        <ul className="space-y-2 px-3">
-                                            {alerts.map((alert) => (
-                                                <li
-                                                    key={alert.id}
-                                                    className={`flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm ${ALERT_TYPE_COLORS[alert.type] || ALERT_TYPE_COLORS.info}`}
+                                <ul className="py-2">
+                                    <li>
+                                        <button
+                                            type="button"
+                                            disabled
+                                            className="flex w-full cursor-not-allowed items-center gap-3 px-4 py-2 text-sm text-[#a8a29e]"
+                                        >
+                                            <UserIcon />
+                                            <span>Meu Perfil</span>
+                                            <span className="ml-auto text-[10px] font-semibold text-[#a8a29e]">Em breve</span>
+                                        </button>
+                                    </li>
+                                    {canRegisterUsers && (
+                                        <>
+                                            <li className="my-1 border-t border-[var(--eixo-border)]" />
+                                            <li>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { onOpenUserRegister?.(); setUserOpen(false); }}
+                                                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                                                 >
-                                                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${ALERT_TYPE_DOT[alert.type] || ALERT_TYPE_DOT.info}`} />
-                                                    <span>{alert.message}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <div className="flex flex-col items-center py-6 text-center">
-                                            <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f5f4] text-[#78716c]">
-                                                <BellIcon />
-                                            </div>
-                                            <p className="text-sm font-medium text-[#1c1917]">{alertsError ? 'Não foi possível carregar' : 'Tudo em ordem'}</p>
-                                            <p className="mt-1 text-xs text-[#78716c]">{alertsError || 'Nenhum alerta no momento.'}</p>
-                                        </div>
+                                                    <UsersIcon />
+                                                    <span>Cadastrar usuários</span>
+                                                </button>
+                                            </li>
+                                        </>
                                     )}
-                                </div>
+                                    <li className="my-1 border-t border-[var(--eixo-border)]" />
+                                    <li>
+                                        <button
+                                            type="button"
+                                            onClick={() => { onLogout?.(); setUserOpen(false); }}
+                                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[var(--eixo-danger)] transition-colors hover:bg-[#fff2ef]"
+                                        >
+                                            <LogoutIcon />
+                                            <span>Sair</span>
+                                        </button>
+                                    </li>
+                                </ul>
                             </div>
                         )}
                     </div>
-
-                    {/* Área do usuário */}
-                    {currentUser && (
-                        <div className="relative" ref={userRef}>
-                            <button
-                                onClick={() => setUserOpen((v) => !v)}
-                                className="flex items-center gap-3 rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-3 py-2.5 transition-colors hover:bg-[#ece9e6]"
-                            >
-                                {/* Avatar */}
-                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#1c1917] text-xs font-bold text-[#f5f0e8]">
-                                    {getInitials(currentUser.name)}
-                                </div>
-                                <div className="hidden text-left sm:block">
-                                    <p className="text-sm font-semibold leading-tight text-[#1c1917]">{currentUser.name}</p>
-                                    <p className="text-xs leading-tight text-[#78716c]">{currentUser.email}</p>
-                                </div>
-                                <ChevronDownIcon isOpen={userOpen} />
-                            </button>
-
-                            {userOpen && (
-                                <div className="absolute right-0 z-30 mt-2 w-56 rounded-2xl border border-[#e7e5e4] bg-white shadow-xl">
-                                    {/* Info do usuário */}
-                                    <div className="border-b border-[#e7e5e4] px-4 py-3">
-                                        <p className="text-sm font-semibold text-[#1c1917]">{currentUser.name}</p>
-                                        <p className="truncate text-xs text-[#78716c]">{currentUser.email}</p>
-                                    </div>
-
-                                    <ul className="py-2">
-                                        {/* Meu Perfil — desabilitado por enquanto */}
-                                        <li>
-                                            <button
-                                                type="button"
-                                                disabled
-                                                className="cursor-not-allowed flex w-full items-center gap-3 px-4 py-2 text-sm text-[#a8a29e]"
-                                            >
-                                                <UserIcon />
-                                                <span>Meu Perfil</span>
-                                                <span className="ml-auto text-[10px] font-semibold text-[#a8a29e]">Em breve</span>
-                                            </button>
-                                        </li>
-
-                                        {/* Cadastrar usuários — só admin */}
-                                        {canRegisterUsers && (
-                                            <>
-                                                <li className="my-1 border-t border-[#e7e5e4]" />
-                                                <li>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => { onOpenUserRegister?.(); setUserOpen(false); }}
-                                                        className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[#1c1917] transition-colors hover:bg-[#f5f5f4]"
-                                                    >
-                                                        <UsersIcon />
-                                                        <span>Cadastrar usuários</span>
-                                                    </button>
-                                                </li>
-                                            </>
-                                        )}
-
-                                        <li className="my-1 border-t border-[#e7e5e4]" />
-
-                                        {/* Sair */}
-                                        <li>
-                                            <button
-                                                type="button"
-                                                onClick={() => { onLogout?.(); setUserOpen(false); }}
-                                                className="flex w-full items-center gap-3 px-4 py-2 text-sm text-red-600 transition-colors hover:bg-red-50"
-                                            >
-                                                <LogoutIcon />
-                                                <span>Sair</span>
-                                            </button>
-                                        </li>
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                </div>
+                )}
             </div>
+            {selectedAlert && selectedAlertAnchor && (
+                <div
+                    ref={alertPopoverRef}
+                    className="fixed z-50 w-80 rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-2xl"
+                    style={{ top: selectedAlertAnchor.top, left: selectedAlertAnchor.left }}
+                >
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSelectedAlert(null);
+                            setSelectedAlertAnchor(null);
+                        }}
+                        className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full text-[var(--eixo-text-soft)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
+                        aria-label="Fechar detalhe do alerta"
+                    >
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 6 6 18M6 6l12 12" />
+                        </svg>
+                    </button>
+
+                    <div className={`mb-3 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${ALERT_PANEL_BADGE[selectedAlert.severity]}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${ALERT_PANEL_DOT[selectedAlert.severity]}`} />
+                        {selectedAlert.severity === 'high' ? 'Alerta alto' : selectedAlert.severity === 'medium' ? 'Atenção' : 'Informativo'}
+                    </div>
+
+                    <h3 className="pr-6 font-brand text-[15px] font-extrabold leading-snug text-[var(--eixo-text)]">
+                        {selectedAlert.title}
+                    </h3>
+
+                    <p className="mt-2 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
+                        {selectedAlert.description}
+                    </p>
+
+                    <div className="mt-4 space-y-1.5 text-xs text-[var(--eixo-text-muted)]">
+                        <p><span className="font-semibold text-[var(--eixo-text)]">Origem:</span> {selectedAlert.sourceLabel}</p>
+                        {selectedAlert.hoursToRespond ? (
+                            <p><span className="font-semibold text-[var(--eixo-text)]">Prazo:</span> responder em até {selectedAlert.hoursToRespond}h</p>
+                        ) : null}
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setSelectedAlert(null);
+                            setSelectedAlertAnchor(null);
+                        }}
+                        className="mt-4 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] py-2.5 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]"
+                    >
+                        {selectedAlert.actionLabel}
+                    </button>
+                </div>
+            )}
         </header>
     );
 };

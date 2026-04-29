@@ -87,6 +87,7 @@ model Farm {
   financialTransactions FinancialTransaction[]
   accountCategories  AccountCategory[]
   criaMortalities    CriaMortality[]
+  breeds             Breed[]
   geneticsAnalysisRuns GeneticsAnalysisRun[]
   herdImportPendings HerdImportPending[]
   userAccesses       UserFarmAccess[]
@@ -97,6 +98,8 @@ model Farm {
   reproCheckupRecords  ReproCheckupRecord[]
   herdEvents           HerdEvent[]
   sanitaryRecords      SanitaryRecord[]
+  herdSettings         HerdSettings?
+  herdCategoryTargets  HerdCategoryTarget[]
   user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId             String
   organization       Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
@@ -1889,4 +1892,37 @@ model SanitaryRecord {
   @@index([farmId])
   @@index([animalId])
   @@index([poAnimalId])
+}
+
+model HerdSettings {
+  id                  String   @id @default(uuid())
+  farmId              String   @unique
+  weighingIntervalDays Int     @default(30)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  farm                Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+}
+
+model HerdCategoryTarget {
+  id          String   @id @default(uuid())
+  farmId      String
+  categoria   String
+  pesoAlvoKg  Float?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  farm        Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, categoria])
+  @@index([farmId])
+}
+
+model Breed {
+  id        String   @id @default(uuid())
+  name      String
+  farmId    String
+  createdAt DateTime @default(now())
+  farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, name])
+  @@index([farmId])
 }

@@ -94,31 +94,31 @@ const formatDateTime = (value: string | null | undefined) => {
 const getSeverityClasses = (severity?: string) => {
     switch (severity) {
         case 'critical':
-            return 'border-red-200 bg-red-50 text-red-700';
+            return 'border-[rgba(184,66,50,0.18)] bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]';
         case 'warning':
-            return 'border-amber-200 bg-amber-50 text-amber-700';
+            return 'border-[rgba(197,138,32,0.18)] bg-[rgba(197,138,32,0.08)] text-[var(--eixo-warning)]';
         case 'info':
-            return 'border-sky-200 bg-sky-50 text-sky-700';
+            return 'border-[rgba(63,111,143,0.18)] bg-[rgba(63,111,143,0.08)] text-[var(--eixo-info)]';
         default:
-            return 'border-[#e7e5e4] bg-white text-[#78716c]';
+            return 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-[var(--eixo-text-muted)]';
     }
 };
 
 const SectionCard: React.FC<{ title: string; description?: string; children: React.ReactNode; }> = ({ title, description, children }) => (
-    <section className="rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] p-5 shadow-sm">
+    <section className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-5 shadow-sm">
         <div className="mb-4">
-            <h2 className="text-lg font-semibold text-[#1c1917]">{title}</h2>
-            {description && <p className="mt-1 text-sm text-[#78716c]">{description}</p>}
+            <h2 className="text-lg font-semibold text-[var(--eixo-text)]">{title}</h2>
+            {description && <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{description}</p>}
         </div>
         {children}
     </section>
 );
 
 const StatCard: React.FC<{ title: string; value: string; helper?: string; }> = ({ title, value, helper }) => (
-    <div className="rounded-2xl border border-[#e7e5e4] bg-white p-4 shadow-sm">
-        <p className="text-sm text-[#78716c]">{title}</p>
-        <p className="mt-2 text-2xl font-semibold text-[#1c1917]">{value}</p>
-        {helper && <p className="mt-2 text-xs text-[#a8a29e]">{helper}</p>}
+    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4 shadow-sm">
+        <p className="text-sm text-[var(--eixo-text-muted)]">{title}</p>
+        <p className="mt-2 text-2xl font-semibold text-[var(--eixo-text)]">{value}</p>
+        {helper && <p className="mt-2 text-xs text-[var(--eixo-text-soft)]">{helper}</p>}
     </div>
 );
 
@@ -127,10 +127,10 @@ const Field: React.FC<{
     children: React.ReactNode;
     helper?: string;
 }> = ({ label, children, helper }) => (
-    <label className="flex flex-col gap-1 text-sm text-[#78716c]">
+    <label className="flex flex-col gap-1 text-sm text-[var(--eixo-text-muted)]">
         <span className="font-medium">{label}</span>
         {children}
-        {helper && <span className="text-xs text-[#a8a29e]">{helper}</span>}
+        {helper && <span className="text-xs text-[var(--eixo-text-soft)]">{helper}</span>}
     </label>
 );
 
@@ -532,7 +532,7 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
 
     if (!farmId) {
         return (
-            <div className="rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] p-10 text-center text-[#78716c]">
+            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-10 text-center text-[var(--eixo-text-muted)]">
                 Selecione uma fazenda para usar o módulo de nutrição.
             </div>
         );
@@ -541,14 +541,14 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="rounded-2xl border border-[#e7e5e4] bg-white px-6 py-5">
+            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-amber-300/40 bg-amber-100/70 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-amber-700">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[rgba(197,138,32,0.18)] bg-[rgba(197,138,32,0.08)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-warning)]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-warning)]" />
                             {farmName || 'Fazenda'}
                         </div>
-                        <h2 className="font-brand text-2xl font-extrabold leading-tight text-[#1c1917]">Nutrição</h2>
+                        <h2 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Nutrição</h2>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {VIEWS.map((item) => (
@@ -556,7 +556,7 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                                 key={item}
                                 type="button"
                                 onClick={() => setView(item)}
-                                className={`rounded-xl px-4 py-2 text-sm font-semibold font-brand transition-colors ${view === item ? 'bg-[#a8442a] text-white' : 'bg-[#f5f5f4] text-[#78716c] hover:bg-[#f5f5f4]'}`}
+                                className={`rounded-xl px-4 py-2 text-sm font-semibold font-brand transition-colors ${view === item ? 'bg-[var(--eixo-green)] text-white' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'}`}
                             >
                                 {item}
                             </button>
@@ -564,7 +564,7 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                         <button
                             type="button"
                             onClick={loadAll}
-                            className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-2 text-sm font-semibold text-[#78716c] hover:bg-[#f5f5f4] font-brand"
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)] font-brand"
                         >
                             Atualizar
                         </button>
@@ -572,9 +572,9 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                 </div>
             </div>
 
-            {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
-            {success && <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">{success}</div>}
-            {loading && <div className="text-sm text-[#78716c]">Carregando nutrição...</div>}
+            {error && <div className="rounded-xl border border-[rgba(184,66,50,0.18)] bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]">{error}</div>}
+            {success && <div className="rounded-xl border border-[rgba(79,159,47,0.18)] bg-[var(--eixo-green-soft)] px-4 py-3 text-sm text-[var(--eixo-success)]">{success}</div>}
+            {loading && <div className="text-sm text-[var(--eixo-text-muted)]">Carregando nutrição...</div>}
 
             {view === 'Hoje' && (
                 <div className="space-y-6">
@@ -587,7 +587,7 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
 
                     <SectionCard title="Central de Atenção" description="Tudo que precisa de ação agora.">
                         <div className="space-y-3">
-                            {exceptions.length === 0 && <p className="text-sm text-[#78716c]">Nenhum alerta aberto neste momento.</p>}
+                            {exceptions.length === 0 && <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum alerta aberto neste momento.</p>}
                             {exceptions.map((item: any) => (
                                 <div key={item.id} className={`rounded-xl border px-4 py-3 ${getSeverityClasses(item.severity)}`}>
                                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -596,11 +596,11 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                                             <p className="mt-1 text-sm">{item.description}</p>
                                         </div>
                                         {item.type === 'offline_pending' ? (
-                                            <button type="button" onClick={handleSyncOffline} className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-[#1c1917]">
+                                            <button type="button" onClick={handleSyncOffline} className="rounded-lg bg-[var(--eixo-surface)] px-3 py-2 text-sm font-medium text-[var(--eixo-text)]">
                                                 {item.action}
                                             </button>
                                         ) : (
-                                            <span className="rounded-lg bg-white px-3 py-2 text-sm font-medium text-[#1c1917]">{item.action}</span>
+                                            <span className="rounded-lg bg-[var(--eixo-surface)] px-3 py-2 text-sm font-medium text-[var(--eixo-text)]">{item.action}</span>
                                         )}
                                     </div>
                                 </div>
@@ -612,26 +612,26 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                         <SectionCard title="Registrar fabricação" description="Lançamento simples para o responsável pela mistura.">
                             <form className="grid gap-3" onSubmit={handleCreateFabrication}>
                                 <Field label="Ração preparada">
-                                    <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={fabricationForm.preparedFeedId} onChange={(event) => setFabricationForm((current) => ({ ...current, preparedFeedId: event.target.value }))}>
+                                    <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={fabricationForm.preparedFeedId} onChange={(event) => setFabricationForm((current) => ({ ...current, preparedFeedId: event.target.value }))}>
                                         <option value="">Selecione</option>
                                         {preparedFeeds.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                                     </select>
                                 </Field>
                                 <Field label="Lote da fabricação">
-                                    <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={fabricationForm.batchCode} onChange={(event) => setFabricationForm((current) => ({ ...current, batchCode: event.target.value }))} placeholder="Ex.: Batida manhã" />
+                                    <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={fabricationForm.batchCode} onChange={(event) => setFabricationForm((current) => ({ ...current, batchCode: event.target.value }))} placeholder="Ex.: Batida manhã" />
                                 </Field>
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <Field label="Data e hora">
-                                        <input type="datetime-local" className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={fabricationForm.producedAt} onChange={(event) => setFabricationForm((current) => ({ ...current, producedAt: event.target.value }))} />
+                                        <input type="datetime-local" className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={fabricationForm.producedAt} onChange={(event) => setFabricationForm((current) => ({ ...current, producedAt: event.target.value }))} />
                                     </Field>
                                     <Field label="Quantidade fabricada (kg matéria natural)">
-                                        <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={fabricationForm.outputNaturalKg} onChange={(event) => setFabricationForm((current) => ({ ...current, outputNaturalKg: event.target.value }))} placeholder="Ex.: 1200" />
+                                        <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={fabricationForm.outputNaturalKg} onChange={(event) => setFabricationForm((current) => ({ ...current, outputNaturalKg: event.target.value }))} placeholder="Ex.: 1200" />
                                     </Field>
                                 </div>
                                 <Field label="Observação">
-                                    <textarea className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={fabricationForm.notes} onChange={(event) => setFabricationForm((current) => ({ ...current, notes: event.target.value }))} rows={2} />
+                                    <textarea className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={fabricationForm.notes} onChange={(event) => setFabricationForm((current) => ({ ...current, notes: event.target.value }))} rows={2} />
                                 </Field>
-                                <button disabled={saving} className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar fabricação</button>
+                                <button disabled={saving} className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar fabricação</button>
                             </form>
                         </SectionCard>
 
@@ -639,44 +639,44 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                             <form className="grid gap-3" onSubmit={handleCreateExecution}>
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <Field label="Baia, lote ou ponto de trato">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={executionForm.unitId} onChange={(event) => setExecutionForm((current) => ({ ...current, unitId: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={executionForm.unitId} onChange={(event) => setExecutionForm((current) => ({ ...current, unitId: event.target.value }))}>
                                             <option value="">Selecione</option>
                                             {units.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                                         </select>
                                     </Field>
                                     <Field label="Horário do trato">
-                                        <input type="datetime-local" className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={executionForm.date} onChange={(event) => setExecutionForm((current) => ({ ...current, date: event.target.value }))} />
+                                        <input type="datetime-local" className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={executionForm.date} onChange={(event) => setExecutionForm((current) => ({ ...current, date: event.target.value }))} />
                                     </Field>
                                 </div>
                                 <div className="grid gap-3 md:grid-cols-3">
                                     <Field label="Ração preparada">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={executionForm.preparedFeedId} onChange={(event) => setExecutionForm((current) => ({ ...current, preparedFeedId: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={executionForm.preparedFeedId} onChange={(event) => setExecutionForm((current) => ({ ...current, preparedFeedId: event.target.value }))}>
                                             <option value="">Automático pelo plano</option>
                                             {preparedFeeds.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                                         </select>
                                     </Field>
                                     <Field label="Fabricação usada">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={executionForm.fabricationId} onChange={(event) => setExecutionForm((current) => ({ ...current, fabricationId: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={executionForm.fabricationId} onChange={(event) => setExecutionForm((current) => ({ ...current, fabricationId: event.target.value }))}>
                                             <option value="">Automática pelo saldo</option>
                                             {fabrications.filter((item) => item.remainingNaturalKg > 0).map((item) => <option key={item.id} value={item.id}>{item.batchCode}</option>)}
                                         </select>
                                     </Field>
                                     <Field label="Trato">
-                                        <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={executionForm.feedingSlot} onChange={(event) => setExecutionForm((current) => ({ ...current, feedingSlot: event.target.value }))} placeholder="Ex.: Trato 1" />
+                                        <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={executionForm.feedingSlot} onChange={(event) => setExecutionForm((current) => ({ ...current, feedingSlot: event.target.value }))} placeholder="Ex.: Trato 1" />
                                     </Field>
                                 </div>
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <Field label="Quantidade entregue (kg matéria natural)">
-                                        <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={executionForm.actualNaturalKg} onChange={(event) => setExecutionForm((current) => ({ ...current, actualNaturalKg: event.target.value }))} placeholder="Ex.: 580" />
+                                        <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={executionForm.actualNaturalKg} onChange={(event) => setExecutionForm((current) => ({ ...current, actualNaturalKg: event.target.value }))} placeholder="Ex.: 580" />
                                     </Field>
                                     <Field label="Quantidade entregue (kg matéria seca)">
-                                        <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={executionForm.actualDryMatterKg} onChange={(event) => setExecutionForm((current) => ({ ...current, actualDryMatterKg: event.target.value }))} placeholder="Ex.: 340" />
+                                        <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={executionForm.actualDryMatterKg} onChange={(event) => setExecutionForm((current) => ({ ...current, actualDryMatterKg: event.target.value }))} placeholder="Ex.: 340" />
                                     </Field>
                                 </div>
                                 <Field label="Observação">
-                                    <textarea className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={executionForm.notes} onChange={(event) => setExecutionForm((current) => ({ ...current, notes: event.target.value }))} rows={2} />
+                                    <textarea className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={executionForm.notes} onChange={(event) => setExecutionForm((current) => ({ ...current, notes: event.target.value }))} rows={2} />
                                 </Field>
-                                <button disabled={saving} className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar trato</button>
+                                <button disabled={saving} className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar trato</button>
                             </form>
                         </SectionCard>
                     </div>
@@ -686,24 +686,24 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                             <form className="grid gap-3">
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <Field label="Baia, lote ou ponto de trato">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={readingForm.unitId} onChange={(event) => setReadingForm((current) => ({ ...current, unitId: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={readingForm.unitId} onChange={(event) => setReadingForm((current) => ({ ...current, unitId: event.target.value }))}>
                                             <option value="">Selecione</option>
                                             {units.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                                         </select>
                                     </Field>
                                     <Field label="Data e hora">
-                                        <input type="datetime-local" className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={readingForm.date} onChange={(event) => setReadingForm((current) => ({ ...current, date: event.target.value }))} />
+                                        <input type="datetime-local" className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={readingForm.date} onChange={(event) => setReadingForm((current) => ({ ...current, date: event.target.value }))} />
                                     </Field>
                                 </div>
                                 <div className="grid gap-3 md:grid-cols-3">
                                     <Field label="Leitura">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={readingForm.readingType} onChange={(event) => setReadingForm((current) => ({ ...current, readingType: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={readingForm.readingType} onChange={(event) => setReadingForm((current) => ({ ...current, readingType: event.target.value }))}>
                                             <option value="DIURNA">Diurna</option>
                                             <option value="NOTURNA">Noturna</option>
                                         </select>
                                     </Field>
                                     <Field label="Score do cocho" helper="0 = faltou comida | 2 = ideal | 5 = excesso forte">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={readingForm.score} onChange={(event) => setReadingForm((current) => ({ ...current, score: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={readingForm.score} onChange={(event) => setReadingForm((current) => ({ ...current, score: event.target.value }))}>
                                             <option value="0">0 - Faltou comida</option>
                                             <option value="1">1 - Quase sem sobra</option>
                                             <option value="2">2 - Ideal</option>
@@ -713,7 +713,7 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                                         </select>
                                     </Field>
                                     <Field label="Comportamento animal">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={readingForm.animalBehavior} onChange={(event) => setReadingForm((current) => ({ ...current, animalBehavior: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={readingForm.animalBehavior} onChange={(event) => setReadingForm((current) => ({ ...current, animalBehavior: event.target.value }))}>
                                             <option value="RUMINANDO">Ruminando</option>
                                             <option value="NORMAL">Normal</option>
                                             <option value="INQUIETO">Inquieto</option>
@@ -724,26 +724,26 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                                 </div>
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <Field label="Sobra ou falta">
-                                        <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={readingForm.supplyObservation} onChange={(event) => setReadingForm((current) => ({ ...current, supplyObservation: event.target.value }))} placeholder="Ex.: sobra leve no lado esquerdo" />
+                                        <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={readingForm.supplyObservation} onChange={(event) => setReadingForm((current) => ({ ...current, supplyObservation: event.target.value }))} placeholder="Ex.: sobra leve no lado esquerdo" />
                                     </Field>
                                     <Field label="Matéria seca observada (%)" helper="Parte realmente nutritiva do alimento.">
-                                        <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={readingForm.observedDryMatterPercent} onChange={(event) => setReadingForm((current) => ({ ...current, observedDryMatterPercent: event.target.value }))} placeholder="Ex.: 58" />
+                                        <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={readingForm.observedDryMatterPercent} onChange={(event) => setReadingForm((current) => ({ ...current, observedDryMatterPercent: event.target.value }))} placeholder="Ex.: 58" />
                                     </Field>
                                 </div>
                                 <Field label="Observação">
-                                    <textarea className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={readingForm.notes} onChange={(event) => setReadingForm((current) => ({ ...current, notes: event.target.value }))} rows={2} />
+                                    <textarea className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={readingForm.notes} onChange={(event) => setReadingForm((current) => ({ ...current, notes: event.target.value }))} rows={2} />
                                 </Field>
                                 <div className="flex flex-wrap gap-3">
-                                    <button disabled={saving} className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-medium text-white" onClick={handleCreateReading} type="submit">Salvar leitura</button>
-                                    <button disabled={saving} className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-2 text-sm font-medium text-[#78716c] hover:bg-[#f5f5f4]" onClick={handleSaveReadingOffline} type="button">Salvar offline</button>
-                                    {offlineReadings.length > 0 && <button disabled={saving} className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-2 text-sm font-medium text-[#78716c] hover:bg-[#f5f5f4]" onClick={handleSyncOffline} type="button">Sincronizar {offlineReadings.length}</button>}
+                                    <button disabled={saving} className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-medium text-white" onClick={handleCreateReading} type="submit">Salvar leitura</button>
+                                    <button disabled={saving} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-medium text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]" onClick={handleSaveReadingOffline} type="button">Salvar offline</button>
+                                    {offlineReadings.length > 0 && <button disabled={saving} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-medium text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]" onClick={handleSyncOffline} type="button">Sincronizar {offlineReadings.length}</button>}
                                 </div>
                             </form>
                         </SectionCard>
 
                         <SectionCard title="Ingredientes com risco de falta" description="Previsão pela média de consumo dos últimos 3 dias.">
                             <div className="space-y-3">
-                                {(dashboard?.ingredientsAtRisk || []).length === 0 && <p className="text-sm text-[#78716c]">Nenhum ingrediente com risco calculado.</p>}
+                                {(dashboard?.ingredientsAtRisk || []).length === 0 && <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum ingrediente com risco calculado.</p>}
                                 {(dashboard?.ingredientsAtRisk || []).map((item: any) => (
                                     <div key={item.ingredientId} className={`rounded-xl border px-4 py-3 ${getSeverityClasses(item.level === 'safe' ? 'normal' : item.level)}`}>
                                         <div className="flex items-center justify-between gap-4">
@@ -777,7 +777,7 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-sm">
                                 <thead>
-                                    <tr className="border-b border-[#e7e5e4] text-left text-[#78716c]">
+                                    <tr className="border-b border-[var(--eixo-border)] text-left text-[var(--eixo-text-muted)]">
                                         <th className="py-2 pr-4">Unidade</th>
                                         <th className="py-2 pr-4">Planejado</th>
                                         <th className="py-2 pr-4">Entregue</th>
@@ -790,18 +790,18 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                                 </thead>
                                 <tbody>
                                     {(dashboard?.today?.units || []).map((item: any) => (
-                                        <tr key={item.unit.id} className="border-b border-[#f0ede6] align-top text-[#1c1917]">
+                                        <tr key={item.unit.id} className="border-b border-[var(--eixo-border)] align-top text-[var(--eixo-text)]">
                                             <td className="py-3 pr-4">
                                                 <p className="font-medium">{item.unit.name}</p>
-                                                <p className="text-xs text-[#a8a29e]">{item.unit.type.toLowerCase()}</p>
+                                                <p className="text-xs text-[var(--eixo-text-soft)]">{item.unit.type.toLowerCase()}</p>
                                             </td>
                                             <td className="py-3 pr-4">
                                                 <p>{formatNumber(item.plannedNaturalKg)} kg</p>
-                                                <p className="text-xs text-[#a8a29e]">MS {formatNumber(item.plannedDryKg)} kg</p>
+                                                <p className="text-xs text-[var(--eixo-text-soft)]">MS {formatNumber(item.plannedDryKg)} kg</p>
                                             </td>
                                             <td className="py-3 pr-4">
                                                 <p>{formatNumber(item.deliveredNaturalKg)} kg</p>
-                                                <p className="text-xs text-[#a8a29e]">MS {formatNumber(item.deliveredDryKg)} kg</p>
+                                                <p className="text-xs text-[var(--eixo-text-soft)]">MS {formatNumber(item.deliveredDryKg)} kg</p>
                                             </td>
                                             <td className="py-3 pr-4">
                                                 <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${getSeverityClasses(item.diffSeverity)}`}>{formatNumber(item.diffNaturalKg)} kg / {formatNumber(item.diffPercent)}%</span>
@@ -823,17 +823,17 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                         <SectionCard title="Conferência" description="Fila para aprovar, rejeitar ou cancelar registros do dia.">
                             <div className="space-y-4">
                                 <div>
-                                    <h3 className="mb-2 text-sm font-semibold text-[#1c1917]">Fabricações pendentes</h3>
+                                    <h3 className="mb-2 text-sm font-semibold text-[var(--eixo-text)]">Fabricações pendentes</h3>
                                     <div className="space-y-2">
                                         {fabrications.filter((item) => item.status === 'PENDING').map((item) => (
-                                            <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e7e5e4] bg-white px-4 py-3">
+                                            <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3">
                                                 <div>
-                                                    <p className="text-sm font-medium text-[#1c1917]">{item.batchCode}</p>
-                                                    <p className="text-xs text-[#78716c]">{item.preparedFeed?.name} • {formatNumber(item.outputNaturalKg)} kg</p>
+                                                    <p className="text-sm font-medium text-[var(--eixo-text)]">{item.batchCode}</p>
+                                                    <p className="text-xs text-[var(--eixo-text-muted)]">{item.preparedFeed?.name} • {formatNumber(item.outputNaturalKg)} kg</p>
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button type="button" className="rounded-lg bg-[#a8442a] px-3 py-2 text-xs font-medium text-white" onClick={() => runAction(async () => { await approveNutritionFabrication(item.id); }, 'Fabricação aprovada.')}>Aprovar</button>
-                                                    <button type="button" className="rounded-lg border border-[#e7e5e4] bg-white px-3 py-2 text-xs font-medium text-[#78716c] hover:bg-[#f5f5f4]" onClick={() => {
+                                                    <button type="button" className="rounded-lg bg-[var(--eixo-green)] px-3 py-2 text-xs font-medium text-white" onClick={() => runAction(async () => { await approveNutritionFabrication(item.id); }, 'Fabricação aprovada.')}>Aprovar</button>
+                                                    <button type="button" className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-xs font-medium text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]" onClick={() => {
                                                         const reason = askReason('Motivo do cancelamento da fabricação');
                                                         if (reason) {
                                                             runAction(async () => { await cancelNutritionFabrication(item.id, reason); }, 'Fabricação cancelada.');
@@ -842,29 +842,29 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                                                 </div>
                                             </div>
                                         ))}
-                                        {fabrications.filter((item) => item.status === 'PENDING').length === 0 && <p className="text-sm text-[#78716c]">Nenhuma fabricação pendente.</p>}
+                                        {fabrications.filter((item) => item.status === 'PENDING').length === 0 && <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma fabricação pendente.</p>}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h3 className="mb-2 text-sm font-semibold text-[#1c1917]">Tratos pendentes ou rejeitados</h3>
+                                    <h3 className="mb-2 text-sm font-semibold text-[var(--eixo-text)]">Tratos pendentes ou rejeitados</h3>
                                     <div className="space-y-2">
                                         {executions.filter((item) => item.reviewStatus === 'PENDING' || item.rejectedAt).map((item) => (
-                                            <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e7e5e4] bg-white px-4 py-3">
+                                            <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3">
                                                 <div>
-                                                    <p className="text-sm font-medium text-[#1c1917]">{item.unit?.name || 'Unidade'}</p>
-                                                    <p className="text-xs text-[#78716c]">{formatNumber(item.actualNaturalKg)} kg • {formatDateTime(item.date)}</p>
-                                                    {item.rejectionReason && <p className="text-xs text-red-600">Rejeição: {item.rejectionReason}</p>}
+                                                    <p className="text-sm font-medium text-[var(--eixo-text)]">{item.unit?.name || 'Unidade'}</p>
+                                                    <p className="text-xs text-[var(--eixo-text-muted)]">{formatNumber(item.actualNaturalKg)} kg • {formatDateTime(item.date)}</p>
+                                                    {item.rejectionReason && <p className="text-xs text-[var(--eixo-danger)]">Rejeição: {item.rejectionReason}</p>}
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button type="button" className="rounded-lg bg-[#a8442a] px-3 py-2 text-xs font-medium text-white" onClick={() => runAction(async () => { await approveNutritionExecution(item.id); }, 'Trato aprovado.')}>Aprovar</button>
-                                                    <button type="button" className="rounded-lg border border-[#e7e5e4] bg-white px-3 py-2 text-xs font-medium text-[#78716c] hover:bg-[#f5f5f4]" onClick={() => {
+                                                    <button type="button" className="rounded-lg bg-[var(--eixo-green)] px-3 py-2 text-xs font-medium text-white" onClick={() => runAction(async () => { await approveNutritionExecution(item.id); }, 'Trato aprovado.')}>Aprovar</button>
+                                                    <button type="button" className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-xs font-medium text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]" onClick={() => {
                                                         const reason = askReason('Motivo da rejeição do trato');
                                                         if (reason) {
                                                             runAction(async () => { await rejectNutritionExecution(item.id, reason); }, 'Trato rejeitado.');
                                                         }
                                                     }}>Rejeitar</button>
-                                                    <button type="button" className="rounded-lg border border-[#e7e5e4] bg-white px-3 py-2 text-xs font-medium text-[#78716c] hover:bg-[#f5f5f4]" onClick={() => {
+                                                    <button type="button" className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-xs font-medium text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]" onClick={() => {
                                                         const reason = askReason('Motivo do cancelamento do trato');
                                                         if (reason) {
                                                             runAction(async () => { await cancelNutritionExecution(item.id, reason); }, 'Trato cancelado.');
@@ -873,23 +873,23 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                                                 </div>
                                             </div>
                                         ))}
-                                        {executions.filter((item) => item.reviewStatus === 'PENDING' || item.rejectedAt).length === 0 && <p className="text-sm text-[#78716c]">Nenhum trato pendente ou rejeitado.</p>}
+                                        {executions.filter((item) => item.reviewStatus === 'PENDING' || item.rejectedAt).length === 0 && <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum trato pendente ou rejeitado.</p>}
                                     </div>
                                 </div>
 
                                 <div>
-                                    <h3 className="mb-2 text-sm font-semibold text-[#1c1917]">Leituras pendentes ou rejeitadas</h3>
+                                    <h3 className="mb-2 text-sm font-semibold text-[var(--eixo-text)]">Leituras pendentes ou rejeitadas</h3>
                                     <div className="space-y-2">
                                         {troughReadings.filter((item) => item.reviewStatus === 'PENDING' || item.rejectedAt).map((item) => (
-                                            <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[#e7e5e4] bg-white px-4 py-3">
+                                            <div key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3">
                                                 <div>
-                                                    <p className="text-sm font-medium text-[#1c1917]">{item.unit?.name || 'Unidade'}</p>
-                                                    <p className="text-xs text-[#78716c]">Score {item.score} • {formatDateTime(item.date)}</p>
-                                                    {item.rejectionReason && <p className="text-xs text-red-600">Rejeição: {item.rejectionReason}</p>}
+                                                    <p className="text-sm font-medium text-[var(--eixo-text)]">{item.unit?.name || 'Unidade'}</p>
+                                                    <p className="text-xs text-[var(--eixo-text-muted)]">Score {item.score} • {formatDateTime(item.date)}</p>
+                                                    {item.rejectionReason && <p className="text-xs text-[var(--eixo-danger)]">Rejeição: {item.rejectionReason}</p>}
                                                 </div>
                                                 <div className="flex gap-2">
-                                                    <button type="button" className="rounded-lg bg-[#a8442a] px-3 py-2 text-xs font-medium text-white" onClick={() => runAction(async () => { await approveNutritionTroughReading(item.id); }, 'Leitura aprovada.')}>Aprovar</button>
-                                                    <button type="button" className="rounded-lg border border-[#e7e5e4] bg-white px-3 py-2 text-xs font-medium text-[#78716c] hover:bg-[#f5f5f4]" onClick={() => {
+                                                    <button type="button" className="rounded-lg bg-[var(--eixo-green)] px-3 py-2 text-xs font-medium text-white" onClick={() => runAction(async () => { await approveNutritionTroughReading(item.id); }, 'Leitura aprovada.')}>Aprovar</button>
+                                                    <button type="button" className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-xs font-medium text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]" onClick={() => {
                                                         const reason = askReason('Motivo da rejeição da leitura');
                                                         if (reason) {
                                                             runAction(async () => { await rejectNutritionTroughReading(item.id, reason); }, 'Leitura rejeitada.');
@@ -898,7 +898,7 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                                                 </div>
                                             </div>
                                         ))}
-                                        {troughReadings.filter((item) => item.reviewStatus === 'PENDING' || item.rejectedAt).length === 0 && <p className="text-sm text-[#78716c]">Nenhuma leitura pendente ou rejeitada.</p>}
+                                        {troughReadings.filter((item) => item.reviewStatus === 'PENDING' || item.rejectedAt).length === 0 && <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma leitura pendente ou rejeitada.</p>}
                                     </div>
                                 </div>
                             </div>
@@ -912,53 +912,53 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                     <SectionCard title="Parâmetros" description="Regra operacional da fazenda, aprovação e limites de alerta.">
                         <form className="grid gap-4 lg:grid-cols-3" onSubmit={handleSaveSettings}>
                             <Field label="Contexto operacional">
-                                <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={settingsForm.operationContext} onChange={(event) => setSettingsForm((current) => ({ ...current, operationContext: event.target.value }))}>
+                                <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={settingsForm.operationContext} onChange={(event) => setSettingsForm((current) => ({ ...current, operationContext: event.target.value }))}>
                                     <option value="CONFINAMENTO">Confinamento</option>
                                     <option value="PASTO">Pasto</option>
                                     <option value="SEMI_CONFINAMENTO">Semi-confinamento</option>
                                 </select>
                             </Field>
                             <Field label="Modo de ajuste">
-                                <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={settingsForm.adjustmentMode} onChange={(event) => setSettingsForm((current) => ({ ...current, adjustmentMode: event.target.value }))}>
+                                <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={settingsForm.adjustmentMode} onChange={(event) => setSettingsForm((current) => ({ ...current, adjustmentMode: event.target.value }))}>
                                     <option value="SUGESTAO">Sugestão</option>
                                     <option value="REVISAO_OBRIGATORIA">Revisão obrigatória</option>
                                     <option value="AUTOMATICO">Automático</option>
                                 </select>
                             </Field>
                             <Field label="Indicador oficial">
-                                <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={settingsForm.indicatorsApprovedOnly ? 'APPROVED' : 'ALL'} onChange={(event) => setSettingsForm((current) => ({ ...current, indicatorsApprovedOnly: event.target.value === 'APPROVED' }))}>
+                                <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={settingsForm.indicatorsApprovedOnly ? 'APPROVED' : 'ALL'} onChange={(event) => setSettingsForm((current) => ({ ...current, indicatorsApprovedOnly: event.target.value === 'APPROVED' }))}>
                                     <option value="ALL">Considerar tudo</option>
                                     <option value="APPROVED">Só dados aprovados</option>
                                 </select>
                             </Field>
                             <Field label="Dias seguros de estoque">
-                                <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={settingsForm.predictiveSafeDays} onChange={(event) => setSettingsForm((current) => ({ ...current, predictiveSafeDays: Number(event.target.value) }))} />
+                                <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={settingsForm.predictiveSafeDays} onChange={(event) => setSettingsForm((current) => ({ ...current, predictiveSafeDays: Number(event.target.value) }))} />
                             </Field>
                             <Field label="Dias de atenção">
-                                <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={settingsForm.predictiveWarningDays} onChange={(event) => setSettingsForm((current) => ({ ...current, predictiveWarningDays: Number(event.target.value) }))} />
+                                <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={settingsForm.predictiveWarningDays} onChange={(event) => setSettingsForm((current) => ({ ...current, predictiveWarningDays: Number(event.target.value) }))} />
                             </Field>
                             <Field label="Limite de revisão humana (%)">
-                                <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={settingsForm.manualReviewThresholdPercent} onChange={(event) => setSettingsForm((current) => ({ ...current, manualReviewThresholdPercent: Number(event.target.value) }))} />
+                                <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={settingsForm.manualReviewThresholdPercent} onChange={(event) => setSettingsForm((current) => ({ ...current, manualReviewThresholdPercent: Number(event.target.value) }))} />
                             </Field>
                             <Field label="Diferença de atenção (%)">
-                                <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={settingsForm.diffWarningPercent} onChange={(event) => setSettingsForm((current) => ({ ...current, diffWarningPercent: Number(event.target.value) }))} />
+                                <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={settingsForm.diffWarningPercent} onChange={(event) => setSettingsForm((current) => ({ ...current, diffWarningPercent: Number(event.target.value) }))} />
                             </Field>
                             <Field label="Diferença crítica (%)">
-                                <input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={settingsForm.diffCriticalPercent} onChange={(event) => setSettingsForm((current) => ({ ...current, diffCriticalPercent: Number(event.target.value) }))} />
+                                <input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={settingsForm.diffCriticalPercent} onChange={(event) => setSettingsForm((current) => ({ ...current, diffCriticalPercent: Number(event.target.value) }))} />
                             </Field>
                             <div className="flex items-end">
-                                <button disabled={saving} className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar parâmetros</button>
+                                <button disabled={saving} className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar parâmetros</button>
                             </div>
-                            <label className="flex items-center gap-2 text-sm text-[#78716c]">
-                                <input type="checkbox" className="accent-[#a8442a]" checked={settingsForm.requireFabricationApproval} onChange={(event) => setSettingsForm((current) => ({ ...current, requireFabricationApproval: event.target.checked }))} />
+                            <label className="flex items-center gap-2 text-sm text-[var(--eixo-text-muted)]">
+                                <input type="checkbox" className="accent-[var(--eixo-green)]" checked={settingsForm.requireFabricationApproval} onChange={(event) => setSettingsForm((current) => ({ ...current, requireFabricationApproval: event.target.checked }))} />
                                 Fabricação nasce pendente
                             </label>
-                            <label className="flex items-center gap-2 text-sm text-[#78716c]">
-                                <input type="checkbox" className="accent-[#a8442a]" checked={settingsForm.requireExecutionApproval} onChange={(event) => setSettingsForm((current) => ({ ...current, requireExecutionApproval: event.target.checked }))} />
+                            <label className="flex items-center gap-2 text-sm text-[var(--eixo-text-muted)]">
+                                <input type="checkbox" className="accent-[var(--eixo-green)]" checked={settingsForm.requireExecutionApproval} onChange={(event) => setSettingsForm((current) => ({ ...current, requireExecutionApproval: event.target.checked }))} />
                                 Trato nasce pendente
                             </label>
-                            <label className="flex items-center gap-2 text-sm text-[#78716c]">
-                                <input type="checkbox" className="accent-[#a8442a]" checked={settingsForm.requireTroughApproval} onChange={(event) => setSettingsForm((current) => ({ ...current, requireTroughApproval: event.target.checked }))} />
+                            <label className="flex items-center gap-2 text-sm text-[var(--eixo-text-muted)]">
+                                <input type="checkbox" className="accent-[var(--eixo-green)]" checked={settingsForm.requireTroughApproval} onChange={(event) => setSettingsForm((current) => ({ ...current, requireTroughApproval: event.target.checked }))} />
                                 Leitura de cocho nasce pendente
                             </label>
                         </form>
@@ -968,28 +968,28 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                         <SectionCard title="Ingredientes" description="Item comprado, como milho ou farelo.">
                             <form className="grid gap-3" onSubmit={handleCreateIngredient}>
                                 <div className="grid gap-3 md:grid-cols-2">
-                                    <Field label="Nome"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={ingredientForm.name} onChange={(event) => setIngredientForm((current) => ({ ...current, name: event.target.value }))} /></Field>
-                                    <Field label="Categoria"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={ingredientForm.category} onChange={(event) => setIngredientForm((current) => ({ ...current, category: event.target.value }))} /></Field>
-                                    <Field label="Unidade"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={ingredientForm.unit} onChange={(event) => setIngredientForm((current) => ({ ...current, unit: event.target.value }))} /></Field>
-                                    <Field label="Custo por unidade"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={ingredientForm.cost} onChange={(event) => setIngredientForm((current) => ({ ...current, cost: event.target.value }))} /></Field>
-                                    <Field label="Matéria seca (%)" helper="Parte realmente nutritiva do alimento."><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={ingredientForm.dryMatterPercent} onChange={(event) => setIngredientForm((current) => ({ ...current, dryMatterPercent: event.target.value }))} /></Field>
-                                    <Field label="Fornecedor"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={ingredientForm.supplier} onChange={(event) => setIngredientForm((current) => ({ ...current, supplier: event.target.value }))} /></Field>
-                                    <Field label="Estoque atual (kg matéria natural)"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={ingredientForm.stockNatural} onChange={(event) => setIngredientForm((current) => ({ ...current, stockNatural: event.target.value }))} /></Field>
-                                    <Field label="Estoque mínimo (kg matéria natural)"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={ingredientForm.minStockNatural} onChange={(event) => setIngredientForm((current) => ({ ...current, minStockNatural: event.target.value }))} /></Field>
+                                    <Field label="Nome"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={ingredientForm.name} onChange={(event) => setIngredientForm((current) => ({ ...current, name: event.target.value }))} /></Field>
+                                    <Field label="Categoria"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={ingredientForm.category} onChange={(event) => setIngredientForm((current) => ({ ...current, category: event.target.value }))} /></Field>
+                                    <Field label="Unidade"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={ingredientForm.unit} onChange={(event) => setIngredientForm((current) => ({ ...current, unit: event.target.value }))} /></Field>
+                                    <Field label="Custo por unidade"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={ingredientForm.cost} onChange={(event) => setIngredientForm((current) => ({ ...current, cost: event.target.value }))} /></Field>
+                                    <Field label="Matéria seca (%)" helper="Parte realmente nutritiva do alimento."><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={ingredientForm.dryMatterPercent} onChange={(event) => setIngredientForm((current) => ({ ...current, dryMatterPercent: event.target.value }))} /></Field>
+                                    <Field label="Fornecedor"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={ingredientForm.supplier} onChange={(event) => setIngredientForm((current) => ({ ...current, supplier: event.target.value }))} /></Field>
+                                    <Field label="Estoque atual (kg matéria natural)"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={ingredientForm.stockNatural} onChange={(event) => setIngredientForm((current) => ({ ...current, stockNatural: event.target.value }))} /></Field>
+                                    <Field label="Estoque mínimo (kg matéria natural)"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={ingredientForm.minStockNatural} onChange={(event) => setIngredientForm((current) => ({ ...current, minStockNatural: event.target.value }))} /></Field>
                                 </div>
-                                <button disabled={saving} className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar ingrediente</button>
+                                <button disabled={saving} className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar ingrediente</button>
                             </form>
                             <div className="mt-4 space-y-2">
                                 {ingredients.slice(0, 8).map((item) => (
-                                    <div key={item.id} className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-3 text-sm text-[#1c1917]">
+                                    <div key={item.id} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm text-[var(--eixo-text)]">
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
                                                 <p className="font-medium">{item.name}</p>
-                                                <p className="text-xs text-[#78716c]">{item.category} • MS {formatNumber(item.currentDryMatterPercent)}%</p>
+                                                <p className="text-xs text-[var(--eixo-text-muted)]">{item.category} • MS {formatNumber(item.currentDryMatterPercent)}%</p>
                                             </div>
                                             <div className="text-right">
                                                 <p>{formatNumber(item.currentStockNatural)} kg</p>
-                                                <p className="text-xs text-[#78716c]">{formatCurrency(item.currentCost)}</p>
+                                                <p className="text-xs text-[var(--eixo-text-muted)]">{formatCurrency(item.currentCost)}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -999,39 +999,39 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
 
                         <SectionCard title="Ração preparada" description="Mistura feita com ingredientes.">
                             <form className="grid gap-3" onSubmit={handleCreatePreparedFeed}>
-                                <Field label="Nome"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={preparedFeedForm.name} onChange={(event) => setPreparedFeedForm((current) => ({ ...current, name: event.target.value }))} /></Field>
-                                <Field label="Rendimento total (kg matéria natural)"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={preparedFeedForm.expectedYieldNaturalKg} onChange={(event) => setPreparedFeedForm((current) => ({ ...current, expectedYieldNaturalKg: event.target.value }))} /></Field>
+                                <Field label="Nome"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={preparedFeedForm.name} onChange={(event) => setPreparedFeedForm((current) => ({ ...current, name: event.target.value }))} /></Field>
+                                <Field label="Rendimento total (kg matéria natural)"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={preparedFeedForm.expectedYieldNaturalKg} onChange={(event) => setPreparedFeedForm((current) => ({ ...current, expectedYieldNaturalKg: event.target.value }))} /></Field>
                                 <div className="space-y-2">
                                     {preparedFeedForm.items.map((item, index) => (
                                         <div key={index} className="grid gap-3 md:grid-cols-[2fr_1fr_auto]">
                                             <Field label={`Ingrediente ${index + 1}`}>
-                                                <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={item.ingredientId} onChange={(event) => handlePreparedFeedItemChange(index, 'ingredientId', event.target.value)}>
+                                                <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={item.ingredientId} onChange={(event) => handlePreparedFeedItemChange(index, 'ingredientId', event.target.value)}>
                                                     <option value="">Selecione</option>
                                                     {ingredients.filter((ingredient) => ingredient.active).map((ingredient) => <option key={ingredient.id} value={ingredient.id}>{ingredient.name}</option>)}
                                                 </select>
                                             </Field>
-                                            <Field label="Proporção (%)"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={item.proportionPercent} onChange={(event) => handlePreparedFeedItemChange(index, 'proportionPercent', event.target.value)} /></Field>
+                                            <Field label="Proporção (%)"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={item.proportionPercent} onChange={(event) => handlePreparedFeedItemChange(index, 'proportionPercent', event.target.value)} /></Field>
                                             <div className="flex items-end">
-                                                <button type="button" className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#78716c] hover:bg-[#f5f5f4]" onClick={() => setPreparedFeedForm((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) || [] }))}>Remover</button>
+                                                <button type="button" className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]" onClick={() => setPreparedFeedForm((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) || [] }))}>Remover</button>
                                             </div>
                                         </div>
                                     ))}
-                                    <button type="button" className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#78716c] hover:bg-[#f5f5f4]" onClick={() => setPreparedFeedForm((current) => ({ ...current, items: [...current.items, { ingredientId: '', proportionPercent: '' }] }))}>Adicionar ingrediente</button>
+                                    <button type="button" className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]" onClick={() => setPreparedFeedForm((current) => ({ ...current, items: [...current.items, { ingredientId: '', proportionPercent: '' }] }))}>Adicionar ingrediente</button>
                                 </div>
-                                <Field label="Observação"><textarea className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" rows={2} value={preparedFeedForm.notes} onChange={(event) => setPreparedFeedForm((current) => ({ ...current, notes: event.target.value }))} /></Field>
-                                <button disabled={saving} className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar ração preparada</button>
+                                <Field label="Observação"><textarea className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" rows={2} value={preparedFeedForm.notes} onChange={(event) => setPreparedFeedForm((current) => ({ ...current, notes: event.target.value }))} /></Field>
+                                <button disabled={saving} className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar ração preparada</button>
                             </form>
                             <div className="mt-4 space-y-2">
                                 {preparedFeeds.slice(0, 8).map((item) => (
-                                    <div key={item.id} className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-3 text-sm text-[#1c1917]">
+                                    <div key={item.id} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm text-[var(--eixo-text)]">
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
                                                 <p className="font-medium">{item.name}</p>
-                                                <p className="text-xs text-[#78716c]">MS {formatNumber(item.currentDryMatterPercent)}% • custo {formatCurrency(item.currentTotalCost)}</p>
+                                                <p className="text-xs text-[var(--eixo-text-muted)]">MS {formatNumber(item.currentDryMatterPercent)}% • custo {formatCurrency(item.currentTotalCost)}</p>
                                             </div>
                                             <div className="text-right">
                                                 <p>{formatNumber(item.currentStockNatural)} kg</p>
-                                                <p className="text-xs text-[#78716c]">{formatCurrency(item.currentCostPerNaturalKg)}/kg</p>
+                                                <p className="text-xs text-[var(--eixo-text-muted)]">{formatCurrency(item.currentCostPerNaturalKg)}/kg</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1044,17 +1044,17 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                         <SectionCard title="Fase do lote e unidade operacional" description="No confinamento a unidade principal é a baia. No pasto e semi-confinamento, o lote ou ponto de trato.">
                             <div className="grid gap-6 lg:grid-cols-2">
                                 <form className="grid gap-3" onSubmit={handleCreatePhase}>
-                                    <Field label="Nome da fase"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={phaseForm.name} onChange={(event) => setPhaseForm((current) => ({ ...current, name: event.target.value }))} /></Field>
-                                    <Field label="Meta de consumo MS/cabeça"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={phaseForm.targetIntakeDryKgHead} onChange={(event) => setPhaseForm((current) => ({ ...current, targetIntakeDryKgHead: event.target.value }))} /></Field>
-                                    <Field label="Meta de GMD"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={phaseForm.targetGmd} onChange={(event) => setPhaseForm((current) => ({ ...current, targetGmd: event.target.value }))} /></Field>
-                                    <Field label="Meta de conversão"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={phaseForm.targetFeedConversion} onChange={(event) => setPhaseForm((current) => ({ ...current, targetFeedConversion: event.target.value }))} /></Field>
-                                    <Field label="Custo-alvo por cabeça/dia"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={phaseForm.targetCostPerHeadDay} onChange={(event) => setPhaseForm((current) => ({ ...current, targetCostPerHeadDay: event.target.value }))} /></Field>
-                                    <Field label="Observação"><textarea className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" rows={2} value={phaseForm.notes} onChange={(event) => setPhaseForm((current) => ({ ...current, notes: event.target.value }))} /></Field>
-                                    <button disabled={saving} className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar fase</button>
+                                    <Field label="Nome da fase"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={phaseForm.name} onChange={(event) => setPhaseForm((current) => ({ ...current, name: event.target.value }))} /></Field>
+                                    <Field label="Meta de consumo MS/cabeça"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={phaseForm.targetIntakeDryKgHead} onChange={(event) => setPhaseForm((current) => ({ ...current, targetIntakeDryKgHead: event.target.value }))} /></Field>
+                                    <Field label="Meta de GMD"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={phaseForm.targetGmd} onChange={(event) => setPhaseForm((current) => ({ ...current, targetGmd: event.target.value }))} /></Field>
+                                    <Field label="Meta de conversão"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={phaseForm.targetFeedConversion} onChange={(event) => setPhaseForm((current) => ({ ...current, targetFeedConversion: event.target.value }))} /></Field>
+                                    <Field label="Custo-alvo por cabeça/dia"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={phaseForm.targetCostPerHeadDay} onChange={(event) => setPhaseForm((current) => ({ ...current, targetCostPerHeadDay: event.target.value }))} /></Field>
+                                    <Field label="Observação"><textarea className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" rows={2} value={phaseForm.notes} onChange={(event) => setPhaseForm((current) => ({ ...current, notes: event.target.value }))} /></Field>
+                                    <button disabled={saving} className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar fase</button>
                                 </form>
                                 <form className="grid gap-3" onSubmit={handleCreateUnit}>
                                     <Field label="Tipo da unidade">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={unitForm.type} onChange={(event) => setUnitForm((current) => ({ ...current, type: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={unitForm.type} onChange={(event) => setUnitForm((current) => ({ ...current, type: event.target.value }))}>
                                             {settingsForm.operationContext === 'CONFINAMENTO' ? <option value="BAIA">Baia</option> : <>
                                                 <option value="LOTE">Lote</option>
                                                 <option value="PONTO_TRATO">Ponto de trato</option>
@@ -1062,21 +1062,21 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                                         </select>
                                     </Field>
                                     <Field label="Lote vinculado">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={unitForm.lotId} onChange={(event) => setUnitForm((current) => ({ ...current, lotId: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={unitForm.lotId} onChange={(event) => setUnitForm((current) => ({ ...current, lotId: event.target.value }))}>
                                             <option value="">Sem vínculo</option>
                                             {lots.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                                         </select>
                                     </Field>
                                     <Field label="Fase do lote">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={unitForm.phaseId} onChange={(event) => setUnitForm((current) => ({ ...current, phaseId: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={unitForm.phaseId} onChange={(event) => setUnitForm((current) => ({ ...current, phaseId: event.target.value }))}>
                                             <option value="">Sem fase</option>
                                             {phases.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                                         </select>
                                     </Field>
-                                    <Field label="Nome exibido"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={unitForm.name} onChange={(event) => setUnitForm((current) => ({ ...current, name: event.target.value }))} placeholder="Ex.: Baia 01" /></Field>
-                                    <Field label="Cabeças informadas"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={unitForm.currentHeadCount} onChange={(event) => setUnitForm((current) => ({ ...current, currentHeadCount: event.target.value }))} /></Field>
-                                    <Field label="Observação"><textarea className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" rows={2} value={unitForm.notes} onChange={(event) => setUnitForm((current) => ({ ...current, notes: event.target.value }))} /></Field>
-                                    <button disabled={saving} className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar unidade</button>
+                                    <Field label="Nome exibido"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={unitForm.name} onChange={(event) => setUnitForm((current) => ({ ...current, name: event.target.value }))} placeholder="Ex.: Baia 01" /></Field>
+                                    <Field label="Cabeças informadas"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={unitForm.currentHeadCount} onChange={(event) => setUnitForm((current) => ({ ...current, currentHeadCount: event.target.value }))} /></Field>
+                                    <Field label="Observação"><textarea className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" rows={2} value={unitForm.notes} onChange={(event) => setUnitForm((current) => ({ ...current, notes: event.target.value }))} /></Field>
+                                    <button disabled={saving} className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar unidade</button>
                                 </form>
                             </div>
                         </SectionCard>
@@ -1084,47 +1084,47 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
                         <SectionCard title="Plano de trato e vínculo" description="Define o que cada unidade deve receber.">
                             <div className="grid gap-6 lg:grid-cols-2">
                                 <form className="grid gap-3" onSubmit={handleCreatePlan}>
-                                    <Field label="Nome do plano"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={planForm.nome} onChange={(event) => setPlanForm((current) => ({ ...current, nome: event.target.value }))} /></Field>
-                                    <Field label="Objetivo"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={planForm.objetivo} onChange={(event) => setPlanForm((current) => ({ ...current, objetivo: event.target.value }))} /></Field>
+                                    <Field label="Nome do plano"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={planForm.nome} onChange={(event) => setPlanForm((current) => ({ ...current, nome: event.target.value }))} /></Field>
+                                    <Field label="Objetivo"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={planForm.objetivo} onChange={(event) => setPlanForm((current) => ({ ...current, objetivo: event.target.value }))} /></Field>
                                     <Field label="Ração preparada principal">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={planForm.preparedFeedId} onChange={(event) => setPlanForm((current) => ({ ...current, preparedFeedId: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={planForm.preparedFeedId} onChange={(event) => setPlanForm((current) => ({ ...current, preparedFeedId: event.target.value }))}>
                                             <option value="">Selecione</option>
                                             {preparedFeeds.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                                         </select>
                                     </Field>
                                     <Field label="Fase do lote">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={planForm.phaseId} onChange={(event) => setPlanForm((current) => ({ ...current, phaseId: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={planForm.phaseId} onChange={(event) => setPlanForm((current) => ({ ...current, phaseId: event.target.value }))}>
                                             <option value="">Sem fase</option>
                                             {phases.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                                         </select>
                                     </Field>
                                     <div className="grid gap-3 md:grid-cols-2">
-                                        <Field label="Início"><input type="datetime-local" className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={planForm.startAt} onChange={(event) => setPlanForm((current) => ({ ...current, startAt: event.target.value }))} /></Field>
-                                        <Field label="Fim"><input type="datetime-local" className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={planForm.endAt} onChange={(event) => setPlanForm((current) => ({ ...current, endAt: event.target.value }))} /></Field>
+                                        <Field label="Início"><input type="datetime-local" className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={planForm.startAt} onChange={(event) => setPlanForm((current) => ({ ...current, startAt: event.target.value }))} /></Field>
+                                        <Field label="Fim"><input type="datetime-local" className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={planForm.endAt} onChange={(event) => setPlanForm((current) => ({ ...current, endAt: event.target.value }))} /></Field>
                                     </div>
-                                    <Field label="Trato"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={planForm.feedingSlot} onChange={(event) => setPlanForm((current) => ({ ...current, feedingSlot: event.target.value }))} placeholder="Ex.: Trato 1" /></Field>
-                                    <Field label="Consumo por cabeça (kg matéria natural)"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={planForm.plannedIntakeNaturalKgPerHead} onChange={(event) => setPlanForm((current) => ({ ...current, plannedIntakeNaturalKgPerHead: event.target.value }))} /></Field>
-                                    <Field label="Consumo por unidade (kg matéria natural)"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={planForm.plannedIntakeNaturalKgTotal} onChange={(event) => setPlanForm((current) => ({ ...current, plannedIntakeNaturalKgTotal: event.target.value }))} /></Field>
-                                    <Field label="Custo estimado por cabeça/dia"><input className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={planForm.estimatedCostPerHeadDay} onChange={(event) => setPlanForm((current) => ({ ...current, estimatedCostPerHeadDay: event.target.value }))} /></Field>
-                                    <Field label="Observação"><textarea className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" rows={2} value={planForm.observacoes} onChange={(event) => setPlanForm((current) => ({ ...current, observacoes: event.target.value }))} /></Field>
-                                    <button disabled={saving} className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar plano</button>
+                                    <Field label="Trato"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={planForm.feedingSlot} onChange={(event) => setPlanForm((current) => ({ ...current, feedingSlot: event.target.value }))} placeholder="Ex.: Trato 1" /></Field>
+                                    <Field label="Consumo por cabeça (kg matéria natural)"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={planForm.plannedIntakeNaturalKgPerHead} onChange={(event) => setPlanForm((current) => ({ ...current, plannedIntakeNaturalKgPerHead: event.target.value }))} /></Field>
+                                    <Field label="Consumo por unidade (kg matéria natural)"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={planForm.plannedIntakeNaturalKgTotal} onChange={(event) => setPlanForm((current) => ({ ...current, plannedIntakeNaturalKgTotal: event.target.value }))} /></Field>
+                                    <Field label="Custo estimado por cabeça/dia"><input className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={planForm.estimatedCostPerHeadDay} onChange={(event) => setPlanForm((current) => ({ ...current, estimatedCostPerHeadDay: event.target.value }))} /></Field>
+                                    <Field label="Observação"><textarea className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" rows={2} value={planForm.observacoes} onChange={(event) => setPlanForm((current) => ({ ...current, observacoes: event.target.value }))} /></Field>
+                                    <button disabled={saving} className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar plano</button>
                                 </form>
                                 <form className="grid gap-3" onSubmit={handleCreateAssignment}>
                                     <Field label="Plano de trato">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={assignmentForm.planId} onChange={(event) => setAssignmentForm((current) => ({ ...current, planId: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={assignmentForm.planId} onChange={(event) => setAssignmentForm((current) => ({ ...current, planId: event.target.value }))}>
                                             <option value="">Selecione</option>
                                             {plans.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}
                                         </select>
                                     </Field>
                                     <Field label="Baia, lote ou ponto de trato">
-                                        <select className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={assignmentForm.unitId} onChange={(event) => setAssignmentForm((current) => ({ ...current, unitId: event.target.value }))}>
+                                        <select className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={assignmentForm.unitId} onChange={(event) => setAssignmentForm((current) => ({ ...current, unitId: event.target.value }))}>
                                             <option value="">Selecione</option>
                                             {units.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
                                         </select>
                                     </Field>
-                                    <Field label="Início"><input type="datetime-local" className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={assignmentForm.startAt} onChange={(event) => setAssignmentForm((current) => ({ ...current, startAt: event.target.value }))} /></Field>
-                                    <Field label="Fim"><input type="datetime-local" className="rounded-xl border border-[#e7e5e4] px-3 py-2 focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10" value={assignmentForm.endAt} onChange={(event) => setAssignmentForm((current) => ({ ...current, endAt: event.target.value }))} /></Field>
-                                    <button disabled={saving} className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar vínculo</button>
+                                    <Field label="Início"><input type="datetime-local" className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={assignmentForm.startAt} onChange={(event) => setAssignmentForm((current) => ({ ...current, startAt: event.target.value }))} /></Field>
+                                    <Field label="Fim"><input type="datetime-local" className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10" value={assignmentForm.endAt} onChange={(event) => setAssignmentForm((current) => ({ ...current, endAt: event.target.value }))} /></Field>
+                                    <button disabled={saving} className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-medium text-white" type="submit">Salvar vínculo</button>
                                 </form>
                             </div>
                         </SectionCard>

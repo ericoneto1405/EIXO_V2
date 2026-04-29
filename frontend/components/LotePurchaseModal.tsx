@@ -38,7 +38,7 @@ const newRow = (racaPadrao = ''): AnimalRow => ({
 });
 
 const inputCls =
-    'w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm focus:border-[#a8442a] focus:outline-none';
+    'w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:border-[var(--eixo-green)] focus:outline-none';
 
 const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
     isOpen,
@@ -158,21 +158,21 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
             onClick={onClose}
         >
             <div
-                className="flex max-h-[92vh] w-full max-w-3xl flex-col rounded-2xl bg-white shadow-2xl"
+                className="flex max-h-[92vh] w-full max-w-3xl flex-col rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <header className="flex items-center justify-between border-b border-[#e7e5e4] px-6 py-5">
+                <header className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5">
                     <div>
-                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#78716c]">
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--eixo-text-muted)]">
                             Manejo do Rebanho
                         </p>
-                        <h3 className="text-xl font-extrabold text-[#1c1917]">Entrada de lote</h3>
+                        <h3 className="text-xl font-extrabold text-[var(--eixo-text)]">Entrada de lote</h3>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] text-[#78716c] hover:bg-[#f5f5f4]"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
                         aria-label="Fechar"
                     >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -185,13 +185,13 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                     <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
 
                         {/* Campos gerais do lote */}
-                        <div className="rounded-2xl border border-[#e7e5e4] bg-white p-4">
-                            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[#78716c]">
+                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
+                            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">
                                 Dados gerais da compra
                             </p>
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 <div>
-                                    <label className="block text-sm font-medium text-[#44403c]">Data da compra</label>
+                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Data da compra</label>
                                     <input
                                         type="date"
                                         value={dataCompra}
@@ -201,7 +201,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[#44403c]">
+                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">
                                         Valor por cabeça (R$)
                                     </label>
                                     <input
@@ -215,7 +215,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[#44403c]">Raça padrão</label>
+                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Raça padrão</label>
                                     <input
                                         type="text"
                                         value={racaPadrao}
@@ -225,7 +225,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[#44403c]">Pasto de destino</label>
+                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Pasto de destino</label>
                                     <select
                                         value={paddockId}
                                         onChange={(e) => setPaddockId(e.target.value)}
@@ -239,7 +239,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[#44403c]">Lote (opcional)</label>
+                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Lote (opcional)</label>
                                     <select
                                         value={lotId}
                                         onChange={(e) => setLotId(e.target.value)}
@@ -255,18 +255,18 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                         </div>
 
                         {/* Tabela de animais */}
-                        <div className="rounded-2xl border border-[#e7e5e4] bg-white overflow-hidden">
-                            <div className="flex items-center justify-between border-b border-[#e7e5e4] px-4 py-3">
-                                <p className="text-sm font-bold text-[#1c1917]">
+                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] overflow-hidden">
+                            <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-4 py-3">
+                                <p className="text-sm font-bold text-[var(--eixo-text)]">
                                     Animais&nbsp;
-                                    <span className="ml-1 rounded-full bg-[#faeee8] px-2 py-0.5 text-xs font-semibold text-[#7a2a14]">
+                                    <span className="ml-1 rounded-full bg-[var(--eixo-green-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--eixo-graphite-dark)]">
                                         {rows.length}
                                     </span>
                                 </p>
                                 <button
                                     type="button"
                                     onClick={addRow}
-                                    className="flex items-center gap-1.5 rounded-xl border border-[#e7e5e4] bg-[#f5f5f4] px-3 py-1.5 text-xs font-semibold text-[#44403c] hover:bg-[#f5f5f4]"
+                                    className="flex items-center gap-1.5 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
                                 >
                                     <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -276,7 +276,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                             </div>
 
                             {/* cabeçalho da tabela */}
-                            <div className="grid grid-cols-[2fr_1.2fr_1.5fr_1fr_32px] gap-2 border-b border-[#e7e5e4] bg-[#f5f5f4] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">
+                            <div className="grid grid-cols-[2fr_1.2fr_1.5fr_1fr_32px] gap-2 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                                 <span>Brinco</span>
                                 <span>Sexo</span>
                                 <span>Raça</span>
@@ -324,7 +324,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                                             type="button"
                                             onClick={() => removeRow(row._id)}
                                             disabled={rows.length === 1}
-                                            className="flex h-7 w-7 items-center justify-center rounded-lg text-[#78716c] hover:bg-[#fef2f2] hover:text-[#8c4d39] disabled:opacity-30"
+                                            className="flex h-7 w-7 items-center justify-center rounded-lg text-[var(--eixo-text-muted)] hover:bg-[#fff2ef] hover:text-[var(--eixo-danger)] disabled:opacity-30"
                                             aria-label="Remover linha"
                                         >
                                             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,14 +338,14 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
 
                         {/* Resumo */}
                         {(rows.length > 0 || valorTotal > 0) && (
-                            <div className="flex items-center justify-between rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-5 py-3">
-                                <span className="text-sm text-[#78716c]">
-                                    <strong className="text-[#1c1917]">{rows.filter((r) => r.brinco.trim()).length}</strong> animais
+                            <div className="flex items-center justify-between rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-3">
+                                <span className="text-sm text-[var(--eixo-text-muted)]">
+                                    <strong className="text-[var(--eixo-text)]">{rows.filter((r) => r.brinco.trim()).length}</strong> animais
                                 </span>
                                 {valorTotal > 0 && (
-                                    <span className="text-sm text-[#78716c]">
+                                    <span className="text-sm text-[var(--eixo-text-muted)]">
                                         Total:{' '}
-                                        <strong className="text-[#1c1917]">
+                                        <strong className="text-[var(--eixo-text)]">
                                             {valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                         </strong>
                                         {' '}→ cai no Financeiro automaticamente
@@ -355,25 +355,25 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                         )}
 
                         {error && (
-                            <div className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-4 py-3 text-sm text-[#8c4d39]">
+                            <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                                 {error}
                             </div>
                         )}
                     </div>
 
                     {/* Footer */}
-                    <div className="flex items-center justify-end gap-3 border-t border-[#e7e5e4] px-6 py-4">
+                    <div className="flex items-center justify-end gap-3 border-t border-[var(--eixo-border)] px-6 py-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#78716c] hover:bg-[#f5f5f4]"
+                            className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={saving}
-                            className="rounded-xl bg-[#a8442a] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#933a22] disabled:opacity-60"
+                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-60"
                         >
                             {saving ? 'Salvando...' : `Salvar ${rows.filter((r) => r.brinco.trim()).length} animal(is)`}
                         </button>

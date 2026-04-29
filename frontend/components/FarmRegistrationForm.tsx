@@ -393,20 +393,20 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     };
 
     return (
-        <div className="rounded-[24px] border border-[#e7e5e4] bg-white p-6 sm:p-8">
+        <div className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 sm:p-8">
 
             {/* Modal de confirmação de exclusão de pasto */}
             {paddockToDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                     <div
-                        className="absolute inset-0 bg-stone-900/50 backdrop-blur-sm"
+                        className="absolute inset-0 bg-[var(--eixo-graphite-dark)]/50 backdrop-blur-sm"
                         onClick={() => setPaddockToDelete(null)}
                     />
-                    <div className="relative w-full max-w-md rounded-3xl border border-[#e7e5e4] bg-white p-8 shadow-2xl">
-                        <h2 className="text-xl font-bold text-[#1c1917]">Excluir pasto</h2>
-                        <p className="mt-3 text-sm leading-relaxed text-[#78716c]">
+                    <div className="relative w-full max-w-md rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-8 shadow-2xl">
+                        <h2 className="text-xl font-bold text-[var(--eixo-text)]">Excluir pasto</h2>
+                        <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
                             Tem certeza que deseja excluir o pasto{' '}
-                            <span className="font-semibold text-[#1c1917]">
+                            <span className="font-semibold text-[var(--eixo-text)]">
                                 "{paddockToDelete.name.trim() || 'sem nome'}"
                             </span>?
                             Essa ação não pode ser desfeita.
@@ -415,14 +415,14 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             <button
                                 type="button"
                                 onClick={() => setPaddockToDelete(null)}
-                                className="rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-5 py-2.5 text-sm font-semibold text-[#44403c] transition-colors hover:bg-[#ece9e6]"
+                                className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-2.5 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="button"
                                 onClick={() => { handleRemoveDivision(paddockToDelete.id); setPaddockToDelete(null); }}
-                                className="rounded-2xl border border-[#d9b6a8] bg-[#fbede8] px-5 py-2.5 text-sm font-semibold text-[#8c4d39] transition-colors hover:bg-[#f5ddd4]"
+                                className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-5 py-2.5 text-sm font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f7ddd7]"
                             >
                                 Excluir
                             </button>
@@ -434,18 +434,18 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             {/* ── Indicador de progresso ── */}
             <div className="mb-6 flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'farm' ? 'bg-[#a8442a] text-white' : 'bg-[#f5f5f4] text-[#78716c]'}`}>1</div>
-                    <span className={`text-sm font-semibold ${currentStep === 'farm' ? 'text-[#1c1917]' : 'text-[#78716c]'}`}>Dados da fazenda</span>
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'farm' ? 'bg-[var(--eixo-green)] text-white' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>1</div>
+                    <span className={`text-sm font-semibold ${currentStep === 'farm' ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-muted)]'}`}>Dados da fazenda</span>
                 </div>
-                <div className="h-px flex-1 bg-[#f5f5f4]" />
+                <div className="h-px flex-1 bg-[var(--eixo-surface-soft)]" />
                 <div className="flex items-center gap-2">
-                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'divisions' ? 'bg-[#a8442a] text-white' : 'bg-[#f5f5f4] text-[#b0a090]'}`}>2</div>
-                    <span className={`text-sm font-semibold ${currentStep === 'divisions' ? 'text-[#1c1917]' : 'text-[#b0a090]'}`}>Pastos</span>
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'divisions' ? 'bg-[var(--eixo-green)] text-white' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-soft)]'}`}>2</div>
+                    <span className={`text-sm font-semibold ${currentStep === 'divisions' ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-soft)]'}`}>Pastos</span>
                 </div>
             </div>
 
-            <h2 className="mb-2 text-2xl font-bold text-[#1c1917]">{activeFarm ? 'Editar Fazenda' : 'Cadastro de Fazenda'}</h2>
-            <p className="mb-6 text-sm text-[#78716c]">
+            <h2 className="mb-2 text-2xl font-bold text-[var(--eixo-text)]">{activeFarm ? 'Editar Fazenda' : 'Cadastro de Fazenda'}</h2>
+            <p className="mb-6 text-sm text-[var(--eixo-text-muted)]">
                 {currentStep === 'farm'
                     ? 'Preencha os dados principais. Os pastos vêm no próximo passo.'
                     : 'Cadastre as áreas que compõem a fazenda. Você pode ajustar depois.'}
@@ -454,24 +454,24 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 {currentStep === 'farm' ? (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div>
-                        <label htmlFor="farmName" className="block text-sm font-medium text-[#44403c]">Nome da Fazenda</label>
+                        <label htmlFor="farmName" className="block text-sm font-medium text-[var(--eixo-text)]">Nome da Fazenda</label>
                         <input
                             ref={nameInputRef}
                             type="text"
                             id="farmName"
                             value={farmName}
                             onChange={e => setFarmName(e.target.value)}
-                            className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none"
+                            className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                             required
                         />
                     </div>
                     <div>
-                        <label htmlFor="farmCity" className="block text-sm font-medium text-[#44403c]">Cidade</label>
-                        <input type="text" id="farmCity" value={farmCity} onChange={e => setFarmCity(e.target.value)} className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none" required />
+                        <label htmlFor="farmCity" className="block text-sm font-medium text-[var(--eixo-text)]">Cidade</label>
+                        <input type="text" id="farmCity" value={farmCity} onChange={e => setFarmCity(e.target.value)} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required />
                     </div>
                     <div>
-                        <label htmlFor="farmState" className="block text-sm font-medium text-[#44403c]">Estado</label>
-                        <select id="farmState" value={farmState} onChange={e => setFarmState(e.target.value)} className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none" required>
+                        <label htmlFor="farmState" className="block text-sm font-medium text-[var(--eixo-text)]">Estado</label>
+                        <select id="farmState" value={farmState} onChange={e => setFarmState(e.target.value)} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required>
                             <option value="">Selecione</option>
                             {BRAZILIAN_STATES.map((state) => (
                                 <option key={state} value={state}>{state}</option>
@@ -479,16 +479,16 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         </select>
                     </div>
                     <div>
-                        <label htmlFor="farmSize" className="block text-sm font-medium text-[#44403c]">Tamanho Total (ha)</label>
-                        <input type="number" id="farmSize" value={farmSize} onChange={e => setFarmSize(e.target.value)} min="0" step="0.01" className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none" required />
+                        <label htmlFor="farmSize" className="block text-sm font-medium text-[var(--eixo-text)]">Tamanho Total (ha)</label>
+                        <input type="number" id="farmSize" value={farmSize} onChange={e => setFarmSize(e.target.value)} min="0" step="0.01" className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required />
                     </div>
                     <div>
-                        <label htmlFor="responsibleName" className="block text-sm font-medium text-[#44403c]">Nome do Responsável</label>
-                        <input type="text" id="responsibleName" value={responsibleName} onChange={e => setResponsibleName(e.target.value)} className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none" />
+                        <label htmlFor="responsibleName" className="block text-sm font-medium text-[var(--eixo-text)]">Nome do Responsável</label>
+                        <input type="text" id="responsibleName" value={responsibleName} onChange={e => setResponsibleName(e.target.value)} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" />
                     </div>
                     <div className="md:col-span-2">
-                        <label htmlFor="farmNotes" className="block text-sm font-medium text-[#44403c]">Observações</label>
-                        <textarea id="farmNotes" value={farmNotes} onChange={e => setFarmNotes(e.target.value)} rows={3} className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none"></textarea>
+                        <label htmlFor="farmNotes" className="block text-sm font-medium text-[var(--eixo-text)]">Observações</label>
+                        <textarea id="farmNotes" value={farmNotes} onChange={e => setFarmNotes(e.target.value)} rows={3} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"></textarea>
                     </div>
 
                     {/* ── Localização opcional ── */}
@@ -497,7 +497,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             <button
                                 type="button"
                                 onClick={() => setShowLocation(true)}
-                                className="flex items-center gap-1.5 text-sm text-[#a8442a] hover:underline"
+                                className="flex items-center gap-1.5 text-sm text-[var(--eixo-green)] hover:underline"
                             >
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -506,35 +506,35 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                 Adicionar localização da fazenda (opcional)
                             </button>
                         ) : (
-                            <div className="rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] p-4 space-y-3">
+                            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4 space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <p className="text-sm font-semibold text-[#1c1917]">📍 Localização</p>
-                                    <button type="button" onClick={() => { setShowLocation(false); setFarmLat(''); setFarmLng(''); }} className="text-xs text-[#78716c] hover:text-[#78716c]">Remover</button>
+                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">📍 Localização</p>
+                                    <button type="button" onClick={() => { setShowLocation(false); setFarmLat(''); setFarmLng(''); }} className="text-xs text-[var(--eixo-text-muted)] hover:text-[var(--eixo-text-muted)]">Remover</button>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={handleGetGPS}
                                     disabled={gpsLoading}
-                                    className="flex items-center gap-2 rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm font-semibold text-[#44403c] transition-colors hover:bg-[#f5f5f4] disabled:opacity-60"
+                                    className="flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:opacity-60"
                                 >
-                                    <svg className="h-4 w-4 text-[#1c1917]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="h-4 w-4 text-[var(--eixo-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                     {gpsLoading ? 'Capturando...' : 'Usar minha localização atual'}
                                 </button>
-                                <p className="text-xs text-[#78716c]">⚠️ Use somente se estiver na fazenda agora. Ou preencha manualmente abaixo.</p>
+                                <p className="text-xs text-[var(--eixo-text-muted)]">⚠️ Use somente se estiver na fazenda agora. Ou preencha manualmente abaixo.</p>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <label htmlFor="farmLat" className="block text-xs font-medium text-[#44403c]">Latitude</label>
-                                        <input type="text" inputMode="decimal" id="farmLat" placeholder="-12.345678" value={farmLat} onChange={e => setFarmLat(e.target.value)} onBlur={e => setFarmLat(normalizeCoordinateInput(e.target.value.trim()))} className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none" />
+                                        <label htmlFor="farmLat" className="block text-xs font-medium text-[var(--eixo-text)]">Latitude</label>
+                                        <input type="text" inputMode="decimal" id="farmLat" placeholder="-12.345678" value={farmLat} onChange={e => setFarmLat(e.target.value)} onBlur={e => setFarmLat(normalizeCoordinateInput(e.target.value.trim()))} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" />
                                     </div>
                                     <div>
-                                        <label htmlFor="farmLng" className="block text-xs font-medium text-[#44403c]">Longitude</label>
-                                        <input type="text" inputMode="decimal" id="farmLng" placeholder="-39.123456" value={farmLng} onChange={e => setFarmLng(e.target.value)} onBlur={e => setFarmLng(normalizeCoordinateInput(e.target.value.trim()))} className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none" />
+                                        <label htmlFor="farmLng" className="block text-xs font-medium text-[var(--eixo-text)]">Longitude</label>
+                                        <input type="text" inputMode="decimal" id="farmLng" placeholder="-39.123456" value={farmLng} onChange={e => setFarmLng(e.target.value)} onBlur={e => setFarmLng(normalizeCoordinateInput(e.target.value.trim()))} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" />
                                     </div>
                                 </div>
                                 {farmLat && farmLng && (
-                                    <p className="text-xs text-[#16a34a]">✓ Localização definida: {farmLat}, {farmLng}</p>
+                                    <p className="text-xs text-[var(--eixo-success)]">✓ Localização definida: {farmLat}, {farmLng}</p>
                                 )}
                             </div>
                         )}
@@ -544,7 +544,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         <button
                             type="button"
                             onClick={onCancelEdit}
-                            className="mr-3 flex items-center rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-6 py-2.5 font-bold text-[#44403c] transition-colors duration-200 hover:bg-[#ece9e6]"
+                            className="mr-3 flex items-center rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-6 py-2.5 font-bold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[#ece9e6]"
                         >
                             Cancelar
                         </button>
@@ -552,7 +552,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             type="button"
                             onClick={() => void saveFarmDetails()}
                             disabled={isSaveDisabled}
-                            className="flex items-center rounded-2xl bg-[#a8442a] px-6 py-2.5 font-bold text-white transition-colors duration-200 hover:bg-[#933a22] disabled:cursor-not-allowed disabled:bg-[#b8ab95]"
+                            className="flex items-center rounded-2xl bg-[var(--eixo-green)] px-6 py-2.5 font-bold text-white transition-colors duration-200 hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
                         >
                             {isSubmitting ? 'Salvando...' : 'Salvar e continuar →'}
                         </button>
@@ -560,17 +560,17 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 </div>
                 ) : (
                 <>
-                <div className="rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] p-4">
+                <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
                     <div className="flex items-start justify-between gap-4">
                         <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">Dados salvos</p>
-                            <h3 className="mt-1 text-lg font-semibold text-[#1c1917]">{farmName}</h3>
-                            <p className="mt-1 text-sm text-[#78716c]">{farmCity}{farmState ? `/${farmState}` : ''}</p>
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Dados salvos</p>
+                            <h3 className="mt-1 text-lg font-semibold text-[var(--eixo-text)]">{farmName}</h3>
+                            <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{farmCity}{farmState ? `/${farmState}` : ''}</p>
                         </div>
                         <button
                             type="button"
                             onClick={() => setCurrentStep('farm')}
-                            className="rounded-xl border border-[#e7e5e4] bg-white px-4 py-2 text-sm font-semibold text-[#44403c] transition-colors hover:bg-[#f5f5f4]"
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                         >
                             Editar dados da fazenda
                         </button>
@@ -579,34 +579,34 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 <div ref={divisionsRef}>
                     <div className="flex items-center justify-between gap-4">
                         <div>
-                            <h3 className="text-lg font-medium text-[#1c1917]">Pastos</h3>
-                            <p className="mt-1 text-sm text-[#78716c]">Cadastre as áreas que compõem a fazenda.</p>
+                            <h3 className="text-lg font-medium text-[var(--eixo-text)]">Pastos</h3>
+                            <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Cadastre as áreas que compõem a fazenda.</p>
                         </div>
                     </div>
                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                         {divisions.map((division, index) => (
-                            <div key={division.id} className="rounded-2xl border border-[#e7e5e4] bg-white p-4">
+                            <div key={division.id} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
                                 <div className="mb-3 flex items-center gap-3">
-                                    <span className="text-sm font-medium text-[#44403c]">{divisions[index].name.trim() || `Pasto ${index + 1}`}</span>
-                                    <button type="button" onClick={() => setPaddockToDelete(division)} className="ml-auto rounded-full p-2 text-[#8c4d39] transition-colors hover:bg-[#fbede8] hover:text-[#8c4d39]" aria-label="Remover pasto">
+                                    <span className="text-sm font-medium text-[var(--eixo-text)]">{divisions[index].name.trim() || `Pasto ${index + 1}`}</span>
+                                    <button type="button" onClick={() => setPaddockToDelete(division)} className="ml-auto rounded-full p-2 text-[var(--eixo-danger)] transition-colors hover:bg-[#fff2ef] hover:text-[var(--eixo-danger)]" aria-label="Remover pasto">
                                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
                                     </button>
                                 </div>
                                 <div className="grid grid-cols-1 gap-3">
                                     <div>
-                                        <label htmlFor={`division-name-${division.id}`} className="block text-sm font-medium text-[#44403c]">Nome do Pasto</label>
+                                        <label htmlFor={`division-name-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">Nome do Pasto</label>
                                         <input
                                             type="text"
                                             id={`division-name-${division.id}`}
                                             value={division.name}
                                             onChange={(e) => handleDivisionNameChange(division.id, e.target.value)}
                                             placeholder="Ex.: Pasto 01, Curral de manejo, APP..."
-                                            className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none"
+                                            className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                                         />
                                     </div>
                                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                         <div>
-                                        <label htmlFor={`division-size-${division.id}`} className="block text-sm font-medium text-[#44403c]">Área Útil (ha)</label>
+                                        <label htmlFor={`division-size-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">Área Útil (ha)</label>
                                         <input
                                             type="number"
                                             id={`division-size-${division.id}`}
@@ -615,16 +615,16 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                             min="0"
                                             step="0.01"
                                             placeholder="0.00"
-                                            className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none"
+                                            className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                                         />
                                         </div>
                                         <div>
-                                            <label htmlFor={`division-type-${division.id}`} className="block text-sm font-medium text-[#44403c]">Tipo</label>
+                                            <label htmlFor={`division-type-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">Tipo</label>
                                             <select
                                                 id={`division-type-${division.id}`}
                                                 value={division.divisionType}
                                                 onChange={(e) => handleDivisionTypeChange(division.id, e.target.value)}
-                                                className="mt-1 block w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2.5 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none"
+                                                className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                                             >
                                                 <option value="pasto">Pasto</option>
                                                 <option value="curral de manejo">Curral de manejo</option>
@@ -639,7 +639,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     <button
                         type="button"
                         onClick={handleAddDivision}
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[#e7e5e4] bg-[#f5f5f4] px-4 py-3 text-sm font-semibold text-[#44403c] transition-colors hover:bg-[#ece9e6]"
+                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
                     >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v12m6-6H6" />
@@ -651,14 +651,14 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 )}
 
                 {farmLimitReached && (
-                    <div className="rounded-2xl border border-[#f0d5ca] bg-[#faeee8] p-4">
-                        <p className="text-sm font-semibold text-[#7a2a14]">🔒 Limite do plano gratuito</p>
-                        <p className="mt-1 text-sm text-[#78716c]">
+                    <div className="rounded-2xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] p-4">
+                        <p className="text-sm font-semibold text-[var(--eixo-graphite-dark)]">🔒 Limite do plano gratuito</p>
+                        <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">
                             O plano gratuito permite apenas <strong>1 fazenda</strong>. Para cadastrar mais fazendas, faça upgrade do seu plano.
                         </p>
                         <button
                             type="button"
-                            className="mt-3 rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#933a22]"
+                            className="mt-3 rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)]"
                             onClick={() => window.location.href = '/planos'}
                         >
                             Ver planos
@@ -666,27 +666,27 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     </div>
                 )}
                 {submitError && (
-                    <p className="text-sm text-[#8c4d39]">{submitError}</p>
+                    <p className="text-sm text-[var(--eixo-danger)]">{submitError}</p>
                 )}
                 {submitSuccess && (
-                    <p className="text-sm text-[#16a34a]">{submitSuccess}</p>
+                    <p className="text-sm text-[var(--eixo-success)]">{submitSuccess}</p>
                 )}
 
                 {currentStep === 'divisions' && farmSizeFloat > 0 && (
-                    <div className="space-y-1.5 rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] p-4">
+                    <div className="space-y-1.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
                         <div className="flex justify-between text-sm">
-                            <span className="font-medium text-[#78716c]">Área total da fazenda</span>
-                            <span className="font-bold text-[#1c1917]">{farmSizeFloat.toFixed(2)} ha</span>
+                            <span className="font-medium text-[var(--eixo-text-muted)]">Área total da fazenda</span>
+                            <span className="font-bold text-[var(--eixo-text)]">{farmSizeFloat.toFixed(2)} ha</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                            <span className="font-medium text-[#78716c]">Distribuído nos pastos</span>
-                            <span className="font-bold text-[#1c1917]">{totalDivisionSize.toFixed(2)} ha</span>
+                            <span className="font-medium text-[var(--eixo-text-muted)]">Distribuído nos pastos</span>
+                            <span className="font-bold text-[var(--eixo-text)]">{totalDivisionSize.toFixed(2)} ha</span>
                         </div>
                         <div className="flex justify-between text-sm font-bold">
-                            <span className={isBalancedArea ? 'text-[#16a34a]' : remainingSize < 0 ? 'text-[#8c4d39]' : 'text-[#1c1917]'}>
+                            <span className={isBalancedArea ? 'text-[var(--eixo-success)]' : remainingSize < 0 ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-text)]'}>
                                 {isBalancedArea ? '✓ Área totalmente distribuída' : remainingSize < 0 ? 'Área excedida' : 'Ainda não distribuído'}
                             </span>
-                            <span className={isBalancedArea ? 'text-[#16a34a]' : remainingSize < 0 ? 'text-[#8c4d39]' : 'text-[#1c1917]'}>
+                            <span className={isBalancedArea ? 'text-[var(--eixo-success)]' : remainingSize < 0 ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-text)]'}>
                                 {isBalancedArea ? '' : `${remainingSize.toFixed(2)} ha`}
                             </span>
                         </div>
@@ -699,7 +699,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             type="button"
                             onClick={() => void saveDivisions('save-and-return')}
                             disabled={isSaveDisabled}
-                            className="rounded-xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-2 text-sm font-semibold text-[#44403c] transition-colors duration-200 hover:bg-[#ece9e6] disabled:cursor-not-allowed disabled:bg-[#d6d3d1]"
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[#ece9e6] disabled:cursor-not-allowed disabled:bg-[#d6d3d1]"
                         >
                             {isSubmitting ? 'Salvando...' : 'Salvar progresso'}
                         </button>
@@ -707,7 +707,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             type="button"
                             onClick={() => void saveDivisions('complete')}
                             disabled={isSaveDisabled}
-                            className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#933a22] disabled:cursor-not-allowed disabled:bg-[#b8ab95]"
+                            className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
                         >
                             {isSubmitting ? 'Salvando...' : '✓ Concluir cadastro'}
                         </button>

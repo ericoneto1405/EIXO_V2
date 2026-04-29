@@ -101,24 +101,24 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
     };
 
     const inputClass =
-        'mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-4 py-2.5 text-sm text-[#1c1917] placeholder-[#c4b5a0] focus:border-[#a8442a] focus:outline-none';
+        'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-[#e7e5e4] bg-white shadow-2xl">
-                <div className="flex items-center justify-between border-b border-[#e7e5e4] px-6 py-5">
+            <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5">
                     <div>
-                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             Sistema web
                         </div>
-                        <h3 className="font-brand text-xl font-extrabold text-[#1c1917]">Novo usuário</h3>
+                        <h3 className="font-brand text-xl font-extrabold text-[var(--eixo-text)]">Novo usuário</h3>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
                         aria-label="Fechar"
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] text-[#78716c] hover:bg-[#f5f5f4]"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
                     >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -128,7 +128,7 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
 
                 <form onSubmit={handleSubmit} className="flex-1 space-y-4 overflow-y-auto px-6 py-5">
                     <div>
-                        <label htmlFor="user-name" className="block text-sm font-medium text-[#78716c]">
+                        <label htmlFor="user-name" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             Nome completo
                         </label>
                         <input
@@ -143,7 +143,7 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                     </div>
 
                     <div>
-                        <label htmlFor="user-email" className="block text-sm font-medium text-[#78716c]">
+                        <label htmlFor="user-email" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             E-mail
                         </label>
                         <input
@@ -158,7 +158,7 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                     </div>
 
                     <div>
-                        <label htmlFor="user-password" className="block text-sm font-medium text-[#78716c]">
+                        <label htmlFor="user-password" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             Senha
                         </label>
                         <input
@@ -173,14 +173,14 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                             placeholder="••••••••"
                             required
                         />
-                        <p className="mt-1 text-xs text-[#78716c]">{PASSWORD_POLICY_MESSAGE}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">{PASSWORD_POLICY_MESSAGE}</p>
                         {passwordError && (
-                            <p className="mt-2 text-xs font-medium text-[#8c4d39]">{passwordError}</p>
+                            <p className="mt-2 text-xs font-medium text-[var(--eixo-danger)]">{passwordError}</p>
                         )}
                     </div>
 
                     <div>
-                        <label htmlFor="user-default-farm" className="block text-sm font-medium text-[#78716c]">
+                        <label htmlFor="user-default-farm" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             Fazenda padrão
                         </label>
                         <select
@@ -201,20 +201,20 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                             ))}
                         </select>
                         {farmError && (
-                            <p className="mt-2 text-xs font-medium text-[#8c4d39]">{farmError}</p>
+                            <p className="mt-2 text-xs font-medium text-[var(--eixo-danger)]">{farmError}</p>
                         )}
                     </div>
 
-                    <div className="rounded-2xl border border-[#e7e5e4] bg-white p-4">
+                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
                         <div className="mb-3 flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-semibold text-[#1c1917]">Liberar módulos</p>
-                                <p className="text-xs text-[#78716c]">Escolha quais áreas o usuário poderá acessar.</p>
+                                <p className="text-sm font-semibold text-[var(--eixo-text)]">Liberar módulos</p>
+                                <p className="text-xs text-[var(--eixo-text-muted)]">Escolha quais áreas o usuário poderá acessar.</p>
                             </div>
                             <button
                                 type="button"
                                 onClick={toggleAll}
-                                className="text-xs font-semibold text-[#1c1917] hover:text-[#292524] hover:underline"
+                                className="text-xs font-semibold text-[var(--eixo-text)] hover:text-[var(--eixo-graphite)] hover:underline"
                             >
                                 {selectedModules.length === allModules.length ? 'Remover todos' : 'Selecionar todos'}
                             </button>
@@ -234,13 +234,13 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                                                     key={module}
                                                     className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm transition-colors ${
                                                         isSelected
-                                                            ? 'border-[#a8442a] bg-[#faeee8] text-[#7a2a14]'
-                                                            : 'border-[#e7e5e4] bg-white text-[#78716c] hover:border-[#c4b5a0]'
+                                                            ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite-dark)]'
+                                                            : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-[var(--eixo-text-muted)] hover:border-[var(--eixo-text-soft)]'
                                                     }`}
                                                 >
                                                     <input
                                                         type="checkbox"
-                                                        className="accent-[#a8442a]"
+                                                        className="accent-[var(--eixo-green)]"
                                                         checked={isSelected}
                                                         onChange={() => toggleModule(module)}
                                                     />
@@ -254,17 +254,17 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                         </div>
 
                         {modulesError && (
-                            <p className="mt-3 text-xs font-medium text-[#8c4d39]">{modulesError}</p>
+                            <p className="mt-3 text-xs font-medium text-[var(--eixo-danger)]">{modulesError}</p>
                         )}
                     </div>
 
                     {error && (
-                        <div className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-4 py-3 text-sm text-[#8c4d39]">
+                        <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                             {error}
                         </div>
                     )}
                     {successMessage && !error && (
-                        <div className="rounded-xl border border-[#b6d4b0] bg-[#edf4eb] px-4 py-3 text-sm text-[#16a34a]">
+                        <div className="rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-4 py-3 text-sm text-[var(--eixo-success)]">
                             {successMessage}
                         </div>
                     )}
@@ -273,13 +273,13 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#78716c] hover:bg-[#f5f5f4]"
+                            className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
-                            className="rounded-xl bg-[#a8442a] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#933a22]"
+                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             Salvar usuário
                         </button>

@@ -52,13 +52,13 @@ interface GeneticsSelecaoProps {
 
 const trafficStyles: Record<TrafficLight, { badge: string; label: string }> = {
     GREEN: { badge: 'bg-emerald-100 text-emerald-700', label: 'Verde' },
-    YELLOW: { badge: 'bg-amber-100 text-amber-700', label: 'Amarelo' },
-    RED: { badge: 'bg-rose-100 text-rose-700', label: 'Vermelho' },
+    YELLOW: { badge: 'bg-[#f7f1df] text-[var(--eixo-warning)]', label: 'Amarelo' },
+    RED: { badge: 'bg-[#f7ddd7] text-[var(--eixo-danger)]', label: 'Vermelho' },
 };
 
 const decisionStyles: Record<DecisionType, { badge: string; label: string }> = {
-    DISCARD: { badge: 'bg-rose-100 text-rose-700', label: 'Descarte' },
-    WATCH: { badge: 'bg-amber-100 text-amber-700', label: 'Observar' },
+    DISCARD: { badge: 'bg-[#f7ddd7] text-[var(--eixo-danger)]', label: 'Descarte' },
+    WATCH: { badge: 'bg-[#f7f1df] text-[var(--eixo-warning)]', label: 'Observar' },
     KEEP: { badge: 'bg-emerald-100 text-emerald-700', label: 'Manter' },
 };
 
@@ -290,47 +290,47 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
     };
 
     return (
-        <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-8">
+        <div className="bg-[var(--eixo-surface)] dark:bg-[var(--eixo-surface)] rounded-xl shadow-lg p-8">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Seleção</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Matrizes com indicadores reprodutivos e semáforo.</p>
+                    <h2 className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">Seleção</h2>
+                    <p className="text-sm text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Matrizes com indicadores reprodutivos e semáforo.</p>
                 </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
+                <div className="text-sm text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
                     {total} matrizes
                 </div>
             </div>
 
             <div className="mt-6 grid gap-3 lg:grid-cols-4">
                 <div className="lg:col-span-2">
-                    <label className="text-xs uppercase text-gray-500">Buscar por brinco</label>
+                    <label className="text-xs uppercase text-[var(--eixo-text-muted)]">Buscar por brinco</label>
                     <input
-                        className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#1c1917] focus:ring-[#1c1917]/10 dark:border-gray-700 dark:bg-dark-card dark:text-white"
+                        className="mt-1 w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
                         placeholder="Ex: F001"
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
                     />
                 </div>
                 <div>
-                    <label className="text-xs uppercase text-gray-500">Só em alerta</label>
+                    <label className="text-xs uppercase text-[var(--eixo-text-muted)]">Só em alerta</label>
                     <div className="mt-2 flex items-center gap-2">
                         <input
                             id="only-alert-toggle"
                             type="checkbox"
-                            className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-[#1c1917]/10"
+                            className="h-4 w-4 rounded border-[var(--eixo-border)] text-primary focus:ring-[var(--eixo-graphite-dark)]/10"
                             checked={onlyAlert}
                             onChange={(event) => setOnlyAlert(event.target.checked)}
                         />
-                        <label htmlFor="only-alert-toggle" className="text-sm text-gray-600 dark:text-gray-300">
+                        <label htmlFor="only-alert-toggle" className="text-sm text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
                             Mostrar somente alertas
                         </label>
                     </div>
                 </div>
                 <div>
-                    <label className="text-xs uppercase text-gray-500">Estação</label>
+                    <label className="text-xs uppercase text-[var(--eixo-text-muted)]">Estação</label>
                     {reproMode === 'ESTACAO' ? (
                         <select
-                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#1c1917] focus:ring-[#1c1917]/10 dark:border-gray-700 dark:bg-dark-card dark:text-white"
+                            className="mt-1 w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
                             value={selectedSeasonId || ''}
                             onChange={(event) => setSelectedSeasonId(event.target.value || null)}
                         >
@@ -342,20 +342,20 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                             ))}
                         </select>
                     ) : (
-                        <p className="mt-2 text-sm text-gray-500">Sem estação (modo contínuo)</p>
+                        <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Sem estação (modo contínuo)</p>
                     )}
                 </div>
             </div>
 
             {loadError && (
-                <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+                <div className="mt-4 rounded-lg border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                     {loadError}
                 </div>
             )}
 
             <div className="mt-6 overflow-x-auto">
-                <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                <table className="w-full text-sm text-left text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
+                    <thead className="text-xs text-[var(--eixo-text)] uppercase bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-surface-soft)] dark:text-[var(--eixo-text-soft)]">
                         <tr>
                             <th className="px-4 py-3">Brinco</th>
                             <th className="px-4 py-3">Raça</th>
@@ -371,13 +371,13 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                     <tbody>
                         {isLoading ? (
                             <tr>
-                                <td colSpan={9} className="px-4 py-6 text-center text-gray-500">
+                                <td colSpan={9} className="px-4 py-6 text-center text-[var(--eixo-text-muted)]">
                                     Carregando seleção...
                                 </td>
                             </tr>
                         ) : items.length === 0 ? (
                             <tr>
-                                <td colSpan={9} className="px-4 py-6 text-center text-gray-500">
+                                <td colSpan={9} className="px-4 py-6 text-center text-[var(--eixo-text-muted)]">
                                     {onlyAlert ? 'Nenhuma matriz em alerta.' : 'Nenhuma matriz encontrada.'}
                                 </td>
                             </tr>
@@ -391,8 +391,8 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                                 const indicatorExtraCount = hasReasons ? item.reasons.length - 1 : 0;
                                 const indicatorTitle = hasReasons ? item.reasons.join(' | ') : '';
                                 return (
-                                    <tr key={item.animal.id} className="border-b border-gray-100 dark:border-gray-700">
-                                        <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{item.animal.brinco}</td>
+                                    <tr key={item.animal.id} className="border-b border-[var(--eixo-border)] dark:border-[var(--eixo-border)]">
+                                        <td className="px-4 py-3 font-medium text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{item.animal.brinco}</td>
                                         <td className="px-4 py-3">{item.animal.raca}</td>
                                         <td className="px-4 py-3">{calculateAge(item.animal.dataNascimento)}</td>
                                         <td className="px-4 py-3">
@@ -402,12 +402,12 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                                                         {decisionBadge.label.toUpperCase()}
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-gray-100 text-gray-600">
+                                                    <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]">
                                                         Sem decisão
                                                     </span>
                                                 )}
                                                 {decision?.reason && (
-                                                    <span className="text-[11px] text-gray-400">
+                                                    <span className="text-[11px] text-[var(--eixo-text-soft)]">
                                                         {decision.reason}
                                                     </span>
                                                 )}
@@ -424,7 +424,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                                                 >
                                                     {traffic.label.toUpperCase()}
                                                 </span>
-                                                <span className="text-[11px] text-gray-400">
+                                                <span className="text-[11px] text-[var(--eixo-text-soft)]">
                                                     {indicatorPrimary}
                                                     {indicatorExtraCount > 0 ? ` +${indicatorExtraCount}` : ''}
                                                 </span>
@@ -433,7 +433,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                                         <td className="px-4 py-3">
                                             <div className="flex flex-wrap gap-2">
                                                 <button
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50"
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#efc2ba] text-[var(--eixo-danger)] hover:bg-[#fff2ef]"
                                                     onClick={() => handleDecision(item, 'DISCARD')}
                                                     aria-label="Marcar descarte"
                                                     title="Descartar"
@@ -441,7 +441,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                                                     ✕
                                                 </button>
                                                 <button
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-50"
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[#e8d8b4] text-[var(--eixo-warning)] hover:bg-amber-50"
                                                     onClick={() => handleDecision(item, 'WATCH')}
                                                     aria-label="Marcar observação"
                                                     title="Observar"
@@ -457,7 +457,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                                                     ✓
                                                 </button>
                                                 <button
-                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+                                                    className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--eixo-border)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
                                                     onClick={() => clearDecision(item.animal.id)}
                                                     aria-label="Limpar decisão"
                                                     title="Limpar"
@@ -476,24 +476,24 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
 
             {isDecisionModalOpen && decisionAnimal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl dark:bg-dark-card">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Motivo do descarte</h3>
-                        <p className="text-sm text-gray-500 mt-1">Informe o motivo para descartar a matriz {decisionAnimal.animal.brinco}.</p>
+                    <div className="w-full max-w-md rounded-xl bg-[var(--eixo-surface)] p-6 shadow-xl dark:bg-[var(--eixo-surface)]">
+                        <h3 className="text-lg font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">Motivo do descarte</h3>
+                        <p className="text-sm text-[var(--eixo-text-muted)] mt-1">Informe o motivo para descartar a matriz {decisionAnimal.animal.brinco}.</p>
                         <form className="mt-4 space-y-3" onSubmit={handleDiscardSubmit}>
                             <textarea
-                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#1c1917] focus:ring-[#1c1917]/10 dark:border-gray-700 dark:bg-dark-card dark:text-white"
+                                className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
                                 rows={3}
                                 value={decisionReason}
                                 onChange={(event) => setDecisionReason(event.target.value)}
                                 placeholder="Ex: baixa taxa de prenhez"
                             />
                             {decisionError && (
-                                <div className="text-sm text-rose-600">{decisionError}</div>
+                                <div className="text-sm text-[var(--eixo-danger)]">{decisionError}</div>
                             )}
                             <div className="flex items-center justify-end gap-2">
                                 <button
                                     type="button"
-                                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-4 py-2 text-sm text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
                                     onClick={closeDecisionModal}
                                     disabled={isSavingDecision}
                                 >
@@ -501,7 +501,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60"
+                                    className="rounded-lg bg-[var(--eixo-danger)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-danger)] disabled:opacity-60"
                                     disabled={isSavingDecision}
                                 >
                                     {isSavingDecision ? 'Salvando...' : 'Confirmar descarte'}
@@ -513,7 +513,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
             )}
 
             {decisionList.length === 0 && (
-                <p className="mt-6 text-xs text-gray-400">
+                <p className="mt-6 text-xs text-[var(--eixo-text-soft)]">
                     Nenhuma decisão registrada.
                 </p>
             )}

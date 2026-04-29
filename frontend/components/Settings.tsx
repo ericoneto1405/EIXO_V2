@@ -36,20 +36,20 @@ const Settings: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto">
             <div className="mb-6">
-                <h1 className="font-brand text-2xl font-extrabold text-[#1c1917]">Configurações</h1>
-                <p className="mt-1 text-sm text-[#78716c]">Gerencie suas preferências e segurança.</p>
+                <h1 className="font-brand text-2xl font-extrabold text-[var(--eixo-text)]">Configurações</h1>
+                <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Gerencie suas preferências e segurança.</p>
             </div>
 
-            <div className="rounded-2xl border border-[#e7e5e4] bg-white p-6 md:p-8">
-                <h2 className="mb-6 flex items-center text-lg font-semibold text-[#1c1917]">
-                    <svg className="mr-2 h-5 w-5 text-[#78716c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 md:p-8">
+                <h2 className="mb-6 flex items-center text-lg font-semibold text-[var(--eixo-text)]">
+                    <svg className="mr-2 h-5 w-5 text-[var(--eixo-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                     </svg>
                     Segurança
                 </h2>
 
-                <div className="border-t border-[#e7e5e4] pt-6">
-                    <h3 className="mb-4 text-base font-semibold text-[#1c1917]">Alterar Senha</h3>
+                <div className="border-t border-[var(--eixo-border)] pt-6">
+                    <h3 className="mb-4 text-base font-semibold text-[var(--eixo-text)]">Alterar Senha</h3>
 
                     {message && (
                         <div className={`mb-6 rounded-xl border px-4 py-3 text-sm ${
@@ -63,7 +63,7 @@ const Settings: React.FC = () => {
 
                     <form onSubmit={handleSubmit} className="max-w-md space-y-5">
                         <div>
-                            <label htmlFor="currentPassword" className="mb-1 block text-sm font-medium text-[#78716c]">
+                            <label htmlFor="currentPassword" className="mb-1 block text-sm font-medium text-[var(--eixo-text-muted)]">
                                 Senha Atual
                             </label>
                             <input
@@ -71,13 +71,13 @@ const Settings: React.FC = () => {
                                 id="currentPassword"
                                 value={currentPassword}
                                 onChange={(e) => setCurrentPassword(e.target.value)}
-                                className="block w-full rounded-xl border border-[#e7e5e4] bg-white px-4 py-2 text-sm text-[#1c1917] placeholder:text-[#a8a29e] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10 transition-colors"
+                                className="block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[#a8a29e] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
                                 placeholder="Digite sua senha atual"
                             />
                         </div>
 
                         <div>
-                            <label htmlFor="newPassword" className="mb-1 block text-sm font-medium text-[#78716c]">
+                            <label htmlFor="newPassword" className="mb-1 block text-sm font-medium text-[var(--eixo-text-muted)]">
                                 Nova Senha
                             </label>
                             <input
@@ -85,13 +85,13 @@ const Settings: React.FC = () => {
                                 id="newPassword"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                className="block w-full rounded-xl border border-[#e7e5e4] bg-white px-4 py-2 text-sm text-[#1c1917] placeholder:text-[#a8a29e] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10 transition-colors"
+                                className="block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[#a8a29e] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
                                 placeholder="Digite a nova senha"
                             />
                         </div>
 
                         <div>
-                            <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-[#78716c]">
+                            <label htmlFor="confirmPassword" className="mb-1 block text-sm font-medium text-[var(--eixo-text-muted)]">
                                 Confirmar Nova Senha
                             </label>
                             <input
@@ -99,7 +99,7 @@ const Settings: React.FC = () => {
                                 id="confirmPassword"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="block w-full rounded-xl border border-[#e7e5e4] bg-white px-4 py-2 text-sm text-[#1c1917] placeholder:text-[#a8a29e] focus:border-[#a8442a] focus:outline-none focus:ring-1 focus:ring-[#a8442a]/10 transition-colors"
+                                className="block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[#a8a29e] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
                                 placeholder="Confirme a nova senha"
                             />
                         </div>
@@ -107,7 +107,7 @@ const Settings: React.FC = () => {
                         <div className="pt-1">
                             <button
                                 type="submit"
-                                className="w-full rounded-xl bg-[#a8442a] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#933a22] focus:outline-none focus:ring-2 focus:ring-[#a8442a]/30 disabled:opacity-50"
+                                className="w-full rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:opacity-50"
                             >
                                 Atualizar Senha
                             </button>
@@ -116,9 +116,9 @@ const Settings: React.FC = () => {
                 </div>
             </div>
 
-            <div className="mt-6 rounded-2xl border border-[#e7e5e4] bg-white p-6 opacity-60 md:p-8">
-                <h2 className="mb-2 text-base font-semibold text-[#1c1917]">Preferências Gerais</h2>
-                <p className="text-sm text-[#78716c]">Opções de idioma e notificações estarão disponíveis em breve.</p>
+            <div className="mt-6 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 opacity-60 md:p-8">
+                <h2 className="mb-2 text-base font-semibold text-[var(--eixo-text)]">Preferências Gerais</h2>
+                <p className="text-sm text-[var(--eixo-text-muted)]">Opções de idioma e notificações estarão disponíveis em breve.</p>
             </div>
         </div>
     );

@@ -96,9 +96,9 @@ function isVencida(t: FinancialTransaction): boolean {
 }
 
 function statusBadge(t: FinancialTransaction) {
-    if (t.status === 'PAGO') return { label: 'Pago', cls: 'bg-[#edf4eb] text-[#16a34a]' };
-    if (isVencida(t)) return { label: 'Vencido', cls: 'bg-[#fef2f2] text-[#8c4d39]' };
-    return { label: 'Pendente', cls: 'bg-[#faeee8] text-[#7a2a14]' };
+    if (t.status === 'PAGO') return { label: 'Pago', cls: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' };
+    if (isVencida(t)) return { label: 'Vencido', cls: 'bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]' };
+    return { label: 'Pendente', cls: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite-dark)]' };
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -434,10 +434,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     // ── Estilos recorrentes ───────────────────────────────────────────────────
 
     const anos = [hoje.getFullYear(), hoje.getFullYear() - 1, hoje.getFullYear() - 2];
-    const activeTabCls = 'bg-[#a8442a] text-white font-bold';
-    const inactiveTabCls = 'bg-[#f5f5f4] text-[#78716c] hover:bg-[#f5f5f4]';
-    const inputCls = 'mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#1c1917] focus:border-[#a8442a] focus:outline-none';
-    const labelCls = 'block text-sm font-medium text-[#44403c]';
+    const activeTabCls = 'bg-[var(--eixo-green)] text-white font-bold';
+    const inactiveTabCls = 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]';
+    const inputCls = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none';
+    const labelCls = 'block text-sm font-medium text-[var(--eixo-text)]';
 
     const getCatLabel = (t: FinancialTransaction) =>
         t.accountCategoryName || CATEGORIA_LABELS[t.categoria] || t.categoria;
@@ -452,7 +452,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         <button
             type="button"
             onClick={onClick}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${active ? 'bg-[#a8442a] text-white' : 'bg-[#f5f5f4] text-[#78716c] hover:bg-[#f5f5f4]'}`}
+            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${active ? 'bg-[var(--eixo-green)] text-white' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'}`}
         >
             {children}
         </button>
@@ -470,25 +470,25 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         const totalVencido = lista.filter(isVencida).reduce((s, t) => s + t.valor, 0);
         const totalAVencer = lista.filter(t => !isVencida(t)).reduce((s, t) => s + t.valor, 0);
 
-        const corTotal = tipo === 'pagar' ? 'text-[#8c4d39]' : 'text-[#16a34a]';
+        const corTotal = tipo === 'pagar' ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-success)]';
 
         return (
             <>
                 {/* Cards de resumo */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-[#e7e5e4] bg-white p-5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">
+                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">
                             Total {tipo === 'pagar' ? 'a pagar' : 'a receber'}
                         </p>
                         <p className={`mt-2 font-brand text-2xl font-black ${corTotal}`}>{formatCurrency(totalPendente)}</p>
                     </div>
-                    <div className="rounded-2xl border border-[#d9b6a8] bg-[#fef2f2] p-5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#8c4d39]">Vencidos</p>
-                        <p className="mt-2 font-brand text-2xl font-black text-[#8c4d39]">{formatCurrency(totalVencido)}</p>
+                    <div className="rounded-2xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] p-5">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-danger)]">Vencidos</p>
+                        <p className="mt-2 font-brand text-2xl font-black text-[var(--eixo-danger)]">{formatCurrency(totalVencido)}</p>
                     </div>
-                    <div className="rounded-2xl border border-[#f0d5ca] bg-[#faeee8] p-5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#7a2a14]">A vencer</p>
-                        <p className="mt-2 font-brand text-2xl font-black text-[#7a2a14]">{formatCurrency(totalAVencer)}</p>
+                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] p-5">
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite-dark)]">A vencer</p>
+                        <p className="mt-2 font-brand text-2xl font-black text-[var(--eixo-graphite-dark)]">{formatCurrency(totalAVencer)}</p>
                     </div>
                 </div>
 
@@ -504,10 +504,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                 </div>
 
                 {/* Tabela */}
-                <div className="overflow-hidden rounded-2xl border border-[#e7e5e4] bg-white">
+                <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-[#78716c]">
-                            <thead className="bg-[#f5f5f4] text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">
+                        <table className="w-full text-left text-sm text-[var(--eixo-text-muted)]">
+                            <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                                 <tr>
                                     <th className="px-4 py-2.5">Vencimento</th>
                                     <th className="px-4 py-2.5">Categoria</th>
@@ -519,11 +519,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             </thead>
                             <tbody>
                                 {pendingLoading ? (
-                                    <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-[#78716c]">Carregando...</td></tr>
+                                    <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-[var(--eixo-text-muted)]">Carregando...</td></tr>
                                 ) : filtrada.length === 0 ? (
                                     <tr>
                                         <td colSpan={6} className="px-4 py-10 text-center">
-                                            <p className="text-base font-semibold text-[#1c1917]">
+                                            <p className="text-base font-semibold text-[var(--eixo-text)]">
                                                 {lista.length === 0
                                                     ? `Nenhuma conta ${tipo === 'pagar' ? 'a pagar' : 'a receber'} em aberto`
                                                     : 'Nenhum resultado para este filtro'}
@@ -541,13 +541,13 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                         .map(t => {
                                             const badge = statusBadge(t);
                                             return (
-                                                <tr key={t.id} className="border-b border-[#e7e5e4] bg-white hover:bg-white">
-                                                    <td className={`px-4 py-3 font-medium ${isVencida(t) ? 'text-[#8c4d39]' : 'text-[#1c1917]'}`}>
+                                                <tr key={t.id} className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface)]">
+                                                    <td className={`px-4 py-3 font-medium ${isVencida(t) ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-text)]'}`}>
                                                         {formatDate(t.vencimento)}
                                                     </td>
-                                                    <td className="px-4 py-3 text-[#1c1917]">{getCatLabel(t)}</td>
-                                                    <td className="px-4 py-3 text-[#78716c]">{t.descricao || '—'}</td>
-                                                    <td className={`px-4 py-3 text-right font-semibold ${tipo === 'pagar' ? 'text-[#8c4d39]' : 'text-[#16a34a]'}`}>
+                                                    <td className="px-4 py-3 text-[var(--eixo-text)]">{getCatLabel(t)}</td>
+                                                    <td className="px-4 py-3 text-[var(--eixo-text-muted)]">{t.descricao || '—'}</td>
+                                                    <td className={`px-4 py-3 text-right font-semibold ${tipo === 'pagar' ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-success)]'}`}>
                                                         {formatCurrency(t.valor)}
                                                     </td>
                                                     <td className="px-4 py-3 text-center">
@@ -560,7 +560,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                                             type="button"
                                                             disabled={markingPaid === t.id}
                                                             onClick={() => handleMarkPaid(t.id)}
-                                                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#b2c9ae] bg-[#edf4eb] px-3 py-1 text-xs font-semibold text-[#16a34a] transition-colors hover:bg-[#d9eddb] disabled:opacity-50"
+                                                            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--eixo-border-strong)] bg-[var(--eixo-green-soft)] px-3 py-1 text-xs font-semibold text-[var(--eixo-success)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50"
                                                         >
                                                             <CheckIcon className="w-3.5 h-3.5" />
                                                             {markingPaid === t.id ? '...' : 'Pago'}
@@ -583,20 +583,20 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     return (
         <div className="space-y-4">
             {/* Header */}
-            <div className="rounded-2xl border border-[#e7e5e4] bg-white px-6 py-5">
+            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             {farmName || 'Fazenda'}
                         </div>
-                        <h2 className="font-brand text-2xl font-extrabold leading-tight text-[#1c1917]">Financeiro</h2>
+                        <h2 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Financeiro</h2>
                     </div>
                     {activeTab === 'lancamentos' && (
                         <button
                             type="button"
                             onClick={() => { resetForm(); setModalOpen(true); }}
-                            className="flex h-10 items-center rounded-[10px] bg-[#a8442a] px-[14px] font-brand font-bold text-white shadow-md transition-colors hover:bg-[#933a22]"
+                            className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-brand font-bold text-white shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             <PlusIcon className="h-[18px] w-[18px]" />
                             <span className="ml-2">Novo lançamento</span>
@@ -611,7 +611,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                 setFormStatus('PENDENTE');
                                 setModalOpen(true);
                             }}
-                            className="flex h-10 items-center rounded-[10px] bg-[#a8442a] px-[14px] font-brand font-bold text-white shadow-md transition-colors hover:bg-[#933a22]"
+                            className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-brand font-bold text-white shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             <PlusIcon className="h-[18px] w-[18px]" />
                             <span className="ml-2">Nova conta</span>
@@ -621,7 +621,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                         <button
                             type="button"
                             onClick={() => { setPcFormName(''); setPcFormGroup(''); setPcFormNewGroup(''); setPcFormType('SAIDA'); setPcFormError(null); setPcModalOpen(true); }}
-                            className="flex h-10 items-center rounded-[10px] bg-[#a8442a] px-[14px] font-brand font-bold text-white shadow-md transition-colors hover:bg-[#933a22]"
+                            className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-brand font-bold text-white shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             <PlusIcon className="h-[18px] w-[18px]" />
                             <span className="ml-2">Nova categoria</span>
@@ -645,7 +645,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             title={isTabLocked ? 'Disponível nos planos pagos' : undefined}
                             className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold font-brand transition-colors ${
                                 isTabLocked
-                                    ? 'bg-[#f5f5f4] text-[#b0a090] cursor-not-allowed opacity-70'
+                                    ? 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-soft)] cursor-not-allowed opacity-70'
                                     : activeTab === tab ? activeTabCls : inactiveTabCls
                             }`}
                         >
@@ -661,40 +661,40 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                 <>
                     <div className="flex flex-wrap gap-3">
                         <select value={selectedMes} onChange={e => setSelectedMes(Number(e.target.value))}
-                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] focus:border-[#a8442a] focus:outline-none">
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
                             {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
                         </select>
                         <select value={selectedAno} onChange={e => setSelectedAno(Number(e.target.value))}
-                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] focus:border-[#a8442a] focus:outline-none">
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
                             {anos.map(a => <option key={a} value={a}>{a}</option>)}
                         </select>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                        <div className="rounded-2xl border border-[#e7e5e4] bg-white p-5 shadow-sm">
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">Entradas</p>
-                            <p className="mt-2 font-brand text-3xl font-black text-[#16a34a]">{formatCurrency(summary.entradas)}</p>
+                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Entradas</p>
+                            <p className="mt-2 font-brand text-3xl font-black text-[var(--eixo-success)]">{formatCurrency(summary.entradas)}</p>
                         </div>
-                        <div className="rounded-2xl border border-[#e7e5e4] bg-white p-5 shadow-sm">
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">Saídas</p>
-                            <p className="mt-2 font-brand text-3xl font-black text-[#8c4d39]">{formatCurrency(summary.saidas)}</p>
+                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Saídas</p>
+                            <p className="mt-2 font-brand text-3xl font-black text-[var(--eixo-danger)]">{formatCurrency(summary.saidas)}</p>
                         </div>
-                        <div className="rounded-2xl border border-[#e7e5e4] bg-white p-5 shadow-sm">
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#78716c]">Saldo</p>
-                            <p className={`mt-2 font-brand text-3xl font-black ${summary.saldo >= 0 ? 'text-[#16a34a]' : 'text-[#8c4d39]'}`}>
+                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Saldo</p>
+                            <p className={`mt-2 font-brand text-3xl font-black ${summary.saldo >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                                 {formatCurrency(summary.saldo)}
                             </p>
                         </div>
                     </div>
 
                     {loadError && (
-                        <div className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-4 py-3 text-sm text-[#8c4d39]">{loadError}</div>
+                        <div className="rounded-xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]">{loadError}</div>
                     )}
 
-                    <div className="overflow-hidden rounded-2xl border border-[#e7e5e4] bg-white shadow-sm">
+                    <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm text-[#78716c]">
-                                <thead className="bg-[#f5f5f4] text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">
+                            <table className="w-full text-left text-sm text-[var(--eixo-text-muted)]">
+                                <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                                     <tr>
                                         <th className="px-4 py-2.5">Data</th>
                                         <th className="px-4 py-2.5">Tipo</th>
@@ -707,36 +707,36 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                 </thead>
                                 <tbody>
                                     {isLoading ? (
-                                        <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-[#78716c]">Carregando...</td></tr>
+                                        <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-[var(--eixo-text-muted)]">Carregando...</td></tr>
                                     ) : transactions.length === 0 ? (
                                         <tr>
                                             <td colSpan={7} className="px-4 py-10 text-center">
-                                                <p className="text-base font-semibold text-[#1c1917]">Nenhum lançamento neste período</p>
-                                                <p className="mt-1 text-sm text-[#78716c]">Use o botão "Novo lançamento" para começar.</p>
+                                                <p className="text-base font-semibold text-[var(--eixo-text)]">Nenhum lançamento neste período</p>
+                                                <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Use o botão "Novo lançamento" para começar.</p>
                                             </td>
                                         </tr>
                                     ) : (
                                         transactions.map(t => (
-                                            <tr key={t.id} className="border-b border-[#e7e5e4] bg-white hover:bg-white">
+                                            <tr key={t.id} className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface)]">
                                                 <td className="px-4 py-3">{formatDate(t.data)}</td>
                                                 <td className="px-4 py-3">
-                                                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${t.type === 'ENTRADA' ? 'bg-[#edf4eb] text-[#16a34a]' : 'bg-[#fef2f2] text-[#8c4d39]'}`}>
+                                                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${t.type === 'ENTRADA' ? 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' : 'bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]'}`}>
                                                         {t.type === 'ENTRADA' ? 'Entrada' : 'Saída'}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 font-medium text-[#1c1917]">{getCatLabel(t)}</td>
-                                                <td className="px-4 py-3 text-[#78716c]">{t.accountCategoryGroup || '—'}</td>
-                                                <td className="px-4 py-3 text-[#78716c]">{t.descricao || '—'}</td>
-                                                <td className={`px-4 py-3 text-right font-semibold ${t.type === 'ENTRADA' ? 'text-[#16a34a]' : 'text-[#8c4d39]'}`}>
+                                                <td className="px-4 py-3 font-medium text-[var(--eixo-text)]">{getCatLabel(t)}</td>
+                                                <td className="px-4 py-3 text-[var(--eixo-text-muted)]">{t.accountCategoryGroup || '—'}</td>
+                                                <td className="px-4 py-3 text-[var(--eixo-text-muted)]">{t.descricao || '—'}</td>
+                                                <td className={`px-4 py-3 text-right font-semibold ${t.type === 'ENTRADA' ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                                                     {t.type === 'SAIDA' ? '− ' : '+ '}{formatCurrency(t.valor)}
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
                                                     {(t.herdEventId || t.sanitaryRecordId) ? (
-                                                        <span className="inline-flex items-center gap-1 text-xs text-[#78716c]"><LockIcon /> auto</span>
+                                                        <span className="inline-flex items-center gap-1 text-xs text-[var(--eixo-text-muted)]"><LockIcon /> auto</span>
                                                     ) : (
                                                         <button type="button"
                                                             onClick={() => { setDeleteError(null); setDeleteConfirmId(t.id); }}
-                                                            className="rounded-lg border border-[#d9b6a8] bg-[#fef2f2] px-3 py-1 text-xs font-semibold text-[#8c4d39] hover:bg-[#f5ddd4]">
+                                                            className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)]">
                                                             Excluir
                                                         </button>
                                                     )}
@@ -765,18 +765,18 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                         <select
                             value={selectedAnoAnual}
                             onChange={e => setSelectedAnoAnual(Number(e.target.value))}
-                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] focus:border-[#a8442a] focus:outline-none"
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                         >
                             {anos.map(a => <option key={a} value={a}>{a}</option>)}
                         </select>
-                        {annualLoading && <span className="text-sm text-[#78716c]">Carregando...</span>}
+                        {annualLoading && <span className="text-sm text-[var(--eixo-text-muted)]">Carregando...</span>}
                     </div>
 
                     {/* Tabela mensal */}
-                    <div className="overflow-hidden rounded-2xl border border-[#e7e5e4] bg-white">
+                    <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-[#78716c]">
-                                <thead className="bg-[#f5f5f4] text-[10px] font-bold uppercase tracking-[0.12em] text-[#78716c]">
+                            <table className="w-full text-sm text-[var(--eixo-text-muted)]">
+                                <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                                     <tr>
                                         <th className="px-5 py-3 text-left">Mês</th>
                                         <th className="px-5 py-3 text-right">Entradas</th>
@@ -789,18 +789,18 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                     {fluxoMensal.map((m, i) => {
                                         const temDados = m.entradas > 0 || m.saidas > 0;
                                         return (
-                                            <tr key={i} className={`border-b border-[#e7e5e4] transition-colors ${temDados ? 'bg-white hover:bg-white' : 'bg-[#f5f5f4]'}`}>
-                                                <td className={`px-5 py-3 font-semibold ${temDados ? 'text-[#1c1917]' : 'text-[#b0a090]'}`}>{m.mes}</td>
-                                                <td className="px-5 py-3 text-right text-[#16a34a]">
-                                                    {m.entradas > 0 ? formatCurrency(m.entradas) : <span className="text-[#c4b8a5]">—</span>}
+                                            <tr key={i} className={`border-b border-[var(--eixo-border)] transition-colors ${temDados ? 'bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface)]' : 'bg-[var(--eixo-surface-soft)]'}`}>
+                                                <td className={`px-5 py-3 font-semibold ${temDados ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-soft)]'}`}>{m.mes}</td>
+                                                <td className="px-5 py-3 text-right text-[var(--eixo-success)]">
+                                                    {m.entradas > 0 ? formatCurrency(m.entradas) : <span className="text-[var(--eixo-text-soft)]">—</span>}
                                                 </td>
-                                                <td className="px-5 py-3 text-right text-[#8c4d39]">
-                                                    {m.saidas > 0 ? formatCurrency(m.saidas) : <span className="text-[#c4b8a5]">—</span>}
+                                                <td className="px-5 py-3 text-right text-[var(--eixo-danger)]">
+                                                    {m.saidas > 0 ? formatCurrency(m.saidas) : <span className="text-[var(--eixo-text-soft)]">—</span>}
                                                 </td>
-                                                <td className={`px-5 py-3 text-right font-semibold ${m.resultado > 0 ? 'text-[#16a34a]' : m.resultado < 0 ? 'text-[#8c4d39]' : 'text-[#b0a090]'}`}>
-                                                    {temDados ? formatCurrency(m.resultado) : <span className="text-[#c4b8a5]">—</span>}
+                                                <td className={`px-5 py-3 text-right font-semibold ${m.resultado > 0 ? 'text-[var(--eixo-success)]' : m.resultado < 0 ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-text-soft)]'}`}>
+                                                    {temDados ? formatCurrency(m.resultado) : <span className="text-[var(--eixo-text-soft)]">—</span>}
                                                 </td>
-                                                <td className={`px-5 py-3 text-right font-bold ${m.acumulado > 0 ? 'text-[#16a34a]' : m.acumulado < 0 ? 'text-[#8c4d39]' : 'text-[#b0a090]'}`}>
+                                                <td className={`px-5 py-3 text-right font-bold ${m.acumulado > 0 ? 'text-[var(--eixo-success)]' : m.acumulado < 0 ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-text-soft)]'}`}>
                                                     {formatCurrency(m.acumulado)}
                                                 </td>
                                             </tr>
@@ -808,11 +808,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                     })}
                                 </tbody>
                                 <tfoot>
-                                    <tr className="border-t-2 border-[#e7e5e4] bg-[#f5f5f4]">
-                                        <td className="px-5 py-3 text-xs font-bold uppercase tracking-[0.12em] text-[#78716c]">Total {selectedAnoAnual}</td>
-                                        <td className="px-5 py-3 text-right font-bold text-[#16a34a]">{formatCurrency(fluxoTotais.entradas)}</td>
-                                        <td className="px-5 py-3 text-right font-bold text-[#8c4d39]">{formatCurrency(fluxoTotais.saidas)}</td>
-                                        <td className={`px-5 py-3 text-right font-black ${fluxoTotais.resultado >= 0 ? 'text-[#16a34a]' : 'text-[#8c4d39]'}`}>
+                                    <tr className="border-t-2 border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)]">
+                                        <td className="px-5 py-3 text-xs font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Total {selectedAnoAnual}</td>
+                                        <td className="px-5 py-3 text-right font-bold text-[var(--eixo-success)]">{formatCurrency(fluxoTotais.entradas)}</td>
+                                        <td className="px-5 py-3 text-right font-bold text-[var(--eixo-danger)]">{formatCurrency(fluxoTotais.saidas)}</td>
+                                        <td className={`px-5 py-3 text-right font-black ${fluxoTotais.resultado >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                                             {formatCurrency(fluxoTotais.resultado)}
                                         </td>
                                         <td className="px-5 py-3" />
@@ -832,57 +832,57 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                         <select
                             value={selectedAnoAnual}
                             onChange={e => setSelectedAnoAnual(Number(e.target.value))}
-                            className="rounded-xl border border-[#e7e5e4] bg-white px-3 py-2 text-sm text-[#44403c] focus:border-[#a8442a] focus:outline-none"
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                         >
                             {anos.map(a => <option key={a} value={a}>{a}</option>)}
                         </select>
-                        {annualLoading && <span className="text-sm text-[#78716c]">Carregando...</span>}
+                        {annualLoading && <span className="text-sm text-[var(--eixo-text-muted)]">Carregando...</span>}
                     </div>
 
                     {annualTransactions.length === 0 && !annualLoading ? (
-                        <div className="rounded-2xl border border-[#e7e5e4] bg-white p-10 text-center">
-                            <p className="font-semibold text-[#1c1917]">Sem lançamentos em {selectedAnoAnual}</p>
-                            <p className="mt-1 text-sm text-[#78716c]">Registre entradas e saídas na aba Lançamentos.</p>
+                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-10 text-center">
+                            <p className="font-semibold text-[var(--eixo-text)]">Sem lançamentos em {selectedAnoAnual}</p>
+                            <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Registre entradas e saídas na aba Lançamentos.</p>
                         </div>
                     ) : (
-                        <div className="overflow-hidden rounded-2xl border border-[#e7e5e4] bg-white">
+                        <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                             {/* Receitas */}
-                            <div className="border-b-2 border-[#e7e5e4] bg-[#edf4eb] px-5 py-3">
-                                <span className="text-xs font-bold uppercase tracking-[0.14em] text-[#16a34a]">Receitas Operacionais</span>
+                            <div className="border-b-2 border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-5 py-3">
+                                <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--eixo-success)]">Receitas Operacionais</span>
                             </div>
                             {dreData.receitas.map(([grp, val]) => (
-                                <div key={grp} className="flex items-center justify-between border-b border-[#e7e5e4] px-5 py-3 hover:bg-white">
-                                    <span className="text-sm text-[#44403c]">{grp}</span>
-                                    <span className="font-semibold text-[#16a34a]">{formatCurrency(val)}</span>
+                                <div key={grp} className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-3 hover:bg-[var(--eixo-surface)]">
+                                    <span className="text-sm text-[var(--eixo-text)]">{grp}</span>
+                                    <span className="font-semibold text-[var(--eixo-success)]">{formatCurrency(val)}</span>
                                 </div>
                             ))}
-                            <div className="flex items-center justify-between border-b-2 border-[#e7e5e4] bg-[#f0f7ef] px-5 py-3">
-                                <span className="font-bold text-[#1c1917]">Total de Receitas</span>
-                                <span className="font-black text-[#16a34a]">{formatCurrency(dreData.totalReceitas)}</span>
+                            <div className="flex items-center justify-between border-b-2 border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-5 py-3">
+                                <span className="font-bold text-[var(--eixo-text)]">Total de Receitas</span>
+                                <span className="font-black text-[var(--eixo-success)]">{formatCurrency(dreData.totalReceitas)}</span>
                             </div>
 
                             {/* Despesas */}
-                            <div className="border-b border-[#e7e5e4] bg-[#fef2f2] px-5 py-3 mt-1">
-                                <span className="text-xs font-bold uppercase tracking-[0.14em] text-[#8c4d39]">Despesas Operacionais</span>
+                            <div className="mt-1 border-b border-[var(--eixo-border)] bg-[rgba(184,66,50,0.08)] px-5 py-3">
+                                <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--eixo-danger)]">Despesas Operacionais</span>
                             </div>
                             {dreData.despesas.map(([grp, val]) => (
-                                <div key={grp} className="flex items-center justify-between border-b border-[#e7e5e4] px-5 py-3 hover:bg-white">
-                                    <span className="text-sm text-[#44403c]">{grp}</span>
-                                    <span className="font-semibold text-[#8c4d39]">{formatCurrency(val)}</span>
+                                <div key={grp} className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-3 hover:bg-[var(--eixo-surface)]">
+                                    <span className="text-sm text-[var(--eixo-text)]">{grp}</span>
+                                    <span className="font-semibold text-[var(--eixo-danger)]">{formatCurrency(val)}</span>
                                 </div>
                             ))}
-                            <div className="flex items-center justify-between border-b-2 border-[#e7e5e4] bg-[#fdf0ec] px-5 py-3">
-                                <span className="font-bold text-[#1c1917]">Total de Despesas</span>
-                                <span className="font-black text-[#8c4d39]">{formatCurrency(dreData.totalDespesas)}</span>
+                            <div className="flex items-center justify-between border-b-2 border-[var(--eixo-border)] bg-[rgba(184,66,50,0.08)] px-5 py-3">
+                                <span className="font-bold text-[var(--eixo-text)]">Total de Despesas</span>
+                                <span className="font-black text-[var(--eixo-danger)]">{formatCurrency(dreData.totalDespesas)}</span>
                             </div>
 
                             {/* Resultado */}
-                            <div className={`flex items-center justify-between px-5 py-5 ${dreData.resultado >= 0 ? 'bg-[#edf4eb]' : 'bg-[#fef2f2]'}`}>
+                            <div className={`flex items-center justify-between px-5 py-5 ${dreData.resultado >= 0 ? 'bg-[var(--eixo-green-soft)]' : 'bg-[rgba(184,66,50,0.08)]'}`}>
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#78716c]">Resultado do Exercício</p>
-                                    <p className="mt-1 text-lg font-extrabold text-[#1c1917]">{selectedAnoAnual}</p>
+                                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Resultado do Exercício</p>
+                                    <p className="mt-1 text-lg font-extrabold text-[var(--eixo-text)]">{selectedAnoAnual}</p>
                                 </div>
-                                <span className={`font-brand text-3xl font-black ${dreData.resultado >= 0 ? 'text-[#16a34a]' : 'text-[#8c4d39]'}`}>
+                                <span className={`font-brand text-3xl font-black ${dreData.resultado >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                                     {formatCurrency(dreData.resultado)}
                                 </span>
                             </div>
@@ -895,74 +895,74 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             {activeTab === 'plano_contas' && (
                 <div className="space-y-5">
                     {catLoading ? (
-                        <div className="rounded-2xl border border-[#e7e5e4] bg-white p-10 text-center text-sm text-[#78716c]">Carregando categorias...</div>
+                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-10 text-center text-sm text-[var(--eixo-text-muted)]">Carregando categorias...</div>
                     ) : (
                         (['ENTRADA', 'SAIDA'] as AccountCategoryType[]).map(tipo => {
                             const catsTipo = categories.filter(c => c.type === tipo);
                             if (catsTipo.length === 0) return null;
                             const grouped = groupByGroup(catsTipo);
                             return (
-                                <div key={tipo} className="overflow-hidden rounded-2xl border border-[#e7e5e4] bg-white shadow-sm">
-                                    <div className={`flex items-center gap-2 border-b border-[#e7e5e4] px-5 py-3 ${tipo === 'ENTRADA' ? 'bg-[#edf4eb]' : 'bg-[#fef2f2]'}`}>
-                                        <span className={`h-2 w-2 rounded-full ${tipo === 'ENTRADA' ? 'bg-[#16a34a]' : 'bg-[#8c4d39]'}`} />
-                                        <span className={`font-brand text-sm font-bold ${tipo === 'ENTRADA' ? 'text-[#16a34a]' : 'text-[#8c4d39]'}`}>
+                                <div key={tipo} className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
+                                    <div className={`flex items-center gap-2 border-b border-[var(--eixo-border)] px-5 py-3 ${tipo === 'ENTRADA' ? 'bg-[var(--eixo-green-soft)]' : 'bg-[rgba(184,66,50,0.08)]'}`}>
+                                        <span className={`h-2 w-2 rounded-full ${tipo === 'ENTRADA' ? 'bg-[var(--eixo-success)]' : 'bg-[var(--eixo-danger)]'}`} />
+                                        <span className={`font-brand text-sm font-bold ${tipo === 'ENTRADA' ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                                             {tipo === 'ENTRADA' ? 'Entradas' : 'Saídas'}
                                         </span>
-                                        <span className="ml-1 text-xs text-[#78716c]">({catsTipo.length} categorias)</span>
+                                        <span className="ml-1 text-xs text-[var(--eixo-text-muted)]">({catsTipo.length} categorias)</span>
                                     </div>
                                     {Array.from(grouped.entries()).map(([grp, cats]) => (
                                         <div key={grp}>
-                                            <div className="border-b border-[#e7e5e4] bg-[#f5f5f4] px-5 py-1.5">
-                                                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#78716c]">{grp}</span>
+                                            <div className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-1.5">
+                                                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">{grp}</span>
                                             </div>
                                             {cats.map((cat, idx) => (
                                                 <div key={cat.id}
-                                                    className={`flex items-center gap-3 px-5 py-3 ${idx < cats.length - 1 ? 'border-b border-[#e7e5e4]' : ''} ${!cat.isActive ? 'opacity-50' : ''}`}
+                                                    className={`flex items-center gap-3 px-5 py-3 ${idx < cats.length - 1 ? 'border-b border-[var(--eixo-border)]' : ''} ${!cat.isActive ? 'opacity-50' : ''}`}
                                                 >
                                                     {cat.isSystem ? (
-                                                        <span className="flex-shrink-0 text-[#78716c]"><LockIcon /></span>
+                                                        <span className="flex-shrink-0 text-[var(--eixo-text-muted)]"><LockIcon /></span>
                                                     ) : (
                                                         <span className="flex-shrink-0 h-3.5 w-3.5" />
                                                     )}
                                                     {editingCatId === cat.id ? (
                                                         <div className="flex flex-1 flex-wrap items-center gap-2">
                                                             <input type="text" value={editingCatName} onChange={e => setEditingCatName(e.target.value)}
-                                                                className="w-40 rounded-lg border border-[#a8442a] bg-white px-2 py-1 text-sm focus:outline-none" />
+                                                                className="w-40 rounded-lg border border-[var(--eixo-green)] bg-[var(--eixo-surface)] px-2 py-1 text-sm focus:outline-none" />
                                                             <input type="text" value={editingCatGroup} onChange={e => setEditingCatGroup(e.target.value)} placeholder="Grupo"
-                                                                className="w-32 rounded-lg border border-[#e7e5e4] bg-white px-2 py-1 text-sm focus:outline-none" />
+                                                                className="w-32 rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1 text-sm focus:outline-none" />
                                                             <button type="button" disabled={editCatSaving} onClick={() => saveEditCat(cat)}
-                                                                className="rounded-lg bg-[#a8442a] px-3 py-1 text-xs font-semibold text-white hover:bg-[#933a22] disabled:opacity-50">
+                                                                className="rounded-lg bg-[var(--eixo-green)] px-3 py-1 text-xs font-semibold text-white hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">
                                                                 {editCatSaving ? 'Salvando...' : 'Salvar'}
                                                             </button>
                                                             <button type="button" onClick={cancelEditCat}
-                                                                className="rounded-lg border border-[#e7e5e4] px-3 py-1 text-xs font-semibold text-[#44403c] hover:bg-[#f5f5f4]">
+                                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
                                                                 Cancelar
                                                             </button>
                                                         </div>
                                                     ) : (
                                                         <div className="flex flex-1 items-center gap-2">
-                                                            <span className="text-sm font-medium text-[#1c1917]">{cat.name}</span>
+                                                            <span className="text-sm font-medium text-[var(--eixo-text)]">{cat.name}</span>
                                                             {!cat.isActive && (
-                                                                <span className="rounded-full bg-[#f5f5f4] px-2 py-0.5 text-[10px] font-semibold text-[#78716c]">inativa</span>
+                                                                <span className="rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--eixo-text-muted)]">inativa</span>
                                                             )}
                                                         </div>
                                                     )}
                                                     {!cat.isSystem && editingCatId !== cat.id && (
                                                         <div className="ml-auto flex items-center gap-2">
                                                             <button type="button" onClick={() => startEditCat(cat)}
-                                                                className="rounded-lg border border-[#e7e5e4] px-3 py-1 text-xs font-semibold text-[#44403c] hover:bg-[#f5f5f4]">Editar</button>
+                                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">Editar</button>
                                                             <button type="button" onClick={() => toggleCatActive(cat)}
-                                                                className="rounded-lg border border-[#e7e5e4] px-3 py-1 text-xs font-semibold text-[#44403c] hover:bg-[#f5f5f4]">
+                                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
                                                                 {cat.isActive ? 'Desativar' : 'Ativar'}
                                                             </button>
                                                             <button type="button" onClick={() => { setDeleteCatError(null); setDeleteCatConfirmId(cat.id); }}
-                                                                className="rounded-lg border border-[#d9b6a8] bg-[#fef2f2] px-3 py-1 text-xs font-semibold text-[#8c4d39] hover:bg-[#f5ddd4]">
+                                                                className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)]">
                                                                 Excluir
                                                             </button>
                                                         </div>
                                                     )}
                                                     {cat.isSystem && editingCatId !== cat.id && (
-                                                        <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-[#78716c]">Sistema</span>
+                                                        <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Sistema</span>
                                                     )}
                                                 </div>
                                             ))}
@@ -978,10 +978,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             {/* ── Modal: Novo lançamento ────────────────────────────────────────── */}
             {modalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setModalOpen(false)}>
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <header className="flex items-center justify-between border-b border-[#e7e5e4] p-5">
-                            <h3 className="font-brand text-lg font-bold text-[#1c1917]">Novo lançamento</h3>
-                            <button type="button" onClick={() => setModalOpen(false)} className="rounded-full p-2 text-[#78716c] hover:bg-[#f5f5f4]">✕</button>
+                    <div className="w-full max-w-md rounded-2xl bg-[var(--eixo-surface)] shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <header className="flex items-center justify-between border-b border-[var(--eixo-border)] p-5">
+                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Novo lançamento</h3>
+                            <button type="button" onClick={() => setModalOpen(false)} className="rounded-full p-2 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">✕</button>
                         </header>
                         <form onSubmit={handleSave} className="space-y-4 p-6">
                             {/* Tipo */}
@@ -996,9 +996,9 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             <div>
                                 <label className={labelCls}>Categoria</label>
                                 {catLoading ? (
-                                    <p className="mt-1 text-sm text-[#78716c]">Carregando...</p>
+                                    <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Carregando...</p>
                                 ) : filteredCategories.length === 0 ? (
-                                    <p className="mt-1 text-sm text-[#8c4d39]">Nenhuma categoria ativa. Crie no Plano de Contas.</p>
+                                    <p className="mt-1 text-sm text-[var(--eixo-danger)]">Nenhuma categoria ativa. Crie no Plano de Contas.</p>
                                 ) : (
                                     <select value={formCategoryId} onChange={e => setFormCategoryId(e.target.value)} className={inputCls}>
                                         {Array.from(groupByGroup(filteredCategories).entries()).map(([grp, cats]) => (
@@ -1036,17 +1036,17 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             )}
                             {/* Descrição */}
                             <div>
-                                <label className={labelCls}>Descrição <span className="text-[#78716c]">(opcional)</span></label>
+                                <label className={labelCls}>Descrição <span className="text-[var(--eixo-text-muted)]">(opcional)</span></label>
                                 <input type="text" value={formDescricao} onChange={e => setFormDescricao(e.target.value)} className={inputCls} />
                             </div>
-                            {formError && <p className="text-sm text-[#8c4d39]">{formError}</p>}
+                            {formError && <p className="text-sm text-[var(--eixo-danger)]">{formError}</p>}
                             <div className="flex justify-end gap-3">
                                 <button type="button" onClick={() => setModalOpen(false)}
-                                    className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#44403c] hover:bg-[#f5f5f4]">
+                                    className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
                                     Cancelar
                                 </button>
                                 <button type="submit" disabled={isSaving || filteredCategories.length === 0}
-                                    className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#933a22] disabled:opacity-50">
+                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">
                                     {isSaving ? 'Salvando...' : 'Salvar'}
                                 </button>
                             </div>
@@ -1058,18 +1058,18 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             {/* ── Modal: Confirmar exclusão de lançamento ───────────────────────── */}
             {deleteConfirmId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                    <div className="w-full max-w-md rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
                         <div className="p-6">
-                            <h3 className="font-brand text-lg font-bold text-[#1c1917]">Excluir lançamento</h3>
-                            <p className="mt-2 text-sm text-[#78716c]">Tem certeza? Essa ação não pode ser desfeita.</p>
-                            {deleteError && <p className="mt-3 text-sm text-[#8c4d39]">{deleteError}</p>}
+                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Excluir lançamento</h3>
+                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Tem certeza? Essa ação não pode ser desfeita.</p>
+                            {deleteError && <p className="mt-3 text-sm text-[var(--eixo-danger)]">{deleteError}</p>}
                             <div className="mt-6 flex justify-end gap-3">
                                 <button type="button" onClick={() => setDeleteConfirmId(null)} disabled={isDeleting}
-                                    className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#44403c] hover:bg-[#f5f5f4] disabled:opacity-50">
+                                    className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50">
                                     Cancelar
                                 </button>
                                 <button type="button" onClick={handleDeleteConfirm} disabled={isDeleting}
-                                    className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-4 py-2 text-sm font-semibold text-[#8c4d39] hover:bg-[#f5ddd4] disabled:opacity-50">
+                                    className="rounded-xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-4 py-2 text-sm font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)] disabled:opacity-50">
                                     {isDeleting ? 'Excluindo...' : 'Excluir'}
                                 </button>
                             </div>
@@ -1081,10 +1081,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             {/* ── Modal: Nova categoria (Plano de Contas) ───────────────────────── */}
             {pcModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPcModalOpen(false)}>
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <header className="flex items-center justify-between border-b border-[#e7e5e4] p-5">
-                            <h3 className="font-brand text-lg font-bold text-[#1c1917]">Nova categoria</h3>
-                            <button type="button" onClick={() => setPcModalOpen(false)} className="rounded-full p-2 text-[#78716c] hover:bg-[#f5f5f4]">✕</button>
+                    <div className="w-full max-w-md rounded-2xl bg-[var(--eixo-surface)] shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <header className="flex items-center justify-between border-b border-[var(--eixo-border)] p-5">
+                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Nova categoria</h3>
+                            <button type="button" onClick={() => setPcModalOpen(false)} className="rounded-full p-2 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">✕</button>
                         </header>
                         <form onSubmit={handleCreateCategory} className="space-y-4 p-6">
                             <div>
@@ -1111,14 +1111,14 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                 <input type="text" value={pcFormName} onChange={e => setPcFormName(e.target.value)}
                                     placeholder="Ex: Arrendamento de Pasto" className={inputCls} required />
                             </div>
-                            {pcFormError && <p className="text-sm text-[#8c4d39]">{pcFormError}</p>}
+                            {pcFormError && <p className="text-sm text-[var(--eixo-danger)]">{pcFormError}</p>}
                             <div className="flex justify-end gap-3">
                                 <button type="button" onClick={() => setPcModalOpen(false)}
-                                    className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#44403c] hover:bg-[#f5f5f4]">
+                                    className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
                                     Cancelar
                                 </button>
                                 <button type="submit" disabled={pcIsSaving}
-                                    className="rounded-xl bg-[#a8442a] px-4 py-2 text-sm font-semibold text-white hover:bg-[#933a22] disabled:opacity-50">
+                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">
                                     {pcIsSaving ? 'Salvando...' : 'Criar categoria'}
                                 </button>
                             </div>
@@ -1130,20 +1130,20 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             {/* ── Modal: Confirmar exclusão de categoria ────────────────────────── */}
             {deleteCatConfirmId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                    <div className="w-full max-w-md rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
                         <div className="p-6">
-                            <h3 className="font-brand text-lg font-bold text-[#1c1917]">Excluir categoria</h3>
-                            <p className="mt-2 text-sm text-[#78716c]">
+                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Excluir categoria</h3>
+                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
                                 Lançamentos existentes não serão afetados, mas a categoria não estará disponível para novos lançamentos.
                             </p>
-                            {deleteCatError && <p className="mt-3 text-sm text-[#8c4d39]">{deleteCatError}</p>}
+                            {deleteCatError && <p className="mt-3 text-sm text-[var(--eixo-danger)]">{deleteCatError}</p>}
                             <div className="mt-6 flex justify-end gap-3">
                                 <button type="button" onClick={() => setDeleteCatConfirmId(null)} disabled={isDeletingCat}
-                                    className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#44403c] hover:bg-[#f5f5f4] disabled:opacity-50">
+                                    className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50">
                                     Cancelar
                                 </button>
                                 <button type="button" onClick={handleDeleteCat} disabled={isDeletingCat}
-                                    className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-4 py-2 text-sm font-semibold text-[#8c4d39] hover:bg-[#f5ddd4] disabled:opacity-50">
+                                    className="rounded-xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-4 py-2 text-sm font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)] disabled:opacity-50">
                                     {isDeletingCat ? 'Excluindo...' : 'Excluir'}
                                 </button>
                             </div>

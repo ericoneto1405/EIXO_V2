@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EIXO — Diagnóstico de Produto por Persona</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f4;
+      color: #1c1917;
+      min-height: 100vh;
+      padding: 32px 16px 64px;
+    }
+
+    /* ── Header ── */
+    .page-header {
+      max-width: 860px;
+      margin: 0 auto 40px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .page-header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #1c1917;
+      line-height: 1.2;
+    }
+    .page-header p {
+      margin-top: 6px;
+      font-size: 14px;
+      color: #78716c;
+      max-width: 520px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-dot {
+      width: 32px; height: 32px;
+      background: #1c1917;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .brand-dot span {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: -1px;
+    }
+    .brand-label {
+      font-size: 20px;
+      font-weight: 900;
+      color: #1c1917;
+      letter-spacing: -0.5px;
+    }
+
+    /* ── Overall Progress ── */
+    .overall-card {
+      max-width: 860px;
+      margin: 0 auto 32px;
+      background: #1c1917;
+      border-radius: 20px;
+      padding: 24px 28px;
+      color: #fff;
+    }
+    .overall-card .label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #a8a29e;
+      margin-bottom: 8px;
+    }
+    .overall-card .title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 18px;
+    }
+    .overall-stats {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .stat-item { display: flex; flex-direction: column; gap: 2px; }
+    .stat-value { font-size: 28px; font-weight: 900; line-height: 1; }
+    .stat-label { font-size: 12px; color: #a8a29e; }
+    .stat-value.sim { color: #4ade80; }
+    .stat-value.parcial { color: #fbbf24; }
+    .stat-value.nao { color: #f87171; }
+
+    .progress-bar-wrap {
+      background: #292524;
+      border-radius: 999px;
+      height: 10px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #a8442a, #d97706);
+      transition: width 0.6s ease;
+    }
+    .progress-legend {
+      display: flex;
+      gap: 16px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px; font-size: 12px; color: #a8a29e;
+    }
+    .legend-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .legend-dot.sim { background: #4ade80; }
+    .legend-dot.parcial { background: #fbbf24; }
+    .legend-dot.nao { background: #f87171; }
+
+    /* ── Persona Card ── */
+    .persona-card {
+      max-width: 860px;
+      margin: 0 auto 24px;
+      background: #fff;
+      border-radius: 20px;
+      border: 1px solid #e7e5e4;
+      overflow: hidden;
+    }
+    .persona-header {
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid #f5f5f4;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .persona-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #faeee8;
+      border: 1px solid #f0d5ca;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.16em;
+      color: #7a2a14;
+      margin-bottom: 6px;
+    }
+    .persona-badge-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: #a8442a;
+    }
+    .persona-name {
+      font-size: 17px;
+      font-weight: 800;
+      color: #1c1917;
+    }
+    .persona-score-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+    .persona-score {
+      font-size: 22px;
+      font-weight: 900;
+      color: #a8442a;
+    }
+    .persona-mini-bar {
+      width: 120px;
+      background: #f5f5f4;
+      border-radius: 999px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .persona-mini-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: #a8442a;
+    }
+
+    /* ── Questions ── */
+    .questions-list { padding: 8px 0; }
+    .question-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 14px 24px;
+      border-bottom: 1px solid #f5f5f4;
+      transition: background 0.15s;
+    }
+    .question-row:last-child { border-bottom: none; }
+    .question-row:hover { background: #fafaf9; }
+
+    .q-number {
+      font-size: 11px;
+      font-weight: 700;
+      color: #a8a29e;
+      min-width: 22px;
+      margin-top: 3px;
+    }
+    .q-content { flex: 1; }
+    .q-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1c1917;
+      line-height: 1.4;
+      margin-bottom: 4px;
+    }
+    .q-answer {
+      font-size: 13px;
+      color: #78716c;
+      line-height: 1.5;
+    }
+    .q-badge {
+      min-width: 96px;
+      text-align: center;
+      border-radius: 999px;
+      padding: 4px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+    .q-badge.sim { background: #dcfce7; color: #15803d; }
+    .q-badge.parcial { background: #fef9c3; color: #a16207; }
+    .q-badge.nao { background: #fbede8; color: #8c4d39; }
+    .q-badge.naoa { background: #fbede8; color: #8c4d39; min-width: 120px; }
+
+    /* ── Pergunta Central ── */
+    .persona-question {
+      padding: 14px 24px;
+      background: #fafaf9;
+      border-top: 1px solid #f5f5f4;
+      font-size: 13px;
+      color: #78716c;
+    }
+    .persona-question strong {
+      color: #1c1917;
+    }
+
+    /* ── Footer note ── */
+    .footer-note {
+      max-width: 860px;
+      margin: 32px auto 0;
+      text-align: center;
+      font-size: 12px;
+      color: #a8a29e;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <div class="brand" style="margin-bottom: 10px;">
+        <div class="brand-dot"><span>ei</span></div>
+        <span class="brand-label">eixo</span>
+      </div>
+      <h1>Diagnóstico de Produto por Persona</h1>
+      <p>Avalia se o sistema responde às perguntas reais de cada perfil de usuário — e como. Base para priorização de desenvolvimento.</p>
+    </div>
+  </div>
+
+  <!-- Overall Progress -->
+  <div class="overall-card">
+    <div class="label">Progresso Geral</div>
+    <div class="title">85 perguntas · 8 personas</div>
+    <div class="overall-stats">
+      <div class="stat-item">
+        <span class="stat-value sim">7</span>
+        <span class="stat-label">Sim</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value parcial">21</span>
+        <span class="stat-label">Parcialmente</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-value nao">57</span>
+        <span class="stat-label">Não atende</span>
+      </div>
+    </div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" style="width: 21%"></div>
+    </div>
+    <div class="progress-legend">
+      <span class="legend-item"><span class="legend-dot sim"></span> Sim = 1 ponto</span>
+      <span class="legend-item"><span class="legend-dot parcial"></span> Parcialmente = 0,5 ponto</span>
+      <span class="legend-item"><span class="legend-dot nao"></span> Não atende = 0 pontos</span>
+    </div>
+  </div>
+
+  <!-- Persona 1 -->
+  <div class="persona-card">
+    <div class="persona-header">
+      <div>
+        <div class="persona-badge"><span class="persona-badge-dot"></span> Persona 1</div>
+        <div class="persona-name">Pequeno Produtor — Primeira Adoção</div>
+      </div>
+      <div class="persona-score-wrap">
+        <span class="persona-score">50%</span>
+        <div class="persona-mini-bar">
+          <div class="persona-mini-fill" style="width: 50%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="questions-list">
+
+      <div class="question-row">
+        <span class="q-number">01</span>
+        <div class="q-content">
+          <div class="q-text">Quantos animais eu tenho hoje na fazenda?</div>
+          <div class="q-answer">Sim. O módulo Rebanho Comercial lista todos os animais ativos por fazenda em tempo real. O Dashboard exibe o total no KPI "Total de Animais".</div>
+        </div>
+        <span class="q-badge sim">✓ Sim</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">02</span>
+        <div class="q-content">
+          <div class="q-text">Quantos bezerros nasceram este mês?</div>
+          <div class="q-answer">Parcialmente. O sistema permite registrar nascimento como evento no animal, mas não há painel ou filtro dedicado a nascimentos por período. O usuário precisaria filtrar manualmente.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">03</span>
+        <div class="q-content">
+          <div class="q-text">Quantos animais morreram este ano?</div>
+          <div class="q-answer">Parcialmente. Morte pode ser registrada como evento/baixa no animal, mas não existe relatório ou contador de baixas por período visível na interface.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">04</span>
+        <div class="q-content">
+          <div class="q-text">Quais vacas estão com bezerro ao pé?</div>
+          <div class="q-answer">Não. O sistema não tem o conceito de vínculo mãe-bezerro ativo no módulo Comercial. Essa funcionalidade pertence ao módulo de Reprodução, que está em placeholder.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">05</span>
+        <div class="q-content">
+          <div class="q-text">Qual animal está sem identificação?</div>
+          <div class="q-answer">Não. Não existe filtro ou alerta para animais sem brinco ou identificação incompleta.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">06</span>
+        <div class="q-content">
+          <div class="q-text">Quanto eu vendi de gado este mês?</div>
+          <div class="q-answer">Sim. O módulo Financeiro registra entradas por categoria. Se a venda foi lançada, o Dashboard mostra o total de entradas do mês no KPI Fluxo de Caixa.</div>
+        </div>
+        <span class="q-badge sim">✓ Sim</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">07</span>
+        <div class="q-content">
+          <div class="q-text">Quanto eu gastei com sal, ração e remédio?</div>
+          <div class="q-answer">Parcialmente. O Financeiro permite lançar saídas com descrição livre, mas não há categorização estruturada por insumo (sal, ração, remédio separados).</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">08</span>
+        <div class="q-content">
+          <div class="q-text">Estou tendo lucro ou só girando dinheiro?</div>
+          <div class="q-answer">Parcialmente. O Dashboard mostra saldo do mês (entradas menos saídas). Mas sem categorização de custos e sem custo por animal, a resposta é superficial.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">09</span>
+        <div class="q-content">
+          <div class="q-text">Qual pasto está mais cheio?</div>
+          <div class="q-answer">Parcialmente. O sistema tem cadastro de pastos e alocação de animais por pasto. A lotação existe nos dados, mas não há painel visual que compare pastos por lotação.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">10</span>
+        <div class="q-content">
+          <div class="q-text">Quais animais estão prontos para vender?</div>
+          <div class="q-answer">Parcialmente. O HerdSettingsTab.tsx tem peso alvo configurável por categoria (Touro, Vaca, Novilha, Novilho, Bezerro, Boi) com 6 categorias padrão. Mas não existe filtro ou lista que cruze o peso atual do animal com o peso alvo para indicar "pronto para abate".</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+    </div>
+    <div class="persona-question">
+      <strong>Pergunta central:</strong> "O sistema é simples o suficiente para eu confiar e usar todo dia?"
+    </div>
+  </div>
+
+  <!-- Persona 2 -->
+  <div class="persona-card">
+    <div class="persona-header">
+      <div>
+        <div class="persona-badge"><span class="persona-badge-dot"></span> Persona 2</div>
+        <div class="persona-name">Dono / Pecuarista Decisor</div>
+      </div>
+      <div class="persona-score-wrap">
+        <span class="persona-score">20%</span>
+        <div class="persona-mini-bar">
+          <div class="persona-mini-fill" style="width: 20%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="questions-list">
+
+      <div class="question-row">
+        <span class="q-number">01</span>
+        <div class="q-content">
+          <div class="q-text">Qual fazenda do grupo está dando mais lucro?</div>
+          <div class="q-answer">Não. O financeiro existe por fazenda, mas não há painel comparativo entre fazendas com margem ou lucro consolidado por unidade.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">02</span>
+        <div class="q-content">
+          <div class="q-text">Qual fase está performando melhor: cria, recria ou engorda?</div>
+          <div class="q-answer">Não. O sistema não tem o conceito de fase produtiva estruturado. Categoria existe no animal, mas não há análise de desempenho por fase.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">03</span>
+        <div class="q-content">
+          <div class="q-text">Quanto custa produzir uma arroba em cada fazenda?</div>
+          <div class="q-answer">Não. Não existe cálculo de custo por arroba. Exigiria cruzar custo operacional com peso dos animais — nenhum dos dois está consolidado dessa forma.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">04</span>
+        <div class="q-content">
+          <div class="q-text">Meu GMD médio está melhorando ou piorando?</div>
+          <div class="q-answer">Parcialmente. O Dashboard mostra o GMD médio atual, mas não há histórico de tendência (comparativo entre períodos) para dizer se está melhorando ou piorando.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">05</span>
+        <div class="q-content">
+          <div class="q-text">Qual fazenda tem maior taxa de ocupação?</div>
+          <div class="q-answer">Parcialmente. A taxa de ocupação existe no Dashboard, mas apenas para a fazenda selecionada. Não há visão comparativa entre fazendas simultaneamente.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">06</span>
+        <div class="q-content">
+          <div class="q-text">Quantos animais tenho em cria, recria e engorda?</div>
+          <div class="q-answer">Não. O sistema tem categoria por animal, mas não há agrupamento estruturado por fase produtiva (cria, recria, engorda) com totalizadores.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">07</span>
+        <div class="q-content">
+          <div class="q-text">Qual lote está atrasando o resultado geral?</div>
+          <div class="q-answer">Não. Não existe análise de desempenho por lote com comparativo entre lotes ou identificação de outliers negativos.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">08</span>
+        <div class="q-content">
+          <div class="q-text">Vale mais vender bezerro, boi magro ou boi gordo?</div>
+          <div class="q-answer">Não. O sistema não tem análise de rentabilidade por tipo de venda nem simulador de cenários comerciais.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">09</span>
+        <div class="q-content">
+          <div class="q-text">Quanto tenho de dinheiro a receber com vendas futuras?</div>
+          <div class="q-answer">Parcialmente. O Financeiro registra contas a receber com vencimento futuro. Mas não há vínculo entre contratos de venda de gado e o fluxo projetado.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">10</span>
+        <div class="q-content">
+          <div class="q-text">Qual operação está consumindo mais caixa?</div>
+          <div class="q-answer">Parcialmente. O módulo financeiro lista saídas, mas sem categorização estruturada por tipo de operação, a resposta depende de disciplina no lançamento.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+    </div>
+    <div class="persona-question">
+      <strong>Pergunta central:</strong> "Minha operação está crescendo ou só ficando mais cara?"
+    </div>
+  </div>
+
+  <!-- Persona 3 -->
+  <div class="persona-card">
+    <div class="persona-header">
+      <div>
+        <div class="persona-badge"><span class="persona-badge-dot"></span> Persona 3</div>
+        <div class="persona-name">Gerente da Fazenda</div>
+      </div>
+      <div class="persona-score-wrap">
+        <span class="persona-score">20%</span>
+        <div class="persona-mini-bar">
+          <div class="persona-mini-fill" style="width: 20%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="questions-list">
+
+      <div class="question-row">
+        <span class="q-number">01</span>
+        <div class="q-content">
+          <div class="q-text">Quais lotes precisam ser manejados hoje?</div>
+          <div class="q-answer">Não. Não existe agenda ou calendário de manejo. O sistema não gera tarefas programadas por lote.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">02</span>
+        <div class="q-content">
+          <div class="q-text">Quais animais mudaram de fase produtiva?</div>
+          <div class="q-answer">Não. O sistema não rastreia transições de fase. Mudança de categoria pode ser editada no animal, mas não gera histórico ou alerta.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">03</span>
+        <div class="q-content">
+          <div class="q-text">Qual lote precisa ser pesado novamente?</div>
+          <div class="q-answer">Parcialmente. O sistema alerta quando animais estão sem pesagem há mais de X dias. Mas o alerta é por animal, não agrupado por lote.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">04</span>
+        <div class="q-content">
+          <div class="q-text">Quais pastos estão acima da lotação ideal?</div>
+          <div class="q-answer">Não. O sistema tem alocação de animais por pasto, mas não tem lotação ideal configurada por pasto nem alerta de superlotação.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">05</span>
+        <div class="q-content">
+          <div class="q-text">Quais animais estão fora do lote correto?</div>
+          <div class="q-answer">Não. O sistema não tem regra de alocação esperada por animal. Não há conceito de "lote correto" para comparar.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">06</span>
+        <div class="q-content">
+          <div class="q-text">Quais manejos estão pendentes de aprovação?</div>
+          <div class="q-answer">Não. Não existe fluxo de aprovação de manejo. O módulo Registro de Atividades está em placeholder.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">07</span>
+        <div class="q-content">
+          <div class="q-text">Quais animais entraram ou saíram da fazenda esta semana?</div>
+          <div class="q-answer">Parcialmente. Entradas e saídas podem ser registradas como eventos no animal, mas não há filtro ou relatório de movimentação por período pronto na interface.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">08</span>
+        <div class="q-content">
+          <div class="q-text">Qual lote deve ir para engorda primeiro?</div>
+          <div class="q-answer">Não. Não existe análise de prioridade de engorda por lote. Exigiria cruzar GMD, peso atual e peso alvo — nenhum desses cruzamentos está disponível.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">09</span>
+        <div class="q-content">
+          <div class="q-text">Quais animais estão sem peso atualizado?</div>
+          <div class="q-answer">Sim. O alerta "sem pesagem nos últimos X dias" já está implementado e aparece no Header do sistema.</div>
+        </div>
+        <span class="q-badge sim">✓ Sim</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">10</span>
+        <div class="q-content">
+          <div class="q-text">O estoque de medicamentos é suficiente para o próximo manejo?</div>
+          <div class="q-answer">Não. O módulo de Estoque e Equipamentos está em placeholder. Não há controle de insumos ou medicamentos.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+    </div>
+    <div class="persona-question">
+      <strong>Pergunta central:</strong> "O que precisa de atenção hoje na fazenda?"
+    </div>
+  </div>
+
+  <!-- Persona 4 -->
+  <div class="persona-card">
+    <div class="persona-header">
+      <div>
+        <div class="persona-badge"><span class="persona-badge-dot"></span> Persona 4</div>
+        <div class="persona-name">Vaqueiro / Operador de Campo</div>
+      </div>
+      <div class="persona-score-wrap">
+        <span class="persona-score">20%</span>
+        <div class="persona-mini-bar">
+          <div class="persona-mini-fill" style="width: 20%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="questions-list">
+
+      <div class="question-row">
+        <span class="q-number">01</span>
+        <div class="q-content">
+          <div class="q-text">Como registro um nascimento rapidamente?</div>
+          <div class="q-answer">Não. O sistema web permite registrar um animal com evento de nascimento, mas não existe interface otimizada para entrada rápida em campo. O App Android está planejado mas não construído.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">02</span>
+        <div class="q-content">
+          <div class="q-text">Como registro uma morte com foto e observação?</div>
+          <div class="q-answer">Parcialmente. O backend tem um sistema de ocorrências de campo com tipo "MORREU" e suporte a anexo de foto. Porém o frontend (App Android) para o vaqueiro acessar isso em campo ainda não existe.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">03</span>
+        <div class="q-content">
+          <div class="q-text">Como mudo um animal de pasto?</div>
+          <div class="q-answer">Não. É possível editar o pasto do animal na interface web, mas não existe fluxo rápido e simplificado para troca de pasto em campo.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">04</span>
+        <div class="q-content">
+          <div class="q-text">Como lanço uma pesagem sem internet?</div>
+          <div class="q-answer">Não. O sistema não tem suporte offline. Toda operação exige conexão ativa com o servidor.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">05</span>
+        <div class="q-content">
+          <div class="q-text">Como aviso que um bebedouro está com problema?</div>
+          <div class="q-answer">Parcialmente. O backend tem tipo de ocorrência "AGUA" com suporte a foto e observação. Sem o App Android, o vaqueiro não tem como registrar isso em campo.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">06</span>
+        <div class="q-content">
+          <div class="q-text">Como marco um animal doente no curral?</div>
+          <div class="q-answer">Parcialmente. O backend tem tipo "DOENTE" no sistema de ocorrências de campo. Mesma limitação: sem o App Android, não há como o vaqueiro usar isso em campo.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">07</span>
+        <div class="q-content">
+          <div class="q-text">Como faço leitura de cocho?</div>
+          <div class="q-answer">Parcialmente. O backend tem tipo "COCHO" nas ocorrências de campo. Mesma limitação de acesso — sem o App Android, o vaqueiro não chega nesse registro.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">08</span>
+        <div class="q-content">
+          <div class="q-text">Como registro que o pasto está fraco?</div>
+          <div class="q-answer">Não. Não existe tipo de ocorrência ou campo específico para condição do pasto. A estrutura de ocorrências de campo não cobre essa informação.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">09</span>
+        <div class="q-content">
+          <div class="q-text">Como confirmo que o manejo foi salvo?</div>
+          <div class="q-answer">Não. Não existe sistema de confirmação, histórico de sincronização ou feedback visual de operação salva para o operador de campo.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">10</span>
+        <div class="q-content">
+          <div class="q-text">Como corrijo um lançamento errado antes de enviar?</div>
+          <div class="q-answer">Não. Não existe modo rascunho, fila de envio ou revisão de lançamentos. Os dados vão direto ao servidor sem etapa de revisão.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+    </div>
+    <div class="persona-question">
+      <strong>Nota:</strong> O backend de ocorrências de campo existe. O gargalo desta persona é o App Android — sem ele, o vaqueiro não tem canal de acesso ao sistema.
+    </div>
+  </div>
+
+  <!-- Persona 5 -->
+  <div class="persona-card">
+    <div class="persona-header">
+      <div>
+        <div class="persona-badge"><span class="persona-badge-dot"></span> Persona 5</div>
+        <div class="persona-name">Administrativo / Financeiro</div>
+      </div>
+      <div class="persona-score-wrap">
+        <span class="persona-score">40%</span>
+        <div class="persona-mini-bar">
+          <div class="persona-mini-fill" style="width: 40%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="questions-list">
+
+      <div class="question-row">
+        <span class="q-number">01</span>
+        <div class="q-content">
+          <div class="q-text">Quanto a fazenda gastou este mês?</div>
+          <div class="q-answer">Sim. O módulo Financeiro lista todas as saídas do mês por fazenda. O Dashboard exibe o total de saídas no KPI Fluxo de Caixa.</div>
+        </div>
+        <span class="q-badge sim">✓ Sim</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">02</span>
+        <div class="q-content">
+          <div class="q-text">Quais contas estão vencidas?</div>
+          <div class="q-answer">Sim. O módulo Financeiro tem aba de contas a pagar com status e vencimento. Contas vencidas são identificáveis e geram alerta no Header.</div>
+        </div>
+        <span class="q-badge sim">✓ Sim</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">03</span>
+        <div class="q-content">
+          <div class="q-text">Quanto foi gasto com nutrição por lote?</div>
+          <div class="q-answer">Não. Não existe vínculo entre lançamentos financeiros e lotes. O custo de nutrição por lote exigiria cruzar o módulo Financeiro com o de Nutrição — integração não implementada.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">04</span>
+        <div class="q-content">
+          <div class="q-text">Quanto foi gasto com sanidade por fazenda?</div>
+          <div class="q-answer">Parcialmente. É possível lançar saídas com descrição livre no Financeiro. Mas não há categoria estruturada "Sanidade" — depende de disciplina manual no lançamento.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">05</span>
+        <div class="q-content">
+          <div class="q-text">Qual foi o custo por cabeça no confinamento?</div>
+          <div class="q-answer">Não. Não existe módulo de Confinamento ativo nem cálculo de custo por cabeça. O módulo está em placeholder.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">06</span>
+        <div class="q-content">
+          <div class="q-text">Qual foi o lucro da venda de determinado lote?</div>
+          <div class="q-answer">Não. Não existe apuração de resultado por lote. Exigiria cruzar custo de aquisição, custo operacional e receita de venda por lote — nenhum desses cruzamentos está disponível.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">07</span>
+        <div class="q-content">
+          <div class="q-text">O estoque de sal, ração e medicamentos está batendo?</div>
+          <div class="q-answer">Não. Módulo de Estoque em placeholder. Não há controle de entradas e saídas de insumos.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">08</span>
+        <div class="q-content">
+          <div class="q-text">Quais despesas estão sem categoria?</div>
+          <div class="q-answer">Não. Não existe campo de categoria obrigatório nos lançamentos financeiros nem filtro para lançamentos sem categorização.</div>
+        </div>
+        <span class="q-badge nao">✗ Não</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">09</span>
+        <div class="q-content">
+          <div class="q-text">Quanto tenho a pagar nos próximos 30 dias?</div>
+          <div class="q-answer">Sim. O módulo Financeiro tem contas a pagar com vencimento. É possível visualizar o que vence nos próximos dias — o alerta de contas a vencer já está implementado no Header.</div>
+        </div>
+        <span class="q-badge sim">✓ Sim</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">10</span>
+        <div class="q-content">
+          <div class="q-text">Qual centro de custo está pesando mais no resultado?</div>
+          <div class="q-answer">Parcialmente. O FinanceModule tem aba "Plano de Contas" implementada. Mas ela gerencia categorias contábeis — não há drill-down por centro de custo (lote, pasto, fase produtiva) nem agrupamento automático de despesas por centro.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+    </div>
+    <div class="persona-question">
+      <strong>Pergunta central:</strong> "As contas fecham? Onde está indo o dinheiro da operação?"
+    </div>
+  </div>
+
+  <!-- Persona 6 -->
+  <div class="persona-card">
+    <div class="persona-header">
+      <div>
+        <div class="persona-badge"><span class="persona-badge-dot"></span> Persona 6</div>
+        <div class="persona-name">Veterinário / Técnico de Reprodução</div>
+      </div>
+      <div class="persona-score-wrap">
+        <span class="persona-score">0%</span>
+        <div class="persona-mini-bar">
+          <div class="persona-mini-fill" style="width: 0%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="questions-list">
+
+      <div class="question-row">
+        <span class="q-number">01</span>
+        <div class="q-content">
+          <div class="q-text">Matrizes expostas</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder — dados reprodutivos não são registrados nem calculados.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">02</span>
+        <div class="q-content">
+          <div class="q-text">Matrizes prenhas</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">03</span>
+        <div class="q-content">
+          <div class="q-text">Matrizes vazias</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">04</span>
+        <div class="q-content">
+          <div class="q-text">Taxa de prenhez</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">05</span>
+        <div class="q-content">
+          <div class="q-text">Fêmea improdutiva ocupando pasto</div>
+          <div class="q-answer">Sem dados reprodutivos registrados, impossível identificar fêmeas improdutivas.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">06</span>
+        <div class="q-content">
+          <div class="q-text">Histórico de diagnósticos (IATF, monta)</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder — sem registro de protocolos ou diagnósticos.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">07</span>
+        <div class="q-content">
+          <div class="q-text">Intervalo entre partos</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">08</span>
+        <div class="q-content">
+          <div class="q-text">Protocolo ativo por lote</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">09</span>
+        <div class="q-content">
+          <div class="q-text">Índice de repetição de cio</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">10</span>
+        <div class="q-content">
+          <div class="q-text">Touros: cobertura e fertilidade</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder — sem avaliação de desempenho de touros.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+    </div>
+    <div class="persona-question">
+      <strong>Pergunta central:</strong> "A reprodução está funcionando ou tem fêmea improdutiva ocupando pasto?" — Será respondida pelo módulo Eixo Acasalamento (Plano Pago 2).
+    </div>
+  </div>
+
+  <!-- Persona 7 -->
+  <div class="persona-card">
+    <div class="persona-header">
+      <div>
+        <div class="persona-badge"><span class="persona-badge-dot"></span> Persona 7</div>
+        <div class="persona-name">Criador P.O. / Genética</div>
+      </div>
+      <div class="persona-score-wrap">
+        <span class="persona-score">8%</span>
+        <div class="persona-mini-bar">
+          <div class="persona-mini-fill" style="width: 8%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="questions-list">
+
+      <div class="question-row">
+        <span class="q-number">01</span>
+        <div class="q-content">
+          <div class="q-text">Total de animais P.O.</div>
+          <div class="q-answer">Sim. Existe o módulo "Plantel P.O." (GeneticsPlantelPO.tsx) como item separado na sidebar, com endpoints próprios (/po/animals). O gráfico de composição do Dashboard também exibe Comercial vs P.O. separados.</div>
+        </div>
+        <span class="q-badge sim">✓ Sim</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">02</span>
+        <div class="q-content">
+          <div class="q-text">Animais P.O. sem registro</div>
+          <div class="q-answer">Sem validação de campos de registro (RGD, RGN, ABCZ) — campos disponíveis apenas no Plano Pago 2, mas sem alerta de incompletos.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">03</span>
+        <div class="q-content">
+          <div class="q-text">Doadoras ativas</div>
+          <div class="q-answer">Módulo de Reprodução (Eixo Acasalamento) está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">04</span>
+        <div class="q-content">
+          <div class="q-text">Receptoras disponíveis</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">05</span>
+        <div class="q-content">
+          <div class="q-text">Touros ativos</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">06</span>
+        <div class="q-content">
+          <div class="q-text">Estoque de sêmen</div>
+          <div class="q-answer">Módulo de genética e estoque reprodutivo não implementado.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">07</span>
+        <div class="q-content">
+          <div class="q-text">Estoque de embriões</div>
+          <div class="q-answer">Módulo de genética e estoque reprodutivo não implementado.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">08</span>
+        <div class="q-content">
+          <div class="q-text">Prenhezes P.O.</div>
+          <div class="q-answer">Módulo de Reprodução está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">09</span>
+        <div class="q-content">
+          <div class="q-text">Produtos por touro</div>
+          <div class="q-answer">Sem rastreabilidade de paternidade nem análise de produção por reprodutor.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">10</span>
+        <div class="q-content">
+          <div class="q-text">Produtos por doadora</div>
+          <div class="q-answer">Sem rastreabilidade de maternidade nem análise de produção por doadora.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">11</span>
+        <div class="q-content">
+          <div class="q-text">Animais prontos para leilão</div>
+          <div class="q-answer">Módulo de Gestão Comercial está em placeholder. Sem critérios de seleção para leilão.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">12</span>
+        <div class="q-content">
+          <div class="q-text">Animais em preparação para leilão</div>
+          <div class="q-answer">Módulo de Gestão Comercial está em placeholder.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">13</span>
+        <div class="q-content">
+          <div class="q-text">Destaques genéticos</div>
+          <div class="q-answer">Sem módulo de avaliação genética, DEP ou ranqueamento por mérito.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+    </div>
+    <div class="persona-question">
+      <strong>Pergunta central:</strong> "Meu plantel genético está organizado e valorizando?" — Persona com maior potencial de receita. Será a principal beneficiada pelo Plano Pago 2 (Eixo Acasalamento + campos genéticos completos).
+    </div>
+  </div>
+
+  <!-- Persona 8 -->
+  <div class="persona-card">
+    <div class="persona-header">
+      <div>
+        <div class="persona-badge"><span class="persona-badge-dot"></span> Persona 8</div>
+        <div class="persona-name">Nutricionista / Responsável pela Nutrição</div>
+      </div>
+      <div class="persona-score-wrap">
+        <span class="persona-score">13%</span>
+        <div class="persona-mini-bar">
+          <div class="persona-mini-fill" style="width: 13%"></div>
+        </div>
+      </div>
+    </div>
+    <div class="questions-list">
+
+      <div class="question-row">
+        <span class="q-number">01</span>
+        <div class="q-content">
+          <div class="q-text">Dietas ativas por lote</div>
+          <div class="q-answer">Parcialmente. Módulo Nutrição ativo, mas sem visão consolidada de dietas ativas por lote no Dashboard.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">02</span>
+        <div class="q-content">
+          <div class="q-text">Consumo planejado</div>
+          <div class="q-answer">Parcialmente. O módulo permite registrar consumo planejado, mas sem painel de acompanhamento consolidado.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">03</span>
+        <div class="q-content">
+          <div class="q-text">Consumo fabricado</div>
+          <div class="q-answer">Sem registro de fabricação de dieta — o sistema não rastreia o que foi efetivamente preparado.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">04</span>
+        <div class="q-content">
+          <div class="q-text">Consumo fornecido</div>
+          <div class="q-answer">Sem registro de fornecimento por lote/dia — o sistema não rastreia o que foi entregue ao cocho.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">05</span>
+        <div class="q-content">
+          <div class="q-text">Desvio entre planejado, fabricado e fornecido</div>
+          <div class="q-answer">Sem os três dados separados, impossível calcular o desvio entre eles.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">06</span>
+        <div class="q-content">
+          <div class="q-text">Leitura de cocho</div>
+          <div class="q-answer">Parcialmente. O NutritionModule.tsx tem leitura de cocho implementada com fluxo de aprovação e rejeição (/nutrition/trough-readings). Mas não há painel consolidado de leituras por lote nem histórico visual de tendência.</div>
+        </div>
+        <span class="q-badge parcial">~ Parcial</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">07</span>
+        <div class="q-content">
+          <div class="q-text">GMD por lote</div>
+          <div class="q-answer">Não. A aba de Pesagens (WeighingsTab.tsx) está implementada e calcula GMD médio geral. Mas GMD por lote — cruzando pesagens apenas dos animais de um lote específico — não existe como métrica separada.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">08</span>
+        <div class="q-content">
+          <div class="q-text">Custo alimentar por cabeça/dia</div>
+          <div class="q-answer">Sem consumo fornecido nem custo por insumo integrado ao módulo de nutrição.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">09</span>
+        <div class="q-content">
+          <div class="q-text">Custo alimentar por arroba</div>
+          <div class="q-answer">Depende de GMD e custo alimentar — ambos indisponíveis no momento.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">10</span>
+        <div class="q-content">
+          <div class="q-text">Ingredientes próximos de acabar</div>
+          <div class="q-answer">Módulo de Estoque e Equipamentos está em placeholder — sem controle de inventário de insumos.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">11</span>
+        <div class="q-content">
+          <div class="q-text">Previsão de ruptura de estoque</div>
+          <div class="q-answer">Módulo de Estoque em placeholder. Sem histórico de consumo nem projeção de ruptura.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+      <div class="question-row">
+        <span class="q-number">12</span>
+        <div class="q-content">
+          <div class="q-text">Lotes abaixo da meta de ganho</div>
+          <div class="q-answer">Sem GMD calculado por lote e sem metas de ganho configuradas — impossível identificar lotes abaixo da meta.</div>
+        </div>
+        <span class="q-badge naoa">EIXO não atende</span>
+      </div>
+
+    </div>
+    <div class="persona-question">
+      <strong>Pergunta central:</strong> "A dieta está virando ganho de peso ou está virando prejuízo?" — Ciclo completo a implementar: consumo real + pesagens por lote + custo de insumos integrado ao Financeiro.
+    </div>
+  </div>
+
+  <div class="footer-note">
+    Pontuação: Sim = 1 pt · Parcialmente = 0,5 pt · EIXO não atende = 0 pt · Progresso geral: 17,5 pts de 85 possíveis (21%)
+  </div>
+
+</body>
+</html>

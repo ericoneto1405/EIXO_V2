@@ -125,28 +125,31 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
     };
 
     return (
-        <div className="flex flex-col h-full rounded-[24px] border border-[#e7e5e4] bg-white shadow-2xl overflow-hidden">
+        <div className="flex flex-col h-full rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl overflow-hidden">
 
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-[#e7e5e4] bg-[#f5f5f4] px-5 py-4">
+            <div className="flex items-center justify-between border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-4">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1c1917]">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--eixo-text)]">
                         <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                 d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
                         </svg>
                     </div>
                     <div>
-                        <p className="text-[15px] font-bold leading-none text-[#1c1917]">
-                            Eixo <span className="text-[#a8442a]">Suporte</span>
-                        </p>
-                        <p className="mt-1 text-xs text-[#78716c]">Ajuda rápida sobre o sistema</p>
+                        <div className="flex items-end gap-2">
+                            <img src="/logo_eixo_official.svg" alt="eixo" className="h-5 w-auto" />
+                            <span className="pb-[1px] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--eixo-graphite)]">
+                                Suporte
+                            </span>
+                        </div>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Ajuda rápida sobre o sistema</p>
                     </div>
                 </div>
                 <button
                     type="button"
                     onClick={onClose}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-[#78716c] transition-colors hover:bg-[#f5f5f4] hover:text-[#1c1917]"
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
                     aria-label="Fechar"
                 >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -161,14 +164,14 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
                 {/* Estado vazio — boas-vindas + sugestões */}
                 {messages.length === 0 && (
                     <div className="flex flex-col items-center pt-4 text-center">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f5f5f4] mb-4">
-                            <svg className="w-7 h-7 text-[#1c1917]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--eixo-surface-soft)] mb-4">
+                            <svg className="w-7 h-7 text-[var(--eixo-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
                                     d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
                             </svg>
                         </div>
-                        <p className="text-sm font-semibold text-[#1c1917]">Olá! Sou o Eixo Suporte.</p>
-                        <p className="mt-1 text-xs text-[#78716c] max-w-[220px]">
+                        <p className="text-sm font-semibold text-[var(--eixo-text)]">Olá! Sou o Eixo Suporte.</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)] max-w-[220px]">
                             Tire suas dúvidas sobre como usar o sistema EIXO.
                         </p>
                         <div className="mt-5 flex flex-col gap-2 w-full">
@@ -177,7 +180,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
                                     key={s}
                                     type="button"
                                     onClick={() => void sendMessage(s)}
-                                    className="rounded-xl border border-[#e7e5e4] bg-[#f5f5f4] px-3 py-2 text-left text-xs font-medium text-[#44403c] transition-colors hover:bg-[#eedfc8] hover:text-[#1c1917]"
+                                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-left text-xs font-medium text-[var(--eixo-text)] transition-colors hover:bg-[#eedfc8] hover:text-[var(--eixo-text)]"
                                 >
                                     {s}
                                 </button>
@@ -190,7 +193,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
                 {messages.map((msg, index) => (
                     <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         {msg.role === 'model' && (
-                            <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#1c1917]">
+                            <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--eixo-text)]">
                                 <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                         d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
@@ -199,8 +202,8 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
                         )}
                         <div className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                             msg.role === 'user'
-                                ? 'bg-[#1c1917] text-white rounded-br-sm'
-                                : 'bg-[#f5f5f4] text-[#1c1917] rounded-bl-sm'
+                                ? 'bg-[var(--eixo-text)] text-white rounded-br-sm'
+                                : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] rounded-bl-sm'
                         }`}>
                             <div className="space-y-1">
                                 {renderText(msg.text)}
@@ -212,16 +215,16 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
                 {/* Indicador de digitando */}
                 {isLoading && (
                     <div className="flex justify-start">
-                        <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[#1c1917]">
+                        <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--eixo-text)]">
                             <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                     d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3-3-3z" />
                             </svg>
                         </div>
-                        <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-[#f5f5f4] px-4 py-3">
-                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#78716c]" style={{ animationDelay: '0ms' }} />
-                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#78716c]" style={{ animationDelay: '150ms' }} />
-                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[#78716c]" style={{ animationDelay: '300ms' }} />
+                        <div className="flex items-center gap-1 rounded-2xl rounded-bl-sm bg-[var(--eixo-surface-soft)] px-4 py-3">
+                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--eixo-text-muted)]" style={{ animationDelay: '0ms' }} />
+                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--eixo-text-muted)]" style={{ animationDelay: '150ms' }} />
+                            <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-[var(--eixo-text-muted)]" style={{ animationDelay: '300ms' }} />
                         </div>
                     </div>
                 )}
@@ -230,8 +233,8 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
             </div>
 
             {/* Input */}
-            <div className="border-t border-[#e7e5e4] bg-white px-4 py-3">
-                <div className={`flex items-center gap-2 rounded-2xl border bg-[#f5f5f4] px-3 py-2 transition-colors ${inputMessage.length >= MAX_CHARS ? 'border-[#c0644a]' : 'border-[#e7e5e4]'}`}>
+            <div className="border-t border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3">
+                <div className={`flex items-center gap-2 rounded-2xl border bg-[var(--eixo-surface-soft)] px-3 py-2 transition-colors ${inputMessage.length >= MAX_CHARS ? 'border-[#c0644a]' : 'border-[var(--eixo-border)]'}`}>
                     <input
                         ref={inputRef}
                         type="text"
@@ -241,19 +244,19 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
                         placeholder="Digite sua dúvida..."
                         disabled={isLoading}
                         maxLength={MAX_CHARS}
-                        className="flex-1 bg-transparent text-sm text-[#1c1917] placeholder-[#b0a090] focus:outline-none disabled:opacity-50"
+                        className="flex-1 bg-transparent text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:outline-none disabled:opacity-50"
                     />
                     <button
                         type="button"
                         onClick={() => void sendMessage()}
                         disabled={isLoading || !inputMessage.trim()}
-                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-[#1c1917] text-white transition-colors hover:bg-[#292524] disabled:opacity-40"
+                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--eixo-text)] text-white transition-colors hover:bg-[var(--eixo-graphite)] disabled:opacity-40"
                         aria-label="Enviar"
                     >
                         <SendIcon />
                     </button>
                 </div>
-                <p className="mt-2 text-center text-[10px] text-[#b0a090]">
+                <p className="mt-2 text-center text-[10px] text-[var(--eixo-text-soft)]">
                     Eixo Suporte responde dúvidas sobre o uso do sistema.
                 </p>
             </div>

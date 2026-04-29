@@ -514,7 +514,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
     };
 
     const renderTabs = () => (
-        <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-3">
+        <div className="flex flex-wrap gap-2 border-b border-[var(--eixo-border)] pb-3">
             {[
                 { key: 'herd', label: 'Rebanho' },
                 { key: 'semen', label: 'Sêmen' },
@@ -527,7 +527,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                     className={`rounded-full px-4 py-2 text-sm font-semibold ${
                         activeTab === tab.key
                             ? 'bg-primary text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-border)]'
                     }`}
                     onClick={() => setActiveTab(tab.key as TabKey)}
                 >
@@ -540,21 +540,21 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
     const showResourceStatus = mode === 'resources' || activeTab !== 'herd';
 
     return (
-        <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-8">
+        <div className="bg-[var(--eixo-surface)] dark:bg-[var(--eixo-surface)] rounded-xl shadow-lg p-8">
             {mode === 'full' && (
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Plantel P.O.</h2>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Animais P.O. e estoques de sêmen e embriões.</p>
+                        <h2 className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">Plantel P.O.</h2>
+                        <p className="text-sm text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Animais P.O. e estoques de sêmen e embriões.</p>
                     </div>
-                    <div className="text-sm text-gray-500">{showResourceStatus && isLoading ? 'Carregando...' : ''}</div>
+                    <div className="text-sm text-[var(--eixo-text-muted)]">{showResourceStatus && isLoading ? 'Carregando...' : ''}</div>
                 </div>
             )}
 
             {renderTabs()}
 
             {showResourceStatus && loadError && (
-                <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+                <div className="mt-4 rounded-lg border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                     {loadError}
                 </div>
             )}
@@ -569,7 +569,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                 <div className="mt-6">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <input
-                            className="w-full max-w-sm rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                            className="w-full max-w-sm rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                             placeholder="Buscar por lote ou reprodutor"
                             value={searchSemen}
                             onChange={(event) => setSearchSemen(event.target.value)}
@@ -582,8 +582,8 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                         </button>
                     </div>
                     <div className="mt-4 overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500">
-                            <thead className="text-xs uppercase bg-gray-50">
+                        <table className="w-full text-sm text-left text-[var(--eixo-text-muted)]">
+                            <thead className="text-xs uppercase bg-[var(--eixo-surface-soft)]">
                                 <tr>
                                     <th className="px-4 py-2">Lote</th>
                                     <th className="px-4 py-2">Reprodutor</th>
@@ -595,13 +595,13 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             <tbody>
                                 {filteredSemen.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-4 py-4 text-center text-gray-400">
+                                        <td colSpan={5} className="px-4 py-4 text-center text-[var(--eixo-text-soft)]">
                                             Nenhum lote de sêmen cadastrado.
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredSemen.map((batch) => (
-                                        <tr key={batch.id} className="border-b border-gray-100">
+                                        <tr key={batch.id} className="border-b border-[var(--eixo-border)]">
                                             <td className="px-4 py-2">{batch.lote}</td>
                                             <td className="px-4 py-2">{batch.bullPoAnimal?.nome || batch.bullName || '-'}</td>
                                             <td className="px-4 py-2">{batch.dosesDisponiveis}/{batch.dosesTotal}</td>
@@ -615,13 +615,13 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                                         Editar
                                                     </button>
                                                     <button
-                                                        className="text-xs font-semibold text-amber-600"
+                                                        className="text-xs font-semibold text-[var(--eixo-warning)]"
                                                         onClick={() => openMoveModal('semen', batch.id)}
                                                     >
                                                         Movimentar
                                                     </button>
                                                     <button
-                                                        className="text-xs font-semibold text-rose-600"
+                                                        className="text-xs font-semibold text-[var(--eixo-danger)]"
                                                         onClick={() => handleDelete('semen', batch.id)}
                                                     >
                                                         Excluir
@@ -641,7 +641,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                 <div className="mt-6">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <input
-                            className="w-full max-w-sm rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                            className="w-full max-w-sm rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                             placeholder="Buscar por lote, doadora ou reprodutor"
                             value={searchEmbryos}
                             onChange={(event) => setSearchEmbryos(event.target.value)}
@@ -654,8 +654,8 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                         </button>
                     </div>
                     <div className="mt-4 overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500">
-                            <thead className="text-xs uppercase bg-gray-50">
+                        <table className="w-full text-sm text-left text-[var(--eixo-text-muted)]">
+                            <thead className="text-xs uppercase bg-[var(--eixo-surface-soft)]">
                                 <tr>
                                     <th className="px-4 py-2">Lote</th>
                                     <th className="px-4 py-2">Doadora</th>
@@ -668,13 +668,13 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             <tbody>
                                 {filteredEmbryos.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="px-4 py-4 text-center text-gray-400">
+                                        <td colSpan={6} className="px-4 py-4 text-center text-[var(--eixo-text-soft)]">
                                             Nenhum lote de embriões cadastrado.
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredEmbryos.map((batch) => (
-                                        <tr key={batch.id} className="border-b border-gray-100">
+                                        <tr key={batch.id} className="border-b border-[var(--eixo-border)]">
                                             <td className="px-4 py-2">{batch.lote}</td>
                                             <td className="px-4 py-2">{batch.donorPoAnimal?.nome || batch.donorName || '-'}</td>
                                             <td className="px-4 py-2">{batch.sirePoAnimal?.nome || batch.sireName || '-'}</td>
@@ -689,13 +689,13 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                                         Editar
                                                     </button>
                                                     <button
-                                                        className="text-xs font-semibold text-amber-600"
+                                                        className="text-xs font-semibold text-[var(--eixo-warning)]"
                                                         onClick={() => openMoveModal('embryo', batch.id)}
                                                     >
                                                         Movimentar
                                                     </button>
                                                     <button
-                                                        className="text-xs font-semibold text-rose-600"
+                                                        className="text-xs font-semibold text-[var(--eixo-danger)]"
                                                         onClick={() => handleDelete('embryo', batch.id)}
                                                     >
                                                         Excluir
@@ -713,18 +713,18 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
 
             {isAnimalModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+                    <div className="w-full max-w-lg rounded-xl bg-[var(--eixo-surface)] p-6 shadow-xl">
                         <h3 className="text-lg font-semibold">{editingAnimal ? 'Editar Animal P.O.' : 'Novo Animal P.O.'}</h3>
                         <form className="mt-4 grid gap-3" onSubmit={handleSaveAnimal}>
                             <input
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 placeholder="Nome"
                                 value={animalForm.nome}
                                 onChange={(event) => setAnimalForm((prev) => ({ ...prev, nome: event.target.value }))}
                                 required
                             />
                             <input
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 placeholder="Raça"
                                 value={animalForm.raca}
                                 onChange={(event) => setAnimalForm((prev) => ({ ...prev, raca: event.target.value }))}
@@ -732,7 +732,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             />
                             <div className="grid grid-cols-2 gap-2">
                                 <select
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     value={animalForm.sexo}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, sexo: event.target.value }))}
                                 >
@@ -740,7 +740,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                     <option value="MACHO">Macho</option>
                                 </select>
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Brinco"
                                     value={animalForm.brinco}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, brinco: event.target.value }))}
@@ -749,12 +749,12 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             <div className="grid grid-cols-2 gap-2">
                                 <input
                                     type="date"
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     value={animalForm.dataNascimento}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, dataNascimento: event.target.value }))}
                                 />
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Registro"
                                     value={animalForm.registro}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, registro: event.target.value }))}
@@ -762,7 +762,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <select
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     value={animalForm.paddockId}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, paddockId: event.target.value }))}
                                     required
@@ -779,24 +779,24 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 </select>
                                 <input
                                     type="date"
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     value={animalForm.paddockStartAt}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, paddockStartAt: event.target.value }))}
                                 />
                             </div>
                             <input
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 placeholder="Categoria"
                                 value={animalForm.categoria}
                                 onChange={(event) => setAnimalForm((prev) => ({ ...prev, categoria: event.target.value }))}
                             />
                             <textarea
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 placeholder="Observações"
                                 value={animalForm.observacoes}
                                 onChange={(event) => setAnimalForm((prev) => ({ ...prev, observacoes: event.target.value }))}
                             />
-                            {animalError && <div className="text-sm text-rose-600">{animalError}</div>}
+                            {animalError && <div className="text-sm text-[var(--eixo-danger)]">{animalError}</div>}
                             <div className="flex justify-end gap-2">
                                 <button type="button" className="px-4 py-2 text-sm" onClick={() => setIsAnimalModalOpen(false)}>
                                     Cancelar
@@ -816,12 +816,12 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
 
             {isSemenModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
+                    <div className="w-full max-w-2xl rounded-xl bg-[var(--eixo-surface)] p-6 shadow-xl">
                         <h3 className="text-lg font-semibold">{editingSemen ? 'Editar Sêmen' : 'Novo Lote de Sêmen'}</h3>
                         <form className="mt-4 grid gap-3" onSubmit={handleSaveSemen}>
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Lote"
                                     value={semenForm.lote}
                                     onChange={(event) => setSemenForm((prev) => ({ ...prev, lote: event.target.value }))}
@@ -829,14 +829,14 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 />
                                 <input
                                     type="date"
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     value={semenForm.dataColeta}
                                     onChange={(event) => setSemenForm((prev) => ({ ...prev, dataColeta: event.target.value }))}
                                 />
                             </div>
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <select
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     value={semenForm.bullPoAnimalId}
                                     onChange={(event) => setSemenForm((prev) => ({ ...prev, bullPoAnimalId: event.target.value }))}
                                 >
@@ -849,14 +849,14 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 </select>
                                 {semenForm.bullPoAnimalId ? (
                                     <input
-                                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                        className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                         placeholder="Registro"
                                         value={semenForm.bullRegistry}
                                         onChange={(event) => setSemenForm((prev) => ({ ...prev, bullRegistry: event.target.value }))}
                                     />
                                 ) : (
                                     <input
-                                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                        className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                         placeholder="Nome do reprodutor"
                                         value={semenForm.bullName}
                                         onChange={(event) => setSemenForm((prev) => ({ ...prev, bullName: event.target.value }))}
@@ -866,7 +866,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             </div>
                             {!semenForm.bullPoAnimalId && (
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Registro do reprodutor"
                                     value={semenForm.bullRegistry}
                                     onChange={(event) => setSemenForm((prev) => ({ ...prev, bullRegistry: event.target.value }))}
@@ -874,13 +874,13 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             )}
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Fornecedor"
                                     value={semenForm.fornecedor}
                                     onChange={(event) => setSemenForm((prev) => ({ ...prev, fornecedor: event.target.value }))}
                                 />
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Local de armazenamento"
                                     value={semenForm.localArmazenamento}
                                     onChange={(event) => setSemenForm((prev) => ({ ...prev, localArmazenamento: event.target.value }))}
@@ -889,7 +889,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <input
                                     type="number"
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Doses totais"
                                     value={semenForm.dosesTotal}
                                     onChange={(event) => setSemenForm((prev) => ({ ...prev, dosesTotal: event.target.value }))}
@@ -897,7 +897,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 />
                                 <input
                                     type="number"
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Doses disponíveis"
                                     value={semenForm.dosesDisponiveis}
                                     onChange={(event) => setSemenForm((prev) => ({ ...prev, dosesDisponiveis: event.target.value }))}
@@ -905,12 +905,12 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 />
                             </div>
                             <textarea
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 placeholder="Observações"
                                 value={semenForm.observacoes}
                                 onChange={(event) => setSemenForm((prev) => ({ ...prev, observacoes: event.target.value }))}
                             />
-                            {semenError && <div className="text-sm text-rose-600">{semenError}</div>}
+                            {semenError && <div className="text-sm text-[var(--eixo-danger)]">{semenError}</div>}
                             <div className="flex justify-end gap-2">
                                 <button type="button" className="px-4 py-2 text-sm" onClick={() => setIsSemenModalOpen(false)}>
                                     Cancelar
@@ -930,19 +930,19 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
 
             {isEmbryoModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl">
+                    <div className="w-full max-w-2xl rounded-xl bg-[var(--eixo-surface)] p-6 shadow-xl">
                         <h3 className="text-lg font-semibold">{editingEmbryo ? 'Editar Embriões' : 'Novo Lote de Embriões'}</h3>
                         <form className="mt-4 grid gap-3" onSubmit={handleSaveEmbryo}>
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Lote"
                                     value={embryoForm.lote}
                                     onChange={(event) => setEmbryoForm((prev) => ({ ...prev, lote: event.target.value }))}
                                     required
                                 />
                                 <select
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     value={embryoForm.tecnica}
                                     onChange={(event) => setEmbryoForm((prev) => ({ ...prev, tecnica: event.target.value }))}
                                 >
@@ -952,7 +952,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             </div>
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <select
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     value={embryoForm.donorPoAnimalId}
                                     onChange={(event) => setEmbryoForm((prev) => ({ ...prev, donorPoAnimalId: event.target.value }))}
                                 >
@@ -965,14 +965,14 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 </select>
                                 {embryoForm.donorPoAnimalId ? (
                                     <input
-                                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                        className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                         placeholder="Registro da doadora"
                                         value={embryoForm.donorRegistry}
                                         onChange={(event) => setEmbryoForm((prev) => ({ ...prev, donorRegistry: event.target.value }))}
                                     />
                                 ) : (
                                     <input
-                                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                        className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                         placeholder="Nome da doadora"
                                         value={embryoForm.donorName}
                                         onChange={(event) => setEmbryoForm((prev) => ({ ...prev, donorName: event.target.value }))}
@@ -982,7 +982,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             </div>
                             {!embryoForm.donorPoAnimalId && (
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Registro da doadora"
                                     value={embryoForm.donorRegistry}
                                     onChange={(event) => setEmbryoForm((prev) => ({ ...prev, donorRegistry: event.target.value }))}
@@ -990,7 +990,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             )}
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <select
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     value={embryoForm.sirePoAnimalId}
                                     onChange={(event) => setEmbryoForm((prev) => ({ ...prev, sirePoAnimalId: event.target.value }))}
                                 >
@@ -1003,14 +1003,14 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 </select>
                                 {embryoForm.sirePoAnimalId ? (
                                     <input
-                                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                        className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                         placeholder="Registro do reprodutor"
                                         value={embryoForm.sireRegistry}
                                         onChange={(event) => setEmbryoForm((prev) => ({ ...prev, sireRegistry: event.target.value }))}
                                     />
                                 ) : (
                                     <input
-                                        className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                        className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                         placeholder="Nome do reprodutor"
                                         value={embryoForm.sireName}
                                         onChange={(event) => setEmbryoForm((prev) => ({ ...prev, sireName: event.target.value }))}
@@ -1020,7 +1020,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             </div>
                             {!embryoForm.sirePoAnimalId && (
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Registro do reprodutor"
                                     value={embryoForm.sireRegistry}
                                     onChange={(event) => setEmbryoForm((prev) => ({ ...prev, sireRegistry: event.target.value }))}
@@ -1028,13 +1028,13 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             )}
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Estágio"
                                     value={embryoForm.estagio}
                                     onChange={(event) => setEmbryoForm((prev) => ({ ...prev, estagio: event.target.value }))}
                                 />
                                 <input
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Qualidade"
                                     value={embryoForm.qualidade}
                                     onChange={(event) => setEmbryoForm((prev) => ({ ...prev, qualidade: event.target.value }))}
@@ -1043,7 +1043,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             <div className="grid gap-2 sm:grid-cols-2">
                                 <input
                                     type="number"
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Quantidade total"
                                     value={embryoForm.quantidadeTotal}
                                     onChange={(event) => setEmbryoForm((prev) => ({ ...prev, quantidadeTotal: event.target.value }))}
@@ -1051,7 +1051,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 />
                                 <input
                                     type="number"
-                                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                    className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                     placeholder="Quantidade disponível"
                                     value={embryoForm.quantidadeDisponivel}
                                     onChange={(event) => setEmbryoForm((prev) => ({ ...prev, quantidadeDisponivel: event.target.value }))}
@@ -1059,18 +1059,18 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 />
                             </div>
                             <input
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 placeholder="Local de armazenamento"
                                 value={embryoForm.localArmazenamento}
                                 onChange={(event) => setEmbryoForm((prev) => ({ ...prev, localArmazenamento: event.target.value }))}
                             />
                             <textarea
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 placeholder="Observações"
                                 value={embryoForm.observacoes}
                                 onChange={(event) => setEmbryoForm((prev) => ({ ...prev, observacoes: event.target.value }))}
                             />
-                            {embryoError && <div className="text-sm text-rose-600">{embryoError}</div>}
+                            {embryoError && <div className="text-sm text-[var(--eixo-danger)]">{embryoError}</div>}
                             <div className="flex justify-end gap-2">
                                 <button type="button" className="px-4 py-2 text-sm" onClick={() => setIsEmbryoModalOpen(false)}>
                                     Cancelar
@@ -1090,25 +1090,25 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
 
             {isMoveModalOpen && moveTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+                    <div className="w-full max-w-md rounded-xl bg-[var(--eixo-surface)] p-6 shadow-xl">
                         <h3 className="text-lg font-semibold">Movimentar estoque</h3>
                         <form className="mt-4 grid gap-3" onSubmit={handleMove}>
                             <input
                                 type="date"
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 value={moveForm.date}
                                 onChange={(event) => setMoveForm((prev) => ({ ...prev, date: event.target.value }))}
                             />
                             <input
                                 type="number"
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 placeholder="Quantidade"
                                 value={moveForm.qty}
                                 onChange={(event) => setMoveForm((prev) => ({ ...prev, qty: event.target.value }))}
                                 required
                             />
                             <select
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 value={moveForm.type}
                                 onChange={(event) => setMoveForm((prev) => ({ ...prev, type: event.target.value }))}
                             >
@@ -1122,12 +1122,12 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 ))}
                             </select>
                             <textarea
-                                className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
                                 placeholder="Observações"
                                 value={moveForm.notes}
                                 onChange={(event) => setMoveForm((prev) => ({ ...prev, notes: event.target.value }))}
                             />
-                            {moveError && <div className="text-sm text-rose-600">{moveError}</div>}
+                            {moveError && <div className="text-sm text-[var(--eixo-danger)]">{moveError}</div>}
                             <div className="flex justify-end gap-2">
                                 <button type="button" className="px-4 py-2 text-sm" onClick={() => setIsMoveModalOpen(false)}>
                                     Cancelar

@@ -401,16 +401,16 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
     return (
         <div className="space-y-6">
             <div className="rounded-[14px] border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.04)] px-5 py-4">
-                <h2 className="m-0 text-[20px] font-bold leading-[24px] text-gray-900 dark:text-white">Reprodução</h2>
-                <p className="mt-1 text-[13px] leading-[18px] text-gray-500 opacity-75 dark:text-gray-400">
+                <h2 className="m-0 text-[20px] font-bold leading-[24px] text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">Reprodução</h2>
+                <p className="mt-1 text-[13px] leading-[18px] text-[var(--eixo-text-muted)] opacity-75 dark:text-[var(--eixo-text-soft)]">
                     Configure o modo reprodutivo e acompanhe eventos das fêmeas.
                 </p>
             </div>
 
-            <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-6 space-y-4">
+            <div className="bg-[var(--eixo-surface)] dark:bg-[var(--eixo-surface)] rounded-xl shadow-lg p-6 space-y-4">
                 <div>
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Modo reprodutivo</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <h3 className="text-sm font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">Modo reprodutivo</h3>
+                    <p className="text-xs text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)] mt-1">
                         Escolha como a fazenda opera o calendário reprodutivo.
                     </p>
                 </div>
@@ -422,7 +422,7 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                         className={`px-4 py-2 rounded-xl text-sm font-semibold border ${
                             reproMode === 'CONTINUO'
                                 ? 'border-primary bg-primary/10 text-primary'
-                                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
+                                : 'border-[var(--eixo-border)] dark:border-[var(--eixo-border)] text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]'
                         }`}
                     >
                         Contínuo
@@ -434,7 +434,7 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                         className={`px-4 py-2 rounded-xl text-sm font-semibold border ${
                             reproMode === 'ESTACAO'
                                 ? 'border-primary bg-primary/10 text-primary'
-                                : 'border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'
+                                : 'border-[var(--eixo-border)] dark:border-[var(--eixo-border)] text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]'
                         }`}
                     >
                         Estação de monta
@@ -444,12 +444,12 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
             </div>
 
             {reproMode === 'ESTACAO' && (
-                <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-6 space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Estações de monta</h3>
+                <div className="bg-[var(--eixo-surface)] dark:bg-[var(--eixo-surface)] rounded-xl shadow-lg p-6 space-y-4">
+                    <h3 className="text-sm font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">Estações de monta</h3>
                     <div className="grid gap-4 lg:grid-cols-2">
                         <div className="space-y-3">
                             {seasons.length === 0 ? (
-                                <p className="text-sm text-gray-500 dark:text-gray-400">Nenhuma estação cadastrada.</p>
+                                <p className="text-sm text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Nenhuma estação cadastrada.</p>
                             ) : (
                                 <ul className="space-y-2">
                                     {seasons.map((season) => (
@@ -460,11 +460,11 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                                                 className={`w-full text-left px-4 py-3 rounded-xl border ${
                                                     selectedSeasonId === season.id
                                                         ? 'border-primary bg-primary/10 text-primary'
-                                                        : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                                                        : 'border-[var(--eixo-border)] dark:border-[var(--eixo-border)] text-[var(--eixo-text)] dark:text-[var(--eixo-text-soft)]'
                                                 }`}
                                             >
                                                 <p className="text-sm font-semibold">{season.name}</p>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                <p className="text-xs text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
                                                     {formatDate(season.startAt)} - {formatDate(season.endAt)}
                                                 </p>
                                             </button>
@@ -475,31 +475,31 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                         </div>
                         <form className="space-y-3" onSubmit={handleCreateSeason}>
                             <div>
-                                <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Nome da estação</label>
+                                <label className="block text-xs font-medium text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Nome da estação</label>
                                 <input
                                     type="text"
                                     value={seasonForm.name}
                                     onChange={(event) => handleSeasonFormChange('name', event.target.value)}
-                                    className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
+                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)]"
                                 />
                             </div>
                             <div className="grid gap-3 sm:grid-cols-2">
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Início</label>
+                                    <label className="block text-xs font-medium text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Início</label>
                                     <input
                                         type="date"
                                         value={seasonForm.startAt}
                                         onChange={(event) => handleSeasonFormChange('startAt', event.target.value)}
-                                        className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
+                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)]"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Fim</label>
+                                    <label className="block text-xs font-medium text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Fim</label>
                                     <input
                                         type="date"
                                         value={seasonForm.endAt}
                                         onChange={(event) => handleSeasonFormChange('endAt', event.target.value)}
-                                        className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
+                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)]"
                                     />
                                 </div>
                             </div>
@@ -516,17 +516,17 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
             )}
 
             {reproMode === 'ESTACAO' && (
-                <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-6 space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Fêmeas expostas</h3>
+                <div className="bg-[var(--eixo-surface)] dark:bg-[var(--eixo-surface)] rounded-xl shadow-lg p-6 space-y-4">
+                    <h3 className="text-sm font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">Fêmeas expostas</h3>
                     {!selectedSeasonId ? (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Selecione uma estação para gerir as expostas.</p>
+                        <p className="text-sm text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Selecione uma estação para gerir as expostas.</p>
                     ) : (
                         <>
                             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 {femaleAnimals.map((animal) => (
                                     <label
                                         key={animal.id}
-                                        className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700 px-3 py-2 text-sm text-gray-700 dark:text-gray-200"
+                                        className="flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] dark:border-[var(--eixo-border)] px-3 py-2 text-sm text-[var(--eixo-text)] dark:text-[var(--eixo-text)]"
                                     >
                                         <input
                                             type="checkbox"
@@ -552,14 +552,14 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
             )}
 
             <div className="grid gap-6 lg:grid-cols-2">
-                <form className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-6 space-y-4" onSubmit={handleCreateEvent}>
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Registrar evento</h3>
+                <form className="bg-[var(--eixo-surface)] dark:bg-[var(--eixo-surface)] rounded-xl shadow-lg p-6 space-y-4" onSubmit={handleCreateEvent}>
+                    <h3 className="text-sm font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">Registrar evento</h3>
                     <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Fêmea</label>
+                        <label className="block text-xs font-medium text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Fêmea</label>
                         <select
                             value={eventForm.animalId}
                             onChange={(event) => handleEventFormChange('animalId', event.target.value)}
-                            className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
+                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)]"
                         >
                             <option value="">Selecione</option>
                             {femaleAnimals.map((animal) => (
@@ -571,11 +571,11 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                         <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Tipo</label>
+                            <label className="block text-xs font-medium text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Tipo</label>
                             <select
                                 value={eventForm.type}
                                 onChange={(event) => handleEventFormChange('type', event.target.value)}
-                                className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
+                                className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)]"
                             >
                                 <option value="COBERTURA">Cobertura</option>
                                 <option value="IATF">IATF</option>
@@ -585,22 +585,22 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                             </select>
                         </div>
                         <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Data</label>
+                            <label className="block text-xs font-medium text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Data</label>
                             <input
                                 type="date"
                                 value={eventForm.date}
                                 onChange={(event) => handleEventFormChange('date', event.target.value)}
-                                className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
+                                className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)]"
                             />
                         </div>
                     </div>
                     {eventForm.type === 'DIAGNOSTICO_PRENHEZ' && (
                         <div>
-                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Status</label>
+                            <label className="block text-xs font-medium text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Status</label>
                             <select
                                 value={eventForm.status}
                                 onChange={(event) => handleEventFormChange('status', event.target.value)}
-                                className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
+                                className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)]"
                             >
                                 <option value="PRENHE">Prenhe</option>
                                 <option value="VACIA">Vazia</option>
@@ -608,12 +608,12 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                         </div>
                     )}
                     <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-300">Observações</label>
+                        <label className="block text-xs font-medium text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Observações</label>
                         <textarea
                             value={eventForm.notes}
                             onChange={(event) => handleEventFormChange('notes', event.target.value)}
                             rows={3}
-                            className="mt-1 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-[#1c1917] focus:outline-none focus:ring-2 focus:ring-[#1c1917]/10 dark:border-gray-600 dark:bg-dark-card"
+                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)]"
                         />
                     </div>
                     {eventError && <p className="text-sm text-red-600 dark:text-red-400">{eventError}</p>}
@@ -626,26 +626,26 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                     </button>
                 </form>
 
-                <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-6 space-y-4">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">KPIs reprodutivos</h3>
+                <div className="bg-[var(--eixo-surface)] dark:bg-[var(--eixo-surface)] rounded-xl shadow-lg p-6 space-y-4">
+                    <h3 className="text-sm font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">KPIs reprodutivos</h3>
                     {selectedAnimal ? (
                         <>
                             <div className="grid gap-4 sm:grid-cols-2">
-                                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">IEP (dias)</p>
-                                    <p className="text-xl font-semibold text-gray-900 dark:text-white">{kpis?.iepDays ?? '—'}</p>
+                                <div className="rounded-xl bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-surface-soft)]/80 p-4">
+                                    <p className="text-xs text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">IEP (dias)</p>
+                                    <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{kpis?.iepDays ?? '—'}</p>
                                 </div>
-                                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Dias em aberto</p>
-                                    <p className="text-xl font-semibold text-gray-900 dark:text-white">{kpis?.openDays ?? '—'}</p>
+                                <div className="rounded-xl bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-surface-soft)]/80 p-4">
+                                    <p className="text-xs text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Dias em aberto</p>
+                                    <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{kpis?.openDays ?? '—'}</p>
                                 </div>
-                                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Taxa de prenhez</p>
-                                    <p className="text-xl font-semibold text-gray-900 dark:text-white">{formatPercent(kpis?.pregRate ?? null)}</p>
+                                <div className="rounded-xl bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-surface-soft)]/80 p-4">
+                                    <p className="text-xs text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Taxa de prenhez</p>
+                                    <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{formatPercent(kpis?.pregRate ?? null)}</p>
                                 </div>
-                                <div className="rounded-xl bg-gray-50 dark:bg-gray-800/60 p-4">
-                                    <p className="text-xs text-gray-500 dark:text-gray-400">Alertas</p>
-                                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                <div className="rounded-xl bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-surface-soft)]/80 p-4">
+                                    <p className="text-xs text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Alertas</p>
+                                    <p className="text-sm font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">
                                         {kpis?.emptyAlerts?.isRepeatEmpty
                                             ? '2 diagnósticos vazia seguidos'
                                             : kpis?.emptyAlerts?.isEmpty
@@ -654,14 +654,14 @@ const GeneticsReproducao: React.FC<GeneticsReproducaoProps> = ({ farmId }) => {
                                     </p>
                                 </div>
                             </div>
-                            <div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+                            <div className="flex flex-wrap gap-4 text-xs text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
                                 <span>Último parto: {formatDate(kpis?.lastCalvingDate ?? null)}</span>
                                 <span>Último diagnóstico: {formatDate(kpis?.lastPregCheck ?? null)}</span>
                             </div>
                             {kpiError && <p className="text-sm text-red-600 dark:text-red-400">{kpiError}</p>}
                         </>
                     ) : (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                        <p className="text-sm text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
                             Selecione uma fêmea para visualizar KPIs.
                         </p>
                     )}

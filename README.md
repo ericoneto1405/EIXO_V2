@@ -62,9 +62,53 @@ O sistema aceita qualquer planilha do produtor — não é necessário usar um m
 
 Marca guarda-chuva: **eixo** — cobre todo o ecossistema de produtos futuros.
 
-Paleta: sidebar escuro `#1c1917`, conteúdo branco, acento terra cotta `#a8442a`.
+Marca atual em uso no sistema: `frontend/public/eixo-logo-render.png`.
 
-Arquivos de logo em `frontend/public/logo_eixo_black.svg` e `logo_eixo_white.svg`.
+### Paleta EIXO
+
+| Papel | Valor |
+|------|-------|
+| Graphite | `#3f4141` |
+| Graphite Dark | `#2f3131` |
+| Primary Green | `#76b82a` |
+| Primary Green Dark | `#5f9f1f` |
+| Green Soft | `#edf7e6` |
+| Background | `#f7f8f6` |
+| Surface | `#ffffff` |
+| Surface Soft | `#f0f2ef` |
+| Text | `#202322` |
+| Text Muted | `#66706a` |
+| Text Soft | `#8a948d` |
+| Border | `#dfe4df` |
+| Border Strong | `#c7cec7` |
+| Success | `#4f9f2f` |
+| Warning | `#c58a20` |
+| Danger | `#b84232` |
+| Info | `#3f6f8f` |
+
+### Tokens CSS base
+
+```css
+:root {
+  --eixo-graphite: #3f4141;
+  --eixo-graphite-dark: #2f3131;
+  --eixo-green: #76b82a;
+  --eixo-green-dark: #5f9f1f;
+  --eixo-green-soft: #edf7e6;
+  --eixo-bg: #f7f8f6;
+  --eixo-surface: #ffffff;
+  --eixo-surface-soft: #f0f2ef;
+  --eixo-text: #202322;
+  --eixo-text-muted: #66706a;
+  --eixo-text-soft: #8a948d;
+  --eixo-border: #dfe4df;
+  --eixo-border-strong: #c7cec7;
+  --eixo-success: #4f9f2f;
+  --eixo-warning: #c58a20;
+  --eixo-danger: #b84232;
+  --eixo-info: #3f6f8f;
+}
+```
 
 ## App de Manejo — Área do Vaqueiro
 

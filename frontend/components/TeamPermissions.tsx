@@ -61,14 +61,14 @@ interface EditFieldCollaboratorModalProps {
 }
 
 const DesktopIcon: React.FC = () => (
-    <svg className="h-4 w-4 text-[#78716c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 text-[var(--eixo-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <rect x="3" y="4" width="18" height="12" rx="2" strokeWidth="1.8" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M8 20h8M10 16v4M14 16v4" />
     </svg>
 );
 
 const SmartphoneIcon: React.FC = () => (
-    <svg className="h-4 w-4 text-[#78716c]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 text-[var(--eixo-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <rect x="7" y="2.5" width="10" height="19" rx="2" strokeWidth="1.8" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M10 5.5h4" />
         <circle cx="12" cy="18" r="0.9" fill="currentColor" stroke="none" />
@@ -120,24 +120,24 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
     if (!isOpen) return null;
 
     const inputClass =
-        'mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-4 py-2.5 text-sm text-[#1c1917] placeholder-[#c4b5a0] focus:border-[#a8442a] focus:outline-none';
+        'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="w-full max-w-lg rounded-2xl border border-[#e7e5e4] bg-white shadow-2xl">
-                <div className="flex items-center justify-between border-b border-[#e7e5e4] px-6 py-5">
+            <div className="w-full max-w-lg rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5">
                     <div>
-                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             App do Manejo
                         </div>
-                        <h3 className="font-brand text-xl font-extrabold text-[#1c1917]">Novo colaborador de campo</h3>
+                        <h3 className="font-brand text-xl font-extrabold text-[var(--eixo-text)]">Novo colaborador de campo</h3>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
                         aria-label="Fechar"
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] text-[#78716c]"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]"
                     >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -158,7 +158,7 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                     }}
                 >
                     <div>
-                        <label htmlFor="field-collaborator-name" className="block text-sm font-medium text-[#78716c]">
+                        <label htmlFor="field-collaborator-name" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             Nome do colaborador
                         </label>
                         <input
@@ -173,7 +173,7 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                     </div>
 
                     <div>
-                        <label htmlFor="field-collaborator-profile" className="block text-sm font-medium text-[#78716c]">
+                        <label htmlFor="field-collaborator-profile" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             Perfil
                         </label>
                         <select
@@ -188,7 +188,7 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                     </div>
 
                     <div>
-                        <label htmlFor="field-collaborator-farm" className="block text-sm font-medium text-[#78716c]">
+                        <label htmlFor="field-collaborator-farm" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             Fazenda
                         </label>
                         <select
@@ -208,15 +208,15 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                                 </option>
                             ))}
                         </select>
-                        {farmError && <p className="mt-2 text-xs font-medium text-[#8c4d39]">{farmError}</p>}
+                        {farmError && <p className="mt-2 text-xs font-medium text-[var(--eixo-danger)]">{farmError}</p>}
                     </div>
 
-                    <div className="rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-3 text-sm text-[#6d6558]">
+                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-sm text-[var(--eixo-text-muted)]">
                         Esse colaborador entra somente por código de ativação. O sistema cria o identificador interno automaticamente.
                     </div>
 
                     {error && (
-                        <div className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-4 py-3 text-sm text-[#8c4d39]">
+                        <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                             {error}
                         </div>
                     )}
@@ -225,13 +225,13 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#78716c] hover:bg-[#f5f5f4]"
+                            className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
-                            className="rounded-xl bg-[#a8442a] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#933a22]"
+                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             Salvar colaborador
                         </button>
@@ -272,24 +272,24 @@ const EditFieldCollaboratorModal: React.FC<EditFieldCollaboratorModalProps> = ({
     if (!isOpen || !user) return null;
 
     const inputClass =
-        'mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-4 py-2.5 text-sm text-[#1c1917] placeholder-[#c4b5a0] focus:border-[#a8442a] focus:outline-none';
+        'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none';
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="w-full max-w-lg rounded-2xl border border-[#e7e5e4] bg-white shadow-2xl">
-                <div className="flex items-center justify-between border-b border-[#e7e5e4] px-6 py-5">
+            <div className="w-full max-w-lg rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5">
                     <div>
-                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             App do Manejo
                         </div>
-                        <h3 className="font-brand text-xl font-extrabold text-[#1c1917]">Editar colaborador</h3>
+                        <h3 className="font-brand text-xl font-extrabold text-[var(--eixo-text)]">Editar colaborador</h3>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
                         aria-label="Fechar"
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] text-[#78716c]"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]"
                     >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -310,7 +310,7 @@ const EditFieldCollaboratorModal: React.FC<EditFieldCollaboratorModalProps> = ({
                     }}
                 >
                     <div>
-                        <label htmlFor="edit-field-collaborator-name" className="block text-sm font-medium text-[#78716c]">
+                        <label htmlFor="edit-field-collaborator-name" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             Nome do colaborador
                         </label>
                         <input
@@ -324,7 +324,7 @@ const EditFieldCollaboratorModal: React.FC<EditFieldCollaboratorModalProps> = ({
                     </div>
 
                     <div>
-                        <label htmlFor="edit-field-collaborator-profile" className="block text-sm font-medium text-[#78716c]">
+                        <label htmlFor="edit-field-collaborator-profile" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             Perfil
                         </label>
                         <select
@@ -339,7 +339,7 @@ const EditFieldCollaboratorModal: React.FC<EditFieldCollaboratorModalProps> = ({
                     </div>
 
                     <div>
-                        <label htmlFor="edit-field-collaborator-farm" className="block text-sm font-medium text-[#78716c]">
+                        <label htmlFor="edit-field-collaborator-farm" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             Fazenda
                         </label>
                         <select
@@ -359,20 +359,20 @@ const EditFieldCollaboratorModal: React.FC<EditFieldCollaboratorModalProps> = ({
                                 </option>
                             ))}
                         </select>
-                        {farmError && <p className="mt-2 text-xs font-medium text-[#8c4d39]">{farmError}</p>}
+                        {farmError && <p className="mt-2 text-xs font-medium text-[var(--eixo-danger)]">{farmError}</p>}
                     </div>
 
                     {error && (
-                        <div className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-4 py-3 text-sm text-[#8c4d39]">
+                        <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                             {error}
                         </div>
                     )}
 
                     <div className="flex items-center justify-end gap-3 pt-1">
-                        <button type="button" onClick={onClose} className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#78716c] hover:bg-[#f5f5f4]">
+                        <button type="button" onClick={onClose} className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">
                             Cancelar
                         </button>
-                        <button type="submit" className="rounded-xl bg-[#a8442a] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#933a22]">
+                        <button type="submit" className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]">
                             Salvar alterações
                         </button>
                     </div>
@@ -425,7 +425,7 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
     if (!isOpen || !user) return null;
 
     const inputClass =
-        'mt-1 w-full rounded-xl border border-[#e7e5e4] bg-white px-4 py-2.5 text-sm text-[#1c1917] placeholder-[#c4b5a0] focus:border-[#a8442a] focus:outline-none';
+        'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none';
 
     const toggleModule = (module: string) => {
         setSelectedModules((prev) =>
@@ -435,20 +435,20 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-[#e7e5e4] bg-white shadow-2xl">
-                <div className="flex items-center justify-between border-b border-[#e7e5e4] px-6 py-5">
+            <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
+                <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5">
                     <div>
-                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             Sistema web
                         </div>
-                        <h3 className="font-brand text-xl font-extrabold text-[#1c1917]">Editar usuário</h3>
+                        <h3 className="font-brand text-xl font-extrabold text-[var(--eixo-text)]">Editar usuário</h3>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
                         aria-label="Fechar"
-                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e7e5e4] bg-[#f5f5f4] text-[#78716c]"
+                        className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]"
                     >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -479,17 +479,17 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
                     }}
                 >
                     <div>
-                        <label htmlFor="edit-user-name" className="block text-sm font-medium text-[#78716c]">Nome completo</label>
+                        <label htmlFor="edit-user-name" className="block text-sm font-medium text-[var(--eixo-text-muted)]">Nome completo</label>
                         <input id="edit-user-name" type="text" value={name} onChange={(event) => setName(event.target.value)} className={inputClass} required />
                     </div>
 
                     <div>
-                        <label htmlFor="edit-user-email" className="block text-sm font-medium text-[#78716c]">E-mail</label>
+                        <label htmlFor="edit-user-email" className="block text-sm font-medium text-[var(--eixo-text-muted)]">E-mail</label>
                         <input id="edit-user-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} required />
                     </div>
 
                     <div>
-                        <label htmlFor="edit-user-farm" className="block text-sm font-medium text-[#78716c]">Fazenda padrão</label>
+                        <label htmlFor="edit-user-farm" className="block text-sm font-medium text-[var(--eixo-text-muted)]">Fazenda padrão</label>
                         <select
                             id="edit-user-farm"
                             value={defaultFarmId}
@@ -505,11 +505,11 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
                                 <option key={farm.id} value={farm.id}>{farm.name}</option>
                             ))}
                         </select>
-                        {farmError && <p className="mt-2 text-xs font-medium text-[#8c4d39]">{farmError}</p>}
+                        {farmError && <p className="mt-2 text-xs font-medium text-[var(--eixo-danger)]">{farmError}</p>}
                     </div>
 
-                    <div className="rounded-2xl border border-[#e7e5e4] bg-white p-4">
-                        <p className="text-sm font-semibold text-[#1c1917]">Módulos liberados</p>
+                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
+                        <p className="text-sm font-semibold text-[var(--eixo-text)]">Módulos liberados</p>
                         <div className="mt-3 max-h-56 space-y-3 overflow-y-auto pr-1">
                             {moduleCategories.map((category) => (
                                 <div key={category.title}>
@@ -522,13 +522,13 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
                                                     key={module}
                                                     className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm transition-colors ${
                                                         isSelected
-                                                            ? 'border-[#a8442a] bg-[#faeee8] text-[#7a2a14]'
-                                                            : 'border-[#e7e5e4] bg-white text-[#78716c] hover:border-[#c4b5a0]'
+                                                            ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite-dark)]'
+                                                            : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-[var(--eixo-text-muted)] hover:border-[var(--eixo-text-soft)]'
                                                     }`}
                                                 >
                                                     <input
                                                         type="checkbox"
-                                                        className="accent-[#a8442a]"
+                                                        className="accent-[var(--eixo-green)]"
                                                         checked={isSelected}
                                                         onChange={() => toggleModule(module)}
                                                     />
@@ -540,20 +540,20 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
                                 </div>
                             ))}
                         </div>
-                        {modulesError && <p className="mt-3 text-xs font-medium text-[#8c4d39]">{modulesError}</p>}
+                        {modulesError && <p className="mt-3 text-xs font-medium text-[var(--eixo-danger)]">{modulesError}</p>}
                     </div>
 
                     {error && (
-                        <div className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-4 py-3 text-sm text-[#8c4d39]">
+                        <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                             {error}
                         </div>
                     )}
 
                     <div className="flex items-center justify-end gap-3 pt-1">
-                        <button type="button" onClick={onClose} className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#78716c] hover:bg-[#f5f5f4]">
+                        <button type="button" onClick={onClose} className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">
                             Cancelar
                         </button>
-                        <button type="submit" className="rounded-xl bg-[#a8442a] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#933a22]">
+                        <button type="submit" className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]">
                             Salvar alterações
                         </button>
                     </div>
@@ -577,33 +577,33 @@ const DeleteUserModal: React.FC<DeleteUserModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="w-full max-w-md rounded-2xl border border-[#e7e5e4] bg-white shadow-2xl">
-                <div className="border-b border-[#e7e5e4] px-6 py-5">
-                    <h3 className="font-brand text-xl font-extrabold text-[#1c1917]">Remover acesso</h3>
-                    <p className="mt-2 text-sm text-[#78716c]">
-                        Deseja remover o acesso de <span className="font-semibold text-[#1c1917]">{user.name}</span>?
+            <div className="w-full max-w-md rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
+                <div className="border-b border-[var(--eixo-border)] px-6 py-5">
+                    <h3 className="font-brand text-xl font-extrabold text-[var(--eixo-text)]">Remover acesso</h3>
+                    <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
+                        Deseja remover o acesso de <span className="font-semibold text-[var(--eixo-text)]">{user.name}</span>?
                     </p>
                 </div>
 
                 <div className="space-y-4 px-6 py-5">
-                    <div className="rounded-2xl border border-[#f0d5ca] bg-[#faeee8] px-4 py-3 text-sm text-[#8c4d39]">
+                    <div className="rounded-2xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                         Essa ação exclui esse {accessLabel} da organização atual.
                     </div>
 
                     {error && (
-                        <div className="rounded-xl border border-[#d9b6a8] bg-[#fef2f2] px-4 py-3 text-sm text-[#8c4d39]">
+                        <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                             {error}
                         </div>
                     )}
 
                     <div className="flex items-center justify-end gap-3">
-                        <button type="button" onClick={onClose} className="rounded-xl border border-[#e7e5e4] px-4 py-2 text-sm font-semibold text-[#78716c] hover:bg-[#f5f5f4]">
+                        <button type="button" onClick={onClose} className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">
                             Cancelar
                         </button>
                         <button
                             type="button"
                             onClick={() => onConfirm(user.id)}
-                            className="rounded-xl bg-[#8c4d39] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#7a4130]"
+                            className="rounded-xl bg-[var(--eixo-danger)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#7a4130]"
                         >
                             Excluir {accessLabel}
                         </button>
@@ -624,29 +624,29 @@ const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({ payload, onCl
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="w-full max-w-md rounded-2xl border border-[#e7e5e4] bg-white shadow-2xl">
-                <div className="border-b border-[#e7e5e4] px-6 py-5">
-                    <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
-                        <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+            <div className="w-full max-w-md rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
+                <div className="border-b border-[var(--eixo-border)] px-6 py-5">
+                    <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                        <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                         App do Manejo
                     </div>
-                    <h3 className="font-brand text-xl font-extrabold text-[#1c1917]">Código de ativação</h3>
-                    <p className="mt-1 text-sm text-[#78716c]">Copie agora. Esse código não será exibido novamente.</p>
+                    <h3 className="font-brand text-xl font-extrabold text-[var(--eixo-text)]">Código de ativação</h3>
+                    <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Copie agora. Esse código não será exibido novamente.</p>
                 </div>
 
                 <div className="space-y-4 px-6 py-5">
-                    <div className="rounded-2xl border border-[#f0d5ca] bg-[#faeee8] px-4 py-4 text-center">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">Código</p>
-                        <p className="mt-2 font-mono text-2xl font-bold tracking-[0.18em] text-[#1c1917]">{payload.code}</p>
+                    <div className="rounded-2xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-4 py-4 text-center">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">Código</p>
+                        <p className="mt-2 font-mono text-2xl font-bold tracking-[0.18em] text-[var(--eixo-text)]">{payload.code}</p>
                     </div>
-                    <div className="rounded-2xl border border-[#e7e5e4] bg-[#f5f5f4] px-4 py-3 text-sm text-[#6d6558]">
+                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-sm text-[var(--eixo-text-muted)]">
                         Válido até {new Date(payload.expiresAt).toLocaleString('pt-BR')}.
                     </div>
                     <div className="flex justify-end">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-xl bg-[#a8442a] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#933a22]"
+                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             Fechar
                         </button>
@@ -740,16 +740,16 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
     const getStatusClasses = (user: ManagedUser) => {
         switch (user.appActivationStatus) {
             case 'ATIVO':
-                return 'bg-[#edf4eb] text-[#2f6b2f]';
+                return 'bg-[var(--eixo-green-soft)] text-[#2f6b2f]';
             case 'CODIGO_EXPIRADO':
-                return 'bg-[#fbede8] text-[#8c4d39]';
+                return 'bg-[#fff2ef] text-[var(--eixo-danger)]';
             case 'BLOQUEADO':
             case 'APARELHO_REVOGADO':
-                return 'bg-[#1c1917] text-white';
+                return 'bg-[var(--eixo-text)] text-white';
             case 'PENDENTE_ATIVACAO':
-                return 'bg-[#f5f5f4] text-[#44403c]';
+                return 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)]';
             default:
-                return 'bg-[#f5f5f4] text-[#78716c]';
+                return 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]';
         }
     };
 
@@ -868,15 +868,15 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
     return (
         <>
             <div className="space-y-6">
-                <div className="rounded-3xl border border-[#e7e5e4] bg-white px-6 py-5">
+                <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
-                            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#f0d5ca] bg-[#faeee8] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#7a2a14]">
-                                <span className="h-1.5 w-1.5 rounded-full bg-[#a8442a]" />
+                            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                                 Estrutura da Fazenda
                             </div>
-                            <h1 className="font-brand text-2xl font-extrabold leading-tight text-[#1c1917]">Usuários e Permissões</h1>
-                            <p className="mt-1 text-sm leading-relaxed text-[#78716c]">
+                            <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Usuários e Permissões</h1>
+                            <p className="mt-1 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
                                 Separe o acesso do sistema web do acesso operacional no App do Manejo.
                             </p>
                         </div>
@@ -884,45 +884,45 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-3xl border border-[#e7e5e4] bg-white p-5">
+                    <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
                         <div className="flex items-center gap-2">
                             <DesktopIcon />
                             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#a8a29e]">Acesso ao Sistema</p>
                         </div>
-                        <p className="mt-2 text-3xl font-extrabold text-[#1c1917]">{webUsers.length}</p>
-                        <p className="mt-1 text-sm text-[#78716c]">Acessos com e-mail, senha e módulos do sistema.</p>
+                        <p className="mt-2 text-3xl font-extrabold text-[var(--eixo-text)]">{webUsers.length}</p>
+                        <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Acessos com e-mail, senha e módulos do sistema.</p>
                     </div>
-                    <div className="rounded-3xl border border-[#e7e5e4] bg-white p-5">
+                    <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
                         <div className="flex items-center gap-2">
                             <SmartphoneIcon />
                             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#a8a29e]">App do Manejo</p>
                         </div>
-                        <p className="mt-2 text-3xl font-extrabold text-[#1c1917]">{fieldUsers.length}</p>
-                        <p className="mt-1 text-sm text-[#78716c]">Acessos operacionais por código no celular.</p>
+                        <p className="mt-2 text-3xl font-extrabold text-[var(--eixo-text)]">{fieldUsers.length}</p>
+                        <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Acessos operacionais por código no celular.</p>
                     </div>
-                    <div className="rounded-3xl border border-[#e7e5e4] bg-white p-5">
+                    <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#a8a29e]">Aparelhos ativos</p>
-                        <p className="mt-2 text-3xl font-extrabold text-[#1c1917]">
+                        <p className="mt-2 text-3xl font-extrabold text-[var(--eixo-text)]">
                             {fieldUsers.filter((user) => Boolean(user.activeAppDevice)).length}
                         </p>
-                        <p className="mt-1 text-sm text-[#78716c]">Um aparelho por colaborador de campo.</p>
+                        <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Um aparelho por colaborador de campo.</p>
                     </div>
                 </div>
 
-                <div className="overflow-hidden rounded-[24px] border border-[#e7e5e4] bg-white">
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e7e5e4] bg-[#f5f5f4] px-6 py-4">
+                <div className="overflow-hidden rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-6 py-4">
                         <div>
                             <div className="flex items-center gap-2">
                                 <DesktopIcon />
-                                <p className="text-sm font-semibold text-[#1c1917]">Acesso ao Sistema</p>
+                                <p className="text-sm font-semibold text-[var(--eixo-text)]">Acesso ao Sistema</p>
                             </div>
-                            <p className="mt-1 text-xs text-[#78716c]">Cadastro com nome, e-mail, senha, módulos e fazenda padrão.</p>
+                            <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Cadastro com nome, e-mail, senha, módulos e fazenda padrão.</p>
                         </div>
                         {canManageUsers && (
                             <button
                                 type="button"
                                 onClick={onOpenUserRegister}
-                                className="inline-flex items-center rounded-2xl border border-[#a8442a] bg-[#a8442a] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#933a22]"
+                                className="inline-flex items-center rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                             >
                                 <span className="mr-2 text-base leading-none">+</span>
                                 Novo usuário
@@ -931,15 +931,15 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                     </div>
 
                     {isLoading ? (
-                        <div className="px-6 py-10 text-sm text-[#78716c]">Carregando usuários...</div>
+                        <div className="px-6 py-10 text-sm text-[var(--eixo-text-muted)]">Carregando usuários...</div>
                     ) : error ? (
-                        <div className="px-6 py-10 text-sm text-[#8c4d39]">{error}</div>
+                        <div className="px-6 py-10 text-sm text-[var(--eixo-danger)]">{error}</div>
                     ) : webUsers.length === 0 ? (
-                        <div className="px-6 py-10 text-sm text-[#78716c]">Nenhum acesso ao sistema cadastrado.</div>
+                        <div className="px-6 py-10 text-sm text-[var(--eixo-text-muted)]">Nenhum acesso ao sistema cadastrado.</div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm text-[#78716c]">
-                                <thead className="bg-[#fffaf1] text-[10px] font-bold uppercase tracking-[0.12em] text-[#74644e]">
+                            <table className="w-full text-left text-sm text-[var(--eixo-text-muted)]">
+                                <thead className="bg-[var(--eixo-surface)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                                     <tr>
                                         <th className="px-6 py-3">Usuário</th>
                                         <th className="px-6 py-3">Fazenda padrão</th>
@@ -949,18 +949,18 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                 </thead>
                                 <tbody>
                                     {webUsers.map((user) => (
-                                        <tr key={user.id} className="border-b border-[#e7e5e4] align-top last:border-b-0">
+                                        <tr key={user.id} className="border-b border-[var(--eixo-border)] align-top last:border-b-0">
                                             <td className="px-6 py-4">
-                                                <div className="font-semibold text-[#1c1917]">{user.name}</div>
-                                                <div className="mt-1 text-xs text-[#78716c]">{user.email}</div>
+                                                <div className="font-semibold text-[var(--eixo-text)]">{user.name}</div>
+                                                <div className="mt-1 text-xs text-[var(--eixo-text-muted)]">{user.email}</div>
                                             </td>
-                                            <td className="px-6 py-4 text-[#44403c]">{getFarmLabel(user)}</td>
+                                            <td className="px-6 py-4 text-[var(--eixo-text)]">{getFarmLabel(user)}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-wrap gap-2">
                                                     {user.modules.map((module) => (
                                                         <span
                                                             key={`${user.id}-${module}`}
-                                                            className="rounded-full border border-[#e7e5e4] bg-white px-3 py-1 text-xs font-medium text-[#6d6558]"
+                                                            className="rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-1 text-xs font-medium text-[var(--eixo-text-muted)]"
                                                         >
                                                             {module}
                                                         </span>
@@ -976,7 +976,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                                             setEditingUser(user);
                                                         }}
                                                         disabled={pendingUserId === user.id}
-                                                        className="inline-flex items-center gap-2 rounded-xl border border-[#e7e5e4] px-3 py-1.5 text-xs font-semibold text-[#44403c] transition-colors hover:bg-[#f5f5f4] disabled:cursor-not-allowed disabled:opacity-60"
+                                                        className="inline-flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:cursor-not-allowed disabled:opacity-60"
                                                     >
                                                         <EditIcon />
                                                         Editar
@@ -992,7 +992,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                                             setDeletingUser(user);
                                                         }}
                                                         disabled={pendingUserId === user.id || user.id === currentUserId}
-                                                        className="inline-flex items-center gap-2 rounded-xl border border-[#f0d5ca] px-3 py-1.5 text-xs font-semibold text-[#8c4d39] transition-colors hover:bg-[#faeee8] disabled:cursor-not-allowed disabled:opacity-50"
+                                                        className="inline-flex items-center gap-2 rounded-xl border border-[#d9ead0] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[var(--eixo-green-soft)] disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                         <TrashIcon />
                                                         Excluir
@@ -1006,20 +1006,20 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                         </div>
                     )}
                     {webActionError && (
-                        <div className="border-t border-[#e7e5e4] px-6 py-4 text-sm text-[#8c4d39]">
+                        <div className="border-t border-[var(--eixo-border)] px-6 py-4 text-sm text-[var(--eixo-danger)]">
                             {webActionError}
                         </div>
                     )}
                 </div>
 
-                <div className="overflow-hidden rounded-[24px] border border-[#e7e5e4] bg-white">
-                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#e7e5e4] bg-[#f5f5f4] px-6 py-4">
+                <div className="overflow-hidden rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+                    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-6 py-4">
                         <div>
                             <div className="flex items-center gap-2">
                                 <SmartphoneIcon />
-                                <p className="text-sm font-semibold text-[#1c1917]">App do Manejo</p>
+                                <p className="text-sm font-semibold text-[var(--eixo-text)]">App do Manejo</p>
                             </div>
-                            <p className="mt-1 text-xs text-[#78716c]">Colaboradores entram só com código e ficam presos a um aparelho por vez.</p>
+                            <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Colaboradores entram só com código e ficam presos a um aparelho por vez.</p>
                         </div>
                         {!isFreePlan && canManageUsers && (
                             <button
@@ -1028,7 +1028,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                     setFieldError(null);
                                     setIsFieldModalOpen(true);
                                 }}
-                                className="inline-flex items-center rounded-2xl border border-[#a8442a] bg-[#a8442a] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[#933a22]"
+                                className="inline-flex items-center rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                             >
                                 <span className="mr-2 text-base leading-none">+</span>
                                 Adicionar colaborador
@@ -1038,21 +1038,21 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
 
                     {isFreePlan ? (
                         <div className="px-6 py-10">
-                            <div className="rounded-2xl border border-dashed border-[#d7cab3] bg-[#fffaf1] px-5 py-5">
-                                <p className="text-sm font-semibold text-[#1c1917]">App do Manejo disponível apenas nos planos pagos</p>
-                                <p className="mt-2 text-sm text-[#78716c]">
+                            <div className="rounded-2xl border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-5 py-5">
+                                <p className="text-sm font-semibold text-[var(--eixo-text)]">App do Manejo disponível apenas nos planos pagos</p>
+                                <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
                                     Faça upgrade para cadastrar vaqueiros e admins de campo, gerar códigos de ativação e controlar o aparelho vinculado.
                                 </p>
                             </div>
                         </div>
                     ) : isLoading ? (
-                        <div className="px-6 py-10 text-sm text-[#78716c]">Carregando colaboradores...</div>
+                        <div className="px-6 py-10 text-sm text-[var(--eixo-text-muted)]">Carregando colaboradores...</div>
                     ) : fieldUsers.length === 0 ? (
-                        <div className="px-6 py-10 text-sm text-[#78716c]">Nenhum colaborador de campo cadastrado.</div>
+                        <div className="px-6 py-10 text-sm text-[var(--eixo-text-muted)]">Nenhum colaborador de campo cadastrado.</div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm text-[#78716c]">
-                                <thead className="bg-[#fffaf1] text-[10px] font-bold uppercase tracking-[0.12em] text-[#74644e]">
+                            <table className="w-full text-left text-sm text-[var(--eixo-text-muted)]">
+                                <thead className="bg-[var(--eixo-surface)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                                     <tr>
                                         <th className="px-6 py-3">Colaborador</th>
                                         <th className="px-6 py-3">Perfil</th>
@@ -1065,13 +1065,13 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                 </thead>
                                 <tbody>
                                     {fieldUsers.map((user) => (
-                                        <tr key={user.id} className="border-b border-[#e7e5e4] align-top last:border-b-0">
+                                        <tr key={user.id} className="border-b border-[var(--eixo-border)] align-top last:border-b-0">
                                             <td className="px-6 py-4">
-                                                <div className="font-semibold text-[#1c1917]">{user.name}</div>
-                                                <div className="mt-1 text-xs text-[#78716c]">Identificador interno do app</div>
+                                                <div className="font-semibold text-[var(--eixo-text)]">{user.name}</div>
+                                                <div className="mt-1 text-xs text-[var(--eixo-text-muted)]">Identificador interno do app</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="inline-flex rounded-full bg-[#faeee8] px-3 py-1 text-xs font-semibold text-[#7a2a14]">
+                                                <span className="inline-flex rounded-full bg-[var(--eixo-green-soft)] px-3 py-1 text-xs font-semibold text-[var(--eixo-graphite-dark)]">
                                                     {getProfileLabel(user)}
                                                 </span>
                                             </td>
@@ -1080,16 +1080,16 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                                     {getStatusLabel(user)}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 text-[#44403c]">{getFarmLabel(user)}</td>
-                                            <td className="px-6 py-4 text-[#44403c]">{getCodeLabel(user)}</td>
-                                            <td className="px-6 py-4 text-[#44403c]">{getDeviceLabel(user)}</td>
+                                            <td className="px-6 py-4 text-[var(--eixo-text)]">{getFarmLabel(user)}</td>
+                                            <td className="px-6 py-4 text-[var(--eixo-text)]">{getCodeLabel(user)}</td>
+                                            <td className="px-6 py-4 text-[var(--eixo-text)]">{getDeviceLabel(user)}</td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-wrap gap-2">
                                                     <button
                                                         type="button"
                                                         onClick={() => handleGenerateCode(user.id)}
                                                         disabled={pendingUserId === user.id}
-                                                        className="rounded-xl border border-[#a8442a] px-3 py-1.5 text-xs font-semibold text-[#a8442a] transition-colors hover:bg-[#faeee8] disabled:cursor-not-allowed disabled:opacity-60"
+                                                        className="rounded-xl border border-[var(--eixo-green)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-green)] transition-colors hover:bg-[var(--eixo-green-soft)] disabled:cursor-not-allowed disabled:opacity-60"
                                                     >
                                                         {user.activeAppCode?.expiresAt ? 'Gerar novo código' : 'Gerar código'}
                                                     </button>
@@ -1097,7 +1097,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                                         type="button"
                                                         onClick={() => handleRevokeDevice(user.id)}
                                                         disabled={!user.activeAppDevice || pendingUserId === user.id}
-                                                        className="rounded-xl border border-[#e7e5e4] px-3 py-1.5 text-xs font-semibold text-[#44403c] transition-colors hover:bg-[#f5f5f4] disabled:cursor-not-allowed disabled:opacity-50"
+                                                        className="rounded-xl border border-[var(--eixo-border)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                         Revogar aparelho
                                                     </button>
@@ -1108,7 +1108,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                                             setEditingFieldUser(user);
                                                         }}
                                                         disabled={pendingUserId === user.id}
-                                                        className="inline-flex items-center gap-2 rounded-xl border border-[#e7e5e4] px-3 py-1.5 text-xs font-semibold text-[#44403c] transition-colors hover:bg-[#f5f5f4] disabled:cursor-not-allowed disabled:opacity-60"
+                                                        className="inline-flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:cursor-not-allowed disabled:opacity-60"
                                                     >
                                                         <EditIcon />
                                                         Editar
@@ -1120,7 +1120,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                                             setDeletingFieldUser(user);
                                                         }}
                                                         disabled={pendingUserId === user.id}
-                                                        className="inline-flex items-center gap-2 rounded-xl border border-[#f0d5ca] px-3 py-1.5 text-xs font-semibold text-[#8c4d39] transition-colors hover:bg-[#faeee8] disabled:cursor-not-allowed disabled:opacity-50"
+                                                        className="inline-flex items-center gap-2 rounded-xl border border-[#d9ead0] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[var(--eixo-green-soft)] disabled:cursor-not-allowed disabled:opacity-50"
                                                     >
                                                         <TrashIcon />
                                                         Excluir
@@ -1135,7 +1135,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                     )}
 
                     {fieldActionError && !isFreePlan && (
-                        <div className="border-t border-[#e7e5e4] px-6 py-4 text-sm text-[#8c4d39]">
+                        <div className="border-t border-[var(--eixo-border)] px-6 py-4 text-sm text-[var(--eixo-danger)]">
                             {fieldActionError}
                         </div>
                     )}

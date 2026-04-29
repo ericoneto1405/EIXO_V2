@@ -55,13 +55,13 @@ interface GeneticsRelatoriosProps {
 
 const trafficStyles: Record<TrafficLight, { badge: string; label: string }> = {
     GREEN: { badge: 'bg-emerald-100 text-emerald-700', label: 'Verde' },
-    YELLOW: { badge: 'bg-amber-100 text-amber-700', label: 'Amarelo' },
-    RED: { badge: 'bg-rose-100 text-rose-700', label: 'Vermelho' },
+    YELLOW: { badge: 'bg-[#f7f1df] text-[var(--eixo-warning)]', label: 'Amarelo' },
+    RED: { badge: 'bg-[#f7ddd7] text-[var(--eixo-danger)]', label: 'Vermelho' },
 };
 
 const decisionStyles: Record<DecisionType, { badge: string; label: string }> = {
-    DISCARD: { badge: 'bg-rose-100 text-rose-700', label: 'Descarte' },
-    WATCH: { badge: 'bg-amber-100 text-amber-700', label: 'Observar' },
+    DISCARD: { badge: 'bg-[#f7ddd7] text-[var(--eixo-danger)]', label: 'Descarte' },
+    WATCH: { badge: 'bg-[#f7f1df] text-[var(--eixo-warning)]', label: 'Observar' },
     KEEP: { badge: 'bg-emerald-100 text-emerald-700', label: 'Manter' },
 };
 
@@ -196,16 +196,16 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
     }, [summary]);
 
     return (
-        <div className="bg-white dark:bg-dark-card rounded-xl shadow-lg p-8">
+        <div className="bg-[var(--eixo-surface)] dark:bg-[var(--eixo-surface)] rounded-xl shadow-lg p-8">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">Relatórios</h2>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Resumo reprodutivo e decisões de seleção.</p>
+                    <h2 className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">Relatórios</h2>
+                    <p className="text-sm text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">Resumo reprodutivo e decisões de seleção.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     {reproMode === 'ESTACAO' && (
                         <select
-                            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-[#1c1917] focus:ring-[#1c1917]/10 dark:border-gray-700 dark:bg-dark-card dark:text-white"
+                            className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
                             value={selectedSeasonId || ''}
                             onChange={(event) => setSelectedSeasonId(event.target.value || null)}
                         >
@@ -228,72 +228,72 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
             </div>
 
             {totalsLine && (
-                <p className="mt-4 text-xs text-gray-400">{totalsLine}</p>
+                <p className="mt-4 text-xs text-[var(--eixo-text-soft)]">{totalsLine}</p>
             )}
 
             {loadError && (
-                <div className="mt-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600">
+                <div className="mt-4 rounded-lg border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
                     {loadError}
                 </div>
             )}
 
             <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-gray-100 p-4 shadow-sm dark:border-gray-700">
-                    <p className="text-xs text-gray-500">Taxa de prenhez</p>
-                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">{summary ? formatRate(summary.pregRate) : '-'}</p>
+                <div className="rounded-xl border border-[var(--eixo-border)] p-4 shadow-sm dark:border-[var(--eixo-border)]">
+                    <p className="text-xs text-[var(--eixo-text-muted)]">Taxa de prenhez</p>
+                    <p className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary ? formatRate(summary.pregRate) : '-'}</p>
                 </div>
-                <div className="rounded-xl border border-gray-100 p-4 shadow-sm dark:border-gray-700">
-                    <p className="text-xs text-gray-500">
+                <div className="rounded-xl border border-[var(--eixo-border)] p-4 shadow-sm dark:border-[var(--eixo-border)]">
+                    <p className="text-xs text-[var(--eixo-text-muted)]">
                         Média dias em aberto{summary?.openDaysCount ? ` (n=${summary.openDaysCount})` : ''}
                     </p>
-                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">{summary ? formatNumber(summary.openDaysAvg) : '-'}</p>
+                    <p className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary ? formatNumber(summary.openDaysAvg) : '-'}</p>
                 </div>
-                <div className="rounded-xl border border-gray-100 p-4 shadow-sm dark:border-gray-700">
-                    <p className="text-xs text-gray-500">% acima de 180 dias</p>
-                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">{summary ? formatRate(summary.openDaysOver180Pct) : '-'}</p>
+                <div className="rounded-xl border border-[var(--eixo-border)] p-4 shadow-sm dark:border-[var(--eixo-border)]">
+                    <p className="text-xs text-[var(--eixo-text-muted)]">% acima de 180 dias</p>
+                    <p className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary ? formatRate(summary.openDaysOver180Pct) : '-'}</p>
                 </div>
-                <div className="rounded-xl border border-gray-100 p-4 shadow-sm dark:border-gray-700">
-                    <p className="text-xs text-gray-500">
+                <div className="rounded-xl border border-[var(--eixo-border)] p-4 shadow-sm dark:border-[var(--eixo-border)]">
+                    <p className="text-xs text-[var(--eixo-text-muted)]">
                         Média IEP (dias){summary?.iepCount ? ` (n=${summary.iepCount})` : ''}
                     </p>
-                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">{summary ? formatNumber(summary.iepAvg) : '-'}</p>
+                    <p className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary ? formatNumber(summary.iepAvg) : '-'}</p>
                 </div>
             </div>
 
             {reproMode === 'ESTACAO' && selectedSeasonId && summary && (
-                <div className="mt-6 rounded-xl border border-gray-100 p-4 shadow-sm dark:border-gray-700">
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3">Estação selecionada</h3>
+                <div className="mt-6 rounded-xl border border-[var(--eixo-border)] p-4 shadow-sm dark:border-[var(--eixo-border)]">
+                    <h3 className="text-sm font-semibold text-[var(--eixo-text)] uppercase mb-3">Estação selecionada</h3>
                     {summary.totals.exposures && summary.totals.exposures > 0 ? (
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             <div>
-                                <p className="text-xs text-gray-500">Expostas</p>
-                                <p className="text-xl font-semibold text-gray-900 dark:text-white">{summary.totals.exposures}</p>
+                                <p className="text-xs text-[var(--eixo-text-muted)]">Expostas</p>
+                                <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary.totals.exposures}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500">Prenhes</p>
-                                <p className="text-xl font-semibold text-gray-900 dark:text-white">{summary.totals.pregnant ?? 0}</p>
+                                <p className="text-xs text-[var(--eixo-text-muted)]">Prenhes</p>
+                                <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary.totals.pregnant ?? 0}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500">Vazias</p>
-                                <p className="text-xl font-semibold text-gray-900 dark:text-white">{summary.totals.empty ?? 0}</p>
+                                <p className="text-xs text-[var(--eixo-text-muted)]">Vazias</p>
+                                <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary.totals.empty ?? 0}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-gray-500">Taxa</p>
-                                <p className="text-xl font-semibold text-gray-900 dark:text-white">{formatRate(summary.pregRate)}</p>
+                                <p className="text-xs text-[var(--eixo-text-muted)]">Taxa</p>
+                                <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{formatRate(summary.pregRate)}</p>
                             </div>
                         </div>
                     ) : (
-                        <p className="text-sm text-gray-500">Sem expostas na estação.</p>
+                        <p className="text-sm text-[var(--eixo-text-muted)]">Sem expostas na estação.</p>
                     )}
                 </div>
             )}
 
             <div className="mt-8 grid gap-6 lg:grid-cols-2">
                 <div>
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3">Top alertas</h3>
+                    <h3 className="text-sm font-semibold text-[var(--eixo-text)] uppercase mb-3">Top alertas</h3>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <table className="w-full text-sm text-left text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
+                            <thead className="text-xs text-[var(--eixo-text)] uppercase bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-surface-soft)] dark:text-[var(--eixo-text-soft)]">
                                 <tr>
                                     <th className="px-4 py-2">Brinco</th>
                                     <th className="px-4 py-2">Raça</th>
@@ -305,7 +305,7 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                             <tbody>
                                 {topAlerts.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-4 py-4 text-center text-gray-400">
+                                        <td colSpan={5} className="px-4 py-4 text-center text-[var(--eixo-text-soft)]">
                                             Nenhum alerta crítico.
                                         </td>
                                     </tr>
@@ -319,8 +319,8 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                                         const alertExtraCount = hasReasons ? item.reasons.length - 1 : 0;
                                         const alertTitle = hasReasons ? item.reasons.join(' | ') : '';
                                         return (
-                                            <tr key={item.animal.id} className="border-b border-gray-100 dark:border-gray-700">
-                                                <td className="px-4 py-2 font-medium text-gray-900 dark:text-white">{item.animal.brinco}</td>
+                                            <tr key={item.animal.id} className="border-b border-[var(--eixo-border)] dark:border-[var(--eixo-border)]">
+                                                <td className="px-4 py-2 font-medium text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{item.animal.brinco}</td>
                                                 <td className="px-4 py-2">{item.animal.raca}</td>
                                                 <td className="px-4 py-2">
                                                     {decisionBadge ? (
@@ -336,7 +336,7 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                                                 <td className="px-4 py-2">{item.kpis.openDays ?? '-'}</td>
                                                 <td className="px-4 py-2">
                                                     <span
-                                                        className="text-[11px] text-gray-400"
+                                                        className="text-[11px] text-[var(--eixo-text-soft)]"
                                                         title={alertTitle || undefined}
                                                     >
                                                         {alertPrimary}{alertExtraCount > 0 ? ` +${alertExtraCount}` : ''}
@@ -351,10 +351,10 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                     </div>
                 </div>
                 <div>
-                    <h3 className="text-sm font-semibold text-gray-700 uppercase mb-3">Decisões recentes</h3>
+                    <h3 className="text-sm font-semibold text-[var(--eixo-text)] uppercase mb-3">Decisões recentes</h3>
                     <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                            <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <table className="w-full text-sm text-left text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
+                            <thead className="text-xs text-[var(--eixo-text)] uppercase bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-surface-soft)] dark:text-[var(--eixo-text-soft)]">
                                 <tr>
                                     <th className="px-4 py-2">Brinco</th>
                                     <th className="px-4 py-2">Decisão</th>
@@ -365,7 +365,7 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                             <tbody>
                                 {decisions.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="px-4 py-4 text-center text-gray-400">
+                                        <td colSpan={4} className="px-4 py-4 text-center text-[var(--eixo-text-soft)]">
                                             Nenhuma decisão registrada.
                                         </td>
                                     </tr>
@@ -373,8 +373,8 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                                     decisions.map((item) => {
                                         const decisionBadge = decisionStyles[item.decision.decision];
                                         return (
-                                            <tr key={item.animal.id} className="border-b border-gray-100 dark:border-gray-700">
-                                                <td className="px-4 py-2 font-medium text-gray-900 dark:text-white">{item.animal.brinco}</td>
+                                            <tr key={item.animal.id} className="border-b border-[var(--eixo-border)] dark:border-[var(--eixo-border)]">
+                                                <td className="px-4 py-2 font-medium text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{item.animal.brinco}</td>
                                                 <td className="px-4 py-2">
                                                     <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${decisionBadge.badge}`}>
                                                         {decisionBadge.label}
