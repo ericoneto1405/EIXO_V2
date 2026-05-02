@@ -47,10 +47,11 @@ export const useAppAuth = () => {
       return;
     }
 
-    const [farmsResponse, paddocksResponse, animalsResponse] = await Promise.all([
+    const [farmsResponse, paddocksResponse, animalsResponse, poAnimalsResponse] = await Promise.all([
       apiFetch('/farms', { method: 'GET' }),
       apiFetch(`/pastos?farmId=${encodeURIComponent(defaultFarmId)}`, { method: 'GET' }),
       apiFetch(`/animals?farmId=${encodeURIComponent(defaultFarmId)}`, { method: 'GET' }),
+      apiFetch(`/po/animals?farmId=${encodeURIComponent(defaultFarmId)}`, { method: 'GET' }),
     ]);
 
     if (!farmsResponse.ok) {
@@ -66,11 +67,27 @@ export const useAppAuth = () => {
     const farmsPayload = await farmsResponse.json();
     const paddocksPayload = await paddocksResponse.json();
     const animalsPayload = await animalsResponse.json();
+    const poAnimalsPayload = poAnimalsResponse.ok ? await poAnimalsResponse.json().catch(() => ({})) : {};
 
     const availableFarms: Farm[] = Array.isArray(farmsPayload?.farms) ? farmsPayload.farms : [];
+    const commercialAnimals: Animal[] = (Array.isArray(animalsPayload?.animals) ? animalsPayload.animals : [])
+      .map((animal: Animal) => ({ ...animal, animalType: 'comercial' as const }));
+    const poAnimalsSource = Array.isArray(poAnimalsPayload?.animals)
+      ? poAnimalsPayload.animals
+      : Array.isArray(poAnimalsPayload?.poAnimals)
+        ? poAnimalsPayload.poAnimals
+        : Array.isArray(poAnimalsPayload?.items)
+          ? poAnimalsPayload.items
+          : [];
+    const poAnimals: Animal[] = poAnimalsSource.map((animal: Animal) => ({
+      ...animal,
+      name: animal.name || animal.nome || animal.registro || null,
+      animalType: 'po' as const,
+    }));
+
     setFarm(availableFarms.find((item) => item.id === defaultFarmId) || null);
     setPaddocks(Array.isArray(paddocksPayload?.items) ? paddocksPayload.items : []);
-    setAnimals(Array.isArray(animalsPayload?.animals) ? animalsPayload.animals : []);
+    setAnimals([...commercialAnimals, ...poAnimals]);
     setScreenError('');
   };
 
@@ -112,7 +129,7 @@ export const useAppAuth = () => {
     void bootstrap();
   }, []);
 
-  const handleLogin = async (event: FormEvent) => {
+  const handleLogin = async (event: FormEvent, expectedProfile?: 'VAQUEIRO' | 'ADMIN_CAMPO') => {
     event.preventDefault();
     setLoginError('');
     setIsLoggingIn(true);
@@ -137,6 +154,14 @@ export const useAppAuth = () => {
       }
       if (!payload?.sessionToken) {
         setLoginError('Resposta de ativação inválida.');
+        return;
+      }
+      const resolvedProfile = payload.profile || payload.user?.fieldProfile || null;
+      if (expectedProfile && resolvedProfile !== expectedProfile) {
+        clearStoredSessionToken();
+        setLoginError(expectedProfile === 'ADMIN_CAMPO'
+          ? 'Este código é de Vaqueiro. Use o botão Gerenciamento apenas com código de Admin de Campo.'
+          : 'Este código não é de Vaqueiro.');
         return;
       }
       setStoredSessionToken(payload.sessionToken);

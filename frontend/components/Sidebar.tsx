@@ -132,10 +132,10 @@ const StatusPopover: React.FC<StatusPopoverProps> = ({ state, pos, onClose, popo
             {/* Badge do estado */}
             <div className={`mb-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
                 state.type === 'plan_locked'
-                    ? 'border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite-dark)]'
+                    ? 'border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
                     : state.type === 'coming_soon'
                         ? 'border-[#4a4944] bg-[rgba(255,255,255,0.04)] text-[#b9b3a8]'
-                        : 'border-[var(--eixo-border)] bg-[rgba(255,250,241,0.78)] text-[var(--eixo-graphite-dark)]'
+                        : 'border-[var(--eixo-border)] bg-[rgba(255,250,241,0.78)] text-[var(--eixo-graphite)]'
             }`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${
                     state.type === 'coming_soon'
@@ -176,7 +176,7 @@ const StatusPopover: React.FC<StatusPopoverProps> = ({ state, pos, onClose, popo
                         ? 'border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] hover:bg-[var(--eixo-bg)]'
                         : state.type === 'needs_setup'
                             ? 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] hover:bg-[var(--eixo-bg)]'
-                            : 'bg-[var(--eixo-green)] text-white hover:bg-[var(--eixo-green-dark)]'
+                            : 'bg-[var(--eixo-green)] text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]'
                 }`}
             >
                 {state.cta}
@@ -368,6 +368,7 @@ const navItems: NavItem[] = [
         allowedLabels: ['Rebanho Comercial'],
     },
     { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição', allowedLabels: ['Nutrição'], requiredPlanBadge: 'PRO' },
+    { label: 'Ocorrências do EIXO Campo', icon: <ReportIcon />, value: 'Ocorrências do EIXO Campo', allowedLabels: ['Operações'] },
     { label: 'Confinamento e Contratos', icon: <OperationsIcon />, value: 'Confinamento e Contratos', allowedLabels: ['Operações'], requiredPlanBadge: 'PLUS' },
     { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Reprodução', path: '/genetics/reproducao', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
     {
@@ -453,7 +454,7 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
     const baseClasses = `w-full flex items-center font-brand ${
         isCollapsed ? 'justify-center' : 'justify-start'
     } ${isSubItem ? 'py-1.5' : 'py-2.5'} ${isSubItem ? (isCollapsed ? 'px-3' : 'pl-11 pr-3') : 'px-3.5'} ${
-        isSubItem ? 'text-[13px]' : 'text-sm'
+        isSubItem ? 'text-[14px]' : 'text-[16px]'
     } ${isSubItem ? 'font-medium' : 'font-semibold'} transition-all duration-150 rounded-2xl ${status ? 'cursor-pointer' : 'active:translate-y-[2px]'} ${
         isComingSoon
             ? 'border border-dashed border-[#4a4944] bg-transparent text-[#8c8579]'
@@ -466,8 +467,8 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
             ? ''
             :
         isActive
-            ? 'translate-y-[2px] border border-transparent bg-[var(--eixo-green)] text-[#fafaf9] font-bold'
-            : 'border border-transparent text-[var(--eixo-text-soft)] hover:translate-y-[2px] hover:border-transparent hover:bg-[var(--eixo-graphite)] hover:text-[var(--eixo-border)] active:bg-[var(--eixo-graphite)]'
+            ? 'translate-y-[2px] border border-transparent bg-[var(--eixo-green)] text-[#1a1a1a] font-bold'
+            : 'border border-transparent text-white/75 hover:translate-y-[2px] hover:border-transparent hover:bg-white/8 hover:text-white active:bg-white/8'
     }`;
 
     return (
@@ -643,7 +644,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                         <button
                             type="button"
                             onClick={() => setIsCollapsed((prev) => !prev)}
-                            className="rounded-md border border-[var(--eixo-border-strong)]/20 bg-[var(--eixo-graphite)] p-1.5 text-[var(--eixo-text-soft)] transition-colors hover:bg-[var(--eixo-graphite-dark)] hover:text-white"
+                            className="rounded-md border border-[var(--eixo-border-strong)]/20 bg-[var(--eixo-graphite)] p-1.5 text-[var(--eixo-text-soft)] transition-colors hover:bg-[var(--eixo-graphite)] hover:text-white"
                             aria-label={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
                         >
                             <SidebarPanelIcon collapsed={isCollapsed} />

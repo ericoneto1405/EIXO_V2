@@ -12,6 +12,17 @@ const CattleIcon: React.FC = () => (
     </svg>
 );
 
+const CalfIcon: React.FC = () => (
+    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.8}
+            d="M6 8.5 8.2 6H11l1.4 1.6h2.2L17 6.4 18.6 8 18 11.2l.8 3.8H16.6l-.8-2.4H8.5L7.6 15H5.4l.8-3.8L6 8.5Zm4.2 1.2h.01M14 9.7h.01M9.4 15v1.8M14.6 15v1.8"
+        />
+    </svg>
+);
+
 const OccupationIcon: React.FC = () => (
     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
@@ -48,6 +59,7 @@ interface CategoryCount {
 
 interface KpiData {
     totalAnimais: number;
+    nascimentosMes: number;
     categorias: CategoryCount[];
     taxaOcupacao: number | null;   // cabeças/ha
     gmdMedio: number | null;
@@ -101,14 +113,14 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, icon, loading, children }) => 
 
 const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
     const [kpis, setKpis] = useState<KpiData>({
-        totalAnimais: 0, categorias: [], taxaOcupacao: null,
+        totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null,
         gmdMedio: null, entradas: null, saidas: null, saldoMes: null,
     });
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (!farmId) {
-            setKpis({ totalAnimais: 0, categorias: [], taxaOcupacao: null, gmdMedio: null, entradas: null, saidas: null, saldoMes: null });
+            setKpis({ totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null, gmdMedio: null, entradas: null, saidas: null, saldoMes: null });
             return;
         }
 
@@ -129,13 +141,19 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
                 if (!active) return;
 
                 // ── Animals ──────────────────────────────────────────────────
-                let animals: Array<{ id: string; pesoAtual: number; categoria?: string }> = [];
+                let animals: Array<{ id: string; pesoAtual: number; categoria?: string; dataNascimento?: string | null }> = [];
                 if (animalsRes.status === 'fulfilled' && animalsRes.value.ok) {
                     const data = await animalsRes.value.json().catch(() => ({}));
                     animals = Array.isArray(data?.animals) ? data.animals : [];
                 }
 
                 const totalAnimais = animals.length;
+                const nascimentosMes = animals.filter((animal) => {
+                    if (!animal.dataNascimento) return false;
+                    const birthDate = new Date(animal.dataNascimento);
+                    if (Number.isNaN(birthDate.getTime())) return false;
+                    return birthDate.getMonth() + 1 === mes && birthDate.getFullYear() === ano;
+                }).length;
 
                 // Breakdown por categoria (top 4)
                 const catMap = new Map<string, number>();
@@ -190,7 +208,7 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
                     saldoMes = entradas - saidas;
                 }
 
-                setKpis({ totalAnimais, categorias, taxaOcupacao, gmdMedio, entradas, saidas, saldoMes });
+                setKpis({ totalAnimais, nascimentosMes, categorias, taxaOcupacao, gmdMedio, entradas, saidas, saldoMes });
             } catch (err) {
                 console.error('Dashboard load error', err);
             } finally {
@@ -210,7 +228,7 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
 
             {/* Cabeçalho */}
             <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                     <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                     Visão Geral
                 </div>
@@ -221,7 +239,7 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
 
                 {/* 1. Total de Animais */}
                 <KpiCard title="Total de Animais" icon={<CattleIcon />} loading={loading}>
@@ -241,7 +259,13 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
                     )}
                 </KpiCard>
 
-                {/* 2. Taxa de Ocupação */}
+                {/* 2. Nascimentos no mês */}
+                <KpiCard title="Nascimentos no mês" icon={<CalfIcon />} loading={loading}>
+                    <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{kpis.nascimentosMes}</p>
+                    <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">No mês atual</p>
+                </KpiCard>
+
+                {/* 3. Taxa de Ocupação */}
                 <KpiCard title="Taxa de Ocupação" icon={<OccupationIcon />} loading={loading}>
                     {kpis.taxaOcupacao !== null ? (
                         <>
@@ -267,7 +291,7 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
                     )}
                 </KpiCard>
 
-                {/* 3. GMD Médio */}
+                {/* 4. GMD Médio */}
                 <KpiCard title="GMD Médio" icon={<TrendIcon />} loading={loading}>
                     {kpis.gmdMedio !== null ? (
                         <>
@@ -287,7 +311,7 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
                     )}
                 </KpiCard>
 
-                {/* 4. Fluxo de Caixa */}
+                {/* 5. Fluxo de Caixa */}
                 <KpiCard title="Fluxo de Caixa" icon={<MoneyIcon />} loading={loading}>
                     {kpis.saldoMes !== null ? (
                         <>

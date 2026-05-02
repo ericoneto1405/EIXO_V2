@@ -127,7 +127,7 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
             <div className="w-full max-w-lg rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
                 <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5">
                     <div>
-                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             App do Manejo
                         </div>
@@ -231,7 +231,7 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                         </button>
                         <button
                             type="submit"
-                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]"
+                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             Salvar colaborador
                         </button>
@@ -279,7 +279,7 @@ const EditFieldCollaboratorModal: React.FC<EditFieldCollaboratorModalProps> = ({
             <div className="w-full max-w-lg rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
                 <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5">
                     <div>
-                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             App do Manejo
                         </div>
@@ -372,7 +372,7 @@ const EditFieldCollaboratorModal: React.FC<EditFieldCollaboratorModalProps> = ({
                         <button type="button" onClick={onClose} className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">
                             Cancelar
                         </button>
-                        <button type="submit" className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]">
+                        <button type="submit" className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]">
                             Salvar alterações
                         </button>
                     </div>
@@ -438,7 +438,7 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
             <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
                 <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5">
                     <div>
-                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             Sistema web
                         </div>
@@ -522,7 +522,7 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
                                                     key={module}
                                                     className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm transition-colors ${
                                                         isSelected
-                                                            ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite-dark)]'
+                                                            ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
                                                             : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-[var(--eixo-text-muted)] hover:border-[var(--eixo-text-soft)]'
                                                     }`}
                                                 >
@@ -553,7 +553,7 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
                         <button type="button" onClick={onClose} className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">
                             Cancelar
                         </button>
-                        <button type="submit" className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]">
+                        <button type="submit" className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]">
                             Salvar alterações
                         </button>
                     </div>
@@ -626,7 +626,7 @@ const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({ payload, onCl
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
             <div className="w-full max-w-md rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
                 <div className="border-b border-[var(--eixo-border)] px-6 py-5">
-                    <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                    <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                         <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                         App do Manejo
                     </div>
@@ -636,7 +636,7 @@ const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({ payload, onCl
 
                 <div className="space-y-4 px-6 py-5">
                     <div className="rounded-2xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-4 py-4 text-center">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">Código</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">Código</p>
                         <p className="mt-2 font-mono text-2xl font-bold tracking-[0.18em] text-[var(--eixo-text)]">{payload.code}</p>
                     </div>
                     <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-sm text-[var(--eixo-text-muted)]">
@@ -646,7 +646,7 @@ const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({ payload, onCl
                         <button
                             type="button"
                             onClick={onClose}
-                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]"
+                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             Fechar
                         </button>
@@ -871,7 +871,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                 <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
-                            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                                 Estrutura da Fazenda
                             </div>
@@ -922,7 +922,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                             <button
                                 type="button"
                                 onClick={onOpenUserRegister}
-                                className="inline-flex items-center rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                                className="inline-flex items-center rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                             >
                                 <span className="mr-2 text-base leading-none">+</span>
                                 Novo usuário
@@ -1028,7 +1028,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                     setFieldError(null);
                                     setIsFieldModalOpen(true);
                                 }}
-                                className="inline-flex items-center rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                                className="inline-flex items-center rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                             >
                                 <span className="mr-2 text-base leading-none">+</span>
                                 Adicionar colaborador
@@ -1071,7 +1071,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                                 <div className="mt-1 text-xs text-[var(--eixo-text-muted)]">Identificador interno do app</div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className="inline-flex rounded-full bg-[var(--eixo-green-soft)] px-3 py-1 text-xs font-semibold text-[var(--eixo-graphite-dark)]">
+                                                <span className="inline-flex rounded-full bg-[var(--eixo-green-soft)] px-3 py-1 text-xs font-semibold text-[var(--eixo-graphite)]">
                                                     {getProfileLabel(user)}
                                                 </span>
                                             </td>

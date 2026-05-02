@@ -475,7 +475,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
 
     const inputClass = 'mt-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none';
     const labelClass = 'text-xs font-medium text-[var(--eixo-text-muted)]';
-    const btnPrimary = 'h-10 rounded-xl bg-[var(--eixo-green)] px-4 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-70';
+    const btnPrimary = 'h-10 rounded-xl bg-[var(--eixo-green)] px-4 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-70';
     const tabClass = (tab: ModalTab) =>
         `${activeTab === tab
             ? 'border-[var(--eixo-green)] text-[var(--eixo-green)] font-semibold'

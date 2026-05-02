@@ -1,11 +1,12 @@
 import { buildApiUrl } from '../api';
-import type { AnimalUI, LotUI, PaddockMove, WeighingUI } from '../types';
+import type { AnimalUI, LotUI, PaddockMove, WeighingSessionUI, WeighingUI } from '../types';
 
 export type HerdType = 'COMMERCIAL' | 'PO';
 
 export type HerdAnimal = AnimalUI;
 export type HerdLot = LotUI;
 export type HerdWeighing = WeighingUI;
+export type HerdWeighingSession = WeighingSessionUI;
 
 // ---- Tipos novos ----
 
@@ -73,6 +74,7 @@ const normalizeAnimal = (animal: any, herdType: HerdType): HerdAnimal => {
             lotId: animal.lotId || null,
             registro: animal.registro || null,
             categoria: animal.categoria || null,
+            selectionDecision: animal.selectionDecision || null,
             currentPaddockId: animal.currentPaddockId || null,
             currentPaddockName: animal.currentPaddockName || null,
             nutritionPlan: animal.nutritionPlan || null,
@@ -93,8 +95,9 @@ const normalizeAnimal = (animal: any, herdType: HerdType): HerdAnimal => {
         gmdLast: typeof animal.gmdLast === 'number' ? animal.gmdLast : null,
         gmd30: typeof animal.gmd30 === 'number' ? animal.gmd30 : null,
         lotId: animal.lotId,
-        registro: null,
-        categoria: null,
+        registro: animal.registro || null,
+        categoria: animal.categoria || null,
+        selectionDecision: animal.selectionDecision || null,
         currentPaddockId: animal.currentPaddockId || null,
         currentPaddockName: animal.currentPaddockName || null,
         nutritionPlan: animal.nutritionPlan || null,
@@ -208,6 +211,34 @@ export const createWeighing = async (
     return data.pesagem;
 };
 
+export const createWeighingSession = async (
+    farmId: string,
+    name: string,
+): Promise<HerdWeighingSession> => {
+    const response = await fetch(buildApiUrl(`/farms/${farmId}/weighing-sessions`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ name }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao criar sessão de pesagem.');
+    }
+    return data;
+};
+
+export const listWeighingSessions = async (farmId: string): Promise<HerdWeighingSession[]> => {
+    const response = await fetch(buildApiUrl(`/farms/${farmId}/weighing-sessions`), {
+        credentials: 'include',
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao listar sessões de pesagem.');
+    }
+    return data.sessions || [];
+};
+
 export const listPaddockMoves = async (animalId: string, herdType: HerdType): Promise<PaddockMove[]> => {
     const endpoint = herdType === 'PO'
         ? `/po/animals/${animalId}/paddock-moves`
@@ -314,7 +345,14 @@ export const createSanitaryRecord = async (
 export const updateLot = async (
     lotId: string,
     herdType: HerdType,
-    payload: { name: string; notes?: string },
+    payload: {
+        name: string;
+        notes?: string;
+        objective?: string;
+        phase?: string;
+        status?: string;
+        startDate?: string;
+    },
 ): Promise<HerdLot> => {
     const endpoint = herdType === 'PO' ? `/po/lots/${lotId}` : `/lots/${lotId}`;
     const response = await fetch(buildApiUrl(endpoint), {

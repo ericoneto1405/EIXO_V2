@@ -39,4 +39,23 @@ export interface Animal {
   brinco?: string | null;
   identificacao?: string | null;
   name?: string | null;
+  nome?: string | null;
+  registro?: string | null;
+  animalType?: 'comercial' | 'po';
+}
+
+export type WeighingStatus = 'pendente' | 'enviado' | 'erro' | 'conflito';
+
+export interface PendingWeighing {
+  localId: string;
+  animalId: string;
+  animalLabel: string;
+  animalType: 'comercial' | 'po';
+  farmId: string;
+  data: string;
+  peso: number;
+  status: WeighingStatus;
+  syncError: string | null;
+  createdAt: string;
+  forceReplace?: boolean;
 }

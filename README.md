@@ -60,55 +60,37 @@ O sistema aceita qualquer planilha do produtor — não é necessário usar um m
 
 ## Identidade visual
 
-Marca guarda-chuva: **eixo** — cobre todo o ecossistema de produtos futuros.
+Marca guarda-chuva: **EIXO** — cobre todo o ecossistema de produtos futuros.
 
-Marca atual em uso no sistema: `frontend/public/eixo-logo-render.png`.
+Logo: "EIXO" maiúsculo, tipografia geométrica bold, com o X bicolor — uma diagonal em Grafite `#2F2F2F` (ou branco sobre fundo escuro), outra em Verde EIXO `#B6E23A`.
 
-### Paleta EIXO
+### Arquivos de logo (`frontend/public/`)
 
-| Papel | Valor |
-|------|-------|
-| Graphite | `#3f4141` |
-| Graphite Dark | `#2f3131` |
-| Primary Green | `#76b82a` |
-| Primary Green Dark | `#5f9f1f` |
-| Green Soft | `#edf7e6` |
-| Background | `#f7f8f6` |
-| Surface | `#ffffff` |
-| Surface Soft | `#f0f2ef` |
-| Text | `#202322` |
-| Text Muted | `#66706a` |
-| Text Soft | `#8a948d` |
-| Border | `#dfe4df` |
-| Border Strong | `#c7cec7` |
-| Success | `#4f9f2f` |
-| Warning | `#c58a20` |
-| Danger | `#b84232` |
-| Info | `#3f6f8f` |
+| Arquivo | Uso |
+|---------|-----|
+| `logo_eixo_official.svg` | Fundos claros (telas públicas, Login, Landing) |
+| `logo_eixo_white.svg` | Fundos escuros (sidebar) |
+| `logo_eixo_negative.svg` | Monocromático branco |
+| `eixo-x-icon.svg` | Favicon e ícone de app |
 
-### Tokens CSS base
+### Paleta EIXO (Manual de Marca v1.0)
 
-```css
-:root {
-  --eixo-graphite: #3f4141;
-  --eixo-graphite-dark: #2f3131;
-  --eixo-green: #76b82a;
-  --eixo-green-dark: #5f9f1f;
-  --eixo-green-soft: #edf7e6;
-  --eixo-bg: #f7f8f6;
-  --eixo-surface: #ffffff;
-  --eixo-surface-soft: #f0f2ef;
-  --eixo-text: #202322;
-  --eixo-text-muted: #66706a;
-  --eixo-text-soft: #8a948d;
-  --eixo-border: #dfe4df;
-  --eixo-border-strong: #c7cec7;
-  --eixo-success: #4f9f2f;
-  --eixo-warning: #c58a20;
-  --eixo-danger: #b84232;
-  --eixo-info: #3f6f8f;
-}
-```
+| Nome | Hex | Uso |
+|------|-----|-----|
+| Grafite Escuro | `#2F2F2F` | Sidebar, avatares, FAB de suporte |
+| Grafite Principal | `#5E5E5E` | Texto secundário, ícones inativos |
+| Verde EIXO | `#B6E23A` | Acento interativo — botões, tabs ativas, focus rings |
+| Cinza Claro | `#EDEDED` | Fundo de página, tabs inativas, bordas |
+| Branco | `#FFFFFF` | Fundo de conteúdo, superfícies |
+
+> **Regra de contraste:** `#B6E23A` é uma cor clara — nunca usar texto branco sobre fundo verde. Todo texto sobre verde deve ser `#1a1a1a` ou `#2F2F2F`.
+
+### Tipografia
+
+| Uso | Fonte | Peso |
+|-----|-------|------|
+| Títulos e subtítulos | Manrope | SemiBold / Bold |
+| Textos e interfaces | Inter | Regular / Medium |
 
 ## App de Manejo — Área do Vaqueiro
 
@@ -141,12 +123,24 @@ Sem login e senha. O gestor gera um código único no sistema web e repassa ao t
 
 **Alertas automáticos:** exibidos no header do sistema web, vinculados a tarefas e processos com prazo — sem alertas genéricos por inatividade.
 
-### Módulos do Admin de Campo
+### Perfis de acesso
 
-- Pesagem com integração a balanças eletrônicas (Coimma / Tru-Test S3 via Bluetooth)
-- Movimentação de animais entre pastos
-- Registro de ocorrências e sanidade
-- Confirmação de tarefas com timestamp e localização
+| Perfil | Destino |
+|--------|---------|
+| `VAQUEIRO` | Tela de ocorrências do campo |
+| `ADMIN_CAMPO` | Tela de Gerenciamento (pesagem, busca de animais) |
+
+### Gerenciamento V1 — ADMIN_CAMPO
+
+- Busca única de animais (sem distinção Comercial/P.O. para o operador)
+- Pesagem manual com funcionamento offline
+- Fila local de pesagens com status: `enviado`, `pendente`, `erro`, `conflito`
+- Sincronização automática ao reconectar + botão "Sincronizar agora"
+- Tratamento de conflito de pesagem (mesmo animal na mesma sessão ou data duplicada no servidor)
+
+### Integração com balanças eletrônicas
+
+Coimma / Tru-Test S3 via Bluetooth — previsto para fase futura.
 
 Protótipo de referência: `app-de-manejo/`
 
@@ -156,3 +150,4 @@ Protótipo de referência: `app-de-manejo/`
 
 - Instruções para Claude: `CLAUDE.md`
 - Regras de backend e Prisma: `AGENTS.md`
+- Plano completo do EIXO Campo: `EIXOCAMPO.md`

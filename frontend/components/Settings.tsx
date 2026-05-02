@@ -107,7 +107,7 @@ const Settings: React.FC = () => {
                         <div className="pt-1">
                             <button
                                 type="submit"
-                                className="w-full rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:opacity-50"
+                                className="w-full rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:opacity-50"
                             >
                                 Atualizar Senha
                             </button>

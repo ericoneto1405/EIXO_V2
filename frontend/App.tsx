@@ -7,6 +7,8 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import HerdModule from './components/HerdModule';
 import Operations from './components/Operations';
+import FieldOccurrences from './components/FieldOccurrences';
+import ConfinementContracts from './components/ConfinementContracts';
 import Settings from './components/Settings';
 import FinanceModule from './components/FinanceModule';
 import Header from './components/Header';
@@ -23,6 +25,8 @@ import GeneticsPlantelPO from './components/GeneticsPlantelPO';
 import NutritionModule from './components/NutritionModule';
 import Login from './components/Login';
 import Register from './components/Register';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 import PublicLanding from './components/PublicLanding';
 import PlansPage from './components/PlansPage';
 import OnboardingChecklist from './components/OnboardingChecklist';
@@ -83,6 +87,7 @@ const SUB_VIEW_PARENT: Record<string, string> = {
     'Mapa da Fazenda': 'Fazendas',
     'Estruturas da Fazenda': 'Fazendas',
     'Usuários e Permissões': 'Fazendas',
+    'Ocorrências do EIXO Campo': 'Operações',
 };
 
 const UpgradeHomeIcon: React.FC = () => (
@@ -275,7 +280,8 @@ const AppContent: React.FC = () => {
     const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number } | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [authScreen, setAuthScreen] = useState<'landing' | 'login' | 'register'>('landing');
+    const [authScreen, setAuthScreen] = useState<'landing' | 'login' | 'register' | 'forgot-password' | 'reset-password'>('landing');
+    const [resetToken, setResetToken] = useState<string | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
     const [registerMessage, setRegisterMessage] = useState<string | null>(null);
     const [registerError, setRegisterError] = useState<string | null>(null);
@@ -362,6 +368,16 @@ const AppContent: React.FC = () => {
         if (isSupportOpen) document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isSupportOpen]);
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('reset');
+        if (token && !isAuthenticated) {
+            setResetToken(token);
+            setAuthScreen('reset-password');
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, [isAuthenticated]);
     const updateFarmFormQuery = React.useCallback((shouldOpen: boolean) => {
         const url = new URL(window.location.href);
         if (shouldOpen) {
@@ -400,7 +416,7 @@ const AppContent: React.FC = () => {
             <h2 className="text-[20px] font-bold leading-[24px] text-[var(--eixo-text)]">{title}</h2>
             {actionLabel && onAction && (
                 <button
-                    className="mt-6 inline-flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                    className="mt-6 inline-flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                     type="button"
                     onClick={onAction}
                 >
@@ -418,7 +434,7 @@ const AppContent: React.FC = () => {
                         d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
             </div>
-            <h2 className="font-brand text-2xl font-extrabold text-[var(--eixo-graphite-dark)]">
+            <h2 className="font-brand text-2xl font-extrabold text-[var(--eixo-graphite)]">
                 Vamos cadastrar sua primeira fazenda
             </h2>
             <p className="mt-3 max-w-sm text-sm text-[var(--eixo-text-muted)]">
@@ -427,7 +443,7 @@ const AppContent: React.FC = () => {
             <button
                 type="button"
                 onClick={handleRegisterFarmView}
-                className="mt-8 flex h-11 items-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 font-brand font-bold text-white shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
+                className="mt-8 flex h-11 items-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 font-brand font-bold text-[#1a1a1a] shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
             >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -459,7 +475,7 @@ const AppContent: React.FC = () => {
                 <button
                     type="button"
                     onClick={handleLogout}
-                    className="mt-8 inline-flex h-11 items-center justify-center rounded-xl bg-[var(--eixo-green)] px-6 font-bold text-white transition-colors hover:bg-[var(--eixo-green-dark)]"
+                    className="mt-8 inline-flex h-11 items-center justify-center rounded-xl bg-[var(--eixo-green)] px-6 font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
                 >
                     Sair
                 </button>
@@ -737,6 +753,27 @@ const AppContent: React.FC = () => {
     }
 
     if (!isAuthenticated) {
+        if (authScreen === 'forgot-password') {
+            return <ForgotPassword onBack={() => setAuthScreen('login')} />;
+        }
+
+        if (authScreen === 'reset-password' && resetToken) {
+            return (
+                <ResetPassword
+                    token={resetToken}
+                    onSuccess={() => {
+                        setResetToken(null);
+                        setAuthScreen('login');
+                        setRegisterMessage('Senha atualizada. Faça login com a nova senha.');
+                    }}
+                    onBack={() => {
+                        setResetToken(null);
+                        setAuthScreen('login');
+                    }}
+                />
+            );
+        }
+
         if (authScreen === 'landing') {
             return (
                 <PublicLanding
@@ -771,6 +808,12 @@ const AppContent: React.FC = () => {
                     setRegisterError(null);
                     setRegisterMessage(null);
                     setAuthScreen('register');
+                }}
+                onForgotPassword={() => {
+                    setAuthError(null);
+                    setRegisterError(null);
+                    setRegisterMessage(null);
+                    setAuthScreen('forgot-password');
                 }}
             />
         );
@@ -918,9 +961,12 @@ const AppContent: React.FC = () => {
                 return <FinanceModule farmId={selectedFarmId} farmName={selectedFarm?.name} isFreePlan={isFreePlan} onUpgradeRequest={() => setUpgradeModal('Financeiro completo')} />;
             case 'Registro de Atividades':
                 return <ActivityModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
+            case 'Ocorrências do EIXO Campo':
+                return <FieldOccurrences farmId={selectedFarmId} />;
             case 'Operações':
-            case 'Confinamento e Contratos':
                 return <Operations />;
+            case 'Confinamento e Contratos':
+                return <ConfinementContracts />;
             case 'Estoque e Equipamentos':
                 return <Suppliers />;
             case 'Configurações':
@@ -1046,7 +1092,7 @@ const AppContent: React.FC = () => {
                                 </button>
                                 <button type="button"
                                     onClick={() => { setUpgradeModal(null); window.location.href = '/planos'; }}
-                                    className="flex-1 rounded-xl bg-[var(--eixo-green)] py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)]">
+                                    className="flex-1 rounded-xl bg-[var(--eixo-green)] py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]">
                                     Ver planos
                                 </button>
                             </div>
@@ -1089,7 +1135,7 @@ const AppContent: React.FC = () => {
                             {/* Ponto verde — ativo */}
                             <span className="absolute right-2 top-1.5 flex h-2.5 w-2.5 items-center justify-center">
                                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--eixo-success)] opacity-50" />
-                                <span className="relative h-1.5 w-1.5 rounded-full bg-[var(--eixo-success)] ring-2 ring-[var(--eixo-graphite-dark)]" />
+                                <span className="relative h-1.5 w-1.5 rounded-full bg-[var(--eixo-success)] ring-2 ring-[var(--eixo-graphite)]" />
                             </span>
                         </button>
 

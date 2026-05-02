@@ -19,14 +19,14 @@ const AlertTicker: React.FC = () => {
 
     if (alerts.length === 0) {
         return (
-            <div className="hidden lg:flex items-center w-full bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-graphite-dark)] rounded-lg p-2 overflow-hidden">
+            <div className="hidden lg:flex items-center w-full bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-graphite)] rounded-lg p-2 overflow-hidden">
                 <p className="text-sm text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)] px-2">Nenhum alerta no momento.</p>
             </div>
         );
     }
 
     return (
-        <div className="hidden lg:flex items-center w-full bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-graphite-dark)] rounded-lg p-2 overflow-hidden">
+        <div className="hidden lg:flex items-center w-full bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-graphite)] rounded-lg p-2 overflow-hidden">
             <Marquee
                 gradient={true}
                 gradientWidth={20}

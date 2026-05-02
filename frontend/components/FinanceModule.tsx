@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 import {
     AccountCategory,
     AccountCategoryType,
@@ -16,6 +17,7 @@ import {
     updateAccountCategory,
     updateTransaction,
 } from '../adapters/financialApi';
+import ChartCard from './ChartCard';
 
 interface FinanceModuleProps {
     farmId?: string | null;
@@ -24,8 +26,8 @@ interface FinanceModuleProps {
     onUpgradeRequest?: () => void;
 }
 
-// Nenhuma aba bloqueada no plano gratuito — Financeiro completo liberado
-const LOCKED_TABS_FREE: FinanceTab[] = [];
+// Plano gratuito: libera só o financeiro básico
+const LOCKED_TABS_FREE: FinanceTab[] = ['fluxo', 'dre', 'plano_contas'];
 
 // ── Ícones ────────────────────────────────────────────────────────────────────
 
@@ -65,12 +67,44 @@ const MESES = [
 
 const MESES_CURTOS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
+const normalizeSearchText = (value: string) =>
+    String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+const CATTLE_SALE_CATEGORY_NAMES = new Set([
+    'venda de animais',
+    'venda de bezerros',
+    'venda de garrotes',
+    'venda de novilhas',
+    'venda de bois',
+    'venda de vacas',
+    'venda de touros',
+    'venda de matrizes',
+    'venda de reprodutores p.o.',
+    'venda de animais para descarte',
+]);
+
+const FEED_AND_MED_CATEGORY_NAMES = new Set([
+    'racao / concentrado',
+    'sal mineral',
+    'suplementacao mineral',
+    'medicamentos veterinarios',
+    'vacinas',
+    'vermifugos',
+    'tratamentos veterinarios',
+]);
+
+const PIE_COLORS = ['#9d7d4d', '#c08a2b', '#6e8b63', '#b35c44', '#8c6d46', '#4f7c83', '#a78b5b', '#7b8f6a'];
+
 // ── Tipos de aba ──────────────────────────────────────────────────────────────
 
-type FinanceTab = 'lancamentos' | 'contas_pagar' | 'contas_receber' | 'fluxo' | 'dre' | 'plano_contas';
+type FinanceTab = 'lancamentos' | 'visao_geral' | 'contas_pagar' | 'contas_receber' | 'fluxo' | 'dre' | 'plano_contas';
 
 const TAB_LABELS: Record<FinanceTab, string> = {
     lancamentos: 'Lançamentos',
+    visao_geral: 'Visão Geral',
     contas_pagar: 'Contas a Pagar',
     contas_receber: 'Contas a Receber',
     fluxo: 'Fluxo de Caixa',
@@ -98,7 +132,7 @@ function isVencida(t: FinancialTransaction): boolean {
 function statusBadge(t: FinancialTransaction) {
     if (t.status === 'PAGO') return { label: 'Pago', cls: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' };
     if (isVencida(t)) return { label: 'Vencido', cls: 'bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]' };
-    return { label: 'Pendente', cls: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite-dark)]' };
+    return { label: 'Pendente', cls: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' };
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -157,6 +191,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     const [pcFormType, setPcFormType] = useState<AccountCategoryType>('SAIDA');
     const [pcFormError, setPcFormError] = useState<string | null>(null);
     const [pcIsSaving, setPcIsSaving] = useState(false);
+    const [pcSearch, setPcSearch] = useState('');
 
     // ── Plano de Contas: edição inline ──
     const [editingCatId, setEditingCatId] = useState<string | null>(null);
@@ -228,6 +263,57 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         const entradas = transactions.filter(t => t.type === 'ENTRADA').reduce((s, t) => s + t.valor, 0);
         const saidas = transactions.filter(t => t.type === 'SAIDA').reduce((s, t) => s + t.valor, 0);
         return { entradas, saidas, saldo: entradas - saidas };
+    }, [transactions]);
+
+    const monthlyAnswers = useMemo(() => {
+        const soldThisMonth = transactions
+            .filter((transaction) => {
+                if (transaction.type !== 'ENTRADA') return false;
+                if (transaction.categoria === 'VENDA_ANIMAIS') return true;
+                const normalizedName = normalizeSearchText(transaction.accountCategoryName || '');
+                return CATTLE_SALE_CATEGORY_NAMES.has(normalizedName);
+            })
+            .reduce((sum, transaction) => sum + transaction.valor, 0);
+
+        const feedAndMedThisMonth = transactions
+            .filter((transaction) => {
+                if (transaction.type !== 'SAIDA') return false;
+                if (transaction.categoria === 'ALIMENTACAO' || transaction.categoria === 'MEDICAMENTOS') return true;
+                const normalizedName = normalizeSearchText(transaction.accountCategoryName || '');
+                return FEED_AND_MED_CATEGORY_NAMES.has(normalizedName);
+            })
+            .reduce((sum, transaction) => sum + transaction.valor, 0);
+
+        return { soldThisMonth, feedAndMedThisMonth };
+    }, [transactions]);
+
+    const monthlyGroupCharts = useMemo(() => {
+        const receitas = new Map<string, number>();
+        const despesas = new Map<string, number>();
+
+        for (const transaction of transactions) {
+            const groupName =
+                transaction.accountCategoryGroup ||
+                transaction.accountCategoryName ||
+                CATEGORIA_LABELS[transaction.categoria] ||
+                'Outros';
+
+            if (transaction.type === 'ENTRADA') {
+                receitas.set(groupName, (receitas.get(groupName) ?? 0) + transaction.valor);
+            } else {
+                despesas.set(groupName, (despesas.get(groupName) ?? 0) + transaction.valor);
+            }
+        }
+
+        const toChartData = (map: Map<string, number>) =>
+            Array.from(map.entries())
+                .map(([name, value]) => ({ name, value }))
+                .sort((a, b) => b.value - a.value);
+
+        return {
+            receitas: toChartData(receitas),
+            despesas: toChartData(despesas),
+        };
     }, [transactions]);
 
     // ── Contas a Pagar / Receber derivadas ────────────────────────────────────
@@ -316,6 +402,17 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     }, [categories, pcFormType]);
 
     const pcResolvedGroup = pcFormGroup === '__new__' ? pcFormNewGroup.trim() : pcFormGroup;
+    const planCategories = useMemo(() => {
+        const term = normalizeSearchText(pcSearch.trim());
+        const sorted = [...categories].sort((a, b) =>
+            a.type.localeCompare(b.type) || a.group.localeCompare(b.group) || a.name.localeCompare(b.name),
+        );
+        if (!term) return sorted;
+        return sorted.filter((category) => {
+            const typeLabel = category.type === 'ENTRADA' ? 'entrada' : 'saída';
+            return [category.name, category.group, typeLabel].some((value) => normalizeSearchText(value).includes(term));
+        });
+    }, [categories, pcSearch]);
 
     // ── Handlers: lançamentos ─────────────────────────────────────────────────
 
@@ -399,6 +496,15 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         } finally { setPcIsSaving(false); }
     };
 
+    const openCategoryModal = (type: AccountCategoryType = 'SAIDA', useNewGroup = false) => {
+        setPcFormType(type);
+        setPcFormName('');
+        setPcFormError(null);
+        setPcFormNewGroup('');
+        setPcFormGroup(useNewGroup ? '__new__' : '');
+        setPcModalOpen(true);
+    };
+
     const startEditCat = (cat: AccountCategory) => { setEditingCatId(cat.id); setEditingCatName(cat.name); setEditingCatGroup(cat.group); };
     const cancelEditCat = () => { setEditingCatId(null); setEditingCatName(''); setEditingCatGroup(''); };
 
@@ -434,7 +540,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     // ── Estilos recorrentes ───────────────────────────────────────────────────
 
     const anos = [hoje.getFullYear(), hoje.getFullYear() - 1, hoje.getFullYear() - 2];
-    const activeTabCls = 'bg-[var(--eixo-green)] text-white font-bold';
+    const activeTabCls = 'bg-[var(--eixo-green)] text-[#1a1a1a] font-bold';
     const inactiveTabCls = 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]';
     const inputCls = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none';
     const labelCls = 'block text-sm font-medium text-[var(--eixo-text)]';
@@ -452,7 +558,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         <button
             type="button"
             onClick={onClick}
-            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${active ? 'bg-[var(--eixo-green)] text-white' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'}`}
+            className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${active ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'}`}
         >
             {children}
         </button>
@@ -487,8 +593,8 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                         <p className="mt-2 font-brand text-2xl font-black text-[var(--eixo-danger)]">{formatCurrency(totalVencido)}</p>
                     </div>
                     <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] p-5">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite-dark)]">A vencer</p>
-                        <p className="mt-2 font-brand text-2xl font-black text-[var(--eixo-graphite-dark)]">{formatCurrency(totalAVencer)}</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite)]">A vencer</p>
+                        <p className="mt-2 font-brand text-2xl font-black text-[var(--eixo-graphite)]">{formatCurrency(totalAVencer)}</p>
                     </div>
                 </div>
 
@@ -586,7 +692,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             {farmName || 'Fazenda'}
                         </div>
@@ -596,7 +702,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                         <button
                             type="button"
                             onClick={() => { resetForm(); setModalOpen(true); }}
-                            className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-brand font-bold text-white shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
+                            className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-brand font-bold text-[#1a1a1a] shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             <PlusIcon className="h-[18px] w-[18px]" />
                             <span className="ml-2">Novo lançamento</span>
@@ -611,20 +717,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                 setFormStatus('PENDENTE');
                                 setModalOpen(true);
                             }}
-                            className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-brand font-bold text-white shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
+                            className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-brand font-bold text-[#1a1a1a] shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             <PlusIcon className="h-[18px] w-[18px]" />
                             <span className="ml-2">Nova conta</span>
-                        </button>
-                    )}
-                    {activeTab === 'plano_contas' && (
-                        <button
-                            type="button"
-                            onClick={() => { setPcFormName(''); setPcFormGroup(''); setPcFormNewGroup(''); setPcFormType('SAIDA'); setPcFormError(null); setPcModalOpen(true); }}
-                            className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-brand font-bold text-white shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
-                        >
-                            <PlusIcon className="h-[18px] w-[18px]" />
-                            <span className="ml-2">Nova categoria</span>
                         </button>
                     )}
                 </div>
@@ -670,7 +766,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                         </select>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
                         <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
                             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Entradas</p>
                             <p className="mt-2 font-brand text-3xl font-black text-[var(--eixo-success)]">{formatCurrency(summary.entradas)}</p>
@@ -684,6 +780,16 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             <p className={`mt-2 font-brand text-3xl font-black ${summary.saldo >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                                 {formatCurrency(summary.saldo)}
                             </p>
+                        </div>
+                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Venda de gado no mês</p>
+                            <p className="mt-2 font-brand text-3xl font-black text-[var(--eixo-success)]">{formatCurrency(monthlyAnswers.soldThisMonth)}</p>
+                            <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Somando só categorias de venda de gado</p>
+                        </div>
+                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Sal, ração e remédio</p>
+                            <p className="mt-2 font-brand text-3xl font-black text-[var(--eixo-danger)]">{formatCurrency(monthlyAnswers.feedAndMedThisMonth)}</p>
+                            <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Nutrição e sanidade no período</p>
                         </div>
                     </div>
 
@@ -747,6 +853,92 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </>
+            )}
+
+            {/* ── Aba: Visão Geral ─────────────────────────────────────────────── */}
+            {activeTab === 'visao_geral' && (
+                <>
+                    <div className="flex flex-wrap gap-3">
+                        <select value={selectedMes} onChange={e => setSelectedMes(Number(e.target.value))}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
+                            {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                        </select>
+                        <select value={selectedAno} onChange={e => setSelectedAno(Number(e.target.value))}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
+                            {anos.map(a => <option key={a} value={a}>{a}</option>)}
+                        </select>
+                    </div>
+
+                    {loadError && (
+                        <div className="rounded-xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]">{loadError}</div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+                        <ChartCard title="Receitas por grupo">
+                            {isLoading ? (
+                                <p className="text-sm text-[var(--eixo-text-muted)]">Carregando receitas...</p>
+                            ) : monthlyGroupCharts.receitas.length === 0 ? (
+                                <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma receita no período selecionado.</p>
+                            ) : (
+                                <ResponsiveContainer width="100%" height={360}>
+                                    <PieChart>
+                                        <Pie
+                                            data={monthlyGroupCharts.receitas}
+                                            cx="50%"
+                                            cy="50%"
+                                            outerRadius={120}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            labelLine={false}
+                                            label={({ percent }) => `${((percent || 0) * 100).toFixed(0)}%`}
+                                        >
+                                            {monthlyGroupCharts.receitas.map((_, index) => (
+                                                <Cell key={`receita-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            formatter={(value: number) => formatCurrency(Number(value))}
+                                            contentStyle={{ backgroundColor: '#fffaf1', borderColor: 'var(--eixo-border)', borderRadius: '0.75rem' }}
+                                        />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                        </ChartCard>
+
+                        <ChartCard title="Despesas por grupo">
+                            {isLoading ? (
+                                <p className="text-sm text-[var(--eixo-text-muted)]">Carregando despesas...</p>
+                            ) : monthlyGroupCharts.despesas.length === 0 ? (
+                                <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma despesa no período selecionado.</p>
+                            ) : (
+                                <ResponsiveContainer width="100%" height={360}>
+                                    <PieChart>
+                                        <Pie
+                                            data={monthlyGroupCharts.despesas}
+                                            cx="50%"
+                                            cy="50%"
+                                            outerRadius={120}
+                                            dataKey="value"
+                                            nameKey="name"
+                                            labelLine={false}
+                                            label={({ percent }) => `${((percent || 0) * 100).toFixed(0)}%`}
+                                        >
+                                            {monthlyGroupCharts.despesas.map((_, index) => (
+                                                <Cell key={`despesa-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            formatter={(value: number) => formatCurrency(Number(value))}
+                                            contentStyle={{ backgroundColor: '#fffaf1', borderColor: 'var(--eixo-border)', borderRadius: '0.75rem' }}
+                                        />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            )}
+                        </ChartCard>
                     </div>
                 </>
             )}
@@ -897,80 +1089,144 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                     {catLoading ? (
                         <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-10 text-center text-sm text-[var(--eixo-text-muted)]">Carregando categorias...</div>
                     ) : (
-                        (['ENTRADA', 'SAIDA'] as AccountCategoryType[]).map(tipo => {
-                            const catsTipo = categories.filter(c => c.type === tipo);
-                            if (catsTipo.length === 0) return null;
-                            const grouped = groupByGroup(catsTipo);
-                            return (
-                                <div key={tipo} className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
-                                    <div className={`flex items-center gap-2 border-b border-[var(--eixo-border)] px-5 py-3 ${tipo === 'ENTRADA' ? 'bg-[var(--eixo-green-soft)]' : 'bg-[rgba(184,66,50,0.08)]'}`}>
-                                        <span className={`h-2 w-2 rounded-full ${tipo === 'ENTRADA' ? 'bg-[var(--eixo-success)]' : 'bg-[var(--eixo-danger)]'}`} />
-                                        <span className={`font-brand text-sm font-bold ${tipo === 'ENTRADA' ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
-                                            {tipo === 'ENTRADA' ? 'Entradas' : 'Saídas'}
-                                        </span>
-                                        <span className="ml-1 text-xs text-[var(--eixo-text-muted)]">({catsTipo.length} categorias)</span>
+                        <>
+                            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                                    <div className="w-full max-w-xl">
+                                        <label className={labelCls}>Buscar no plano de contas</label>
+                                        <input
+                                            type="text"
+                                            value={pcSearch}
+                                            onChange={(e) => setPcSearch(e.target.value)}
+                                            placeholder="Busque por tipo, grupo ou categoria"
+                                            className={inputCls}
+                                        />
+                                        <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
+                                            {planCategories.length} {planCategories.length === 1 ? 'item encontrado' : 'itens encontrados'} na lista.
+                                        </p>
                                     </div>
-                                    {Array.from(grouped.entries()).map(([grp, cats]) => (
-                                        <div key={grp}>
-                                            <div className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-1.5">
-                                                <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">{grp}</span>
-                                            </div>
-                                            {cats.map((cat, idx) => (
-                                                <div key={cat.id}
-                                                    className={`flex items-center gap-3 px-5 py-3 ${idx < cats.length - 1 ? 'border-b border-[var(--eixo-border)]' : ''} ${!cat.isActive ? 'opacity-50' : ''}`}
-                                                >
-                                                    {cat.isSystem ? (
-                                                        <span className="flex-shrink-0 text-[var(--eixo-text-muted)]"><LockIcon /></span>
-                                                    ) : (
-                                                        <span className="flex-shrink-0 h-3.5 w-3.5" />
-                                                    )}
-                                                    {editingCatId === cat.id ? (
-                                                        <div className="flex flex-1 flex-wrap items-center gap-2">
-                                                            <input type="text" value={editingCatName} onChange={e => setEditingCatName(e.target.value)}
-                                                                className="w-40 rounded-lg border border-[var(--eixo-green)] bg-[var(--eixo-surface)] px-2 py-1 text-sm focus:outline-none" />
-                                                            <input type="text" value={editingCatGroup} onChange={e => setEditingCatGroup(e.target.value)} placeholder="Grupo"
-                                                                className="w-32 rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1 text-sm focus:outline-none" />
-                                                            <button type="button" disabled={editCatSaving} onClick={() => saveEditCat(cat)}
-                                                                className="rounded-lg bg-[var(--eixo-green)] px-3 py-1 text-xs font-semibold text-white hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">
-                                                                {editCatSaving ? 'Salvando...' : 'Salvar'}
+                                    <div className="flex flex-col gap-2 sm:flex-row">
+                                        <button
+                                            type="button"
+                                            onClick={() => openCategoryModal('SAIDA', true)}
+                                            className="flex h-10 items-center justify-center rounded-[10px] border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                        >
+                                            Novo grupo de despesa
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => openCategoryModal('SAIDA')}
+                                            className="flex h-10 items-center justify-center rounded-[10px] bg-[var(--eixo-green)] px-4 text-sm font-semibold text-[#1a1a1a] shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
+                                        >
+                                            <PlusIcon className="h-4 w-4" />
+                                            <span className="ml-2">Nova categoria</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
+                                <div className="grid grid-cols-[110px_160px_minmax(0,1fr)_110px] gap-3 border-b border-[var(--eixo-border)] bg-[#f1e7d8] px-5 py-3 text-xs font-bold uppercase tracking-[0.14em] text-[#74644e]">
+                                    <span>Tipo</span>
+                                    <span>Grupo</span>
+                                    <span>Categoria</span>
+                                    <span className="text-right">Origem</span>
+                                </div>
+                                {planCategories.length === 0 ? (
+                                    <div className="px-5 py-8 text-center text-sm text-[var(--eixo-text-muted)]">
+                                        Nenhuma categoria encontrada para a busca informada.
+                                    </div>
+                                ) : (
+                                    planCategories.map((cat, idx) => (
+                                        <div
+                                            key={cat.id}
+                                            className={`px-5 py-4 ${idx < planCategories.length - 1 ? 'border-b border-[var(--eixo-border)]' : ''}`}
+                                        >
+                                            {editingCatId === cat.id ? (
+                                                <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                                                    <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-semibold ${cat.type === 'ENTRADA' ? 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' : 'bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]'}`}>
+                                                        {cat.type === 'ENTRADA' ? 'Entrada' : 'Saída'}
+                                                    </span>
+                                                    <input
+                                                        type="text"
+                                                        value={editingCatGroup}
+                                                        onChange={e => setEditingCatGroup(e.target.value)}
+                                                        placeholder="Grupo"
+                                                        className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:outline-none lg:w-48"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        value={editingCatName}
+                                                        onChange={e => setEditingCatName(e.target.value)}
+                                                        className="w-full rounded-lg border border-[var(--eixo-green)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:outline-none"
+                                                    />
+                                                    <div className="flex items-center gap-2 lg:ml-auto">
+                                                        <button
+                                                            type="button"
+                                                            disabled={editCatSaving}
+                                                            onClick={() => saveEditCat(cat)}
+                                                            className="rounded-lg bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:opacity-50"
+                                                        >
+                                                            {editCatSaving ? 'Salvando...' : 'Salvar'}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={cancelEditCat}
+                                                            className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                        >
+                                                            Cancelar
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[110px_160px_minmax(0,1fr)_110px_auto] lg:items-center lg:gap-3">
+                                                    <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${cat.type === 'ENTRADA' ? 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' : 'bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]'}`}>
+                                                        {cat.type === 'ENTRADA' ? 'Entrada' : 'Saída'}
+                                                    </span>
+                                                    <span className="text-sm text-[var(--eixo-text-muted)]">{cat.group}</span>
+                                                    <div className="flex min-w-0 items-center gap-2">
+                                                        {cat.isSystem ? (
+                                                            <span className="flex-shrink-0 text-[var(--eixo-text-muted)]"><LockIcon /></span>
+                                                        ) : (
+                                                            <span className="flex h-3.5 w-3.5 flex-shrink-0 rounded-full bg-[var(--eixo-green-soft)]" />
+                                                        )}
+                                                        <span className="truncate text-sm font-medium text-[var(--eixo-text)]">{cat.name}</span>
+                                                    </div>
+                                                    <span className="text-right text-[10px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">
+                                                        {cat.isSystem ? 'Sistema' : 'Cliente'}
+                                                    </span>
+                                                    {!cat.isSystem && (
+                                                        <div className="flex items-center gap-2 lg:justify-end">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => startEditCat(cat)}
+                                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                            >
+                                                                Editar
                                                             </button>
-                                                            <button type="button" onClick={cancelEditCat}
-                                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
-                                                                Cancelar
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex flex-1 items-center gap-2">
-                                                            <span className="text-sm font-medium text-[var(--eixo-text)]">{cat.name}</span>
-                                                            {!cat.isActive && (
-                                                                <span className="rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-semibold text-[var(--eixo-text-muted)]">inativa</span>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                    {!cat.isSystem && editingCatId !== cat.id && (
-                                                        <div className="ml-auto flex items-center gap-2">
-                                                            <button type="button" onClick={() => startEditCat(cat)}
-                                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">Editar</button>
-                                                            <button type="button" onClick={() => toggleCatActive(cat)}
-                                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleCatActive(cat)}
+                                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                            >
                                                                 {cat.isActive ? 'Desativar' : 'Ativar'}
                                                             </button>
-                                                            <button type="button" onClick={() => { setDeleteCatError(null); setDeleteCatConfirmId(cat.id); }}
-                                                                className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)]">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => { setDeleteCatError(null); setDeleteCatConfirmId(cat.id); }}
+                                                                className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)]"
+                                                            >
                                                                 Excluir
                                                             </button>
                                                         </div>
                                                     )}
-                                                    {cat.isSystem && editingCatId !== cat.id && (
-                                                        <span className="ml-auto text-[10px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Sistema</span>
-                                                    )}
                                                 </div>
-                                            ))}
+                                            )}
                                         </div>
-                                    ))}
-                                </div>
-                            );
-                        })
+                                    ))
+                                )}
+                            </div>
+                        </>
                     )}
                 </div>
             )}
@@ -1046,7 +1302,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                     Cancelar
                                 </button>
                                 <button type="submit" disabled={isSaving || filteredCategories.length === 0}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">
+                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">
                                     {isSaving ? 'Salvando...' : 'Salvar'}
                                 </button>
                             </div>
@@ -1105,6 +1361,9 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                     <input type="text" value={pcFormNewGroup} onChange={e => setPcFormNewGroup(e.target.value)}
                                         placeholder="Nome do novo grupo" className={`${inputCls} mt-2`} autoFocus required />
                                 )}
+                                <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">
+                                    Para criar um grupo de despesa novo, escolha <strong>+ Novo grupo...</strong> e informe o primeiro item dessa lista.
+                                </p>
                             </div>
                             <div>
                                 <label className={labelCls}>Nome da categoria</label>
@@ -1118,7 +1377,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                     Cancelar
                                 </button>
                                 <button type="submit" disabled={pcIsSaving}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">
+                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">
                                     {pcIsSaving ? 'Salvando...' : 'Criar categoria'}
                                 </button>
                             </div>

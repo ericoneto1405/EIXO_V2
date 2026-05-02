@@ -169,7 +169,7 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
                             {/* Badge */}
                             {plan.badge && (
                                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                    <span className="rounded-full bg-[var(--eixo-green)] px-3 py-1 text-xs font-semibold text-white">
+                                    <span className="rounded-full bg-[var(--eixo-green)] px-3 py-1 text-xs font-semibold text-[#1a1a1a]">
                                         {plan.badge}
                                     </span>
                                 </div>
@@ -197,7 +197,7 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
                                 disabled={plan.id === 'gratis'}
                                 className={`mb-6 w-full rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-default ${
                                     plan.ctaVariant === 'primary'
-                                        ? 'bg-[var(--eixo-green)] text-white hover:bg-[var(--eixo-green-dark)]'
+                                        ? 'bg-[var(--eixo-green)] text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]'
                                         : plan.ctaVariant === 'dark'
                                         ? 'bg-[var(--eixo-text)] text-white hover:bg-[var(--eixo-graphite)]'
                                         : 'border border-[var(--eixo-border)] text-[var(--eixo-text-muted)]'

@@ -21,6 +21,48 @@ import type { Paddock } from '../types';
 
 type TabKey = 'overview' | 'lots' | 'animals' | 'weighings' | 'settings';
 
+const LOT_OBJECTIVE_OPTIONS = [
+    'Cria',
+    'Recria',
+    'Engorda',
+    'Matrizes',
+    'Bezerros',
+    'Apartação',
+    'Venda',
+    'Confinamento',
+    'Semi-confinamento',
+    'Manejo sanitário',
+    'Observação',
+];
+const LOT_OBJECTIVE_HELP = [
+    'Cria: produção de bezerros.',
+    'Recria: crescimento dos animais.',
+    'Engorda: ganho de peso para venda.',
+    'Matrizes: vacas do rebanho.',
+    'Bezerros: animais jovens separados.',
+    'Apartação: separação temporária.',
+    'Venda: animais separados para negociação.',
+    'Confinamento: sistema intensivo no cocho.',
+    'Semi-confinamento: pasto com suplementação forte.',
+    'Manejo sanitário: vacina, vermífugo ou tratamento.',
+    'Observação: animais que exigem acompanhamento.',
+];
+const LOT_STATUS_OPTIONS = ['ATIVO', 'INATIVO'];
+
+const LotObjectiveHelp: React.FC = () => (
+    <span className="group relative inline-flex">
+        <span className="flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-xs font-bold text-[var(--eixo-text-muted)]">
+            ?
+        </span>
+        <span className="pointer-events-none absolute left-1/2 top-7 z-20 hidden w-[320px] -translate-x-1/2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4 text-left text-xs font-normal leading-5 text-[var(--eixo-text-muted)] shadow-xl group-hover:block">
+            <span className="mb-2 block font-semibold text-[var(--eixo-text)]">Escolha para que este lote existe.</span>
+            {LOT_OBJECTIVE_HELP.map((item) => (
+                <span key={item} className="block">{item}</span>
+            ))}
+        </span>
+    </span>
+);
+
 interface HerdModuleProps {
     farmId?: string | null;
     farmName?: string | null;
@@ -360,6 +402,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
     const [lotFilter, setLotFilter] = useState('');
     const [filterRaca, setFilterRaca] = useState('');
     const [filterSexo, setFilterSexo] = useState('');
+    const [filterIdentificacao, setFilterIdentificacao] = useState<'todas' | 'com' | 'sem'>('todas');
     const [filterPaddock, setFilterPaddock] = useState('');
     const [filterGmdMin, setFilterGmdMin] = useState('');
     const [filterGmdMax, setFilterGmdMax] = useState('');
@@ -403,7 +446,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
         valorCompra: '',
         dataCompra: '',
     });
-    const [lotForm, setLotForm] = useState({ name: '', notes: '' });
+    const [lotForm, setLotForm] = useState({
+        name: '',
+        objective: '',
+        status: 'ATIVO',
+        startDate: '',
+        notes: '',
+    });
     const [paddocks, setPaddocks] = useState<Paddock[]>([]);
     const [farmBreeds, setFarmBreeds] = useState<string[]>([]);
 
@@ -502,6 +551,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
         setSearchTerm('');
         setFilterRaca('');
         setFilterSexo('');
+        setFilterIdentificacao('todas');
         setFilterPaddock('');
         setFilterGmdMin('');
         setFilterGmdMax('');
@@ -522,7 +572,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, lotFilter, filterRaca, filterSexo, filterPaddock, filterGmdMin, filterGmdMax, filterNutrition, activeTab]);
+    }, [searchTerm, lotFilter, filterRaca, filterSexo, filterIdentificacao, filterPaddock, filterGmdMin, filterGmdMax, filterNutrition, activeTab]);
 
     const filteredAnimals = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
@@ -543,6 +593,16 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
 
             if (filterSexo && animal.sexo !== filterSexo) {
                 return false;
+            }
+
+            if (filterIdentificacao !== 'todas') {
+                const hasIdentification = Boolean(String(animal.brinco || '').trim());
+                if (filterIdentificacao === 'sem' && hasIdentification) {
+                    return false;
+                }
+                if (filterIdentificacao === 'com' && !hasIdentification) {
+                    return false;
+                }
             }
 
             if (selectedPaddockName && animal.currentPaddockName !== selectedPaddockName) {
@@ -591,6 +651,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
         animals,
         filterGmdMax,
         filterGmdMin,
+        filterIdentificacao,
         filterNutrition,
         filterPaddock,
         filterRaca,
@@ -758,7 +819,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
     };
 
     const resetLotForm = () => {
-        setLotForm({ name: '', notes: '' });
+        setLotForm({ name: '', objective: '', status: 'ATIVO', startDate: '', notes: '' });
     };
 
     const openAnimalForm = () => {
@@ -1066,6 +1127,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
             setLotFormError(null);
             await createLot(farmId, resolvedMode, {
                 name: lotForm.name.trim(),
+                objective: lotForm.objective || undefined,
+                status: lotForm.status,
+                startDate: lotForm.startDate || undefined,
                 notes: lotForm.notes.trim() || undefined,
             });
             closeLotForm();
@@ -1180,7 +1244,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                                 <button
                                                     type="button"
                                                     onClick={openAnimalForm}
-                                                    className="flex items-center rounded-xl bg-[var(--eixo-green)] px-4 py-2 font-bold text-white shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                                                    className="flex items-center rounded-xl bg-[var(--eixo-green)] px-4 py-2 font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                                                 >
                                                     <PlusIcon />
                                                     <span className="ml-2">Adicionar animal</span>
@@ -1346,11 +1410,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
 
                 {overviewStats.semPesagem > 0 && (
                     <div className="rounded-3xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] p-5 shadow-sm">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite-dark)]">Sem pesagem</p>
+                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite)]">Sem pesagem</p>
                         <p className="mt-2 font-brand text-4xl font-black text-[var(--eixo-green)]">
                             {overviewStats.semPesagem}
                         </p>
-                        <p className="mt-1 text-xs text-[var(--eixo-graphite-dark)]/70">animais sem registro de peso</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-graphite)]/70">animais sem registro de peso</p>
                     </div>
                 )}
 
@@ -1429,19 +1493,23 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                         <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                             <tr>
                                 <th scope="col" className="px-4 py-2.5">Lote</th>
+                                <th scope="col" className="px-4 py-2.5">Finalidade</th>
+                                <th scope="col" className="px-4 py-2.5">Status</th>
+                                <th scope="col" className="px-4 py-2.5">Início</th>
                                 <th scope="col" className="px-4 py-2.5">Observações</th>
+                                <th scope="col" className="px-4 py-2.5 text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
+                                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         Carregando lotes...
                                     </td>
                                 </tr>
                             ) : lots.length === 0 ? (
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
+                                    <td colSpan={6} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         <div className="flex flex-col items-center gap-4">
                                             <div className="space-y-1">
                                                 <p className="text-base font-semibold text-[var(--eixo-text)]">
@@ -1452,7 +1520,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                             <button
                                                 type="button"
                                                 onClick={openLotForm}
-                                                className="flex items-center bg-[var(--eixo-green)] hover:bg-[var(--eixo-green-dark)] text-white font-bold py-2 px-4 rounded-xl shadow-md transition-colors duration-200"
+                                                className="flex items-center bg-[var(--eixo-green)] hover:bg-[var(--eixo-green-dark)] text-[#1a1a1a] font-bold py-2 px-4 rounded-xl shadow-md transition-colors duration-200"
                                             >
                                                 <PlusIcon />
                                                 <span className="ml-2">Adicionar lote</span>
@@ -1468,7 +1536,28 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                         onClick={() => setSelectedLot(lot)}
                                     >
                                         <td className="px-6 py-4 font-medium text-[var(--eixo-text)]">{lot.name}</td>
+                                        <td className="px-4 py-3">{lot.objective || '—'}</td>
+                                        <td className="px-4 py-3">
+                                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${lot.status === 'INATIVO' ? 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' : 'bg-[var(--eixo-green-soft)] text-[var(--eixo-green)]'}`}>
+                                                {lot.status === 'INATIVO' ? 'Inativo' : 'Ativo'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {lot.startDate ? new Date(lot.startDate).toLocaleDateString('pt-BR') : '—'}
+                                        </td>
                                         <td className="px-4 py-3">{lot.notes || '—'}</td>
+                                        <td className="px-4 py-3 text-center">
+                                            <button
+                                                type="button"
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    setSelectedLot(lot);
+                                                }}
+                                                className="inline-flex items-center justify-center rounded-xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2 text-xs font-bold text-[#1a1a1a] shadow-sm transition-colors hover:bg-[var(--eixo-green-dark)]"
+                                            >
+                                                Gerenciar lote
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))
                             )}
@@ -1484,7 +1573,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
             <div className="mb-4 rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                     <div className="min-w-0 flex-1 xl:max-w-[420px]">
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             {farmName || 'Fazenda'}
                         </div>
@@ -1497,7 +1586,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                     <button
                                         type="button"
                                         onClick={openAnimalForm}
-                                        className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                                        className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                                     >
                                         <PlusIcon className="h-[18px] w-[18px]" />
                                         <span className="ml-2 hidden sm:block">Adicionar animal</span>
@@ -1512,48 +1601,44 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                         </svg>
                                         <span className="ml-2 hidden sm:block">Entrada de lote</span>
                                     </button>
-                                    {!isFreePlan && (
-                                        <>
-                                            <div className="flex flex-col items-center">
-                                                <button
-                                                    className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
-                                                    type="button"
-                                                    onClick={handleUploadClick}
-                                                >
-                                                    <UploadIcon className="h-[18px] w-[18px]" />
-                                                    <span className="ml-2 hidden sm:block">Importar planilha</span>
-                                                </button>
-                                                <span className="mt-1 text-center text-xs font-medium text-[var(--eixo-text-muted)]">
-                                                    Funciona com qualquer planilha sua
-                                                </span>
-                                            </div>
+                                    <>
+                                        <div className="flex flex-col items-center">
                                             <button
-                                                className="flex h-10 items-center justify-center rounded-[10px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-[10px] text-[13px] font-semibold text-[var(--eixo-text-muted)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
+                                                className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                                                 type="button"
-                                                onClick={handleDownloadTemplate}
+                                                onClick={handleUploadClick}
                                             >
-                                                <DownloadIcon className="h-4 w-4" />
-                                                <span className="ml-1.5 hidden sm:block">Baixar modelo</span>
+                                                <UploadIcon className="h-[18px] w-[18px]" />
+                                                <span className="ml-2 hidden sm:block">Importar planilha</span>
                                             </button>
-                                        </>
-                                    )}
+                                            <span className="mt-1 text-center text-xs font-medium text-[var(--eixo-text-muted)]">
+                                                Funciona com qualquer planilha sua
+                                            </span>
+                                        </div>
+                                        <button
+                                            className="flex h-10 items-center justify-center rounded-[10px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-[10px] text-[13px] font-semibold text-[var(--eixo-text-muted)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
+                                            type="button"
+                                            onClick={handleDownloadTemplate}
+                                        >
+                                            <DownloadIcon className="h-4 w-4" />
+                                            <span className="ml-1.5 hidden sm:block">Baixar modelo</span>
+                                        </button>
+                                    </>
                                 </div>
-                                {!isFreePlan && (
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept=".xlsx,.xls,.csv"
-                                        className="hidden"
-                                        onChange={handleFileChange}
-                                    />
-                                )}
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".xlsx,.xls,.csv"
+                                    className="hidden"
+                                    onChange={handleFileChange}
+                                />
                             </>
                         )}
                         {activeTab === 'lots' && (
                             <button
                                 type="button"
                                 onClick={openLotForm}
-                                className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-white shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                                className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                             >
                                 <LayersIcon className="h-[18px] w-[18px]" />
                                 <span className="ml-2 hidden sm:block">Criar lote</span>
@@ -1587,7 +1672,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                         onClick={() => setActiveTab(tab.key)}
                         className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
                             activeTab === tab.key
-                                ? 'bg-[var(--eixo-green)] text-white'
+                                ? 'bg-[var(--eixo-green)] text-[#1a1a1a]'
                                 : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'
                         }`}
                     >
@@ -1615,7 +1700,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                             className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] py-2 pl-9 pr-3 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
                         <select
                             value={filterSexo}
                             onChange={(event) => setFilterSexo(event.target.value)}
@@ -1624,6 +1709,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                             <option value="">Todos os sexos</option>
                             <option value="Macho">Macho</option>
                             <option value="Fêmea">Fêmea</option>
+                        </select>
+                        <select
+                            value={filterIdentificacao}
+                            onChange={(event) => setFilterIdentificacao(event.target.value as 'todas' | 'com' | 'sem')}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
+                        >
+                            <option value="todas">Todas as identificações</option>
+                            <option value="com">Com identificação</option>
+                            <option value="sem">Sem identificação</option>
                         </select>
                         <select
                             value={filterPaddock}
@@ -1685,6 +1779,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                 setLotFilter('');
                                 setFilterRaca('');
                                 setFilterSexo('');
+                                setFilterIdentificacao('todas');
                                 setFilterPaddock('');
                                 setFilterGmdMin('');
                                 setFilterGmdMax('');
@@ -1705,6 +1800,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                 <WeighingsTab
                     farmId={farmId}
                     animals={animals}
+                    lots={lots}
                     herdType={resolvedMode}
                 />
             )}
@@ -1919,7 +2015,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)]"
+                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
                                 >
                                     Salvar
                                 </button>
@@ -1963,6 +2059,45 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                 />
                             </div>
                             <div>
+                                <label className="flex items-center gap-2 text-sm font-medium text-[var(--eixo-text)]">
+                                    <span>Finalidade do lote</span>
+                                    <LotObjectiveHelp />
+                                </label>
+                                <select
+                                    value={lotForm.objective}
+                                    onChange={(event) => setLotForm((prev) => ({ ...prev, objective: event.target.value }))}
+                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                >
+                                    <option value="">Não definida</option>
+                                    {LOT_OBJECTIVE_OPTIONS.map((option) => (
+                                        <option key={option} value={option}>{option}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Status</label>
+                                    <select
+                                        value={lotForm.status}
+                                        onChange={(event) => setLotForm((prev) => ({ ...prev, status: event.target.value }))}
+                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                    >
+                                        {LOT_STATUS_OPTIONS.map((option) => (
+                                            <option key={option} value={option}>{option === 'INATIVO' ? 'Inativo' : 'Ativo'}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Data de início</label>
+                                    <input
+                                        type="date"
+                                        value={lotForm.startDate}
+                                        onChange={(event) => setLotForm((prev) => ({ ...prev, startDate: event.target.value }))}
+                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                    />
+                                </div>
+                            </div>
+                            <div>
                                 <label className="block text-sm font-medium text-[var(--eixo-text)]">Observações</label>
                                 <textarea
                                     value={lotForm.notes}
@@ -1984,7 +2119,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)]"
+                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
                                 >
                                     Salvar
                                 </button>
@@ -2032,7 +2167,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                                     onClick={() => setImportWeightUnit(u)}
                                                     className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
                                                         importWeightUnit === u
-                                                            ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)] text-white'
+                                                            ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)] text-[#1a1a1a]'
                                                             : 'border-[var(--eixo-border)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'
                                                     }`}>
                                                     {u === 'kg' ? 'Quilos (kg)' : 'Arrobas (@) × 15'}
@@ -2058,7 +2193,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                         {!Object.values(importMapping).includes('brinco') && (
                                             <div className="mb-3 flex items-start gap-2 rounded-xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-2.5">
                                                 <span className="mt-0.5 flex-shrink-0 text-[var(--eixo-green)]">⚠️</span>
-                                                <p className="text-xs text-[var(--eixo-graphite-dark)]">
+                                                <p className="text-xs text-[var(--eixo-graphite)]">
                                                     <span className="font-semibold">Campo obrigatório não identificado:</span> selecione qual coluna da planilha contém o <span className="font-semibold">Brinco / ID</span> do animal para continuar.
                                                 </p>
                                             </div>
@@ -2218,12 +2353,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                     </button>
                                     <div className="flex flex-col items-end gap-1">
                                         {!Object.values(importMapping).includes('brinco') && (
-                                            <p className="text-xs text-[var(--eixo-graphite-dark)]">Mapeie o Brinco/ID para continuar</p>
+                                            <p className="text-xs text-[var(--eixo-graphite)]">Mapeie o Brinco/ID para continuar</p>
                                         )}
                                         <button type="button"
                                             onClick={handleImportConfirm}
                                             disabled={!Object.values(importMapping).includes('brinco')}
-                                            className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-40">
+                                            className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-40">
                                             Importar {importRows.length} animais
                                         </button>
                                     </div>
@@ -2232,7 +2367,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                             {importProgress && !isImporting && (
                                 <button type="button"
                                     onClick={() => setImportModalOpen(false)}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)]">
+                                    className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]">
                                     {importProgress.errors.length > 0 ? 'Fechar' : 'Concluir'}
                                 </button>
                             )}

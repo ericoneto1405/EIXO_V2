@@ -83,7 +83,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
   };
 
-  const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-[var(--eixo-green-dark)]';
+  const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
   const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]';
 
   return (
@@ -132,7 +132,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
           <div className="relative mx-auto max-w-5xl px-4 text-center lg:px-8">
 
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
               100% GRATUITO PARA COMEÇAR
             </div>
@@ -155,9 +155,6 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 Ver como funciona
               </button>
             </div>
-
-            <p className="mt-4 text-sm font-medium text-[var(--eixo-text)]/72 [text-shadow:0_1px_0_rgba(255,250,241,0.35)]">Sem cartão de crédito · Plano Grátis permanente · Comece em 2 minutos</p>
-
             {/* Mini prova social */}
             <div className="mx-auto mt-12 grid max-w-xl grid-cols-3 gap-4 border-t border-[var(--eixo-border)]/80 pt-10">
               {[['R$ 0', 'para começar'], ['Sem cartão', 'para criar sua conta'], ['2 min', 'para cadastrar sua fazenda']].map(([value, label]) => (
@@ -174,7 +171,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         <section id="gratis" className="bg-[var(--eixo-surface)] py-20 lg:py-28">
           <div className="mx-auto max-w-5xl px-4 lg:px-8">
             <div className="mx-auto mb-12 max-w-2xl text-center">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                 Plano gratuito
               </div>
               <h2 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] lg:text-4xl">
@@ -230,7 +227,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                   className="absolute inset-x-2 bottom-0 h-full overflow-hidden rounded-2xl"
                   style={{ background: '#eef1e7', transform: 'rotate(2.5deg) translateY(4px)', zIndex: 0 }}
                 >
-                  <div style={{ fontFamily: "'Caveat', cursive", fontSize: '1.15rem', color: 'var(--eixo-graphite-dark)', opacity: 0.28, filter: 'blur(2.5px)', padding: '52px 56px 0 56px', lineHeight: '28px' }}>
+                  <div style={{ fontFamily: "'Caveat', cursive", fontSize: '1.15rem', color: 'var(--eixo-graphite)', opacity: 0.28, filter: 'blur(2.5px)', padding: '52px 56px 0 56px', lineHeight: '28px' }}>
                     <p style={{ transform: 'rotate(-0.5deg)' }}>vacina aftosa — 340 cab</p>
                     <p style={{ transform: 'rotate(0.3deg)', marginTop: 28 }}>custo ração jun: R$ 18.400</p>
                     <p style={{ transform: 'rotate(-0.4deg)', marginTop: 28 }}>pasto C vazio — lotar?</p>
@@ -244,7 +241,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                   className="absolute inset-x-1 bottom-0 h-full overflow-hidden rounded-2xl"
                   style={{ background: '#f3f5f1', transform: 'rotate(-1.5deg) translateY(2px)', zIndex: 1 }}
                 >
-                  <div style={{ fontFamily: "'Caveat', cursive", fontSize: '1.15rem', color: 'var(--eixo-graphite-dark)', opacity: 0.32, filter: 'blur(1.8px)', padding: '52px 52px 0 52px', lineHeight: '28px' }}>
+                  <div style={{ fontFamily: "'Caveat', cursive", fontSize: '1.15rem', color: 'var(--eixo-graphite)', opacity: 0.32, filter: 'blur(1.8px)', padding: '52px 52px 0 52px', lineHeight: '28px' }}>
                     <p style={{ transform: 'rotate(0.4deg)' }}>boi gordo @ R$ 312 arr.</p>
                     <p style={{ transform: 'rotate(-0.5deg)', marginTop: 28 }}>lote 14 — GMD caindo</p>
                     <p style={{ transform: 'rotate(0.3deg)', marginTop: 28 }}>remédio pra brucelose</p>
@@ -287,19 +284,19 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
                   {/* Linhas de caderno */}
                   <div className="space-y-1 pl-14 pr-2" style={{ fontFamily: 'inherit' }}>
-                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.3deg)', color: 'var(--eixo-graphite-dark)' }}>
+                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.3deg)', color: 'var(--eixo-graphite)' }}>
                       Lote 14 - 247 cab - pesagem 12/03
                     </p>
                     <p className="text-xl leading-7" style={{ transform: 'rotate(0.4deg)', color: '#1e3f72' }}>
                       comprou ração 15t ontem
                     </p>
-                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.2deg)', color: 'var(--eixo-graphite-dark)' }}>
+                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.2deg)', color: 'var(--eixo-graphite)' }}>
                       morreu 2 no pasto B-08 <span style={{ color: '#c0392b' }}>(!)</span>
                     </p>
                     <p className="text-xl leading-7" style={{ transform: 'rotate(0.5deg)', color: '#1e3f72' }}>
                       santa rita precisa vacinar
                     </p>
-                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.4deg)', color: 'var(--eixo-graphite-dark)' }}>
+                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.4deg)', color: 'var(--eixo-graphite)' }}>
                       vender lote A? preço tá ruim...
                     </p>
                     <p className="text-xl leading-7" style={{ transform: 'rotate(0.2deg)', color: '#2a4a80' }}>
@@ -437,7 +434,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         <button
           type="button"
           onClick={onRegister}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--eixo-green)] px-5 py-4 font-bold text-white shadow-lg hover:bg-[var(--eixo-green-dark)]"
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--eixo-green)] px-5 py-4 font-bold text-[#1a1a1a] shadow-lg hover:bg-[var(--eixo-green-dark)]"
         >
           Criar conta grátis — é de graça
           <ArrowRight className="h-4 w-4" />

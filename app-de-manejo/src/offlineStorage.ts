@@ -1,3 +1,5 @@
+import type { PendingWeighing } from './types';
+
 export type FieldOccurrenceType = 'COCHO' | 'AGUA' | 'DOENTE' | 'AVARIA' | 'NASCEU' | 'MORREU';
 
 export interface PendingPhoto {
@@ -30,6 +32,7 @@ const DB_NAME = 'eixo_app_manejo_offline';
 const DB_VERSION = 1;
 const STORE_NAME = 'app_state';
 const PENDING_REPORTS_RECORD_KEY = 'pending_reports';
+const PENDING_WEIGHINGS_RECORD_KEY = 'pending_weighings';
 
 interface LegacyPendingPhoto {
   id: string;
@@ -223,5 +226,24 @@ export const savePendingReports = async (reports: PendingReport[]) => {
     } catch {
       // ignora erro de storage
     }
+  }
+};
+
+export const loadPendingWeighings = async (): Promise<PendingWeighing[]> => {
+  try {
+    const stored = await runTransaction<PendingWeighing[] | undefined>('readonly', (store) =>
+      store.get(PENDING_WEIGHINGS_RECORD_KEY),
+    );
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
+};
+
+export const savePendingWeighings = async (weighings: PendingWeighing[]) => {
+  try {
+    await runTransaction('readwrite', (store) => store.put(weighings, PENDING_WEIGHINGS_RECORD_KEY));
+  } catch {
+    // Mantem a tela funcionando mesmo se o armazenamento local falhar.
   }
 };

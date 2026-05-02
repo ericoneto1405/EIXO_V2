@@ -305,7 +305,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                 <div className="lg:col-span-2">
                     <label className="text-xs uppercase text-[var(--eixo-text-muted)]">Buscar por brinco</label>
                     <input
-                        className="mt-1 w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
+                        className="mt-1 w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
                         placeholder="Ex: F001"
                         value={search}
                         onChange={(event) => setSearch(event.target.value)}
@@ -317,7 +317,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                         <input
                             id="only-alert-toggle"
                             type="checkbox"
-                            className="h-4 w-4 rounded border-[var(--eixo-border)] text-primary focus:ring-[var(--eixo-graphite-dark)]/10"
+                            className="h-4 w-4 rounded border-[var(--eixo-border)] text-primary focus:ring-[var(--eixo-graphite)]/10"
                             checked={onlyAlert}
                             onChange={(event) => setOnlyAlert(event.target.checked)}
                         />
@@ -330,7 +330,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                     <label className="text-xs uppercase text-[var(--eixo-text-muted)]">Estação</label>
                     {reproMode === 'ESTACAO' ? (
                         <select
-                            className="mt-1 w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
+                            className="mt-1 w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
                             value={selectedSeasonId || ''}
                             onChange={(event) => setSelectedSeasonId(event.target.value || null)}
                         >
@@ -481,7 +481,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                         <p className="text-sm text-[var(--eixo-text-muted)] mt-1">Informe o motivo para descartar a matriz {decisionAnimal.animal.brinco}.</p>
                         <form className="mt-4 space-y-3" onSubmit={handleDiscardSubmit}>
                             <textarea
-                                className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
+                                className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
                                 rows={3}
                                 value={decisionReason}
                                 onChange={(event) => setDecisionReason(event.target.value)}

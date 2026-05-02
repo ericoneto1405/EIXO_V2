@@ -108,7 +108,7 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
             <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
                 <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-5">
                     <div>
-                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                        <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             Sistema web
                         </div>
@@ -234,7 +234,7 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                                                     key={module}
                                                     className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-2 text-sm transition-colors ${
                                                         isSelected
-                                                            ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite-dark)]'
+                                                            ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
                                                             : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-[var(--eixo-text-muted)] hover:border-[var(--eixo-text-soft)]'
                                                     }`}
                                                 >
@@ -279,7 +279,7 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                         </button>
                         <button
                             type="submit"
-                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]"
+                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
                             Salvar usuário
                         </button>

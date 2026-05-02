@@ -26,6 +26,7 @@
     "concurrently": "^9.0.0"
   },
   "dependencies": {
-    "@prisma/client": "^6.9.0"
+    "@prisma/client": "^6.9.0",
+    "resend": "^6.12.2"
   }
 }

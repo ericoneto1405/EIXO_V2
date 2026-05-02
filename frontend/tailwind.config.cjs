@@ -2,7 +2,6 @@ const defaultTheme = require('tailwindcss/defaultTheme');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  darkMode: 'class',
   content: [
     './index.html',
     './index.tsx',
@@ -13,24 +12,25 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Manrope', ...defaultTheme.fontFamily.sans],
-        brand: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans],
+        sans: ['Inter', ...defaultTheme.fontFamily.sans],
+        brand: ['Manrope', ...defaultTheme.fontFamily.sans],
       },
       colors: {
-        primary: '#76b82a',
-        'primary-dark': '#5f9f1f',
-        graphite: '#3f4141',
-        'graphite-dark': '#2f3131',
-        background: '#f7f8f6',
-        surface: '#ffffff',
-        'surface-soft': '#f0f2ef',
-        text: '#202322',
-        'text-muted': '#66706a',
-        border: '#dfe4df',
-        success: '#4f9f2f',
-        warning: '#c58a20',
-        danger: '#b84232',
-        info: '#3f6f8f',
+        primary:          '#B6E23A',
+        'primary-dark':   '#a3d130',
+        'primary-soft':   '#f0f9d4',
+        graphite:         '#2F2F2F',
+        'graphite-mid':   '#5E5E5E',
+        background:       '#EDEDED',
+        surface:          '#ffffff',
+        'surface-soft':   '#f5f5f5',
+        text:             '#2F2F2F',
+        'text-muted':     '#5E5E5E',
+        border:           '#EDEDED',
+        success:          '#4f9f2f',
+        warning:          '#c58a20',
+        danger:           '#b84232',
+        info:             '#3f6f8f',
       },
     },
   },

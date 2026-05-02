@@ -1,126 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { buildApiUrl } from '../api';
-
-// ─── Modal de documento legal ──────────────────────────────────────────────────
-type LegalDoc = 'terms' | 'privacy' | 'cookies';
-
-const LEGAL_CONTENT: Record<LegalDoc, { title: string; body: string }> = {
-    terms: {
-        title: 'Termos de Uso',
-        body: `Ao criar uma conta no EIXO Sistema de Gestão, você concorda com as regras abaixo.
-
-O EIXO é uma plataforma de gestão para pecuária de corte. O acesso é pessoal e intransferível — cada usuário deve ter seu próprio login.
-
-Você se compromete a usar o sistema apenas para fins legítimos de gestão rural. São proibidos: uso fraudulento, acesso a dados de outros usuários, revenda do sistema sem autorização e inserção de dados falsos.
-
-Os dados inseridos por você (animais, fazendas, lotes, pesagens etc.) pertencem a você. O EIXO os utiliza exclusivamente para entregar o serviço contratado.
-
-O EIXO poderá suspender contas que violem estes Termos. Você pode encerrar sua conta a qualquer momento nas configurações.
-
-Os planos pagos têm garantia de reembolso de 7 dias a partir da primeira cobrança. Cancelamentos entram em vigor ao final do período já pago.
-
-Estes Termos são regidos pela legislação brasileira, incluindo o Código de Defesa do Consumidor (Lei nº 8.078/1990).`,
-    },
-    privacy: {
-        title: 'Política de Privacidade',
-        body: `Esta Política descreve como o EIXO coleta, usa e protege seus dados, em conformidade com a LGPD (Lei nº 13.709/2018).
-
-DADOS QUE COLETAMOS
-Fornecidos por você: nome, e-mail, telefone, senha, dados da fazenda e do rebanho.
-Coletados automaticamente: IP, tipo de dispositivo, páginas acessadas e cookies.
-
-COMO USAMOS SEUS DADOS
-— Criar e gerenciar sua conta (execução de contrato)
-— Processar pagamentos via Asaas (execução de contrato)
-— Melhorar a plataforma (legítimo interesse)
-— Enviar comunicações de marketing apenas com seu consentimento
-
-COM QUEM COMPARTILHAMOS
-Seus dados não são vendidos. Podemos compartilhá-los com: Asaas (pagamentos), provedores de nuvem (hospedagem) e autoridades quando exigido por lei.
-
-SEUS DIREITOS
-Você pode acessar, corrigir ou excluir seus dados a qualquer momento. Para exercer seus direitos, envie e-mail para privacidade@eixo.app. Responderemos em até 15 dias úteis.
-
-SEGURANÇA
-Utilizamos criptografia, controle de acesso e monitoramento contínuo para proteger seus dados.`,
-    },
-    cookies: {
-        title: 'Política de Cookies',
-        body: `Cookies são pequenos arquivos que o EIXO armazena no seu navegador para melhorar sua experiência.
-
-TIPOS DE COOKIES
-— Essenciais: mantêm sua sessão ativa e garantem segurança. Não podem ser desativados.
-— Funcionais: lembram suas preferências. Podem ser desativados.
-— Analíticos: entendem como você usa a plataforma. Podem ser desativados.
-— Marketing: personalizam comunicações. Apenas com seu consentimento.
-
-COMO GERENCIAR
-Você pode controlar os cookies nas configurações do seu navegador (Chrome, Safari, Firefox ou Edge) em Privacidade ou Cookies.
-
-Ao acessar o EIXO pela primeira vez, você verá um aviso para aceitar ou personalizar suas preferências de cookies.`,
-    },
-};
-
-interface LegalModalProps {
-    doc: LegalDoc;
-    onClose: () => void;
-}
-
-const LegalModal: React.FC<LegalModalProps> = ({ doc, onClose }) => {
-    const content = LEGAL_CONTENT[doc];
-    return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}
-            onClick={onClose}
-        >
-            <div
-                className="relative w-full max-w-lg rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
-                    <h3 className="text-base font-bold text-[var(--eixo-text)]">{content.title}</h3>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="rounded-lg p-1 text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-green)]"
-                        aria-label="Fechar"
-                    >
-                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-                {/* Corpo */}
-                <div className="max-h-[55vh] overflow-y-auto px-6 py-5">
-                    {content.body.split('\n\n').map((paragraph, i) => (
-                        <p
-                            key={i}
-                            className={`text-sm leading-relaxed text-[var(--eixo-text-muted)] ${i > 0 ? 'mt-4' : ''} ${
-                                paragraph === paragraph.toUpperCase() && paragraph.length < 40
-                                    ? 'font-semibold text-[var(--eixo-text)]'
-                                    : ''
-                            }`}
-                        >
-                            {paragraph}
-                        </p>
-                    ))}
-                </div>
-                {/* Footer */}
-                <div className="border-t border-[var(--eixo-border)] px-6 py-4">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="w-full rounded-2xl bg-[var(--eixo-green)] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)]"
-                    >
-                        Entendido
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
+import LegalModal, { type LegalDoc, LEGAL_CONTENT } from './LegalModal';
 
 interface RegisterProps {
     onSuccess: () => void;
@@ -221,6 +101,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
     const [otpError, setOtpError] = useState<string | null>(null);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+    const lastAutoFetchedCnpjRef = useRef<string | null>(null);
 
     const docDigits = docValue.replace(/\D/g, '');
     const cnpjIsActive = cnpjResult?.descricao_situacao_cadastral === 'ATIVA';
@@ -232,7 +113,6 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
     const isDocInputValid = docType === 'CNPJ'
         ? docDigits.length === 14 && validateCNPJ(docDigits)
         : docDigits.length === 11 && validateCPF(docDigits);
-    const canVerifyDoc = docType === 'CNPJ' && isDocInputValid && !isCnpjLoading;
     const canSubmit = isNameValid
         && isRegisterEmailValid
         && isPasswordValid
@@ -252,6 +132,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
         setOtpSent(false);
         setPhoneVerified(false);
         setOtpError(null);
+        lastAutoFetchedCnpjRef.current = null;
     };
 
     const handleDocInput = (raw: string) => {
@@ -274,6 +155,31 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
             }
         }
     };
+
+    useEffect(() => {
+        if (docType !== 'CNPJ') {
+            lastAutoFetchedCnpjRef.current = null;
+            return;
+        }
+
+        if (!validateCNPJ(docDigits)) {
+            if (docDigits.length < 14) {
+                lastAutoFetchedCnpjRef.current = null;
+            }
+            return;
+        }
+
+        if (lastAutoFetchedCnpjRef.current === docDigits || isCnpjLoading) {
+            return;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            lastAutoFetchedCnpjRef.current = docDigits;
+            void handleConsultarCNPJ();
+        }, 350);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [docType, docDigits, isCnpjLoading]);
 
     const maskPhone = (value: string): string => {
         const n = value.replace(/\D/g, '').slice(0, 11);
@@ -410,7 +316,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
     };
 
     const inputClass = 'mt-1 w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]';
-    const primaryButtonClass = 'bg-[var(--eixo-green)] text-white shadow-sm hover:bg-[var(--eixo-green-dark)]';
+    const primaryButtonClass = 'bg-[var(--eixo-green)] text-[#1a1a1a] shadow-sm hover:bg-[var(--eixo-green-dark)]';
     const disabledButtonClass = 'cursor-not-allowed bg-[#b8d58a] text-[rgba(47,58,45,0.78)] shadow-[inset_0_0_0_1px_rgba(118,184,42,0.12)] hover:bg-[#b8d58a]';
 
     return (
@@ -447,7 +353,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                         ← VOLTAR
                                     </button>
                                     <div className="mb-5">
-                                        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                                        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                                             Crie sua conta
                                         </div>
@@ -461,6 +367,271 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                     </div>
 
                                     <form onSubmit={handleSubmit} className="space-y-4">
+                                        {/* ── Documento ── */}
+                                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
+                                            <p className="mb-1 text-sm font-semibold text-[var(--eixo-text)]">Identificação</p>
+                                            <p className="mb-3 text-xs text-[var(--eixo-text-muted)]">
+                                                Usamos seu CNPJ ou CPF para confirmar que você é um produtor real.
+                                            </p>
+
+                                            {/* Seletor CNPJ / CPF */}
+                                            <div className="mb-3 flex rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-0.5">
+                                                {(['CNPJ', 'CPF'] as const).map((type) => (
+                                                    <button
+                                                        key={type}
+                                                        type="button"
+                                                        onClick={() => handleDocTypeChange(type)}
+                                                        className={`flex-1 rounded-[10px] py-2 text-sm font-semibold transition-colors ${
+                                                            docType === type
+                                                                ? 'bg-[var(--eixo-green)] text-[#1a1a1a]'
+                                                                : 'text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'
+                                                        }`}
+                                                    >
+                                                        {type}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {/* Input do documento */}
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    value={docValue}
+                                                    onChange={(e) => handleDocInput(e.target.value)}
+                                                    placeholder={docType === 'CNPJ' ? '00.000.000/0000-00' : '000.000.000-00'}
+                                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                />
+                                            </div>
+
+                                            {docType === 'CNPJ' && isDocInputValid && (
+                                                <div className="mt-2 flex items-center gap-2 text-xs text-[var(--eixo-text-muted)]">
+                                                    {isCnpjLoading ? (
+                                                        <>
+                                                            <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                                            </svg>
+                                                            <span>Buscando dados do CNPJ...</span>
+                                                        </>
+                                                    ) : cnpjResult ? (
+                                                        <>
+                                                            <svg className="h-3.5 w-3.5 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                            <span>CNPJ consultado automaticamente.</span>
+                                                        </>
+                                                    ) : (
+                                                        <span>Vamos consultar esse CNPJ automaticamente.</span>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Erro de documento */}
+                                            {docError && (
+                                                <p className="mt-2 text-xs text-[var(--eixo-danger)]">{docError}</p>
+                                            )}
+
+                                            {/* CPF válido → etapa de celular */}
+                                            {docType === 'CPF' && cpfValid && (
+                                                <div className="mt-3 space-y-3">
+                                                    <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
+                                                        <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                        </svg>
+                                                        <span className="text-xs font-medium text-[var(--eixo-success)]">CPF válido</span>
+                                                    </div>
+
+                                                    {/* Celular */}
+                                                    {!phoneVerified && (
+                                                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 space-y-2">
+                                                            <p className="text-xs font-semibold text-[var(--eixo-text)]">Confirme seu celular</p>
+                                                            <p className="text-xs text-[var(--eixo-text-muted)]">Enviaremos um código de verificação por SMS.</p>
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="tel"
+                                                                    inputMode="numeric"
+                                                                    value={phone}
+                                                                    onChange={(e) => handlePhoneInput(e.target.value)}
+                                                                    placeholder="(11) 99999-9999"
+                                                                    disabled={otpSent}
+                                                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] disabled:opacity-60"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => void handleSendOtp()}
+                                                                    disabled={phone.replace(/\D/g, '').length < 10 || isSendingOtp || otpSent}
+                                                                    className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
+                                                                >
+                                                                    {isSendingOtp ? 'Enviando...' : otpSent ? 'Enviado ✓' : 'Enviar código'}
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Campo do código */}
+                                                            {otpSent && (
+                                                                <div className="space-y-2">
+                                                                    <div className="flex gap-2">
+                                                                        <input
+                                                                            type="text"
+                                                                            inputMode="numeric"
+                                                                            maxLength={6}
+                                                                            value={otpCode}
+                                                                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                                                            placeholder="Código de 6 dígitos"
+                                                                            className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm tracking-widest text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => void handleVerifyOtp()}
+                                                                            disabled={otpCode.length !== 6 || isVerifyingOtp}
+                                                                            className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
+                                                                        >
+                                                                            {isVerifyingOtp ? 'Verificando...' : 'Confirmar'}
+                                                                        </button>
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => { setOtpSent(false); setOtpCode(''); setOtpError(null); }}
+                                                                        className="text-xs text-[var(--eixo-text-muted)] hover:underline"
+                                                                    >
+                                                                        Não recebi — reenviar
+                                                                    </button>
+                                                                </div>
+                                                            )}
+
+                                                            {otpError && (
+                                                                <p className="text-xs text-[var(--eixo-danger)]">{otpError}</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Celular verificado */}
+                                                    {phoneVerified && (
+                                                        <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
+                                                            <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                            <span className="text-xs font-medium text-[var(--eixo-success)]">Celular verificado — {phone}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Resultado do CNPJ */}
+                                            {cnpjResult && (
+                                                <div className={`mt-3 rounded-xl border px-3 py-3 ${
+                                                    cnpjIsActive
+                                                        ? 'border-[#b6d4b0] bg-[var(--eixo-green-soft)]'
+                                                        : 'border-[var(--eixo-border)] bg-[var(--eixo-green-soft)]'
+                                                }`}>
+                                                    <div className="flex items-start gap-2">
+                                                        {cnpjIsActive ? (
+                                                            <svg className="mt-0.5 h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                        ) : (
+                                                            <svg className="mt-0.5 h-4 w-4 shrink-0 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                                                            </svg>
+                                                        )}
+                                                        <div className="min-w-0">
+                                                            <p className={`text-xs font-bold uppercase tracking-wide ${cnpjIsActive ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-graphite)]'}`}>
+                                                                {cnpjResult.descricao_situacao_cadastral}
+                                                            </p>
+                                                            <p className="mt-0.5 text-sm font-semibold text-[var(--eixo-text)] leading-snug">
+                                                                {cnpjResult.razao_social}
+                                                            </p>
+                                                            {cnpjResult.cnae_fiscal_descricao && (
+                                                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)] leading-snug">
+                                                                    {cnpjResult.cnae_fiscal_descricao}
+                                                                </p>
+                                                            )}
+                                                            {(cnpjResult.municipio || cnpjResult.uf) && (
+                                                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">
+                                                                    {[cnpjResult.municipio, cnpjResult.uf].filter(Boolean).join(' — ')}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {!cnpjIsActive && (
+                                                        <p className="mt-2 text-xs leading-relaxed text-[var(--eixo-graphite)]">
+                                                            Este CNPJ está com situação <strong>{cnpjResult.descricao_situacao_cadastral}</strong> na Receita Federal.
+                                                            Selecione <strong>CPF</strong> acima para se cadastrar como produtor individual, ou tente outro CNPJ ativo.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {/* Celular + OTP para CNPJ ativo */}
+                                            {docType === 'CNPJ' && cnpjIsActive && (
+                                                <div className="mt-3 space-y-2">
+                                                    {!phoneVerified ? (
+                                                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 space-y-2">
+                                                            <p className="text-xs font-semibold text-[var(--eixo-text)]">Confirme seu celular</p>
+                                                            <p className="text-xs text-[var(--eixo-text-muted)]">Último passo: vamos confirmar que você é uma pessoa real.</p>
+                                                            <div className="flex gap-2">
+                                                                <input
+                                                                    type="tel"
+                                                                    inputMode="numeric"
+                                                                    value={phone}
+                                                                    onChange={(e) => handlePhoneInput(e.target.value)}
+                                                                    placeholder="(11) 99999-9999"
+                                                                    disabled={otpSent}
+                                                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] disabled:opacity-60"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => void handleSendOtp()}
+                                                                    disabled={phone.replace(/\D/g, '').length < 10 || isSendingOtp || otpSent}
+                                                                    className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
+                                                                >
+                                                                    {isSendingOtp ? 'Enviando...' : otpSent ? 'Enviado ✓' : 'Enviar código'}
+                                                                </button>
+                                                            </div>
+                                                            {otpSent && (
+                                                                <div className="space-y-2">
+                                                                    <div className="flex gap-2">
+                                                                        <input
+                                                                            type="text"
+                                                                            inputMode="numeric"
+                                                                            maxLength={6}
+                                                                            value={otpCode}
+                                                                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                                                            placeholder="Código de 6 dígitos"
+                                                                            className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm tracking-widest text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => void handleVerifyOtp()}
+                                                                            disabled={otpCode.length !== 6 || isVerifyingOtp}
+                                                                            className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
+                                                                        >
+                                                                            {isVerifyingOtp ? 'Verificando...' : 'Confirmar'}
+                                                                        </button>
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => { setOtpSent(false); setOtpCode(''); setOtpError(null); }}
+                                                                        className="text-xs text-[var(--eixo-text-muted)] hover:underline"
+                                                                    >
+                                                                        Não recebi — reenviar
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            {otpError && <p className="text-xs text-[var(--eixo-danger)]">{otpError}</p>}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
+                                                            <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                            </svg>
+                                                            <span className="text-xs font-medium text-[var(--eixo-success)]">Celular verificado — {phone}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
                                         {/* ── Dados pessoais ── */}
                                         <div>
                                             <label htmlFor="register-name" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
@@ -520,266 +691,6 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                 placeholder="Repita sua senha"
                                                 required
                                             />
-                                        </div>
-
-                                        {/* ── Documento ── */}
-                                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
-                                            <p className="mb-1 text-sm font-semibold text-[var(--eixo-text)]">Identificação</p>
-                                            <p className="mb-3 text-xs text-[var(--eixo-text-muted)]">
-                                                Usamos seu CNPJ ou CPF para confirmar que você é um produtor real.
-                                            </p>
-
-                                            {/* Seletor CNPJ / CPF */}
-                                            <div className="mb-3 flex rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-0.5">
-                                                {(['CNPJ', 'CPF'] as const).map((type) => (
-                                                    <button
-                                                        key={type}
-                                                        type="button"
-                                                        onClick={() => handleDocTypeChange(type)}
-                                                        className={`flex-1 rounded-[10px] py-2 text-sm font-semibold transition-colors ${
-                                                            docType === type
-                                                                ? 'bg-[var(--eixo-green)] text-white'
-                                                                : 'text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'
-                                                        }`}
-                                                    >
-                                                        {type}
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            {/* Input + botão consultar (CNPJ) */}
-                                            <div className="flex gap-2">
-                                                <input
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    value={docValue}
-                                                    onChange={(e) => handleDocInput(e.target.value)}
-                                                    placeholder={docType === 'CNPJ' ? '00.000.000/0000-00' : '000.000.000-00'}
-                                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
-                                                />
-                                                {docType === 'CNPJ' && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => void handleConsultarCNPJ()}
-                                                        disabled={!canVerifyDoc}
-                                                        className={`whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors ${canVerifyDoc ? primaryButtonClass : disabledButtonClass}`}
-                                                    >
-                                                        {isCnpjLoading ? (
-                                                            <span className="flex items-center gap-1.5">
-                                                                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                                                </svg>
-                                                                Buscando...
-                                                            </span>
-                                                        ) : 'Verificar'}
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            {/* Erro de documento */}
-                                            {docError && (
-                                                <p className="mt-2 text-xs text-[var(--eixo-danger)]">{docError}</p>
-                                            )}
-
-                                            {/* CPF válido → etapa de celular */}
-                                            {docType === 'CPF' && cpfValid && (
-                                                <div className="mt-3 space-y-3">
-                                                    <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
-                                                        <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                        </svg>
-                                                        <span className="text-xs font-medium text-[var(--eixo-success)]">CPF válido</span>
-                                                    </div>
-
-                                                    {/* Celular */}
-                                                    {!phoneVerified && (
-                                                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 space-y-2">
-                                                            <p className="text-xs font-semibold text-[var(--eixo-text)]">Confirme seu celular</p>
-                                                            <p className="text-xs text-[var(--eixo-text-muted)]">Enviaremos um código de verificação por SMS.</p>
-                                                            <div className="flex gap-2">
-                                                                <input
-                                                                    type="tel"
-                                                                    inputMode="numeric"
-                                                                    value={phone}
-                                                                    onChange={(e) => handlePhoneInput(e.target.value)}
-                                                                    placeholder="(11) 99999-9999"
-                                                                    disabled={otpSent}
-                                                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] disabled:opacity-60"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => void handleSendOtp()}
-                                                                    disabled={phone.replace(/\D/g, '').length < 10 || isSendingOtp || otpSent}
-                                                                    className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-white/80 disabled:hover:bg-[var(--eixo-green)]/35"
-                                                                >
-                                                                    {isSendingOtp ? 'Enviando...' : otpSent ? 'Enviado ✓' : 'Enviar código'}
-                                                                </button>
-                                                            </div>
-
-                                                            {/* Campo do código */}
-                                                            {otpSent && (
-                                                                <div className="space-y-2">
-                                                                    <div className="flex gap-2">
-                                                                        <input
-                                                                            type="text"
-                                                                            inputMode="numeric"
-                                                                            maxLength={6}
-                                                                            value={otpCode}
-                                                                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                                                                            placeholder="Código de 6 dígitos"
-                                                                            className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm tracking-widest text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
-                                                                        />
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => void handleVerifyOtp()}
-                                                                            disabled={otpCode.length !== 6 || isVerifyingOtp}
-                                                                            className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-white/80 disabled:hover:bg-[var(--eixo-green)]/35"
-                                                                        >
-                                                                            {isVerifyingOtp ? 'Verificando...' : 'Confirmar'}
-                                                                        </button>
-                                                                    </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => { setOtpSent(false); setOtpCode(''); setOtpError(null); }}
-                                                                        className="text-xs text-[var(--eixo-text-muted)] hover:underline"
-                                                                    >
-                                                                        Não recebi — reenviar
-                                                                    </button>
-                                                                </div>
-                                                            )}
-
-                                                            {otpError && (
-                                                                <p className="text-xs text-[var(--eixo-danger)]">{otpError}</p>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Celular verificado */}
-                                                    {phoneVerified && (
-                                                        <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
-                                                            <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                            <span className="text-xs font-medium text-[var(--eixo-success)]">Celular verificado — {phone}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Resultado do CNPJ */}
-                                            {cnpjResult && (
-                                                <div className={`mt-3 rounded-xl border px-3 py-3 ${
-                                                    cnpjIsActive
-                                                        ? 'border-[#b6d4b0] bg-[var(--eixo-green-soft)]'
-                                                        : 'border-[var(--eixo-border)] bg-[var(--eixo-green-soft)]'
-                                                }`}>
-                                                    <div className="flex items-start gap-2">
-                                                        {cnpjIsActive ? (
-                                                            <svg className="mt-0.5 h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                        ) : (
-                                                            <svg className="mt-0.5 h-4 w-4 shrink-0 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                                                            </svg>
-                                                        )}
-                                                        <div className="min-w-0">
-                                                            <p className={`text-xs font-bold uppercase tracking-wide ${cnpjIsActive ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-graphite-dark)]'}`}>
-                                                                {cnpjResult.descricao_situacao_cadastral}
-                                                            </p>
-                                                            <p className="mt-0.5 text-sm font-semibold text-[var(--eixo-text)] leading-snug">
-                                                                {cnpjResult.razao_social}
-                                                            </p>
-                                                            {cnpjResult.cnae_fiscal_descricao && (
-                                                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)] leading-snug">
-                                                                    {cnpjResult.cnae_fiscal_descricao}
-                                                                </p>
-                                                            )}
-                                                            {(cnpjResult.municipio || cnpjResult.uf) && (
-                                                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">
-                                                                    {[cnpjResult.municipio, cnpjResult.uf].filter(Boolean).join(' — ')}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                    {!cnpjIsActive && (
-                                                        <p className="mt-2 text-xs leading-relaxed text-[var(--eixo-graphite-dark)]">
-                                                            Este CNPJ está com situação <strong>{cnpjResult.descricao_situacao_cadastral}</strong> na Receita Federal.
-                                                            Selecione <strong>CPF</strong> acima para se cadastrar como produtor individual, ou tente outro CNPJ ativo.
-                                                        </p>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {/* Celular + OTP para CNPJ ativo */}
-                                            {docType === 'CNPJ' && cnpjIsActive && (
-                                                <div className="mt-3 space-y-2">
-                                                    {!phoneVerified ? (
-                                                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 space-y-2">
-                                                            <p className="text-xs font-semibold text-[var(--eixo-text)]">Confirme seu celular</p>
-                                                            <p className="text-xs text-[var(--eixo-text-muted)]">Último passo: vamos confirmar que você é uma pessoa real.</p>
-                                                            <div className="flex gap-2">
-                                                                <input
-                                                                    type="tel"
-                                                                    inputMode="numeric"
-                                                                    value={phone}
-                                                                    onChange={(e) => handlePhoneInput(e.target.value)}
-                                                                    placeholder="(11) 99999-9999"
-                                                                    disabled={otpSent}
-                                                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] disabled:opacity-60"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => void handleSendOtp()}
-                                                                    disabled={phone.replace(/\D/g, '').length < 10 || isSendingOtp || otpSent}
-                                                                    className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-white/80 disabled:hover:bg-[var(--eixo-green)]/35"
-                                                                >
-                                                                    {isSendingOtp ? 'Enviando...' : otpSent ? 'Enviado ✓' : 'Enviar código'}
-                                                                </button>
-                                                            </div>
-                                                            {otpSent && (
-                                                                <div className="space-y-2">
-                                                                    <div className="flex gap-2">
-                                                                        <input
-                                                                            type="text"
-                                                                            inputMode="numeric"
-                                                                            maxLength={6}
-                                                                            value={otpCode}
-                                                                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                                                                            placeholder="Código de 6 dígitos"
-                                                                            className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm tracking-widest text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
-                                                                        />
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => void handleVerifyOtp()}
-                                                                            disabled={otpCode.length !== 6 || isVerifyingOtp}
-                                                                            className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-white/80 disabled:hover:bg-[var(--eixo-green)]/35"
-                                                                        >
-                                                                            {isVerifyingOtp ? 'Verificando...' : 'Confirmar'}
-                                                                        </button>
-                                                                    </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => { setOtpSent(false); setOtpCode(''); setOtpError(null); }}
-                                                                        className="text-xs text-[var(--eixo-text-muted)] hover:underline"
-                                                                    >
-                                                                        Não recebi — reenviar
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                            {otpError && <p className="text-xs text-[var(--eixo-danger)]">{otpError}</p>}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
-                                                            <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                            <span className="text-xs font-medium text-[var(--eixo-success)]">Celular verificado — {phone}</span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )}
                                         </div>
 
                                         {error && (

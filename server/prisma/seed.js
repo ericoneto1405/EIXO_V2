@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { upsertSystemAccountCategories } from '../accountCategoryDefaults.js';
 
 const prisma = new PrismaClient();
 
@@ -53,6 +54,8 @@ const buildLegacyEntitlements = (modules) => {
 };
 
 const main = async () => {
+    await upsertSystemAccountCategories(prisma);
+
     const hashedPassword = await bcrypt.hash('admin', 10);
     const adminUser = await prisma.user.upsert({
         where: { email: 'admin@eixo.com' },

@@ -28,6 +28,7 @@ model User {
   createdAt            DateTime                @default(now())
   farms                Farm[]
   sessions             Session[]
+  passwordResetTokens  PasswordResetToken[]
   memberships          OrganizationMembership[]
   farmAccesses         UserFarmAccess[]
   appActivationCodes   AppActivationCode[]
@@ -70,6 +71,7 @@ model Farm {
   semenBatches       SemenBatch[]
   embryoBatches      EmbryoBatch[]
   poWeighings        PoWeighing[]
+  weighingSessions   WeighingSession[]
   paddockMoves       PaddockMove[]
   nutritionPlans     NutritionPlan[]
   nutritionAssignments NutritionAssignment[]
@@ -144,6 +146,10 @@ model Lot {
   id        String   @id @default(uuid())
   name      String
   notes     String?
+  objective String?
+  phase     String?
+  status    String   @default("ATIVO")
+  startDate DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
@@ -219,9 +225,23 @@ model Weighing {
   animal         Animal                   @relation(fields: [animalId], references: [id], onDelete: Cascade)
   animalId       String
   scaleSessionId String?
+  weighingSessionId String?
+  weighingSession   WeighingSession?      @relation(fields: [weighingSessionId], references: [id], onDelete: SetNull)
 
   @@unique([animalId, data])
   @@unique([scaleSessionId], map: "Weighing_scaleSessionId_key")
+  @@index([weighingSessionId])
+}
+
+model WeighingSession {
+  id        String     @id @default(uuid())
+  name      String
+  farmId    String
+  createdAt DateTime   @default(now())
+  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  weighings Weighing[]
+
+  @@index([farmId])
 }
 
 model CriaMortality {
@@ -1925,4 +1945,16 @@ model Breed {
 
   @@unique([farmId, name])
   @@index([farmId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

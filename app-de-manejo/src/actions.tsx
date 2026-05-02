@@ -73,5 +73,5 @@ export const ACTIONS: ActionConfig[] = [
 ];
 
 export const buildAnimalLabel = (animal: Animal) => {
-  return animal.brinco || animal.identificacao || animal.name || 'Animal sem identificação';
+  return animal.brinco || animal.identificacao || animal.name || animal.nome || animal.registro || 'Animal sem identificação';
 };

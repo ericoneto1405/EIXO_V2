@@ -19,11 +19,11 @@ interface ActivityModuleProps {
 const ACTION_ICON: Record<string, { icon: string; color: string }> = {
     ANIMAL_CRIADO:      { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
     LOTE_CRIADO:        { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    ANIMAL_COMPRA:      { icon: '💰', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite-dark)]' },
+    ANIMAL_COMPRA:      { icon: '💰', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
     ANIMAL_VENDA:       { icon: '💵', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
     ANIMAL_MORTE:       { icon: '📋', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
     ANIMAL_NASCIMENTO:  { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    TRANSACAO_CRIADA:   { icon: '📊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite-dark)]' },
+    TRANSACAO_CRIADA:   { icon: '📊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
     TRANSACAO_PAGA:     { icon: '✅', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
     USUARIO_CRIADO:     { icon: '👤', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
     FAZENDA_CRIADA:     { icon: '🏡', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
@@ -92,7 +92,7 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
             <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div className="flex items-center justify-between">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             {farmName || 'Todas as fazendas'}
                         </div>

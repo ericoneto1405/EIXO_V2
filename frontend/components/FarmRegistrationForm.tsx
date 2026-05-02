@@ -399,7 +399,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             {paddockToDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                     <div
-                        className="absolute inset-0 bg-[var(--eixo-graphite-dark)]/50 backdrop-blur-sm"
+                        className="absolute inset-0 bg-[var(--eixo-graphite)]/50 backdrop-blur-sm"
                         onClick={() => setPaddockToDelete(null)}
                     />
                     <div className="relative w-full max-w-md rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-8 shadow-2xl">
@@ -434,12 +434,12 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             {/* ── Indicador de progresso ── */}
             <div className="mb-6 flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'farm' ? 'bg-[var(--eixo-green)] text-white' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>1</div>
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'farm' ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>1</div>
                     <span className={`text-sm font-semibold ${currentStep === 'farm' ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-muted)]'}`}>Dados da fazenda</span>
                 </div>
                 <div className="h-px flex-1 bg-[var(--eixo-surface-soft)]" />
                 <div className="flex items-center gap-2">
-                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'divisions' ? 'bg-[var(--eixo-green)] text-white' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-soft)]'}`}>2</div>
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'divisions' ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-soft)]'}`}>2</div>
                     <span className={`text-sm font-semibold ${currentStep === 'divisions' ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-soft)]'}`}>Pastos</span>
                 </div>
             </div>
@@ -552,7 +552,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             type="button"
                             onClick={() => void saveFarmDetails()}
                             disabled={isSaveDisabled}
-                            className="flex items-center rounded-2xl bg-[var(--eixo-green)] px-6 py-2.5 font-bold text-white transition-colors duration-200 hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
+                            className="flex items-center rounded-2xl bg-[var(--eixo-green)] px-6 py-2.5 font-bold text-[#1a1a1a] transition-colors duration-200 hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
                         >
                             {isSubmitting ? 'Salvando...' : 'Salvar e continuar →'}
                         </button>
@@ -652,26 +652,19 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
 
                 {farmLimitReached && (
                     <div className="rounded-2xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] p-4">
-                        <p className="text-sm font-semibold text-[var(--eixo-graphite-dark)]">🔒 Limite do plano gratuito</p>
+                        <p className="text-sm font-semibold text-[var(--eixo-graphite)]">🔒 Limite do plano gratuito</p>
                         <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">
                             O plano gratuito permite apenas <strong>1 fazenda</strong>. Para cadastrar mais fazendas, faça upgrade do seu plano.
                         </p>
                         <button
                             type="button"
-                            className="mt-3 rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)]"
+                            className="mt-3 rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
                             onClick={() => window.location.href = '/planos'}
                         >
                             Ver planos
                         </button>
                     </div>
                 )}
-                {submitError && (
-                    <p className="text-sm text-[var(--eixo-danger)]">{submitError}</p>
-                )}
-                {submitSuccess && (
-                    <p className="text-sm text-[var(--eixo-success)]">{submitSuccess}</p>
-                )}
-
                 {currentStep === 'divisions' && farmSizeFloat > 0 && (
                     <div className="space-y-1.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
                         <div className="flex justify-between text-sm">
@@ -693,24 +686,37 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     </div>
                 )}
 
+                {submitError && (
+                    <p className="text-sm text-[var(--eixo-danger)]">{submitError}</p>
+                )}
+                {submitSuccess && (
+                    <p className="text-sm text-[var(--eixo-success)]">{submitSuccess}</p>
+                )}
+
                 {currentStep === 'divisions' && activeFarm && (
                     <div className="flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={() => void saveDivisions('save-and-return')}
-                            disabled={isSaveDisabled}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[#ece9e6] disabled:cursor-not-allowed disabled:bg-[#d6d3d1]"
-                        >
-                            {isSubmitting ? 'Salvando...' : 'Salvar progresso'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => void saveDivisions('complete')}
-                            disabled={isSaveDisabled}
-                            className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
-                        >
-                            {isSubmitting ? 'Salvando...' : '✓ Concluir cadastro'}
-                        </button>
+                        <div className="flex flex-col items-end gap-0.5">
+                            <button
+                                type="button"
+                                onClick={() => void saveDivisions('save-and-return')}
+                                disabled={isSaveDisabled}
+                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[#ece9e6] disabled:cursor-not-allowed disabled:bg-[#d6d3d1]"
+                            >
+                                {isSubmitting ? 'Salvando...' : 'Salvar progresso'}
+                            </button>
+                            <span className="text-[11px] text-[var(--eixo-text-muted)]">volta para a lista</span>
+                        </div>
+                        <div className="flex flex-col items-end gap-0.5">
+                            <button
+                                type="button"
+                                onClick={() => void saveDivisions('complete')}
+                                disabled={isSaveDisabled}
+                                className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors duration-200 hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
+                            >
+                                {isSubmitting ? 'Salvando...' : '✓ Concluir cadastro'}
+                            </button>
+                            <span className="text-[11px] text-[var(--eixo-text-muted)]">fica aqui para continuar editando</span>
+                        </div>
                     </div>
                 )}
             </form>

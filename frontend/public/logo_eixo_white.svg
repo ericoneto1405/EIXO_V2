@@ -7,7 +7,7 @@
 
   <!-- X: diagonal verde (╱) -->
   <rect x="303.21" y="124.0" width="325.58" height="52" rx="20"
-        fill="#4ade80"
+        fill="#B6E23A"
         transform="rotate(-47.49 466 150)"/>
   <!-- X: diagonal branca (╲) por cima -->
   <rect x="303.21" y="124.0" width="325.58" height="52" rx="20"

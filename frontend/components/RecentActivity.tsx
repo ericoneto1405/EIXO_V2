@@ -4,12 +4,12 @@ import { AtividadeRecente } from '../types';
 import ChartCard from './ChartCard';
 
 const ActivityIcon: React.FC<{ type: AtividadeRecente['tipo'] }> = ({ type }) => {
-    const iconStyles = "w-10 h-10 rounded-lg flex items-center justify-center text-white";
+    const iconStyles = "w-10 h-10 rounded-lg flex items-center justify-center";
     switch (type) {
-        case 'Venda': return <div className={`${iconStyles} bg-[var(--eixo-green)]`}>$</div>;
-        case 'Pesagem': return <div className={`${iconStyles} bg-[var(--eixo-success)]`}>⚖️</div>;
-        case 'Vacinação': return <div className={`${iconStyles} bg-[#d97706]`}>💉</div>;
-        case 'Manejo': return <div className={`${iconStyles} bg-[var(--eixo-graphite-dark)]`}>🐄</div>;
+        case 'Venda': return <div className={`${iconStyles} bg-[var(--eixo-green)] text-[#1a1a1a]`}>$</div>;
+        case 'Pesagem': return <div className={`${iconStyles} bg-[var(--eixo-success)] text-white`}>⚖️</div>;
+        case 'Vacinação': return <div className={`${iconStyles} bg-[#d97706] text-white`}>💉</div>;
+        case 'Manejo': return <div className={`${iconStyles} bg-[var(--eixo-graphite)] text-white`}>🐄</div>;
         default: return null;
     }
 };

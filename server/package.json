@@ -19,6 +19,7 @@
     "cors": "^2.8.6",
     "express": "^4.22.1",
     "prisma": "^6.19.3",
+    "resend": "^6.12.2",
     "twilio": "^5.7.0"
   },
   "devDependencies": {

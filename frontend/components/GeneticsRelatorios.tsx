@@ -205,7 +205,7 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                 <div className="flex items-center gap-2">
                     {reproMode === 'ESTACAO' && (
                         <select
-                            className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite-dark)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
+                            className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
                             value={selectedSeasonId || ''}
                             onChange={(event) => setSelectedSeasonId(event.target.value || null)}
                         >
@@ -218,7 +218,7 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                         </select>
                     )}
                     <button
-                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-primary/90"
                         onClick={loadSummary}
                         disabled={isLoading}
                     >

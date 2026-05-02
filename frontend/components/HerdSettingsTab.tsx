@@ -274,7 +274,7 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
                     <button
                         type="submit"
                         disabled={intervalSaving}
-                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:opacity-50"
+                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:opacity-50"
                     >
                         {intervalSaving ? 'Salvando…' : 'Salvar'}
                     </button>
@@ -337,7 +337,7 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
                     <button
                         type="submit"
                         disabled={targetsSaving}
-                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:opacity-50"
+                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:opacity-50"
                     >
                         {targetsSaving ? 'Salvando…' : 'Salvar pesos alvo'}
                     </button>
@@ -373,7 +373,7 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
                     <button
                         type="submit"
                         disabled={breedAdding || !newBreed.trim()}
-                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-50"
+                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-50"
                     >
                         {breedAdding ? 'Adicionando…' : 'Adicionar'}
                     </button>

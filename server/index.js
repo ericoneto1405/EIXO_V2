@@ -9,8 +9,10 @@ import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 import { registerNutritionModuleRoutes } from './nutritionModule.js';
+import { upsertSystemAccountCategories } from './accountCategoryDefaults.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import twilio from 'twilio';
+import { Resend } from 'resend';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,6 +51,10 @@ const OTP_SEND_MAX_PER_PHONE = Number(process.env.OTP_SEND_MAX_PER_PHONE) || 3;
 const OTP_VERIFY_WINDOW_MS = Number(process.env.OTP_VERIFY_WINDOW_MS) || 10 * 60 * 1000;
 const OTP_VERIFY_MAX_PER_IP = Number(process.env.OTP_VERIFY_MAX_PER_IP) || 10;
 const OTP_VERIFY_MAX_PER_PHONE = Number(process.env.OTP_VERIFY_MAX_PER_PHONE) || 5;
+const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:5173';
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@eixo.ag';
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const resend = RESEND_API_KEY && RESEND_API_KEY !== 're_...' ? new Resend(RESEND_API_KEY) : null;
 
 // ─── Twilio Verify ────────────────────────────────────────────────────────────
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
@@ -90,11 +96,87 @@ function sanitizeUser(user) {
     return safeUser;
 }
 
+const escapeHtml = (value) =>
+    String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
 const PASSWORD_POLICY_MESSAGE = 'A senha deve ter pelo menos 8 caracteres, com ao menos 1 letra e 1 número.';
+let systemAccountCategoriesReady = false;
+let systemAccountCategoriesPromise = null;
+
+const ensureSystemAccountCategories = async () => {
+    if (systemAccountCategoriesReady) return;
+    if (!systemAccountCategoriesPromise) {
+        systemAccountCategoriesPromise = upsertSystemAccountCategories(prisma)
+            .then(() => {
+                systemAccountCategoriesReady = true;
+            })
+            .finally(() => {
+                systemAccountCategoriesPromise = null;
+            });
+    }
+    await systemAccountCategoriesPromise;
+};
 
 const isPasswordStrongEnough = (value) => {
     const password = String(value || '');
     return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
+};
+
+const validateCNPJ = (cnpj) => {
+    const n = String(cnpj || '').replace(/\D/g, '');
+    if (n.length !== 14) return false;
+    if (/^(\d)\1+$/.test(n)) return false;
+    let sum = 0;
+    let weight = 5;
+    for (let index = 0; index < 12; index += 1) {
+        sum += Number.parseInt(n[index], 10) * weight;
+        weight = weight === 2 ? 9 : weight - 1;
+    }
+    const d1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (Number.parseInt(n[12], 10) !== d1) return false;
+    sum = 0;
+    weight = 6;
+    for (let index = 0; index < 13; index += 1) {
+        sum += Number.parseInt(n[index], 10) * weight;
+        weight = weight === 2 ? 9 : weight - 1;
+    }
+    const d2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    return Number.parseInt(n[13], 10) === d2;
+};
+
+const validateCPF = (cpf) => {
+    const n = String(cpf || '').replace(/\D/g, '');
+    if (n.length !== 11) return false;
+    if (/^(\d)\1+$/.test(n)) return false;
+    let sum = 0;
+    for (let index = 0; index < 9; index += 1) {
+        sum += Number.parseInt(n[index], 10) * (10 - index);
+    }
+    const d1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (Number.parseInt(n[9], 10) !== d1) return false;
+    sum = 0;
+    for (let index = 0; index < 10; index += 1) {
+        sum += Number.parseInt(n[index], 10) * (11 - index);
+    }
+    const d2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    return Number.parseInt(n[10], 10) === d2;
+};
+
+const fetchCnpjFromBrasilApi = async (cnpj) => {
+    const normalizedCnpj = String(cnpj || '').replace(/\D/g, '');
+    const apiRes = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${normalizedCnpj}`);
+    const data = await apiRes.json().catch(() => ({}));
+    if (!apiRes.ok) {
+        const error = new Error(data?.message || 'CNPJ não encontrado na Receita Federal.');
+        error.statusCode = apiRes.status;
+        throw error;
+    }
+    return data;
 };
 
 const prisma = new PrismaClient();
@@ -283,8 +365,10 @@ const normalizeSelectionDecision = (value) => {
 const serializeAnimal = (animal) => ({
     id: animal.id,
     brinco: animal.brinco,
+    registro: animal.registro,
     raca: animal.raca,
     sexo: formatSexoLabel(animal.sexo),
+    categoria: animal.categoria,
     dataNascimento: animal.dataNascimento ? animal.dataNascimento.toISOString() : null,
     pesoAtual: animal.pesoAtual,
     gmd: animal.gmd ?? null,
@@ -295,6 +379,7 @@ const serializeAnimal = (animal) => ({
     currentPaddockId: animal.currentPaddockId ?? null,
     currentPaddockName: animal.currentPaddock?.name || null,
     nutritionPlan: animal.currentNutritionPlan || null,
+    selectionDecision: animal.selectionDecision || null,
     createdAt: animal.createdAt.toISOString(),
     updatedAt: animal.updatedAt.toISOString(),
 });
@@ -518,13 +603,15 @@ const buildFieldOccurrenceAlert = (occurrence) => {
     const paddockLabel = occurrence.paddock?.name || 'Local não informado';
     const description = occurrence.description ? String(occurrence.description).trim() : '';
     const createdAt = occurrence.occurredAt?.toISOString?.() ?? occurrence.createdAt?.toISOString?.() ?? null;
+    const workerName = occurrence.createdBy?.name ? String(occurrence.createdBy.name).trim() : '';
+    const workerPrefix = workerName ? `${workerName}, ` : '';
 
     switch (occurrence.type) {
         case 'NASCEU':
             return {
                 id: `field-${occurrence.id}`,
                 type: 'info',
-                message: `NASCEU: revisar nascimento${animalLabel ? ` - mãe ${animalLabel}` : ' - mãe não informada'}.`,
+                message: `NASCEU: ${workerPrefix}registrou nascimento${animalLabel ? ` da mãe ${animalLabel}` : ''}.`,
                 source: 'APP_MANEJO',
                 sourceType: occurrence.type,
                 sourceId: occurrence.id,
@@ -535,7 +622,7 @@ const buildFieldOccurrenceAlert = (occurrence) => {
             return {
                 id: `field-${occurrence.id}`,
                 type: 'critical',
-                message: `MORREU: revisar baixa${animalLabel ? ` - animal ${animalLabel}` : ' - animal não informado'}.`,
+                message: `MORREU: ${workerPrefix}registrou morte${animalLabel ? ` do animal ${animalLabel}` : ''}.`,
                 source: 'APP_MANEJO',
                 sourceType: occurrence.type,
                 sourceId: occurrence.id,
@@ -546,7 +633,7 @@ const buildFieldOccurrenceAlert = (occurrence) => {
             return {
                 id: `field-${occurrence.id}`,
                 type: 'critical',
-                message: `DOENTE: animal com atenção${animalLabel ? ` - ${animalLabel}` : ' - ID não informado'}.`,
+                message: `DOENTE: ${workerPrefix}registrou animal doente${animalLabel ? ` - ${animalLabel}` : ''}.`,
                 source: 'APP_MANEJO',
                 sourceType: occurrence.type,
                 sourceId: occurrence.id,
@@ -557,7 +644,7 @@ const buildFieldOccurrenceAlert = (occurrence) => {
             return {
                 id: `field-${occurrence.id}`,
                 type: 'critical',
-                message: `AVARIA: ${paddockLabel}${description ? ` - ${description}` : ' - sem descrição'}.`,
+                message: `AVARIA: ${workerPrefix}registrou avaria em ${paddockLabel}${description ? ` - ${description}` : ''}.`,
                 source: 'APP_MANEJO',
                 sourceType: occurrence.type,
                 sourceId: occurrence.id,
@@ -2007,25 +2094,22 @@ app.get('/public/cnpj/:cnpj', async (req, res) => {
         return res.status(400).json({ message: 'CNPJ deve ter 14 dígitos.' });
     }
     try {
-        const apiRes = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
-        const data = await apiRes.json();
-        if (!apiRes.ok) {
-            return res.status(apiRes.status).json({ message: data?.message || 'CNPJ não encontrado na Receita Federal.' });
-        }
+        const data = await fetchCnpjFromBrasilApi(cnpj);
         return res.json(data);
     } catch (error) {
         console.error('BrasilAPI error:', error);
-        return res.status(503).json({ message: 'Não foi possível consultar a Receita Federal. Tente novamente.' });
+        return res.status(error?.statusCode || 503).json({ message: error?.message || 'Não foi possível consultar a Receita Federal. Tente novamente.' });
     }
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
 app.post('/register', async (req, res) => {
-    const { name, email, password, document, documentType, cnpjData, phone, termsVersion } = req.body || {};
+    const { name, email, password, document, documentType, phone, termsVersion } = req.body || {};
     const normalizedName = typeof name === 'string' ? name.trim() : '';
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
     const normalizedDocument = typeof document === 'string' ? document.replace(/\D/g, '') : null;
     const normalizedPhone = typeof phone === 'string' ? phone.replace(/\D/g, '') : null;
+    const normalizedDocumentType = documentType === 'CNPJ' || documentType === 'CPF' ? documentType : null;
 
     if (!normalizedName || !normalizedEmail || !password) {
         return res.status(400).json({ message: 'Informe nome, e-mail e senha.' });
@@ -2039,8 +2123,16 @@ app.post('/register', async (req, res) => {
         return res.status(400).json({ message: PASSWORD_POLICY_MESSAGE });
     }
 
-    if (!normalizedDocument || !documentType) {
+    if (!normalizedDocument || !normalizedDocumentType) {
         return res.status(400).json({ message: 'Informe seu CNPJ ou CPF para criar a conta.' });
+    }
+
+    if (normalizedDocumentType === 'CNPJ' && !validateCNPJ(normalizedDocument)) {
+        return res.status(400).json({ message: 'CNPJ inválido. Verifique os dígitos.' });
+    }
+
+    if (normalizedDocumentType === 'CPF' && !validateCPF(normalizedDocument)) {
+        return res.status(400).json({ message: 'CPF inválido. Verifique os dígitos.' });
     }
 
     try {
@@ -2066,6 +2158,22 @@ app.post('/register', async (req, res) => {
         }
         verifiedPhones.delete(normalizedPhone); // uso único
 
+        let trustedCnpjData = undefined;
+        if (normalizedDocumentType === 'CNPJ') {
+            try {
+                trustedCnpjData = await fetchCnpjFromBrasilApi(normalizedDocument);
+            } catch (error) {
+                console.error('BrasilAPI register error:', error);
+                return res.status(error?.statusCode || 503).json({ message: error?.message || 'Não foi possível confirmar o CNPJ na Receita Federal.' });
+            }
+
+            if (String(trustedCnpjData?.descricao_situacao_cadastral || '').trim().toUpperCase() !== 'ATIVA') {
+                return res.status(400).json({
+                    message: `Este CNPJ está com situação ${trustedCnpjData?.descricao_situacao_cadastral || 'não disponível'} na Receita Federal.`,
+                });
+            }
+        }
+
         const hashedPassword = await bcrypt.hash(String(password), 10);
         // Plano grátis: Estrutura da Fazenda + Manejo do Rebanho + Financeiro básico
         // Visão Geral é exclusiva dos planos pagos
@@ -2078,8 +2186,8 @@ app.post('/register', async (req, res) => {
                 modules: FREE_PLAN_MODULES,
                 roles: ['user'],
                 document: normalizedDocument,
-                documentType,
-                cnpjData: cnpjData || undefined,
+                documentType: normalizedDocumentType,
+                cnpjData: trustedCnpjData || undefined,
                 phone: normalizedPhone,
                 termsVersion: String(termsVersion),
                 termsAcceptedAt: new Date(),
@@ -2089,10 +2197,10 @@ app.post('/register', async (req, res) => {
         const saasCtx = await ensureSaasContextForUser(newUser.id, { allowProvision: true });
 
         // Atualiza nome da organização com a razão social (CNPJ)
-        if (documentType === 'CNPJ' && cnpjData?.razao_social && saasCtx?.organizationId) {
+        if (normalizedDocumentType === 'CNPJ' && trustedCnpjData?.razao_social && saasCtx?.organizationId) {
             await prisma.organization.update({
                 where: { id: saasCtx.organizationId },
-                data: { name: cnpjData.razao_social },
+                data: { name: trustedCnpjData.razao_social },
             });
         }
 
@@ -2172,6 +2280,98 @@ app.post('/auth/login', async (req, res) => {
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao autenticar usuário.' });
+    }
+});
+
+app.post('/auth/forgot-password', async (req, res) => {
+    const { email } = req.body || {};
+    if (!email) return res.status(400).json({ message: 'Informe o e-mail.' });
+
+    const responsePayload = {
+        message: 'Se esse e-mail estiver cadastrado, você receberá as instruções em breve.',
+    };
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email: normalizeEmailForLogin(email) },
+        });
+        if (!user || !resend) {
+            return res.json(responsePayload);
+        }
+
+        await prisma.passwordResetToken.updateMany({
+            where: { userId: user.id, usedAt: null },
+            data: { usedAt: new Date() },
+        });
+
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+
+        await prisma.passwordResetToken.create({
+            data: {
+                userId: user.id,
+                token: rawToken,
+                expiresAt,
+            },
+        });
+
+        const resetLink = `${APP_BASE_URL}?reset=${rawToken}`;
+        const safeName = escapeHtml(user.name);
+        const safeResetLink = escapeHtml(resetLink);
+
+        await resend.emails.send({
+            from: RESEND_FROM_EMAIL,
+            to: user.email,
+            subject: 'Redefinir senha — EIXO',
+            html: `
+                <p>Olá, ${safeName}.</p>
+                <p>Recebemos uma solicitação para redefinir a senha da sua conta no EIXO.</p>
+                <p><a href="${safeResetLink}" style="background:#B6E23A;color:#1a1a1a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Redefinir senha</a></p>
+                <p>Este link expira em 30 minutos. Se você não solicitou a redefinição, ignore este e-mail.</p>
+                <p style="color:#888;font-size:12px;">Link alternativo: ${safeResetLink}</p>
+            `,
+        });
+    } catch (err) {
+        console.error('forgot-password error:', err);
+    }
+
+    return res.json(responsePayload);
+});
+
+app.post('/auth/reset-password', async (req, res) => {
+    const { token, password } = req.body || {};
+    if (!token || !password) {
+        return res.status(400).json({ message: 'Token e nova senha são obrigatórios.' });
+    }
+    if (String(password).length < 8) {
+        return res.status(400).json({ message: 'A senha deve ter pelo menos 8 caracteres.' });
+    }
+
+    try {
+        const record = await prisma.passwordResetToken.findUnique({ where: { token: String(token) } });
+
+        if (!record || record.usedAt || record.expiresAt < new Date()) {
+            return res.status(400).json({ message: 'Link inválido ou expirado. Solicite um novo link.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(String(password), 10);
+
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: record.userId },
+                data: { password: hashedPassword },
+            }),
+            prisma.passwordResetToken.update({
+                where: { id: record.id },
+                data: { usedAt: new Date() },
+            }),
+            prisma.session.deleteMany({ where: { userId: record.userId } }),
+        ]);
+
+        return res.json({ message: 'Senha atualizada com sucesso.' });
+    } catch (err) {
+        console.error('reset-password error:', err);
+        return res.status(500).json({ message: 'Erro ao redefinir senha.' });
     }
 });
 
@@ -3808,9 +4008,13 @@ app.get('/lots', async (req, res) => {
 });
 
 app.post('/lots', requireNonFieldWorker, async (req, res) => {
-    const { farmId, name, notes } = req.body || {};
+    const { farmId, name, notes, objective, phase, status, startDate } = req.body || {};
     if (!farmId || !name?.trim()) {
         return res.status(400).json({ message: 'Informe fazenda e nome do lote.' });
+    }
+    const parsedStartDate = startDate ? parseDateValue(startDate) : null;
+    if (startDate && !parsedStartDate) {
+        return res.status(400).json({ message: 'Data de início inválida.' });
     }
 
     try {
@@ -3826,6 +4030,10 @@ app.post('/lots', requireNonFieldWorker, async (req, res) => {
                 farmId,
                 name: name.trim(),
                 notes: notes?.trim() || null,
+                objective: objective?.trim() || null,
+                phase: phase?.trim() || null,
+                status: status?.trim() || 'ATIVO',
+                startDate: parsedStartDate,
             },
         });
         logActivity(req, { action: 'LOTE_CRIADO', entity: 'Lot', entityId: lot.id, description: `Criou o lote "${lot.name}"`, farmId: lot.farmId });
@@ -3838,9 +4046,13 @@ app.post('/lots', requireNonFieldWorker, async (req, res) => {
 
 app.patch('/lots/:id', requireNonFieldWorker, async (req, res) => {
     const { id } = req.params;
-    const { name, notes } = req.body || {};
+    const { name, notes, objective, phase, status, startDate } = req.body || {};
     if (!name?.trim()) {
         return res.status(400).json({ message: 'Informe o nome do lote.' });
+    }
+    const parsedStartDate = startDate ? parseDateValue(startDate) : null;
+    if (startDate && !parsedStartDate) {
+        return res.status(400).json({ message: 'Data de início inválida.' });
     }
     try {
         const lot = await prisma.lot.findFirst({
@@ -3849,7 +4061,14 @@ app.patch('/lots/:id', requireNonFieldWorker, async (req, res) => {
         if (!lot) return res.status(404).json({ message: 'Lote não encontrado.' });
         const updated = await prisma.lot.update({
             where: { id },
-            data: { name: name.trim(), notes: notes?.trim() || null },
+            data: {
+                name: name.trim(),
+                notes: notes?.trim() || null,
+                objective: objective?.trim() || null,
+                phase: phase?.trim() || null,
+                status: status?.trim() || 'ATIVO',
+                startDate: parsedStartDate,
+            },
         });
         return res.json({ lot: updated });
     } catch (error) {
@@ -4658,6 +4877,13 @@ app.get('/po/animals', async (req, res) => {
                 }
             });
         }
+        const decisions = animalIds.length
+            ? await prisma.selectionDecision.findMany({
+                where: { farmId: farm.id, animalId: { in: animalIds } },
+                select: { animalId: true, decision: true },
+            })
+            : [];
+        const decisionByAnimal = new Map(decisions.map((decision) => [decision.animalId, decision.decision]));
 
         const enriched = animals.map((animal) => {
             const direct = nutritionByAnimal.get(animal.id);
@@ -4666,6 +4892,7 @@ app.get('/po/animals', async (req, res) => {
             return {
                 ...animal,
                 currentNutritionPlan: plan ? serializeNutritionPlan(plan) : null,
+                selectionDecision: decisionByAnimal.get(animal.id) || null,
             };
         });
 
@@ -4983,7 +5210,7 @@ const listPoWeighings = async (req, res, responseKey) => {
 
 const createPoWeighing = async (req, res, responseKey) => {
     const { id } = req.params;
-    const { data, date, peso, weightKg, notes } = req.body || {};
+    const { data, date, peso, weightKg, notes, forceReplace } = req.body || {};
 
     const weighingDate = parseDateValue(date || data);
     if (!weighingDate) {
@@ -5004,6 +5231,12 @@ const createPoWeighing = async (req, res, responseKey) => {
         }
 
         const pesagem = await prisma.$transaction(async (tx) => {
+            if (forceReplace === true) {
+                await tx.poWeighing.deleteMany({
+                    where: { poAnimalId: id, data: weighingDate },
+                });
+            }
+
             const previousWeighing = await tx.poWeighing.findFirst({
                 where: { poAnimalId: id, data: { lt: weighingDate } },
                 orderBy: { data: 'desc' },
@@ -6569,7 +6802,8 @@ app.get('/animals/:id/pesagens', async (req, res) => {
 
 app.post('/animals/:id/pesagens', async (req, res) => {
     const { id } = req.params;
-    const { data, peso } = req.body || {};
+    const { data, peso, forceReplace } = req.body || {};
+    const weighingSessionId = req.body?.weighingSessionId ?? null;
 
     const weighingDate = parseDateValue(data);
     if (!weighingDate) {
@@ -6589,7 +6823,28 @@ app.post('/animals/:id/pesagens', async (req, res) => {
             return res.status(404).json({ message: 'Animal não encontrado.' });
         }
 
+        let validWeighingSessionId = null;
+        if (weighingSessionId) {
+            const session = await prisma.weighingSession.findFirst({
+                where: {
+                    id: String(weighingSessionId),
+                    farmId: animal.farmId,
+                    farm: buildFarmRelationFilter(req),
+                },
+            });
+            if (!session) {
+                return res.status(404).json({ message: 'Sessão de pesagem não encontrada.' });
+            }
+            validWeighingSessionId = session.id;
+        }
+
         const pesagem = await prisma.$transaction(async (tx) => {
+            if (forceReplace === true) {
+                await tx.weighing.deleteMany({
+                    where: { animalId: id, data: weighingDate },
+                });
+            }
+
             const previousWeighing = await tx.weighing.findFirst({
                 where: { animalId: id, data: { lt: weighingDate } },
                 orderBy: { data: 'desc' },
@@ -6609,6 +6864,7 @@ app.post('/animals/:id/pesagens', async (req, res) => {
                     data: weighingDate,
                     peso: parsedPeso,
                     gmd: gmdValue,
+                    ...(validWeighingSessionId ? { weighingSessionId: validWeighingSessionId } : {}),
                 },
             });
 
@@ -6640,6 +6896,7 @@ app.post('/animals/:id/pesagens', async (req, res) => {
                 data: pesagem.data.toISOString(),
                 peso: pesagem.peso,
                 gmd: pesagem.gmd,
+                weighingSessionId: pesagem.weighingSessionId,
             },
         });
     } catch (error) {
@@ -6653,9 +6910,57 @@ app.post('/animals/:id/pesagens', async (req, res) => {
 
 
 // ── Pesagens da fazenda (listagem central) ──────────────────────────────────
+function serializeWeighingSession(s) {
+    return {
+        id: s.id,
+        name: s.name,
+        farmId: s.farmId,
+        createdAt: s.createdAt,
+        weighingsCount: s._count?.weighings ?? undefined,
+    };
+}
+
+app.post('/farms/:farmId/weighing-sessions', requireAuth, async (req, res) => {
+    try {
+        const scopeFilter = buildFarmScopeFilter(req);
+        const farm = await prisma.farm.findFirst({ where: { id: req.params.farmId, ...scopeFilter } });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        const { name } = req.body;
+        if (!name?.trim()) return res.status(400).json({ message: 'Nome da sessão é obrigatório.' });
+
+        const session = await prisma.weighingSession.create({
+            data: { name: name.trim(), farmId: farm.id },
+        });
+        res.status(201).json(serializeWeighingSession(session));
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao criar sessão.' });
+    }
+});
+
+app.get('/farms/:farmId/weighing-sessions', requireAuth, async (req, res) => {
+    try {
+        const scopeFilter = buildFarmScopeFilter(req);
+        const farm = await prisma.farm.findFirst({ where: { id: req.params.farmId, ...scopeFilter } });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        const sessions = await prisma.weighingSession.findMany({
+            where: { farmId: farm.id },
+            orderBy: { createdAt: 'desc' },
+            take: 50,
+            include: { _count: { select: { weighings: true } } },
+        });
+        res.json({ sessions: sessions.map(serializeWeighingSession) });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao listar sessões.' });
+    }
+});
+
 app.get('/farms/:farmId/weighings', async (req, res) => {
     const { farmId } = req.params;
-    const { limit = 50, offset = 0, animalId, startDate, endDate, lotId } = req.query;
+    const { limit = 50, offset = 0, animalId, startDate, endDate, lotId, weighingSessionId } = req.query;
 
     try {
         const farm = await prisma.farm.findFirst({
@@ -6665,7 +6970,8 @@ app.get('/farms/:farmId/weighings', async (req, res) => {
 
         const where = { animal: { farmId } };
         if (animalId) where.animalId = String(animalId);
-        if (lotId) where.animal = { ...where.animal, currentLotId: String(lotId) };
+        if (lotId) where.animal = { ...where.animal, lotId: String(lotId) };
+        if (weighingSessionId) where.weighingSessionId = String(weighingSessionId);
         if (startDate || endDate) {
             where.data = {};
             if (startDate) where.data.gte = new Date(String(startDate));
@@ -6688,7 +6994,21 @@ app.get('/farms/:farmId/weighings', async (req, res) => {
                 skip,
                 include: {
                     animal: {
-                        select: { id: true, brinco: true, raca: true, sexo: true, categoria: true },
+                        select: {
+                            id: true,
+                            brinco: true,
+                            raca: true,
+                            sexo: true,
+                            categoria: true,
+                            lotId: true,
+                            lot: { select: { name: true } },
+                        },
+                    },
+                    weighingSession: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
                     },
                 },
             }),
@@ -6719,6 +7039,8 @@ app.get('/farms/:farmId/weighings', async (req, res) => {
                     date: w.data.toISOString(),
                     weightKg: w.peso,
                     gmd: w.gmd,
+                    weighingSessionId: w.weighingSessionId,
+                    weighingSessionName: w.weighingSession?.name || null,
                     previousWeightKg: prev ? prev.peso : null,
                     gainKg: prev ? w.peso - prev.peso : null,
                     animal: {
@@ -6727,6 +7049,8 @@ app.get('/farms/:farmId/weighings', async (req, res) => {
                         raca: w.animal.raca,
                         sexo: w.animal.sexo,
                         categoria: w.animal.categoria,
+                        lotId: w.animal.lotId,
+                        lotName: w.animal.lot?.name || null,
                     },
                 };
             }),
@@ -7474,6 +7798,7 @@ app.post('/po/animals/:id/sanitario', async (req, res) => {
 
 app.get('/account-categories', requireAuth, requireBillingAccess, async (req, res) => {
     try {
+        await ensureSystemAccountCategories();
         const { farmId } = req.query;
         if (farmId) {
             const farmScope = buildFarmScopeFilter(req, { id: String(farmId) });
@@ -7758,6 +8083,7 @@ app.get('/alerts', requireAuth, async (req, res) => {
                 },
                 include: {
                     paddock: true,
+                    createdBy: { select: { id: true, name: true } },
                 },
                 orderBy: { occurredAt: 'desc' },
             }),
@@ -7770,13 +8096,13 @@ app.get('/alerts', requireAuth, async (req, res) => {
                 include: {
                     animal: true,
                     paddock: true,
+                    createdBy: { select: { id: true, name: true } },
                 },
                 orderBy: { occurredAt: 'desc' },
                 take: 50,
             }),
         ]);
 
-        const farmById = new Map(farms.map((farm) => [farm.id, farm]));
         const paddocksByFarmId = new Map();
         paddocks.forEach((paddock) => {
             const current = paddocksByFarmId.get(paddock.farmId) || [];
@@ -7807,10 +8133,12 @@ app.get('/alerts', requireAuth, async (req, res) => {
                         continue;
                     }
                     const daysSince = getDaysSince(latest?.occurredAt);
+                    const workerName = latest?.createdBy?.name ? String(latest.createdBy.name).trim() : '';
+                    const workerPrefix = workerName ? `${workerName}, ` : '';
                     alerts.push({
                         id: `stale-${type.toLowerCase()}-${farm.id}-${scope.id}`,
                         type: 'warning',
-                        message: `${type}: ${scope.label} ${daysSince === null ? 'sem atualização registrada' : `sem atualização há ${daysSince} dia(s)`}.`,
+                        message: `${type}: ${workerPrefix}${type === 'COCHO' ? 'cocho' : 'bebedouro'} sem atualização${daysSince === null ? ' no período' : ` há ${daysSince} dia(s)`}.`,
                         source: 'APP_MANEJO',
                         sourceType: type,
                         sourceId: latest?.id || null,
@@ -7825,110 +8153,6 @@ app.get('/alerts', requireAuth, async (req, res) => {
             .map(buildFieldOccurrenceAlert)
             .filter(Boolean)
             .forEach((alert) => alerts.push(alert));
-
-        // ── Alertas de pesagem ────────────────────────────────────────────────
-        try {
-            for (const farm of farms) {
-                const herdSettings = await prisma.herdSettings.findUnique({
-                    where: { farmId: farm.id },
-                    select: { weighingIntervalDays: true },
-                });
-                const weighingIntervalDays = herdSettings?.weighingIntervalDays ?? 30;
-                const weighingCutoff = new Date(Date.now() - weighingIntervalDays * 24 * 60 * 60 * 1000);
-
-                const farmAnimals = await prisma.animal.findMany({
-                    where: { farmId: farm.id },
-                    select: { id: true },
-                });
-                if (farmAnimals.length === 0) continue;
-
-                const animalIds = farmAnimals.map((a) => a.id);
-                const lastWeighings = await prisma.weighing.findMany({
-                    where: { animalId: { in: animalIds } },
-                    orderBy: { data: 'desc' },
-                    select: { animalId: true, data: true, gmd: true },
-                });
-
-                const lastByAnimal = new Map();
-                for (const w of lastWeighings) {
-                    if (!lastByAnimal.has(w.animalId)) lastByAnimal.set(w.animalId, w);
-                }
-
-                const semPesagem = farmAnimals.filter((a) => {
-                    const last = lastByAnimal.get(a.id);
-                    return !last || last.data < weighingCutoff;
-                });
-
-                if (semPesagem.length > 0) {
-                    alerts.push({
-                        id: `sem-pesagem-${farm.id}`,
-                        type: 'warning',
-                        message: `${semPesagem.length} ${semPesagem.length === 1 ? 'animal sem pesagem' : 'animais sem pesagem'} nos últimos ${weighingIntervalDays} dias${farms.length > 1 ? ` (${farm.name})` : ''}.`,
-                        source: 'SISTEMA',
-                        sourceType: 'WEIGHING',
-                        sourceId: null,
-                        farmId: farm.id,
-                        createdAt: new Date().toISOString(),
-                    });
-                }
-
-                const gmdNegativo = Array.from(lastByAnimal.values()).filter(
-                    (w) => w.gmd !== null && w.gmd < 0,
-                );
-                if (gmdNegativo.length > 0) {
-                    alerts.push({
-                        id: `gmd-negativo-${farm.id}`,
-                        type: 'critical',
-                        message: `${gmdNegativo.length} ${gmdNegativo.length === 1 ? 'animal com GMD negativo' : 'animais com GMD negativo'} na última pesagem${farms.length > 1 ? ` (${farm.name})` : ''}.`,
-                        source: 'SISTEMA',
-                        sourceType: 'GMD',
-                        sourceId: null,
-                        farmId: farm.id,
-                        createdAt: new Date().toISOString(),
-                    });
-                }
-            }
-        } catch (weighingErr) {
-            console.error('Erro ao calcular alertas de pesagem:', weighingErr);
-        }
-
-        // ── Alertas financeiros ───────────────────────────────────────────────
-        const billingBlocked = BILLING_BLOCKED_STATES.has(req.saas?.billingAccessState || '');
-        if (!billingBlocked && !isFieldWorkerRequest(req)) {
-            try {
-                const sevenDaysFromNow = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-                const pendingTxs = await prisma.financialTransaction.findMany({
-                    where: {
-                        farmId: { in: farmIds },
-                        status: 'PENDENTE',
-                        vencimento: { lte: sevenDaysFromNow },
-                    },
-                    select: { farmId: true },
-                });
-                if (pendingTxs.length > 0) {
-                    const countByFarm = new Map();
-                    for (const tx of pendingTxs) {
-                        countByFarm.set(tx.farmId, (countByFarm.get(tx.farmId) || 0) + 1);
-                    }
-                    for (const [fid, count] of countByFarm) {
-                        const farm = farmById.get(fid);
-                        if (!farm) continue;
-                        alerts.push({
-                            id: `contas-vencer-${fid}`,
-                            type: 'warning',
-                            message: `${count} ${count === 1 ? 'conta a vencer' : 'contas a vencer'} nos próximos 7 dias${farms.length > 1 ? ` (${farm.name})` : ''}.`,
-                            source: 'FINANCEIRO',
-                            sourceType: 'FINANCEIRO',
-                            sourceId: null,
-                            farmId: fid,
-                            createdAt: new Date().toISOString(),
-                        });
-                    }
-                }
-            } catch (finErr) {
-                console.error('Erro ao calcular alertas financeiros:', finErr);
-        }
-        }
 
         const severityOrder = { critical: 0, warning: 1, info: 2 };
         alerts.sort((a, b) => {

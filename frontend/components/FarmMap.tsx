@@ -394,7 +394,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                 type="button"
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:bg-[var(--eixo-border-strong)]"
+                                className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:bg-[var(--eixo-border-strong)]"
                             >
                                 {isSaving ? 'Salvando...' : 'Salvar geometrias'}
                             </button>
@@ -406,7 +406,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                         onClick={() => { setEditMode((v) => !v); setSaveError(null); setSaveSuccess(null); }}
                         className={`rounded-xl border px-4 py-2 text-xs font-semibold transition-colors ${
                             editMode
-                                ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)] text-white hover:bg-[var(--eixo-green-dark)]'
+                                ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)] text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]'
                                 : 'border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] hover:bg-[#ece9e6]'
                         }`}
                     >
@@ -595,7 +595,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                 <button
                                     type="button"
                                     onClick={confirmPendingLayer}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)]"
+                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
                                 >
                                     Confirmar
                                 </button>
@@ -691,7 +691,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                 <button
                                     type="button"
                                     onClick={confirmImport}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--eixo-green-dark)]"
+                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
                                 >
                                     Aplicar geometrias
                                 </button>

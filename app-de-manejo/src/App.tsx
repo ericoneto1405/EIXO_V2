@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CheckCircle2, ChevronRight, Cloud, HelpCircle, LoaderCircle, LogOut, MapPin, RefreshCw, Search, Wifi, WifiOff } from 'lucide-react';
+import { Camera, CheckCircle2, ChevronRight, ClipboardList, Cloud, HelpCircle, LoaderCircle, LogOut, MapPin, RefreshCw, Search, UserRound, Wifi, WifiOff } from 'lucide-react';
 import { ACTIONS, buildAnimalLabel } from './actions';
 import { getApiBaseUrl } from './api';
 import { useAppAuth } from './hooks/useAppAuth';
 import { useSyncReports } from './hooks/useSyncReports';
+import ManagementScreen from './ManagementScreen';
 import {
   type PendingPhoto,
   type PendingReport,
@@ -13,6 +14,7 @@ import { formatCoordinateLabel } from './utils';
 
 export default function App() {
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [entryMode, setEntryMode] = useState<'field' | 'management' | null>(null);
   const [selectedAction, setSelectedAction] = useState<ActionConfig | null>(null);
   const [selectedPaddockId, setSelectedPaddockId] = useState('');
   const [selectedAnimalId, setSelectedAnimalId] = useState('');
@@ -293,12 +295,67 @@ export default function App() {
   }
 
   if (!currentUser) {
+    if (!entryMode) {
+      return (
+        <div className="min-h-screen bg-[var(--eixo-bg)] flex items-center justify-center p-6">
+          <div className="w-full max-w-sm bg-[var(--eixo-surface)] border border-[var(--eixo-border)] rounded-[2rem] p-8 shadow-xl">
+            <img src="/eixo-logo-render.png" alt="EIXO" className="mb-6 h-12 w-auto" />
+            <h1 className="text-3xl font-bold text-[var(--eixo-text)]">EIXO Campo</h1>
+            <p className="mt-2 text-sm leading-6 text-[var(--eixo-text-muted)]">
+              Escolha como este aparelho será usado.
+            </p>
+
+            <div className="mt-8 space-y-3">
+              <button
+                type="button"
+                onClick={() => setEntryMode('field')}
+                className="flex w-full items-center gap-4 rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-4 text-left text-white shadow-lg shadow-[rgba(118,184,42,0.18)]"
+              >
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/20">
+                  <UserRound className="h-6 w-6" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-base font-bold">Vaqueiro</span>
+                  <span className="mt-0.5 block text-xs leading-5 text-white/80">Entrar com o código enviado pela base.</span>
+                </span>
+                <ChevronRight className="ml-auto h-5 w-5 shrink-0" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setEntryMode('management')}
+                className="flex w-full items-center gap-4 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-4 text-left text-[var(--eixo-text)]"
+              >
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[var(--eixo-surface)] text-[var(--eixo-graphite-dark)]">
+                  <ClipboardList className="h-6 w-6" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-base font-bold">Gerenciamento</span>
+                  <span className="mt-0.5 block text-xs leading-5 text-[var(--eixo-text-muted)]">Pesagem e gerenciamento em campo.</span>
+                </span>
+                <ChevronRight className="ml-auto h-5 w-5 shrink-0 text-[var(--eixo-text-soft)]" />
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[var(--eixo-bg)] flex items-center justify-center p-6">
-        <form onSubmit={handleLogin} className="w-full max-w-sm bg-[var(--eixo-surface)] border border-[var(--eixo-border)] rounded-[2rem] p-8 shadow-xl">
+        <form
+          onSubmit={(event) => handleLogin(event, entryMode === 'management' ? 'ADMIN_CAMPO' : undefined)}
+          className="w-full max-w-sm bg-[var(--eixo-surface)] border border-[var(--eixo-border)] rounded-[2rem] p-8 shadow-xl"
+        >
           <img src="/eixo-logo-render.png" alt="EIXO" className="mb-6 h-12 w-auto" />
-          <h1 className="text-2xl font-bold text-[var(--eixo-text)]">Ativar App do Manejo</h1>
-          <p className="text-sm text-[var(--eixo-text-muted)] mt-2">Use o código de ativação entregue pela fazenda para liberar este aparelho. Um novo código só será necessário se a fazenda gerar uma nova ativação.</p>
+          <h1 className="text-2xl font-bold text-[var(--eixo-text)]">
+            {entryMode === 'management' ? 'Ativar Gerenciamento' : 'Ativar EIXO Campo'}
+          </h1>
+          <p className="text-sm text-[var(--eixo-text-muted)] mt-2">
+            {entryMode === 'management'
+              ? 'Use o código de Admin de Campo para liberar pesagem e gerenciamento neste aparelho.'
+              : 'Use o código de ativação entregue pela fazenda para liberar este aparelho. Um novo código só será necessário se a fazenda gerar uma nova ativação.'}
+          </p>
 
           <div className="mt-6 space-y-4">
             <label className="block">
@@ -329,12 +386,31 @@ export default function App() {
           <button type="submit" disabled={isLoggingIn} className="mt-6 w-full py-4 bg-[var(--eixo-green)] text-white rounded-2xl font-bold hover:bg-[var(--eixo-green-dark)] disabled:opacity-70">
             {isLoggingIn ? 'Ativando...' : 'ATIVAR APP'}
           </button>
+          <button
+            type="button"
+            onClick={() => setEntryMode(null)}
+            className="mt-3 w-full rounded-2xl bg-[var(--eixo-surface-soft)] py-3 text-sm font-bold text-[var(--eixo-text-muted)]"
+          >
+            VOLTAR
+          </button>
         </form>
       </div>
     );
   }
 
   const modalVisible = Boolean(selectedAction || showSuccess || showFAQ || showAnimalLookup);
+
+  if (currentProfile === 'ADMIN_CAMPO' && farm) {
+    return (
+      <ManagementScreen
+        user={currentUser}
+        farm={farm}
+        animals={animals}
+        isOnline={isOnline}
+        onLogout={handleLogout}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--eixo-bg)] flex items-center justify-center p-4 font-sans text-[var(--eixo-text)]">
@@ -362,11 +438,13 @@ export default function App() {
                   <img src="/eixo-logo-render.png" alt="EIXO" className="h-6 w-auto" />
                 </div>
                 <div className="w-px h-6 bg-[var(--eixo-surface)]/20 mx-1" />
-                <h1 className="text-xl font-bold tracking-tight">App de Manejo</h1>
+                <h1 className="text-xl font-bold tracking-tight">EIXO Campo</h1>
               </div>
-              <button onClick={handleLogout} className="p-2 rounded-full bg-[var(--eixo-surface)]/10 border border-white/10">
-                <LogOut className="w-4 h-4" />
-              </button>
+              {currentProfile === 'ADMIN_CAMPO' && (
+                <button onClick={handleLogout} className="p-2 rounded-full bg-[var(--eixo-surface)]/10 border border-white/10">
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
             </div>
             <div className="mt-3 flex items-center justify-between gap-3">
               <p className="text-white/72 text-sm min-w-0 truncate">{currentUser.name}</p>

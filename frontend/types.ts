@@ -68,6 +68,10 @@ export interface LotUI {
     id: string;
     name: string;
     notes?: string | null;
+    objective?: string | null;
+    phase?: string | null;
+    status?: string | null;
+    startDate?: string | null;
     farmId: string;
 }
 
@@ -87,6 +91,7 @@ export interface AnimalUI {
     lotId?: string | null;
     registro?: string | null;
     categoria?: string | null;
+    selectionDecision?: string | null;
     currentPaddockId?: string | null;
     currentPaddockName?: string | null;
     nutritionPlan?: {
@@ -102,12 +107,25 @@ export interface WeighingUI {
     data: string;
     peso: number;
     gmd: number;
+    weighingSessionId?: string | null;
+}
+
+export interface WeighingSessionUI {
+    id: string;
+    name: string;
+    farmId: string;
+    createdAt: string;
+    weighingsCount?: number;
 }
 
 export interface Lot {
     id: string;
     name: string;
     notes?: string | null;
+    objective?: string | null;
+    phase?: string | null;
+    status?: string | null;
+    startDate?: string | null;
     farmId: string;
     createdAt?: string;
     updatedAt?: string;

@@ -259,7 +259,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                             <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-4 py-3">
                                 <p className="text-sm font-bold text-[var(--eixo-text)]">
                                     Animais&nbsp;
-                                    <span className="ml-1 rounded-full bg-[var(--eixo-green-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--eixo-graphite-dark)]">
+                                    <span className="ml-1 rounded-full bg-[var(--eixo-green-soft)] px-2 py-0.5 text-xs font-semibold text-[var(--eixo-graphite)]">
                                         {rows.length}
                                     </span>
                                 </p>
@@ -373,7 +373,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                         <button
                             type="submit"
                             disabled={saving}
-                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-60"
+                            className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-60"
                         >
                             {saving ? 'Salvando...' : `Salvar ${rows.filter((r) => r.brinco.trim()).length} animal(is)`}
                         </button>

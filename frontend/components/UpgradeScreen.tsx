@@ -27,7 +27,7 @@ const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
     return (
         <div className="grid h-full gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
             <section className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 lg:p-8">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                     <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                     Desbloqueie no {PLAN_NAMES[requiredPlan] ?? requiredPlan}
                 </div>
@@ -37,7 +37,7 @@ const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
                         {icon}
                     </div>
                     <div>
-                        <h1 className="font-brand text-2xl font-extrabold text-[var(--eixo-graphite-dark)]">{moduleName}</h1>
+                        <h1 className="font-brand text-2xl font-extrabold text-[var(--eixo-graphite)]">{moduleName}</h1>
                         <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{tagline}</p>
                     </div>
                 </div>
@@ -58,7 +58,7 @@ const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
                     <button
                         type="button"
                         onClick={onUpgrade}
-                        className="inline-flex items-center rounded-2xl bg-[var(--eixo-green)] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#8f7144]"
+                        className="inline-flex items-center rounded-2xl bg-[var(--eixo-green)] px-5 py-3 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[#8f7144]"
                     >
                         Fazer upgrade
                     </button>

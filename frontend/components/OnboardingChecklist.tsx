@@ -209,7 +209,7 @@ const StepRow: React.FC<StepRowProps> = ({ done, number, title, description }) =
         <div className="flex-shrink-0">
             {done ? (
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--eixo-green)]">
-                    <svg className="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-4 w-4 text-[#1a1a1a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                     </svg>
                 </div>

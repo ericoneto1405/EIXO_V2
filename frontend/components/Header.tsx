@@ -120,27 +120,17 @@ const normalizeShortAlertText = (alert: Alert) => {
         case 'WEIGHING':
             return normalizeWeighingLabel(message);
         case 'COCHO':
-            return message
-                .replace(/^COCHO:\s*/i, '')
-                .replace(/\s+sem atualização registrada$/i, '')
-                .replace(/\s+sem atualização há \d+ dia\(s\)$/i, '')
-                .trim()
-                .replace(/^(.+)$/, 'Cocho sem atualização: $1');
+            return message.replace(/^COCHO:\s*/i, '').trim();
         case 'AGUA':
-            return message
-                .replace(/^AGUA:\s*/i, '')
-                .replace(/\s+sem atualização registrada$/i, '')
-                .replace(/\s+sem atualização há \d+ dia\(s\)$/i, '')
-                .trim()
-                .replace(/^(.+)$/, 'Água sem atualização: $1');
+            return message.replace(/^AGUA:\s*/i, '').trim();
         case 'NASCEU':
-            return message.replace(/^NASCEU:\s*/i, 'Nascimento: ');
+            return message.replace(/^NASCEU:\s*/i, '').trim();
         case 'MORREU':
-            return message.replace(/^MORREU:\s*/i, 'Morte: ');
+            return message.replace(/^MORREU:\s*/i, '').trim();
         case 'DOENTE':
-            return message.replace(/^DOENTE:\s*/i, 'Doença: ');
+            return message.replace(/^DOENTE:\s*/i, '').trim();
         case 'AVARIA':
-            return message.replace(/^AVARIA:\s*/i, 'Avaria: ');
+            return message.replace(/^AVARIA:\s*/i, '').trim();
         default:
             return message;
     }
@@ -516,7 +506,8 @@ const Header: React.FC<HeaderProps> = ({
                                     type="button"
                                     onClick={(event) => handleAlertClick(alert, event)}
                                     title={alert.description}
-                                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold leading-none transition-colors hover:brightness-[0.98] ${ALERT_PANEL_STYLE[alert.severity]}`}
+                                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[14px] font-semibold leading-none transition-colors hover:brightness-[0.98] ${ALERT_PANEL_STYLE[alert.severity]}`}
+                                    style={{ fontFamily: 'Sora, "Plus Jakarta Sans", sans-serif' }}
                                 >
                                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${ALERT_PANEL_DOT[alert.severity]}`} />
                                     <span className="whitespace-nowrap">{alert.chipLabel}</span>

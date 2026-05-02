@@ -22,9 +22,12 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
     const [focusOnForm, setFocusOnForm] = useState(false);
     const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
     const [farmToDelete, setFarmToDelete] = useState<Farm | null>(null);
+    const [showUpgradePopover, setShowUpgradePopover] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const formRef = useRef<HTMLDivElement | null>(null);
+    const upgradePopoverRef = useRef<HTMLDivElement | null>(null);
+    const firstFarmWithoutPaddocks = farms.find((farm) => (farm.paddocks?.length ?? 0) === 0) ?? null;
 
     useEffect(() => {
         const freeLimitHit = isFreePlan && farms.length >= 1;
@@ -50,6 +53,14 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
 
     const handleToggleForm = () => {
         setEditingFarm(null);
+        setShowForm(true);
+        setFocusOnForm(true);
+        onFormOpened?.();
+    };
+
+    const handleRegisterPaddock = () => {
+        if (!firstFarmWithoutPaddocks) return;
+        setEditingFarm(firstFarmWithoutPaddocks);
         setShowForm(true);
         setFocusOnForm(true);
         onFormOpened?.();
@@ -120,6 +131,20 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
         }
     }, [showForm]);
 
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (upgradePopoverRef.current && !upgradePopoverRef.current.contains(event.target as Node)) {
+                setShowUpgradePopover(false);
+            }
+        };
+
+        if (showUpgradePopover) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showUpgradePopover]);
+
     return (
         <div className="space-y-6">
 
@@ -127,7 +152,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
             {farmToDelete && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
                     <div
-                        className="absolute inset-0 bg-[var(--eixo-graphite-dark)]/50 backdrop-blur-sm"
+                        className="absolute inset-0 bg-[var(--eixo-graphite)]/50 backdrop-blur-sm"
                         onClick={handleDeleteCancel}
                     />
                     <div className="relative w-full max-w-md rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-8 shadow-2xl">
@@ -169,7 +194,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
             <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite-dark)]">
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             Estrutura da Fazenda
                         </div>
@@ -180,19 +205,31 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                         const freeLimitHit = isFreePlan && farms.length >= 1;
                         if (freeLimitHit) {
                             return (
-                                <div className="flex flex-col items-end gap-1">
-                                    <div className="inline-flex items-center gap-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm font-semibold text-[#a8a29e] cursor-not-allowed select-none">
+                                <div className="relative" ref={upgradePopoverRef}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowUpgradePopover((current) => !current)}
+                                        className="inline-flex items-center gap-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm font-semibold text-[#a8a29e] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                                    >
                                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                         </svg>
                                         <span>Adicionar fazenda</span>
-                                    </div>
-                                    <p className="text-xs text-[var(--eixo-text-muted)]">
-                                        Plano Grátis: 1 fazenda.{' '}
-                                        <a href="/planos" className="font-semibold text-[var(--eixo-green)] hover:underline">
-                                            Ver planos
-                                        </a>
-                                    </p>
+                                    </button>
+                                    {showUpgradePopover && (
+                                        <div className="absolute right-0 z-20 mt-2 w-[320px] rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4 text-left shadow-xl">
+                                            <p className="text-sm font-semibold text-[var(--eixo-text)]">Eleve o nível da gestão</p>
+                                            <p className="mt-1 text-xs leading-relaxed text-[var(--eixo-text-muted)]">
+                                                Com o Plano Gestão, você acompanha mais fazendas e expande o controle da operação.
+                                            </p>
+                                            <a
+                                                href="/planos"
+                                                className="mt-3 inline-flex rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
+                                            >
+                                                Conhecer Plano Gestão
+                                            </a>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         }
@@ -200,7 +237,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                             <button
                                 type="button"
                                 onClick={handleToggleForm}
-                                className="inline-flex items-center rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                                className="inline-flex items-center rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                             >
                                 <PlusIcon />
                                 <span className="ml-2">Adicionar fazenda</span>
@@ -238,8 +275,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                             <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                                 <tr>
                                     <th scope="col" className="px-6 py-3">Nome da Fazenda</th>
-                                    <th scope="col" className="px-6 py-3">Cidade</th>
-                                    <th scope="col" className="px-6 py-3">UF</th>
+                                    <th scope="col" className="px-6 py-3">Localização</th>
                                     <th scope="col" className="px-6 py-3">Tamanho (ha)</th>
                                     <th scope="col" className="px-6 py-3">Pastos</th>
                                     <th scope="col" className="px-6 py-3 text-center">Ações</th>
@@ -252,9 +288,16 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                                             <div className="flex items-center gap-2">
                                                 {farm.name}
                                                 {farm.lat && farm.lng ? (
-                                                    <span title="Localização cadastrada" className="text-[var(--eixo-success)]">
+                                                    <a
+                                                        href={`https://maps.google.com/?q=${farm.lat},${farm.lng}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        title="Ver no mapa"
+                                                        className="text-[var(--eixo-success)] transition-opacity hover:opacity-70"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
                                                         <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                                                    </span>
+                                                    </a>
                                                 ) : (
                                                     <span title="Localização não cadastrada" className="text-[#c4b8a5]">
                                                         <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
@@ -262,10 +305,19 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                                                 )}
                                             </div>
                                         </th>
-                                        <td className="px-6 py-4">{farm.city?.split('/')[0]?.trim() || '—'}</td>
-                                        <td className="px-6 py-4">{farm.city?.split('/')[1]?.trim() || '—'}</td>
+                                        <td className="px-6 py-4">{farm.city || '—'}</td>
                                         <td className="px-6 py-4">{farm.size}</td>
-                                        <td className="px-6 py-4">{farm.paddocks?.length ?? 0}</td>
+                                        <td className="px-6 py-4">
+                                            {(farm.paddocks?.length ?? 0) === 0 ? (
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff2ef] px-2.5 py-1 text-xs font-semibold text-[var(--eixo-danger)]">
+                                                    Sem pastos
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--eixo-graphite)]">
+                                                    {farm.paddocks!.length} {farm.paddocks!.length === 1 ? 'pasto' : 'pastos'}
+                                                </span>
+                                            )}
+                                        </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center justify-center gap-2">
                                                 <button
@@ -292,23 +344,34 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                 </div>
             )}
 
-            {/* Card de próximo passo — aparece quando alguma fazenda tem 0 pastos */}
-            {farms.length > 0 && farms.some(f => (f.paddocks?.length ?? 0) === 0) && (
-                <div className="mt-4 flex items-start gap-4 rounded-[20px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-5 py-4">
-                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[var(--eixo-surface-soft)]">
-                        <svg className="h-4 w-4 text-[var(--eixo-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                        </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-[var(--eixo-text)]">Cadastre os pastos da sua fazenda</p>
-                        <p className="mt-0.5 text-xs leading-relaxed text-[var(--eixo-text-muted)]">
-                            Com os pastos cadastrados você consegue alocar animais, acompanhar lotação e organizar o manejo.
-                        </p>
-                    </div>
-                    <div className="flex-shrink-0 self-center">
-                        <span className="text-xs font-semibold text-[var(--eixo-text)]">Mapa da Fazenda →</span>
+            {/* Estado vazio de pastos — prioriza a base operacional da fazenda */}
+            {firstFarmWithoutPaddocks && (
+                <div className="mt-4 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-4">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[var(--eixo-green-soft)]">
+                                <svg className="h-4 w-4 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                </svg>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-base font-semibold text-[var(--eixo-text)]">Sua fazenda ainda não tem pastos cadastrados.</p>
+                                <p className="mt-1 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
+                                    Cadastre os pastos para organizar lotação, manejo e pesagens.
+                                </p>
+                                <p className="mt-2 text-xs font-medium text-[var(--eixo-text-soft)]">
+                                    Fazenda atual: {firstFarmWithoutPaddocks.name}
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleRegisterPaddock}
+                            className="inline-flex flex-shrink-0 items-center rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
+                        >
+                            Cadastrar pasto
+                        </button>
                     </div>
                 </div>
             )}

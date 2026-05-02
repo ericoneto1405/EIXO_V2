@@ -25,25 +25,47 @@ Stack: React + TypeScript + Vite + Tailwind (frontend) | Node.js + Express + Pri
 
 Nunca usar classes `gray-` ou `dark:`. Tema único — sem modo escuro/claro/sistema.
 
+### Cores base (Manual de Marca EIXO)
+
+| Nome | Hex | Uso |
+|------|-----|-----|
+| Grafite Escuro | `#2F2F2F` | Sidebar, avatares, FAB de suporte |
+| Grafite Principal | `#5E5E5E` | Texto secundário, ícones inativos |
+| Verde EIXO | `#B6E23A` | Acento interativo principal |
+| Cinza Claro | `#EDEDED` | Fundo de página, tabs inativas, hover |
+| Branco | `#FFFFFF` | Fundo de conteúdo, superfícies |
+
+### Mapeamento por elemento
+
 | Elemento | Valor |
 |----------|-------|
-| Sidebar fundo | `bg-[#1c1917]` |
-| Sidebar hover/ativo | `bg-[#292524]` (estrutural) ou `bg-[#a8442a]` (acento ativo) |
+| Sidebar fundo | `bg-[#2F2F2F]` |
+| Sidebar hover | `bg-white/8` (branco 8% opacidade) |
+| Sidebar item ativo | `bg-[#B6E23A]` texto `text-[#1a1a1a]` |
 | Conteúdo fundo | `bg-white` |
-| Página fundo | `bg-[#f5f5f4]` |
-| Borda padrão | `border-[#e7e5e4]` |
-| Título principal | `text-[#1c1917]` |
-| Texto secundário | `text-[#78716c]` |
-| Texto mudo | `text-[#a8a29e]` |
-| Botão primário | `bg-[#a8442a]` hover `bg-[#933a22]` texto `text-white` |
-| Botão excluir | `bg-[#fbede8]` texto `text-[#8c4d39]` |
-| Focus ring inputs | `focus:ring-[#a8442a]` |
-| Tab ativa | `bg-[#a8442a] text-white` |
-| Tab inativa | `bg-[#f5f5f4] text-[#78716c]` hover `bg-[#ece9e6]` |
-| Badge acento | `bg-[#faeee8]` texto `text-[#7a2a14]` dot `bg-[#a8442a]` |
+| Página fundo | `bg-[#EDEDED]` |
+| Borda padrão | `border-[#EDEDED]` |
+| Título principal | `text-[#2F2F2F]` |
+| Texto secundário | `text-[#5E5E5E]` |
+| Texto mudo | `text-[#5E5E5E]/60` |
+| Botão primário | `bg-[#B6E23A]` hover `bg-[#a3d130]` texto `text-[#1a1a1a]` |
+| Botão excluir | `bg-[#fce8e8]` texto `text-[#8c2020]` |
+| Focus ring inputs | `focus:ring-[#B6E23A]` |
+| Tab ativa | `bg-[#B6E23A] text-[#1a1a1a]` |
+| Tab inativa | `bg-[#EDEDED] text-[#5E5E5E]` hover `bg-[#e0e0e0]` |
+| Badge acento | `bg-[#f0f9d4]` texto `text-[#3a5c10]` dot `bg-[#B6E23A]` |
 | Border radius | `rounded-2xl` ou `rounded-[24px]` |
 
-**Regra de ouro:** `#1c1917` é estrutural (sidebar, avatares, FAB de suporte). `#a8442a` é acento interativo (botões primários, tabs ativas, checkboxes, focus rings, links de destaque).
+### Tipografia
+
+| Uso | Fonte | Peso |
+|-----|-------|------|
+| Títulos e subtítulos | Manrope | SemiBold / Bold |
+| Textos e interfaces | Inter | Regular / Medium |
+
+**Regra de ouro:** `#2F2F2F` é estrutural (sidebar, avatares, FAB de suporte). `#B6E23A` é acento interativo (botões primários, tabs ativas, checkboxes, focus rings, links de destaque).
+
+**Regra crítica de contraste:** o Verde EIXO `#B6E23A` é uma cor clara — **nunca usar texto branco sobre fundo verde**. Todo texto sobre `#B6E23A` deve ser escuro (`#1a1a1a` ou `#2F2F2F`).
 
 ---
 
@@ -59,8 +81,8 @@ Nunca avançar sem TypeScript limpo.
 
 ## Decisões já tomadas
 
-- Fundo do app autenticado: `bg-white` no conteúdo, `bg-[#f5f5f4]` na página (sem foto — foto só em Login, Register e PublicLanding)
-- Sidebar: fundo sólido `bg-[#1c1917]`, sem transparência
+- Fundo do app autenticado: `bg-white` no conteúdo, `bg-[#EDEDED]` na página (sem foto — foto só em Login, Register e PublicLanding)
+- Sidebar: fundo sólido `bg-[#2F2F2F]`, sem transparência
 - Modo escuro/claro/sistema: **não existe** — tema único light
 - `window.confirm` e `window.alert` proibidos — sempre usar modal visual
 - HerdModule — aba "Relatórios" removida: relatórios aparecem contextualmente dentro de cada aba por módulo
@@ -77,18 +99,28 @@ Nunca avançar sem TypeScript limpo.
 - Plano Pago 2 terá mapeamento por IA (futuro)
 
 ### Logomarca
-- Marca guarda-chuva: **eixo** — cobre todo o ecossistema de produtos
-- Logo: wordmark "eixo" em typeface geométrica bold com ponto flutuante acima do "i"
-- Arquivos: `frontend/public/logo_eixo_black.svg` (para fundos claros) e `frontend/public/logo_eixo_white.svg` (para fundos escuros)
+- Marca guarda-chuva: **EIXO** — cobre todo o ecossistema de produtos
+- Logo: "EIXO" maiúsculo, tipografia geométrica bold, com o X bicolor (uma diagonal em Grafite `#2F2F2F` ou branco, outra diagonal em Verde EIXO `#B6E23A`)
+- Tipografia institucional: **Manrope** | Tipografia de apoio: **Inter**
+- Arquivos SVG disponíveis em `frontend/public/`:
+
+| Arquivo | Versão | Uso |
+|---------|--------|-----|
+| `logo_eixo_official.svg` | Principal colorida (grafite + verde) | Fundos claros |
+| `logo_eixo_white.svg` | Para fundos escuros (branco + verde) | Sidebar, fundos escuros |
+| `logo_eixo_negative.svg` | Monocromática branca | Fundos escuros sem cor |
+| `eixo-x-icon.svg` | Símbolo X isolado | Favicon, ícone de app |
+
 - No sidebar: `<img src="/logo_eixo_white.svg" />`
-- Nas telas públicas (Login, Register, Landing): `<img src="/logo_eixo_black.svg" />`
+- Nas telas públicas (Login, Register, Landing): `<img src="/logo_eixo_official.svg" />`
+- Todos os SVGs usam `#B6E23A` como verde — já corrigido e padronizado
 
 ### Eixo Suporte (chat de suporte)
 - Componente: `frontend/components/AssistantChat.tsx`
 - Modelo: Gemini 2.5 Flash via `/api/chat/send-message`
 - Prompt de sistema: `EIXO_SUPORTE_SYSTEM_PROMPT` em `server/index.js`
 - Renderizador de markdown: processa `**negrito**`, `- lista` e `• lista`. **Não processa `* lista` (asterisco)** — instruir o modelo a usar traço (`-`) para listas
-- FAB de acesso: botão "eixo suporte" no canto inferior direito do app autenticado (fundo `#1c1917`, mantém cor escura mesmo após acento terra cotta)
+- FAB de acesso: botão "eixo suporte" no canto inferior direito do app autenticado (fundo `#2F2F2F`, mantém cor grafite escuro — nunca usa o verde como fundo do FAB)
 
 ---
 
@@ -166,14 +198,34 @@ Nunca avançar sem TypeScript limpo.
 
 ## Próximos passos
 
-1. **Paleta acento terra cotta** — aplicar `#a8442a` em botões primários, tabs ativas, checkboxes, focus rings (Codex)
-2. **HerdModule** — aba Pesagens, modal de detalhe, aba Configurações
-3. **Nutrição** — revisar paleta visual
+1. **Paleta nova** — atualizar `index.css` e `tailwind.config.cjs` com Verde EIXO `#B6E23A` e Grafite `#2F2F2F` (Codex)
+2. **HerdModule** — aba Pesagens com sessões nomeadas, modal de detalhe, aba Configurações
+3. **Nutrição** — revisar paleta visual com nova identidade
 4. **Eixo Suporte** — atualizar system prompt (usar `-` para listas, corrigir info sobre importação)
 5. **Planos e billing** — integração com Asaas para mensalidade
-6. **App Android** — planejamento futuro para manejo em campo
+6. **EIXO Campo — Gerenciamento V1** — pesagem manual, offline, conflitos (ver `EIXOCAMPO.md`)
 7. **Integração com balanças eletrônicas** — MVP: Bluetooth SPP (Coimma) + BLE (Tru-Test S3)
-8. **Integrar app Android
+
+---
+
+## EIXO Campo
+
+App Android para uso em campo e curral. Perfis: `VAQUEIRO` (ocorrências) e `ADMIN_CAMPO` (gerenciamento e pesagem).
+
+Plano completo, regras de conflito e testes: **`EIXOCAMPO.md`**
+
+### Contrato de API — não quebrar
+
+A rota de pesagem do campo é compartilhada com o desktop:
+
+```
+POST /animals/:id/pesagens
+{ "data": "YYYY-MM-DD", "peso": 420 }
+```
+
+Campos que **nunca podem mudar sem alinhamento com o EIXO Campo**: caminho da rota, `data`, `peso`, formato da data, resposta com `id`/`data`/`peso`/`gmd`, validação por fazenda, atualização de `pesoAtual`/`gmd`/`gmd30`, bloqueio de duplicata na mesma data.
+
+Campos novos opcionais (ex: `weighingSessionId`) podem ser adicionados sem quebrar o contrato.
 
 ---
 

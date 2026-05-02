@@ -526,7 +526,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                     key={tab.key}
                     className={`rounded-full px-4 py-2 text-sm font-semibold ${
                         activeTab === tab.key
-                            ? 'bg-primary text-white'
+                            ? 'bg-primary text-[#1a1a1a]'
                             : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-border)]'
                     }`}
                     onClick={() => setActiveTab(tab.key as TabKey)}
@@ -575,7 +575,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             onChange={(event) => setSearchSemen(event.target.value)}
                         />
                         <button
-                            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-[#1a1a1a]"
                             onClick={() => openSemenModal()}
                         >
                             Adicionar
@@ -647,7 +647,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                             onChange={(event) => setSearchEmbryos(event.target.value)}
                         />
                         <button
-                            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-[#1a1a1a]"
                             onClick={() => openEmbryoModal()}
                         >
                             Adicionar
@@ -803,7 +803,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-[#1a1a1a]"
                                     disabled={isSavingAnimal}
                                 >
                                     {isSavingAnimal ? 'Salvando...' : 'Salvar'}
@@ -917,7 +917,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-[#1a1a1a]"
                                     disabled={isSavingSemen}
                                 >
                                     {isSavingSemen ? 'Salvando...' : 'Salvar'}
@@ -1077,7 +1077,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-[#1a1a1a]"
                                     disabled={isSavingEmbryo}
                                 >
                                     {isSavingEmbryo ? 'Salvando...' : 'Salvar'}
@@ -1134,7 +1134,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 </button>
                                 <button
                                     type="submit"
-                                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-[#1a1a1a]"
                                     disabled={isSavingMove}
                                 >
                                     {isSavingMove ? 'Salvando...' : 'Confirmar'}
