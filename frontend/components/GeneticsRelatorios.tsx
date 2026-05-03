@@ -240,23 +240,23 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
             <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-xl border border-[var(--eixo-border)] p-4 shadow-sm dark:border-[var(--eixo-border)]">
                     <p className="text-xs text-[var(--eixo-text-muted)]">Taxa de prenhez</p>
-                    <p className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary ? formatRate(summary.pregRate) : '-'}</p>
+                    <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{summary ? formatRate(summary.pregRate) : '-'}</p>
                 </div>
                 <div className="rounded-xl border border-[var(--eixo-border)] p-4 shadow-sm dark:border-[var(--eixo-border)]">
                     <p className="text-xs text-[var(--eixo-text-muted)]">
                         Média dias em aberto{summary?.openDaysCount ? ` (n=${summary.openDaysCount})` : ''}
                     </p>
-                    <p className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary ? formatNumber(summary.openDaysAvg) : '-'}</p>
+                    <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{summary ? formatNumber(summary.openDaysAvg) : '-'}</p>
                 </div>
                 <div className="rounded-xl border border-[var(--eixo-border)] p-4 shadow-sm dark:border-[var(--eixo-border)]">
                     <p className="text-xs text-[var(--eixo-text-muted)]">% acima de 180 dias</p>
-                    <p className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary ? formatRate(summary.openDaysOver180Pct) : '-'}</p>
+                    <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{summary ? formatRate(summary.openDaysOver180Pct) : '-'}</p>
                 </div>
                 <div className="rounded-xl border border-[var(--eixo-border)] p-4 shadow-sm dark:border-[var(--eixo-border)]">
                     <p className="text-xs text-[var(--eixo-text-muted)]">
                         Média IEP (dias){summary?.iepCount ? ` (n=${summary.iepCount})` : ''}
                     </p>
-                    <p className="text-2xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary ? formatNumber(summary.iepAvg) : '-'}</p>
+                    <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{summary ? formatNumber(summary.iepAvg) : '-'}</p>
                 </div>
             </div>
 
@@ -267,19 +267,19 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             <div>
                                 <p className="text-xs text-[var(--eixo-text-muted)]">Expostas</p>
-                                <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary.totals.exposures}</p>
+                                <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{summary.totals.exposures}</p>
                             </div>
                             <div>
                                 <p className="text-xs text-[var(--eixo-text-muted)]">Prenhes</p>
-                                <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary.totals.pregnant ?? 0}</p>
+                                <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{summary.totals.pregnant ?? 0}</p>
                             </div>
                             <div>
                                 <p className="text-xs text-[var(--eixo-text-muted)]">Vazias</p>
-                                <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{summary.totals.empty ?? 0}</p>
+                                <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{summary.totals.empty ?? 0}</p>
                             </div>
                             <div>
                                 <p className="text-xs text-[var(--eixo-text-muted)]">Taxa</p>
-                                <p className="text-xl font-semibold text-[var(--eixo-text)] dark:text-[var(--eixo-text)]">{formatRate(summary.pregRate)}</p>
+                                <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{formatRate(summary.pregRate)}</p>
                             </div>
                         </div>
                     ) : (

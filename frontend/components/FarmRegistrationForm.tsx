@@ -40,7 +40,6 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     const [farmLat, setFarmLat] = useState('');
     const [farmLng, setFarmLng] = useState('');
     const [farmSize, setFarmSize] = useState(''); // Total size in hectares
-    const [responsibleName, setResponsibleName] = useState('');
     const [farmNotes, setFarmNotes] = useState('');
     const [divisions, setDivisions] = useState<DivisionInput[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -83,7 +82,6 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         setFarmLat(initialFarm.lat?.toString?.() || '');
         setFarmLng(initialFarm.lng?.toString?.() || '');
         setFarmSize(initialFarm.size?.toString?.() || '');
-        setResponsibleName(initialFarm.responsibleName || '');
         setFarmNotes(initialFarm.notes || '');
         setDivisions(
             (initialFarm.paddocks || []).map((division, index) => ({
@@ -176,7 +174,6 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         setFarmLat(savedFarm.lat?.toString?.() || '');
         setFarmLng(savedFarm.lng?.toString?.() || '');
         setFarmSize(savedFarm.size?.toString?.() || '');
-        setResponsibleName(savedFarm.responsibleName || '');
         setFarmNotes(savedFarm.notes || '');
         setDivisions(
             (savedFarm.paddocks || []).map((division, index) => ({
@@ -208,7 +205,6 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             lat: farmLat.trim(),
             lng: farmLng.trim(),
             size: farmSizeFloat,
-            responsibleName: responsibleName.trim(),
             notes: farmNotes.trim(),
             paddocks: activeFarm ? divisions.map((division) => ({
                 id: division.id,
@@ -335,7 +331,6 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             lat: farmLat.trim(),
             lng: farmLng.trim(),
             size: farmSizeFloat,
-            responsibleName: responsibleName.trim(),
             notes: farmNotes.trim(),
             paddocks: payloadDivisions,
         });
@@ -482,10 +477,6 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         <label htmlFor="farmSize" className="block text-sm font-medium text-[var(--eixo-text)]">Tamanho Total (ha)</label>
                         <input type="number" id="farmSize" value={farmSize} onChange={e => setFarmSize(e.target.value)} min="0" step="0.01" className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required />
                     </div>
-                    <div>
-                        <label htmlFor="responsibleName" className="block text-sm font-medium text-[var(--eixo-text)]">Nome do Responsável</label>
-                        <input type="text" id="responsibleName" value={responsibleName} onChange={e => setResponsibleName(e.target.value)} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" />
-                    </div>
                     <div className="md:col-span-2">
                         <label htmlFor="farmNotes" className="block text-sm font-medium text-[var(--eixo-text)]">Observações</label>
                         <textarea id="farmNotes" value={farmNotes} onChange={e => setFarmNotes(e.target.value)} rows={3} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"></textarea>
@@ -522,7 +513,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                     </svg>
                                     {gpsLoading ? 'Capturando...' : 'Usar minha localização atual'}
                                 </button>
-                                <p className="text-xs text-[var(--eixo-text-muted)]">⚠️ Use somente se estiver na fazenda agora. Ou preencha manualmente abaixo.</p>
+                                <p className="text-xs text-[var(--eixo-text-muted)]">Use somente se estiver na fazenda agora. Ou preencha manualmente abaixo.</p>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label htmlFor="farmLat" className="block text-xs font-medium text-[var(--eixo-text)]">Latitude</label>

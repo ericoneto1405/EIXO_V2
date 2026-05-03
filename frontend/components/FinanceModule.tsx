@@ -586,15 +586,15 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">
                             Total {tipo === 'pagar' ? 'a pagar' : 'a receber'}
                         </p>
-                        <p className={`mt-2 font-brand text-2xl font-black ${corTotal}`}>{formatCurrency(totalPendente)}</p>
+                        <p className={`mt-2 font-brand text-2xl font-extrabold ${corTotal}`}>{formatCurrency(totalPendente)}</p>
                     </div>
                     <div className="rounded-2xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] p-5">
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-danger)]">Vencidos</p>
-                        <p className="mt-2 font-brand text-2xl font-black text-[var(--eixo-danger)]">{formatCurrency(totalVencido)}</p>
+                        <p className="mt-2 font-brand text-2xl font-extrabold text-[var(--eixo-danger)]">{formatCurrency(totalVencido)}</p>
                     </div>
                     <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] p-5">
                         <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite)]">A vencer</p>
-                        <p className="mt-2 font-brand text-2xl font-black text-[var(--eixo-graphite)]">{formatCurrency(totalAVencer)}</p>
+                        <p className="mt-2 font-brand text-2xl font-extrabold text-[var(--eixo-graphite)]">{formatCurrency(totalAVencer)}</p>
                     </div>
                 </div>
 
@@ -767,28 +767,31 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                        <div className="flex min-h-[96px] flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
                             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Entradas</p>
-                            <p className="mt-2 font-brand text-3xl font-black text-[var(--eixo-success)]">{formatCurrency(summary.entradas)}</p>
+                            <p className="mt-2 font-brand text-3xl font-extrabold text-[var(--eixo-success)]">{formatCurrency(summary.entradas)}</p>
+                            <p className="mt-1 text-xs invisible">—</p>
                         </div>
-                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                        <div className="flex min-h-[96px] flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
                             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Saídas</p>
-                            <p className="mt-2 font-brand text-3xl font-black text-[var(--eixo-danger)]">{formatCurrency(summary.saidas)}</p>
+                            <p className="mt-2 font-brand text-3xl font-extrabold text-[var(--eixo-danger)]">{formatCurrency(summary.saidas)}</p>
+                            <p className="mt-1 text-xs invisible">—</p>
                         </div>
-                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                        <div className="flex min-h-[96px] flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
                             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Saldo</p>
-                            <p className={`mt-2 font-brand text-3xl font-black ${summary.saldo >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
+                            <p className={`mt-2 font-brand text-3xl font-extrabold ${summary.saldo >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                                 {formatCurrency(summary.saldo)}
                             </p>
+                            <p className="mt-1 text-xs invisible">—</p>
                         </div>
-                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                        <div className="flex min-h-[96px] flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
                             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Venda de gado no mês</p>
-                            <p className="mt-2 font-brand text-3xl font-black text-[var(--eixo-success)]">{formatCurrency(monthlyAnswers.soldThisMonth)}</p>
+                            <p className="mt-2 font-brand text-3xl font-extrabold text-[var(--eixo-success)]">{formatCurrency(monthlyAnswers.soldThisMonth)}</p>
                             <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Somando só categorias de venda de gado</p>
                         </div>
-                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                        <div className="flex min-h-[96px] flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
                             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Sal, ração e remédio</p>
-                            <p className="mt-2 font-brand text-3xl font-black text-[var(--eixo-danger)]">{formatCurrency(monthlyAnswers.feedAndMedThisMonth)}</p>
+                            <p className="mt-2 font-brand text-3xl font-extrabold text-[var(--eixo-danger)]">{formatCurrency(monthlyAnswers.feedAndMedThisMonth)}</p>
                             <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Nutrição e sanidade no período</p>
                         </div>
                     </div>
@@ -1004,7 +1007,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                         <td className="px-5 py-3 text-xs font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Total {selectedAnoAnual}</td>
                                         <td className="px-5 py-3 text-right font-bold text-[var(--eixo-success)]">{formatCurrency(fluxoTotais.entradas)}</td>
                                         <td className="px-5 py-3 text-right font-bold text-[var(--eixo-danger)]">{formatCurrency(fluxoTotais.saidas)}</td>
-                                        <td className={`px-5 py-3 text-right font-black ${fluxoTotais.resultado >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
+                                        <td className={`px-5 py-3 text-right font-extrabold ${fluxoTotais.resultado >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                                             {formatCurrency(fluxoTotais.resultado)}
                                         </td>
                                         <td className="px-5 py-3" />
@@ -1050,7 +1053,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             ))}
                             <div className="flex items-center justify-between border-b-2 border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-5 py-3">
                                 <span className="font-bold text-[var(--eixo-text)]">Total de Receitas</span>
-                                <span className="font-black text-[var(--eixo-success)]">{formatCurrency(dreData.totalReceitas)}</span>
+                                <span className="font-extrabold text-[var(--eixo-success)]">{formatCurrency(dreData.totalReceitas)}</span>
                             </div>
 
                             {/* Despesas */}
@@ -1065,7 +1068,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             ))}
                             <div className="flex items-center justify-between border-b-2 border-[var(--eixo-border)] bg-[rgba(184,66,50,0.08)] px-5 py-3">
                                 <span className="font-bold text-[var(--eixo-text)]">Total de Despesas</span>
-                                <span className="font-black text-[var(--eixo-danger)]">{formatCurrency(dreData.totalDespesas)}</span>
+                                <span className="font-extrabold text-[var(--eixo-danger)]">{formatCurrency(dreData.totalDespesas)}</span>
                             </div>
 
                             {/* Resultado */}
@@ -1074,7 +1077,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                     <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Resultado do Exercício</p>
                                     <p className="mt-1 text-lg font-extrabold text-[var(--eixo-text)]">{selectedAnoAnual}</p>
                                 </div>
-                                <span className={`font-brand text-3xl font-black ${dreData.resultado >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
+                                <span className={`font-brand text-3xl font-extrabold ${dreData.resultado >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                                     {formatCurrency(dreData.resultado)}
                                 </span>
                             </div>

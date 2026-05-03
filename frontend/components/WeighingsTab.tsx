@@ -117,6 +117,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
 
     // filtros
     const [filterAnimal, setFilterAnimal] = useState('');
+    const [animalSearch, setAnimalSearch] = useState('');
     const [filterLot, setFilterLot] = useState('');
     const [filterSession, setFilterSession] = useState('');
     const [filterStart, setFilterStart] = useState('');
@@ -125,7 +126,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
     // sessão nomeada de pesagem
     const [sessions, setSessions] = useState<HerdWeighingSession[]>([]);
     const [activeSession, setActiveSession] = useState<{ id: string; name: string } | null>(null);
-    const [showSessionModal, setShowSessionModal] = useState(true);
+    const [showSessionModal, setShowSessionModal] = useState(false);
     const [sessionName, setSessionName] = useState('');
     const [sessionSaving, setSessionSaving] = useState(false);
     const [sessionError, setSessionError] = useState<string | null>(null);
@@ -176,27 +177,15 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
             setWeighings(list);
             setTotal(data.total ?? list.length);
 
-            // Calcular stats a partir dos dados mais recentes
-            const todayStr = today8601();
-            const weekAgo = new Date();
-            weekAgo.setDate(weekAgo.getDate() - 7);
-            const weekAgoStr = weekAgo.toISOString().slice(0, 10);
-
-            // Para stats, buscar sem paginação (limite maior)
-            const statsRes = await fetch(
-                buildApiUrl(`/farms/${farmId}/weighings?limit=500&offset=0`),
-                { credentials: 'include' },
-            );
-            const statsData = await statsRes.json().catch(() => ({}));
-            const allList: FarmWeighing[] = statsData.weighings ?? [];
-
-            const todayCount = allList.filter(w => w.date.slice(0, 10) === todayStr).length;
-            const weekCount = allList.filter(w => w.date.slice(0, 10) >= weekAgoStr).length;
-            const uniqueAnimals = new Set(allList.map(w => w.animal.id)).size;
-            const gmds = allList.map(w => w.gmd).filter((g): g is number => g != null);
-            const avgGmd = gmds.length > 0 ? gmds.reduce((a, b) => a + b, 0) / gmds.length : null;
-
-            setStats({ today: todayCount, thisWeek: weekCount, animalsWeighed: uniqueAnimals, avgGmd });
+            // Stats vêm direto da resposta — sem segunda requisição
+            if (data.stats) {
+                setStats({
+                    today: data.stats.todayCount ?? 0,
+                    thisWeek: data.stats.weekCount ?? 0,
+                    animalsWeighed: data.stats.uniqueAnimals ?? 0,
+                    avgGmd: data.stats.avgGmd ?? null,
+                });
+            }
         } catch (err: any) {
             setLoadError(err?.message ?? 'Erro desconhecido.');
         } finally {
@@ -242,11 +231,21 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
             setShowSessionModal(false);
             setSessionName('');
             setManualSessionWeighings([]);
+            setManualModalOpen(true);
         } catch (err: any) {
             setSessionError(err?.message || 'Erro ao iniciar sessão.');
         } finally {
             setSessionSaving(false);
         }
+    };
+
+    const handleContinueSession = (session: HerdWeighingSession) => {
+        setActiveSession({ id: session.id, name: session.name });
+        setFilterSession(session.id);
+        setPage(0);
+        setShowSessionModal(false);
+        setManualSessionWeighings([]);
+        setManualModalOpen(true);
     };
 
     const handleOpenHistoryToday = () => {
@@ -381,18 +380,29 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
 
     return (
         <div className="space-y-6">
+            {/* Modal de sessão */}
             {showSessionModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
                     <div className="w-full max-w-lg rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 shadow-2xl">
-                        <div>
-                            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)]">Pesagens</p>
-                            <h3 className="mt-1 text-xl font-black text-[var(--eixo-text)]">Nome da sessão de pesagem</h3>
-                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
-                                Esse nome vai agrupar todas as pesagens lançadas agora.
-                            </p>
+                        <div className="mb-5 flex items-start justify-between">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)]">Pesagens</p>
+                                <h3 className="mt-1 text-xl font-black text-[var(--eixo-text)]">Nova sessão de pesagem</h3>
+                                <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
+                                    Esse nome vai agrupar todas as pesagens lançadas agora.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowSessionModal(false)}
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--eixo-border)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                                aria-label="Fechar"
+                            >
+                                ✕
+                            </button>
                         </div>
 
-                        <form onSubmit={handleStartSession} className="mt-5 space-y-4">
+                        <form onSubmit={handleStartSession} className="space-y-4">
                             <div>
                                 <label className="mb-1 block text-xs font-semibold uppercase text-[var(--eixo-text-muted)]">Nome da sessão</label>
                                 <input
@@ -426,6 +436,32 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                                 </button>
                             </div>
                         </form>
+
+                        {/* Sessões recentes para continuar */}
+                        {sessions.length > 0 && (
+                            <div className="mt-5 border-t border-[var(--eixo-border)] pt-4">
+                                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Ou continue uma sessão recente</p>
+                                <div className="space-y-2">
+                                    {sessions.slice(0, 5).map((session) => (
+                                        <div key={session.id} className="flex items-center justify-between rounded-xl border border-[var(--eixo-border)] px-4 py-2.5">
+                                            <div>
+                                                <p className="text-sm font-semibold text-[var(--eixo-text)]">{session.name}</p>
+                                                {typeof session.weighingsCount === 'number' && (
+                                                    <p className="text-xs text-[var(--eixo-text-muted)]">{session.weighingsCount} pesagem(ns)</p>
+                                                )}
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleContinueSession(session)}
+                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1.5 text-xs font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                            >
+                                                Continuar
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -445,6 +481,14 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                 );
             })()}
 
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <StatCard label="Pesagens hoje" value={String(stats.today)} />
+                <StatCard label="Últimos 7 dias" value={String(stats.thisWeek)} />
+                <StatCard label="Animais pesados" value={String(stats.animalsWeighed)} />
+                <StatCard label="GMD médio" value={fmtGmd(stats.avgGmd)} accent />
+            </div>
+
             <div className="flex items-center justify-between rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div>
                     <h3 className="text-base font-semibold text-[var(--eixo-text)]">Pesagem manual</h3>
@@ -455,7 +499,11 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                     onClick={() => {
                         setFormMsg(null);
                         setManualSessionWeighings([]);
-                        setManualModalOpen(true);
+                        if (!activeSession) {
+                            setShowSessionModal(true);
+                        } else {
+                            setManualModalOpen(true);
+                        }
                     }}
                     className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30"
                 >
@@ -482,12 +530,12 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                 </div>
             )}
 
+            {/* Modal de pesagem manual (balança) — paleta intencional */}
             {manualModalOpen && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
                     role="dialog"
                     aria-modal="true"
-                    onClick={closeManualModal}
                 >
                     <div
                         className="w-full max-w-[760px] rounded-[20px] border border-[#d7cab3] bg-[#fffaf1] p-5 shadow-2xl"
@@ -678,16 +726,29 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                 <div className="flex flex-wrap items-end gap-3 border-b border-[var(--eixo-border)] px-6 py-4">
                     <div className="min-w-[180px] flex-1">
                         <label className="mb-1 block text-xs font-medium text-[var(--eixo-text-muted)]">Animal</label>
-                        <select
-                            value={filterAnimal}
-                            onChange={e => { setFilterAnimal(e.target.value); setPage(0); }}
+                        <input
+                            type="text"
+                            list="animal-filter-list"
+                            value={animalSearch}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setAnimalSearch(val);
+                                const found = animals.find(
+                                    (a) =>
+                                        a.identificacao?.toLowerCase() === val.toLowerCase() ||
+                                        (a.brinco?.toLowerCase() ?? '') === val.toLowerCase(),
+                                );
+                                setFilterAnimal(found?.id ?? '');
+                                setPage(0);
+                            }}
+                            placeholder="Buscar animal…"
                             className="block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
-                        >
-                            <option value="">Todos os animais</option>
-                            {animals.map(a => (
-                                <option key={a.id} value={a.id}>{a.identificacao}</option>
+                        />
+                        <datalist id="animal-filter-list">
+                            {animals.map((a) => (
+                                <option key={a.id} value={a.identificacao ?? a.brinco ?? ''} />
                             ))}
-                        </select>
+                        </datalist>
                     </div>
                     <div className="min-w-[180px] flex-1">
                         <label className="mb-1 block text-xs font-medium text-[var(--eixo-text-muted)]">Lote</label>
@@ -737,7 +798,15 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                     </div>
                     {(filterAnimal || filterLot || filterSession || filterStart || filterEnd) && (
                         <button
-                            onClick={() => { setFilterAnimal(''); setFilterLot(''); setFilterSession(''); setFilterStart(''); setFilterEnd(''); setPage(0); }}
+                            onClick={() => {
+                                setFilterAnimal('');
+                                setAnimalSearch('');
+                                setFilterLot('');
+                                setFilterSession('');
+                                setFilterStart('');
+                                setFilterEnd('');
+                                setPage(0);
+                            }}
                             className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                         >
                             Limpar filtros
@@ -795,13 +864,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             {w.gainKg != null ? (
-                                                <span
-                                                    className={
-                                                        w.gainKg >= 0
-                                                            ? 'text-green-700'
-                                                            : 'text-red-600'
-                                                    }
-                                                >
+                                                <span className={w.gainKg >= 0 ? 'text-[#3a5c10]' : 'text-red-600'}>
                                                     {w.gainKg >= 0 ? '+' : ''}
                                                     {w.gainKg.toFixed(1)} kg
                                                 </span>
@@ -811,13 +874,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             {w.gmd != null ? (
-                                                <span
-                                                    className={
-                                                        w.gmd >= 0
-                                                            ? 'text-green-700'
-                                                            : 'text-red-600'
-                                                    }
-                                                >
+                                                <span className={w.gmd >= 0 ? 'text-[#3a5c10]' : 'text-red-600'}>
                                                     {fmtGmd(w.gmd)}
                                                 </span>
                                             ) : (
@@ -872,7 +929,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, accent }) => (
     <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
         <p className="text-xs font-medium text-[var(--eixo-text-muted)]">{label}</p>
         <p
-            className={`mt-1 text-2xl font-bold ${
+            className={`mt-1 text-2xl font-extrabold ${
                 accent ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text)]'
             }`}
         >

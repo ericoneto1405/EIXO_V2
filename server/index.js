@@ -58,16 +58,16 @@ const resend = RESEND_API_KEY && RESEND_API_KEY !== 're_...' ? new Resend(RESEND
 
 // ─── Twilio Verify ────────────────────────────────────────────────────────────
 const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_VERIFY_SID = process.env.TWILIO_VERIFY_SID;
+const TWILIO_AUTH_TOKEN  = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_VERIFY_SID  = process.env.TWILIO_VERIFY_SID;
 
 const twilioClient = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN
     ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
     : null;
 
 // Map temporário: phone -> { verifiedAt: number }  (TTL 30 min, uso único)
-const verifiedPhones = new Map();
-const otpSendAttempts = new Map();
+const verifiedPhones    = new Map();
+const otpSendAttempts   = new Map();
 const otpVerifyAttempts = new Map();
 const PHONE_VERIFY_TTL_MS = 30 * 60 * 1000;
 // ─────────────────────────────────────────────────────────────────────────────
@@ -167,16 +167,87 @@ const validateCPF = (cpf) => {
     return Number.parseInt(n[10], 10) === d2;
 };
 
-const fetchCnpjFromBrasilApi = async (cnpj) => {
-    const normalizedCnpj = String(cnpj || '').replace(/\D/g, '');
-    const apiRes = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${normalizedCnpj}`);
-    const data = await apiRes.json().catch(() => ({}));
-    if (!apiRes.ok) {
+// Normaliza resposta do CNPJ.ws para o formato padrão interno
+const normalizeCnpjWs = (data) => {
+    const est = data?.estabelecimento || {};
+    const telefone = [(est.ddd1 || ''), (est.telefone1 || '')].filter(Boolean).join('');
+    const logradouro = [
+        est.tipo_logradouro,
+        est.logradouro,
+        est.numero,
+        est.complemento,
+    ].filter(Boolean).join(' ');
+    return {
+        cnpj: est.cnpj || '',
+        razao_social: data.razao_social || '',
+        nome_fantasia: est.nome_fantasia || '',
+        descricao_situacao_cadastral: String(est.situacao_cadastral || '').toUpperCase(),
+        cnae_fiscal_descricao: est.atividade_principal?.descricao || '',
+        logradouro,
+        bairro: est.bairro || '',
+        cep: est.cep || '',
+        municipio: est.municipio?.nome || '',
+        uf: est.estado?.sigla || '',
+        telefone,
+        email: est.email || '',
+    };
+};
+
+// Normaliza resposta da Minha Receita para o formato padrão interno
+const normalizeMinhareceita = (data) => {
+    const logradouro = [
+        data.descricao_tipo_de_logradouro,
+        data.logradouro,
+        data.numero,
+        data.complemento,
+    ].filter(Boolean).join(' ');
+    return {
+        cnpj: data.cnpj || '',
+        razao_social: data.razao_social || '',
+        nome_fantasia: data.nome_fantasia || '',
+        descricao_situacao_cadastral: String(data.descricao_situacao_cadastral || '').toUpperCase(),
+        cnae_fiscal_descricao: data.cnae_fiscal_descricao || '',
+        logradouro,
+        bairro: data.bairro || '',
+        cep: data.cep || '',
+        municipio: data.municipio || '',
+        uf: data.uf || '',
+        telefone: data.ddd_telefone_1 || '',
+        email: data.email || '',
+    };
+};
+
+// Busca dados do CNPJ com fallback: CNPJ.ws → Minha Receita
+const fetchCnpjData = async (cnpj) => {
+    const n = String(cnpj || '').replace(/\D/g, '');
+
+    // 1ª tentativa: CNPJ.ws
+    try {
+        const res = await fetch(`https://publica.cnpj.ws/cnpj/${n}`);
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data?.razao_social) {
+            return normalizeCnpjWs(data);
+        }
+    } catch (e) {
+        console.warn('CNPJ.ws falhou, tentando Minha Receita...', e?.message);
+    }
+
+    // 2ª tentativa: Minha Receita
+    try {
+        const res = await fetch(`https://minhareceita.org/${n}`);
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data?.razao_social) {
+            return normalizeMinhareceita(data);
+        }
         const error = new Error(data?.message || 'CNPJ não encontrado na Receita Federal.');
-        error.statusCode = apiRes.status;
+        error.statusCode = res.status;
+        throw error;
+    } catch (e) {
+        if (e?.statusCode) throw e;
+        const error = new Error('Não foi possível consultar a Receita Federal. Tente novamente.');
+        error.statusCode = 503;
         throw error;
     }
-    return data;
 };
 
 const prisma = new PrismaClient();
@@ -2087,17 +2158,17 @@ app.post('/auth/verify-otp', async (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
-// ─── Consulta pública de CNPJ (Receita Federal via BrasilAPI) ────────────────
+// ─── Consulta pública de CNPJ (Receita Federal) ──────────────────────────────
 app.get('/public/cnpj/:cnpj', async (req, res) => {
     const cnpj = req.params.cnpj.replace(/\D/g, '');
     if (cnpj.length !== 14) {
         return res.status(400).json({ message: 'CNPJ deve ter 14 dígitos.' });
     }
     try {
-        const data = await fetchCnpjFromBrasilApi(cnpj);
+        const data = await fetchCnpjData(cnpj);
         return res.json(data);
     } catch (error) {
-        console.error('BrasilAPI error:', error);
+        console.error('CNPJ lookup error:', error);
         return res.status(error?.statusCode || 503).json({ message: error?.message || 'Não foi possível consultar a Receita Federal. Tente novamente.' });
     }
 });
@@ -2161,9 +2232,9 @@ app.post('/register', async (req, res) => {
         let trustedCnpjData = undefined;
         if (normalizedDocumentType === 'CNPJ') {
             try {
-                trustedCnpjData = await fetchCnpjFromBrasilApi(normalizedDocument);
+                trustedCnpjData = await fetchCnpjData(normalizedDocument);
             } catch (error) {
-                console.error('BrasilAPI register error:', error);
+                console.error('CNPJ register error:', error);
                 return res.status(error?.statusCode || 503).json({ message: error?.message || 'Não foi possível confirmar o CNPJ na Receita Federal.' });
             }
 
@@ -3088,6 +3159,166 @@ app.post('/users/:id/revoke-device', requireAuth, async (req, res) => {
         return res.status(500).json({ message: 'Erro ao revogar aparelho.' });
     }
 });
+
+// ─── Convites ─────────────────────────────────────────────────────────────────
+
+app.post('/invitations', requireAuth, async (req, res) => {
+    try {
+        const membershipRole = String(req.saas?.membershipRole || '').trim().toUpperCase();
+        if (membershipRole !== 'OWNER') {
+            return res.status(403).json({ message: 'Apenas o Proprietário pode convidar usuários.' });
+        }
+
+        const { email, role } = req.body || {};
+        if (!email || !role) {
+            return res.status(400).json({ message: 'E-mail e papel são obrigatórios.' });
+        }
+        if (!['OWNER', 'ADMIN', 'MEMBER'].includes(role)) {
+            return res.status(400).json({ message: 'Papel inválido.' });
+        }
+
+        const orgId = req.saas?.organizationId;
+        if (!orgId) {
+            return res.status(400).json({ message: 'Organização não encontrada.' });
+        }
+
+        const normalizedEmail = String(email).toLowerCase().trim();
+
+        // Verificar se já é membro
+        const existingMember = await prisma.organizationMembership.findFirst({
+            where: { organizationId: orgId, user: { email: normalizedEmail } },
+        });
+        if (existingMember) {
+            return res.status(409).json({ message: 'Este e-mail já é membro da organização.' });
+        }
+
+        // Cancelar convites pendentes para o mesmo e-mail
+        await prisma.invitation.updateMany({
+            where: { organizationId: orgId, email: normalizedEmail, acceptedAt: null },
+            data: { acceptedAt: new Date() },
+        });
+
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+
+        await prisma.invitation.create({
+            data: { organizationId: orgId, email: normalizedEmail, role, token: rawToken, expiresAt },
+        });
+
+        const org = await prisma.organization.findUnique({ where: { id: orgId } });
+        const inviteLink = `${APP_BASE_URL}?invite=${rawToken}`;
+        const safeLink = escapeHtml(inviteLink);
+        const safeOrg = escapeHtml(org?.name || 'EIXO');
+        const roleLabel = role === 'ADMIN' ? 'Gestor' : role === 'OWNER' ? 'Proprietário' : 'Operador';
+
+        if (resend) {
+            await resend.emails.send({
+                from: RESEND_FROM_EMAIL,
+                to: normalizedEmail,
+                subject: `Você foi convidado para ${safeOrg} — EIXO`,
+                html: `
+                    <p>Você foi convidado para fazer parte de <strong>${safeOrg}</strong> no EIXO como <strong>${roleLabel}</strong>.</p>
+                    <p><a href="${safeLink}" style="background:#B6E23A;color:#1a1a1a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Aceitar convite</a></p>
+                    <p>Este link expira em 48 horas. Se você não conhece esta organização, ignore este e-mail.</p>
+                    <p style="color:#888;font-size:12px;">Link alternativo: ${safeLink}</p>
+                `,
+            });
+        }
+
+        return res.json({ message: 'Convite enviado.' });
+    } catch (error) {
+        console.error('invitation create error:', error);
+        return res.status(500).json({ message: 'Erro ao enviar convite.' });
+    }
+});
+
+app.get('/invitations/:token', async (req, res) => {
+    try {
+        const invitation = await prisma.invitation.findUnique({
+            where: { token: String(req.params.token) },
+            include: { organization: { select: { name: true } } },
+        });
+        if (!invitation || invitation.acceptedAt || invitation.expiresAt < new Date()) {
+            return res.status(404).json({ message: 'Convite inválido ou expirado.' });
+        }
+        return res.json({
+            email: invitation.email,
+            orgName: invitation.organization?.name || '',
+            role: invitation.role,
+        });
+    } catch (error) {
+        console.error('invitation get error:', error);
+        return res.status(500).json({ message: 'Erro ao verificar convite.' });
+    }
+});
+
+app.post('/invitations/accept', async (req, res) => {
+    try {
+        const { token, name, password } = req.body || {};
+        if (!token || !name || !password) {
+            return res.status(400).json({ message: 'Token, nome e senha são obrigatórios.' });
+        }
+        if (String(password).length < 8) {
+            return res.status(400).json({ message: 'A senha deve ter pelo menos 8 caracteres.' });
+        }
+
+        const invitation = await prisma.invitation.findUnique({
+            where: { token: String(token) },
+        });
+        if (!invitation || invitation.acceptedAt || invitation.expiresAt < new Date()) {
+            return res.status(400).json({ message: 'Convite inválido ou expirado.' });
+        }
+
+        // Usuário já existe — só vincular à organização
+        const existingUser = await prisma.user.findUnique({ where: { email: invitation.email } });
+        if (existingUser) {
+            await prisma.$transaction([
+                prisma.organizationMembership.upsert({
+                    where: { organizationId_userId: { organizationId: invitation.organizationId, userId: existingUser.id } },
+                    create: { organizationId: invitation.organizationId, userId: existingUser.id, role: invitation.role },
+                    update: { role: invitation.role },
+                }),
+                prisma.invitation.update({ where: { id: invitation.id }, data: { acceptedAt: new Date() } }),
+            ]);
+            return res.json({ message: 'Conta vinculada com sucesso. Faça login.' });
+        }
+
+        // Módulos padrão por papel
+        const defaultModules = invitation.role === 'MEMBER'
+            ? ['Fazendas', 'Rebanho Comercial']
+            : ['Fazendas', 'Rebanho Comercial', 'Nutrição', 'Financeiro'];
+
+        const hashedPassword = await bcrypt.hash(String(password), 10);
+
+        await prisma.$transaction(async (tx) => {
+            const newUser = await tx.user.create({
+                data: {
+                    name: String(name).trim(),
+                    email: invitation.email,
+                    password: hashedPassword,
+                    modules: defaultModules,
+                    activeOrganizationId: invitation.organizationId,
+                    termsAcceptedAt: new Date(),
+                    termsVersion: '1.0',
+                },
+            });
+            await tx.organizationMembership.create({
+                data: { organizationId: invitation.organizationId, userId: newUser.id, role: invitation.role },
+            });
+            await tx.invitation.update({
+                where: { id: invitation.id },
+                data: { acceptedAt: new Date() },
+            });
+        });
+
+        return res.json({ message: 'Conta criada com sucesso. Faça login.' });
+    } catch (error) {
+        console.error('invitation accept error:', error);
+        return res.status(500).json({ message: 'Erro ao aceitar convite.' });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 app.post('/app/activate', async (req, res) => {
     const {
@@ -7028,8 +7259,25 @@ app.get('/farms/:farmId/weighings', async (req, res) => {
             }),
         );
 
+        // Calcular stats em uma única query (sem filtros de paginação)
+        const allWeighingsForStats = await prisma.weighing.findMany({
+            where: { animal: { farmId } },
+            select: { data: true, gmd: true, animalId: true },
+        });
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const weekAgo = new Date();
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const statsGmds = allWeighingsForStats.map((w) => w.gmd).filter((g) => g != null);
+        const stats = {
+            todayCount: allWeighingsForStats.filter((w) => w.data.toISOString().slice(0, 10) === todayStr).length,
+            weekCount: allWeighingsForStats.filter((w) => w.data >= weekAgo).length,
+            uniqueAnimals: new Set(allWeighingsForStats.map((w) => w.animalId)).size,
+            avgGmd: statsGmds.length ? statsGmds.reduce((a, b) => a + b, 0) / statsGmds.length : null,
+        };
+
         return res.json({
             total,
+            stats,
             weighings: weighings.map((w) => {
                 const animalHistory = previousMap[w.animalId] || [];
                 const idx = animalHistory.findIndex((h) => h.id === w.id);

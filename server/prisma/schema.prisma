@@ -439,6 +439,7 @@ model Organization {
   billingEvents        BillingEvent[]
   billingSubscriptions BillingSubscription[]
   geneticsAnalysisRuns GeneticsAnalysisRun[]
+  invitations          Invitation[]
 
   @@index([accessState])
 }
@@ -480,6 +481,21 @@ model OrganizationMembership {
 
   @@unique([organizationId, userId])
   @@index([userId])
+}
+
+model Invitation {
+  id             String           @id @default(uuid())
+  organizationId String
+  email          String
+  role           OrganizationRole @default(MEMBER)
+  token          String           @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([token])
 }
 
 enum ReproMode {

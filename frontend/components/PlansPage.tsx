@@ -25,8 +25,8 @@ const PLANS: Plan[] = [
         name: 'Plano Grátis',
         price: 'R$ 0',
         priceNote: 'para sempre',
-        description: 'Entre, sinta o valor e comece a organizar seu rebanho.',
-        cta: 'Seu plano atual',
+        description: 'O plano mais completo do mercado para quem quer parar de usar caderno. Comece hoje.',
+        cta: 'Já está usando ✓',
         ctaVariant: 'outline',
         features: [
             { text: 'Animais ilimitados', included: true },
@@ -48,7 +48,7 @@ const PLANS: Plan[] = [
         badge: 'Mais popular',
         price: 'Em breve',
         priceNote: 'por fazenda / mês',
-        description: 'Gestão completa com controle financeiro e múltiplas fazendas.',
+        description: 'Inclui Dashboard completo, Nutrição avançada e exportação de dados.',
         cta: 'Quero saber mais',
         ctaVariant: 'primary',
         features: [
@@ -121,8 +121,7 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
     };
 
     const handleCta = (plan: Plan) => {
-        if (plan.id === 'gratis') return; // já é o plano atual
-        // Futuramente: abrir formulário de interesse ou redirecionar para Asaas
+        if (plan.id === 'gratis') return;
         window.open('mailto:contato@eixo.ag?subject=Interesse no ' + plan.name, '_blank');
     };
 
@@ -139,18 +138,21 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
                         <span aria-hidden="true">←</span>
                         Voltar
                     </button>
-                    <img src="/eixo-logo-render.png" alt="eixo" className="h-7" />
+                    <img src="/logo_eixo_official.svg" alt="EIXO" className="h-7" />
                     <div className="w-[92px]" aria-hidden="true" />
                 </div>
             </header>
 
             {/* Hero */}
             <div className="mx-auto max-w-5xl px-6 py-12 text-center">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)] mb-4">
+                    ACESSO ANTECIPADO
+                </div>
                 <h1 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] md:text-4xl">
-                    Planos e preços
+                    Comece grátis. Evolua quando precisar.
                 </h1>
-                <p className="mt-3 text-base text-[var(--eixo-text-muted)]">
-                    Comece gratuitamente e faça upgrade quando precisar de mais.
+                <p className="mt-3 text-base text-[var(--eixo-text-muted)] max-w-md mx-auto">
+                    O plano mais poderoso do mercado para quem quer sair do caderno. Teste o Acasalamento Inteligente no plano pago.
                 </p>
             </div>
 
@@ -224,9 +226,12 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
                     ))}
                 </div>
 
-                {/* Nota de preços */}
+                {/* Nota de preços + Early Access */}
                 <p className="mt-8 text-center text-sm text-[#a8a29e]">
-                    Preços em breve. Para saber mais, entre em contato: <a href="mailto:contato@eixo.ag" className="text-[var(--eixo-green)] hover:underline">contato@eixo.ag</a>
+                    Os primeiros 500 produtores que cadastrarem agora ganham <span className="font-semibold text-[var(--eixo-text)]">Plano Grátis Vitalício</span> + prioridade no suporte.
+                </p>
+                <p className="mt-1 text-center text-xs text-[#a8a29e]">
+                    Preços dos planos pagos em breve. Dúvidas? <a href="mailto:contato@eixo.ag" className="text-[var(--eixo-green)] hover:underline">contato@eixo.ag</a>
                 </p>
             </div>
         </div>

@@ -27,6 +27,7 @@ import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
+import AcceptInvite from './components/AcceptInvite';
 import PublicLanding from './components/PublicLanding';
 import PlansPage from './components/PlansPage';
 import OnboardingChecklist from './components/OnboardingChecklist';
@@ -280,8 +281,9 @@ const AppContent: React.FC = () => {
     const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number } | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [authScreen, setAuthScreen] = useState<'landing' | 'login' | 'register' | 'forgot-password' | 'reset-password'>('landing');
+    const [authScreen, setAuthScreen] = useState<'landing' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'accept-invite'>('landing');
     const [resetToken, setResetToken] = useState<string | null>(null);
+    const [inviteToken, setInviteToken] = useState<string | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
     const [registerMessage, setRegisterMessage] = useState<string | null>(null);
     const [registerError, setRegisterError] = useState<string | null>(null);
@@ -317,12 +319,15 @@ const AppContent: React.FC = () => {
             'Fluxo de Caixa': 'Financeiro',
             'DRE': 'Financeiro',
         };
+        const membershipRole = String(currentUser?.membershipRole || '').trim().toUpperCase();
         const filtered = Array.from(new Set(
             sourceModules
                 .map((module) => LEGACY_MODULE_MAP[module] ?? module)
                 .filter((module) => ALL_MODULES.includes(module))
                 // Bloqueia módulos pagos para usuários do plano grátis
                 .filter((module) => isFreePlan ? !PAID_ONLY_MODULES.includes(module) : true)
+                // Operador (MEMBER) não acessa Financeiro
+                .filter((module) => membershipRole === 'MEMBER' ? module !== 'Financeiro' : true)
         ));
         const withNutrition = hasNutritionEntitlement && !filtered.includes('Nutrição')
             ? [...filtered, 'Nutrição']
@@ -375,6 +380,13 @@ const AppContent: React.FC = () => {
         if (token && !isAuthenticated) {
             setResetToken(token);
             setAuthScreen('reset-password');
+            window.history.replaceState({}, '', window.location.pathname);
+            return;
+        }
+        const invite = params.get('invite');
+        if (invite && !isAuthenticated) {
+            setInviteToken(invite);
+            setAuthScreen('accept-invite');
             window.history.replaceState({}, '', window.location.pathname);
         }
     }, [isAuthenticated]);
@@ -755,6 +767,19 @@ const AppContent: React.FC = () => {
     if (!isAuthenticated) {
         if (authScreen === 'forgot-password') {
             return <ForgotPassword onBack={() => setAuthScreen('login')} />;
+        }
+
+        if (authScreen === 'accept-invite' && inviteToken) {
+            return (
+                <AcceptInvite
+                    token={inviteToken}
+                    onSuccess={() => {
+                        setInviteToken(null);
+                        setAuthScreen('login');
+                        setRegisterMessage('Conta criada! Faça login com o e-mail e a senha que você definiu.');
+                    }}
+                />
+            );
         }
 
         if (authScreen === 'reset-password' && resetToken) {

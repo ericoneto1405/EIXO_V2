@@ -7,14 +7,14 @@ interface PublicLandingProps {
 }
 
 const FREE_FEATURES = [
-  'Animais cadastrados',
+  'Animais ilimitados',
   'Pesagens e GMD automático',
-  'Registro de atividades',
-  'Manejo do rebanho completo',
+  'Manejo do Rebanho (básico)',
   'Lotes e pastos',
+  'Estrutura da Fazenda',
+  'Financeiro básico',
+  'Importação de planilha própria',
   'Sem cartão de crédito',
-  'Entrada de lote',
-  'Financeiro completo',
   'Sem prazo para acabar',
 ];
 
@@ -93,7 +93,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
       <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${isScrolled ? 'border-b border-[var(--eixo-border)] bg-[var(--eixo-bg)]/95 shadow-sm backdrop-blur' : 'bg-[rgba(247,248,246,0.58)] backdrop-blur-[2px]'}`}>
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:h-18 lg:px-8">
           <div className="inline-flex flex-col items-center leading-none">
-            <img src="/logo_eixo_3d_transparent.png" alt="eixo" className="h-[2.53575rem] w-auto" />
+            <img src="/logo_eixo_official.svg" alt="EIXO" className="h-[2.53575rem] w-auto" />
             <div className="-mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] whitespace-nowrap text-[var(--eixo-text)]/75">
               Tecnologia para Gestão Pecuária
             </div>
@@ -124,7 +124,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         {/* ── Hero ── */}
         <section className="relative overflow-hidden pb-20 pt-28 lg:pt-36 lg:pb-28">
           <div
-            className="absolute inset-0 opacity-08"
+            className="absolute inset-0 opacity-[0.08]"
             style={{ backgroundImage: "url('/pasture-horizon.jpg')", backgroundPosition: 'center', backgroundSize: 'cover' }}
           />
           <div className="absolute inset-0 bg-[rgba(255,250,241,0.58)]" />
@@ -134,16 +134,16 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
-              100% GRATUITO PARA COMEÇAR
+              ACESSO ANTECIPADO • 100% GRÁTIS
             </div>
 
             <h1 className="font-brand text-balance text-4xl font-extrabold leading-tight text-[var(--eixo-text)] lg:text-6xl">
               Chega de caderno e planilha.<br />
-              <span className="text-[var(--eixo-text)]">Organize sua fazenda com controle.</span>
+              <span className="text-[var(--eixo-text)]">Gestão pecuária completa — 100% grátis para começar.</span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--eixo-text-muted)] lg:text-xl">
-              Cadastre sua fazenda, organize o rebanho, registre pesagens e acompanhe compras, vendas e financeiro em uma plataforma simples para pecuária de corte.
+              Organize seu rebanho, controle financeiro e tome decisões com dados reais. O Acasalamento Inteligente está disponível nos planos pagos para quem quer ir além.
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -155,12 +155,13 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 Ver como funciona
               </button>
             </div>
+
             {/* Mini prova social */}
             <div className="mx-auto mt-12 grid max-w-xl grid-cols-3 gap-4 border-t border-[var(--eixo-border)]/80 pt-10">
-              {[['R$ 0', 'para começar'], ['Sem cartão', 'para criar sua conta'], ['2 min', 'para cadastrar sua fazenda']].map(([value, label]) => (
-                <div key={label} className="rounded-2xl border border-[var(--eixo-border)]/70 bg-[rgba(255,250,241,0.42)] px-3 py-4 text-center shadow-[0_10px_24px_rgba(47,58,45,0.06)] backdrop-blur-[1px]">
-                  <p className="font-brand text-3xl font-extrabold leading-none text-[var(--eixo-text)] [text-shadow:0_1px_0_rgba(255,250,241,0.3)]">{value}</p>
-                  <p className="mt-2 text-xs font-semibold leading-5 text-[var(--eixo-text)]/72">{label}</p>
+              {[['Acesso Antecipado', 'Vagas limitadas'], ['R$ 0', 'para sempre'], ['2 min', 'para começar']].map(([value, label]) => (
+                <div key={label} className="flex min-h-[80px] flex-col items-center justify-center rounded-2xl border border-[var(--eixo-border)]/70 bg-[rgba(255,250,241,0.42)] px-3 py-4 text-center shadow-[0_10px_24px_rgba(47,58,45,0.06)] backdrop-blur-[1px]">
+                  <p className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)] [text-shadow:0_1px_0_rgba(255,250,241,0.3)]">{value}</p>
+                  <p className="mt-1.5 text-xs font-semibold leading-5 text-[var(--eixo-text)]/72">{label}</p>
                 </div>
               ))}
             </div>
@@ -175,10 +176,10 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 Plano gratuito
               </div>
               <h2 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] lg:text-4xl">
-                O básico da gestão pecuária, liberado no Plano Grátis.
+                O básico que já resolve 80% dos problemas da sua fazenda — liberado agora.
               </h2>
               <p className="mt-4 text-lg text-[var(--eixo-text-muted)]">
-                Comece organizando sua operação desde o primeiro dia, sem custo e sem cartão.
+                Comece organizando sua operação desde o primeiro dia, sem custo e sem cartão. <span className="font-semibold text-[var(--eixo-text)]">Acasalamento Inteligente</span> disponível no plano pago.
               </p>
             </div>
 
@@ -222,11 +223,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Antes — caderno amassado */}
               <div className="relative" style={{ perspective: '600px' }}>
-                {/* Folha 1 — mais ao fundo */}
-                <div
-                  className="absolute inset-x-2 bottom-0 h-full overflow-hidden rounded-2xl"
-                  style={{ background: '#eef1e7', transform: 'rotate(2.5deg) translateY(4px)', zIndex: 0 }}
-                >
+                <div className="absolute inset-x-2 bottom-0 h-full overflow-hidden rounded-2xl" style={{ background: '#eef1e7', transform: 'rotate(2.5deg) translateY(4px)', zIndex: 0 }}>
                   <div style={{ fontFamily: "'Caveat', cursive", fontSize: '1.15rem', color: 'var(--eixo-graphite)', opacity: 0.28, filter: 'blur(2.5px)', padding: '52px 56px 0 56px', lineHeight: '28px' }}>
                     <p style={{ transform: 'rotate(-0.5deg)' }}>vacina aftosa — 340 cab</p>
                     <p style={{ transform: 'rotate(0.3deg)', marginTop: 28 }}>custo ração jun: R$ 18.400</p>
@@ -236,11 +233,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                   </div>
                 </div>
 
-                {/* Folha 2 — intermediária */}
-                <div
-                  className="absolute inset-x-1 bottom-0 h-full overflow-hidden rounded-2xl"
-                  style={{ background: '#f3f5f1', transform: 'rotate(-1.5deg) translateY(2px)', zIndex: 1 }}
-                >
+                <div className="absolute inset-x-1 bottom-0 h-full overflow-hidden rounded-2xl" style={{ background: '#f3f5f1', transform: 'rotate(-1.5deg) translateY(2px)', zIndex: 1 }}>
                   <div style={{ fontFamily: "'Caveat', cursive", fontSize: '1.15rem', color: 'var(--eixo-graphite)', opacity: 0.32, filter: 'blur(1.8px)', padding: '52px 52px 0 52px', lineHeight: '28px' }}>
                     <p style={{ transform: 'rotate(0.4deg)' }}>boi gordo @ R$ 312 arr.</p>
                     <p style={{ transform: 'rotate(-0.5deg)', marginTop: 28 }}>lote 14 — GMD caindo</p>
@@ -250,58 +243,22 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                   </div>
                 </div>
 
-                {/* Folha principal */}
-                <div
-                  className="relative overflow-hidden rounded-2xl px-6 pb-6 pt-5"
-                  style={{
-                    zIndex: 2,
-                    background: '#f7f8f6',
-                    backgroundImage: `
-                      repeating-linear-gradient(transparent, transparent 27px, #d0d8d0 27px, #d0d8d0 28px),
-                      linear-gradient(to right, transparent 42px, #c7cec7 42px, #c7cec7 44px, transparent 44px)
-                    `,
-                    transform: 'rotate(-1.2deg)',
-                    boxShadow: '3px 4px 12px rgba(0,0,0,0.18), -2px -1px 6px rgba(0,0,0,0.08)',
-                    fontFamily: "'Caveat', 'Patrick Hand', 'Comic Sans MS', cursive",
-                  }}
-                >
-                  {/* Furos de fichário */}
+                <div className="relative overflow-hidden rounded-2xl px-6 pb-6 pt-5" style={{ zIndex: 2, background: '#f7f8f6', backgroundImage: `repeating-linear-gradient(transparent, transparent 27px, #d0d8d0 27px, #d0d8d0 28px), linear-gradient(to right, transparent 42px, #c7cec7 42px, #c7cec7 44px, transparent 44px)`, transform: 'rotate(-1.2deg)', boxShadow: '3px 4px 12px rgba(0,0,0,0.18), -2px -1px 6px rgba(0,0,0,0.08)', fontFamily: "'Caveat', 'Patrick Hand', 'Comic Sans MS', cursive" }}>
                   <div className="absolute left-0 top-0 flex h-full flex-col justify-around py-6 pl-1.5">
                     {[0,1,2,3].map(i => (
                       <div key={i} className="h-4 w-4 rounded-full bg-[var(--eixo-surface-soft)] shadow-inner" style={{ boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)' }} />
                     ))}
                   </div>
-
-                  {/* Mancha de café */}
                   <div className="pointer-events-none absolute right-8 top-4 h-14 w-14 rounded-full opacity-10" style={{ background: 'radial-gradient(circle, #8B4513 30%, transparent 70%)' }} />
-                  {/* Mancha menor */}
                   <div className="pointer-events-none absolute bottom-10 left-14 h-7 w-7 rounded-full opacity-8" style={{ background: 'radial-gradient(circle, #6B4226 40%, transparent 70%)', opacity: 0.07 }} />
-
-                  {/* Label */}
-                  <p className="mb-3 pl-10 text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-text-soft)]" style={{ fontFamily: 'inherit' }}>
-                    Sem sistema
-                  </p>
-
-                  {/* Linhas de caderno */}
+                  <p className="mb-3 pl-10 text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-text-soft)]" style={{ fontFamily: 'inherit' }}>Sem sistema</p>
                   <div className="space-y-1 pl-14 pr-2" style={{ fontFamily: 'inherit' }}>
-                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.3deg)', color: 'var(--eixo-graphite)' }}>
-                      Lote 14 - 247 cab - pesagem 12/03
-                    </p>
-                    <p className="text-xl leading-7" style={{ transform: 'rotate(0.4deg)', color: '#1e3f72' }}>
-                      comprou ração 15t ontem
-                    </p>
-                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.2deg)', color: 'var(--eixo-graphite)' }}>
-                      morreu 2 no pasto B-08 <span style={{ color: '#c0392b' }}>(!)</span>
-                    </p>
-                    <p className="text-xl leading-7" style={{ transform: 'rotate(0.5deg)', color: '#1e3f72' }}>
-                      santa rita precisa vacinar
-                    </p>
-                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.4deg)', color: 'var(--eixo-graphite)' }}>
-                      vender lote A? preço tá ruim...
-                    </p>
-                    <p className="text-xl leading-7" style={{ transform: 'rotate(0.2deg)', color: '#2a4a80' }}>
-                      peso médio caiu? conferir amanhã
-                    </p>
+                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.3deg)', color: 'var(--eixo-graphite)' }}>Lote 14 - 247 cab - pesagem 12/03</p>
+                    <p className="text-xl leading-7" style={{ transform: 'rotate(0.4deg)', color: '#1e3f72' }}>comprou ração 15t ontem</p>
+                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.2deg)', color: 'var(--eixo-graphite)' }}>morreu 2 no pasto B-08 <span style={{ color: '#c0392b' }}>(!)</span></p>
+                    <p className="text-xl leading-7" style={{ transform: 'rotate(0.5deg)', color: '#1e3f72' }}>santa rita precisa vacinar</p>
+                    <p className="text-xl leading-7" style={{ transform: 'rotate(-0.4deg)', color: 'var(--eixo-graphite)' }}>vender lote A? preço tá ruim...</p>
+                    <p className="text-xl leading-7" style={{ transform: 'rotate(0.2deg)', color: '#2a4a80' }}>peso médio caiu? conferir amanhã</p>
                   </div>
                 </div>
               </div>
@@ -374,11 +331,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 const open = activeFaq === i;
                 return (
                   <div key={faq.q} className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
-                    <button
-                      type="button"
-                      onClick={() => setActiveFaq(open ? null : i)}
-                      className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left"
-                    >
+                    <button type="button" onClick={() => setActiveFaq(open ? null : i)} className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left">
                       <span className="font-semibold text-[var(--eixo-text)]">{faq.q}</span>
                       <ChevronDown className={`h-5 w-5 flex-shrink-0 text-[var(--eixo-text-soft)] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
                     </button>
@@ -398,10 +351,10 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         <section className="bg-[var(--eixo-text)] py-20 lg:py-28">
           <div className="mx-auto max-w-3xl px-4 text-center lg:px-8">
             <h2 className="font-brand text-balance text-3xl font-extrabold text-[#f5f0e8] lg:text-5xl">
-              Sua fazenda merece mais que caderno.
+              Sua fazenda merece mais que caderno e planilha.
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-[var(--eixo-text-soft)]">
-              Comece grátis e organize rebanho, pesagens, compras, vendas e financeiro em um só lugar.
+              Comece grátis agora e teste o Acasalamento Inteligente. Sem risco. Sem cartão. Sem prazo.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <button type="button" onClick={onRegister} className="inline-flex items-center gap-2 rounded-xl bg-[var(--eixo-surface)] px-8 py-4 text-base font-bold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]">
@@ -431,11 +384,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
       {/* CTA fixo mobile */}
       <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden">
-        <button
-          type="button"
-          onClick={onRegister}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--eixo-green)] px-5 py-4 font-bold text-[#1a1a1a] shadow-lg hover:bg-[var(--eixo-green-dark)]"
-        >
+        <button type="button" onClick={onRegister} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--eixo-green)] px-5 py-4 font-bold text-[#1a1a1a] shadow-lg hover:bg-[var(--eixo-green-dark)]">
           Criar conta grátis — é de graça
           <ArrowRight className="h-4 w-4" />
         </button>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { buildApiUrl } from '../api';
 import {
     createFieldCollaborator,
     deleteUser,
@@ -680,6 +681,42 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
     const [editingFieldUser, setEditingFieldUser] = React.useState<ManagedUser | null>(null);
     const [deletingFieldUser, setDeletingFieldUser] = React.useState<ManagedUser | null>(null);
 
+    // Estados do formulário de convite
+    const [inviteEmail, setInviteEmail] = React.useState('');
+    const [inviteRole, setInviteRole] = React.useState<'ADMIN' | 'MEMBER'>('MEMBER');
+    const [inviteStatus, setInviteStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [inviteError, setInviteError] = React.useState<string | null>(null);
+
+    const sendInvite = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setInviteStatus('loading');
+        setInviteError(null);
+        try {
+            const sessionToken = localStorage.getItem('sessionToken') || sessionStorage.getItem('sessionToken');
+            const res = await fetch(buildApiUrl('/invitations'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+                },
+                body: JSON.stringify({ email: inviteEmail, role: inviteRole }),
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setInviteError(data.message || 'Erro ao enviar convite.');
+                setInviteStatus('error');
+                return;
+            }
+            setInviteStatus('success');
+            setInviteEmail('');
+            setInviteRole('MEMBER');
+            setTimeout(() => setInviteStatus('idle'), 4000);
+        } catch {
+            setInviteError('Erro inesperado. Tente novamente.');
+            setInviteStatus('error');
+        }
+    };
+
     const farmNameById = React.useMemo(() => new Map(farms.map((farm) => [farm.id, farm.name])), [farms]);
 
     const loadUsers = React.useCallback(async () => {
@@ -908,6 +945,58 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                         <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Um aparelho por colaborador de campo.</p>
                     </div>
                 </div>
+
+                {canManageUsers && (
+                    <div className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
+                        <div className="mb-4">
+                            <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
+                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
+                                Convite por e-mail
+                            </div>
+                            <h3 className="font-brand text-base font-extrabold text-[var(--eixo-text)]">Convidar usuário</h3>
+                            <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                                O usuário receberá um link para criar a senha e acessar o sistema.
+                            </p>
+                        </div>
+                        <form onSubmit={sendInvite} className="flex flex-wrap items-end gap-3">
+                            <div className="flex-1 min-w-[200px]">
+                                <label className="block text-xs font-medium text-[var(--eixo-text)] mb-1">E-mail</label>
+                                <input
+                                    type="email"
+                                    value={inviteEmail}
+                                    onChange={(e) => setInviteEmail(e.target.value)}
+                                    required
+                                    placeholder="email@exemplo.com"
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                />
+                            </div>
+                            <div className="min-w-[160px]">
+                                <label className="block text-xs font-medium text-[var(--eixo-text)] mb-1">Papel</label>
+                                <select
+                                    value={inviteRole}
+                                    onChange={(e) => setInviteRole(e.target.value as 'ADMIN' | 'MEMBER')}
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                >
+                                    <option value="MEMBER">Operador</option>
+                                    <option value="ADMIN">Gestor</option>
+                                </select>
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={inviteStatus === 'loading'}
+                                className="rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-60"
+                            >
+                                {inviteStatus === 'loading' ? 'Enviando…' : 'Enviar convite'}
+                            </button>
+                        </form>
+                        {inviteStatus === 'success' && (
+                            <p className="mt-3 text-sm text-[var(--eixo-success)]">Convite enviado para {inviteEmail || 'o e-mail informado'}.</p>
+                        )}
+                        {inviteStatus === 'error' && inviteError && (
+                            <p className="mt-3 text-sm text-[var(--eixo-danger)]">{inviteError}</p>
+                        )}
+                    </div>
+                )}
 
                 <div className="overflow-hidden rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                     <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-6 py-4">

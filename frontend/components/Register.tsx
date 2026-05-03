@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { buildApiUrl } from '../api';
 import LegalModal, { type LegalDoc, LEGAL_CONTENT } from './LegalModal';
 
@@ -66,6 +67,9 @@ interface CnpjResult {
     razao_social?: string;
     nome_fantasia?: string;
     descricao_situacao_cadastral?: string;
+    logradouro?: string;
+    bairro?: string;
+    cep?: string;
     municipio?: string;
     uf?: string;
     cnae_fiscal_descricao?: string;
@@ -74,12 +78,110 @@ interface CnpjResult {
     [key: string]: unknown;
 }
 
+// ─── PhoneVerification ────────────────────────────────────────────────────────
+interface PhoneVerificationProps {
+    docType: 'CNPJ' | 'CPF';
+    subtitle: string;
+    phone: string;
+    otpSent: boolean;
+    otpCode: string;
+    phoneVerified: boolean;
+    isSendingOtp: boolean;
+    isVerifyingOtp: boolean;
+    otpError: string | null;
+    onPhoneChange: (raw: string) => void;
+    onSendOtp: () => void;
+    onOtpCodeChange: (value: string) => void;
+    onVerifyOtp: () => void;
+    onResend: () => void;
+}
+
+const PhoneVerification: React.FC<PhoneVerificationProps> = ({
+    docType, subtitle, phone, otpSent, otpCode, phoneVerified,
+    isSendingOtp, isVerifyingOtp, otpError,
+    onPhoneChange, onSendOtp, onOtpCodeChange, onVerifyOtp, onResend,
+}) => {
+    if (phoneVerified) {
+        return (
+            <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
+                <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-xs font-medium text-[var(--eixo-success)]">Celular verificado — {phone}</span>
+            </div>
+        );
+    }
+    return (
+        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 space-y-2">
+            <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-[var(--eixo-text)]">Confirme seu celular</p>
+                <span className="rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--eixo-text-muted)]">
+                    Para seu {docType}
+                </span>
+            </div>
+            <p className="text-xs text-[var(--eixo-text-muted)]">{subtitle}</p>
+            <div className="flex gap-2">
+                <input
+                    type="tel"
+                    inputMode="numeric"
+                    value={phone}
+                    onChange={(e) => onPhoneChange(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    disabled={otpSent}
+                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] disabled:opacity-60"
+                />
+                <button
+                    type="button"
+                    onClick={onSendOtp}
+                    disabled={phone.replace(/\D/g, '').length < 10 || isSendingOtp || otpSent}
+                    className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
+                >
+                    {isSendingOtp ? 'Enviando...' : otpSent ? 'Enviado ✓' : 'Enviar código'}
+                </button>
+            </div>
+            {otpSent && (
+                <div className="space-y-2">
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            value={otpCode}
+                            onChange={(e) => onOtpCodeChange(e.target.value.replace(/\D/g, ''))}
+                            placeholder="Código de 6 dígitos"
+                            className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm tracking-widest text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                        />
+                        <button
+                            type="button"
+                            onClick={onVerifyOtp}
+                            disabled={otpCode.length !== 6 || isVerifyingOtp}
+                            className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
+                        >
+                            {isVerifyingOtp ? 'Verificando...' : 'Confirmar'}
+                        </button>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onResend}
+                        className="text-xs text-[var(--eixo-text-muted)] hover:underline"
+                    >
+                        Não recebi — reenviar
+                    </button>
+                </div>
+            )}
+            {otpError && <p className="text-xs text-[var(--eixo-danger)]">{otpError}</p>}
+        </div>
+    );
+};
+
 // ─── Componente ───────────────────────────────────────────────────────────────
 const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [termsAccepted, setTermsAccepted] = useState(false);
@@ -253,6 +355,10 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                 return;
             }
             setCnpjResult(data);
+            const autoName = data.nome_fantasia?.trim() || data.razao_social?.trim() || '';
+            if (autoName && !name.trim()) setName(autoName);
+            const autoEmail = data.email?.trim() || '';
+            if (autoEmail && !email.trim()) setEmail(autoEmail);
         } catch {
             setDocError('Não foi possível consultar a Receita Federal. Verifique sua conexão.');
         } finally {
@@ -337,7 +443,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
 
                 <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-10 pt-8 lg:px-8">
                     <div className="mb-10">
-                        <img src="/eixo-logo-render.png" alt="eixo" className="h-10 w-auto" />
+                        <img src="/logo_eixo_official.svg" alt="EIXO" className="h-10 w-auto" />
                         <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--eixo-text-muted)]">Plataforma de Gestão Pecuária</div>
                     </div>
 
@@ -442,78 +548,22 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                         <span className="text-xs font-medium text-[var(--eixo-success)]">CPF válido</span>
                                                     </div>
 
-                                                    {/* Celular */}
-                                                    {!phoneVerified && (
-                                                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 space-y-2">
-                                                            <p className="text-xs font-semibold text-[var(--eixo-text)]">Confirme seu celular</p>
-                                                            <p className="text-xs text-[var(--eixo-text-muted)]">Enviaremos um código de verificação por SMS.</p>
-                                                            <div className="flex gap-2">
-                                                                <input
-                                                                    type="tel"
-                                                                    inputMode="numeric"
-                                                                    value={phone}
-                                                                    onChange={(e) => handlePhoneInput(e.target.value)}
-                                                                    placeholder="(11) 99999-9999"
-                                                                    disabled={otpSent}
-                                                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] disabled:opacity-60"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => void handleSendOtp()}
-                                                                    disabled={phone.replace(/\D/g, '').length < 10 || isSendingOtp || otpSent}
-                                                                    className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
-                                                                >
-                                                                    {isSendingOtp ? 'Enviando...' : otpSent ? 'Enviado ✓' : 'Enviar código'}
-                                                                </button>
-                                                            </div>
-
-                                                            {/* Campo do código */}
-                                                            {otpSent && (
-                                                                <div className="space-y-2">
-                                                                    <div className="flex gap-2">
-                                                                        <input
-                                                                            type="text"
-                                                                            inputMode="numeric"
-                                                                            maxLength={6}
-                                                                            value={otpCode}
-                                                                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                                                                            placeholder="Código de 6 dígitos"
-                                                                            className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm tracking-widest text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
-                                                                        />
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => void handleVerifyOtp()}
-                                                                            disabled={otpCode.length !== 6 || isVerifyingOtp}
-                                                                            className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
-                                                                        >
-                                                                            {isVerifyingOtp ? 'Verificando...' : 'Confirmar'}
-                                                                        </button>
-                                                                    </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => { setOtpSent(false); setOtpCode(''); setOtpError(null); }}
-                                                                        className="text-xs text-[var(--eixo-text-muted)] hover:underline"
-                                                                    >
-                                                                        Não recebi — reenviar
-                                                                    </button>
-                                                                </div>
-                                                            )}
-
-                                                            {otpError && (
-                                                                <p className="text-xs text-[var(--eixo-danger)]">{otpError}</p>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Celular verificado */}
-                                                    {phoneVerified && (
-                                                        <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
-                                                            <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                            <span className="text-xs font-medium text-[var(--eixo-success)]">Celular verificado — {phone}</span>
-                                                        </div>
-                                                    )}
+                                                    <PhoneVerification
+                                                        docType="CPF"
+                                                        subtitle="Enviaremos um código de verificação por SMS."
+                                                        phone={phone}
+                                                        otpSent={otpSent}
+                                                        otpCode={otpCode}
+                                                        phoneVerified={phoneVerified}
+                                                        isSendingOtp={isSendingOtp}
+                                                        isVerifyingOtp={isVerifyingOtp}
+                                                        otpError={otpError}
+                                                        onPhoneChange={handlePhoneInput}
+                                                        onSendOtp={() => void handleSendOtp()}
+                                                        onOtpCodeChange={setOtpCode}
+                                                        onVerifyOtp={() => void handleVerifyOtp()}
+                                                        onResend={() => { setOtpSent(false); setOtpCode(''); setOtpError(null); }}
+                                                    />
                                                 </div>
                                             )}
 
@@ -564,73 +614,65 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
 
                                             {/* Celular + OTP para CNPJ ativo */}
                                             {docType === 'CNPJ' && cnpjIsActive && (
-                                                <div className="mt-3 space-y-2">
-                                                    {!phoneVerified ? (
-                                                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 space-y-2">
-                                                            <p className="text-xs font-semibold text-[var(--eixo-text)]">Confirme seu celular</p>
-                                                            <p className="text-xs text-[var(--eixo-text-muted)]">Último passo: vamos confirmar que você é uma pessoa real.</p>
-                                                            <div className="flex gap-2">
-                                                                <input
-                                                                    type="tel"
-                                                                    inputMode="numeric"
-                                                                    value={phone}
-                                                                    onChange={(e) => handlePhoneInput(e.target.value)}
-                                                                    placeholder="(11) 99999-9999"
-                                                                    disabled={otpSent}
-                                                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] disabled:opacity-60"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => void handleSendOtp()}
-                                                                    disabled={phone.replace(/\D/g, '').length < 10 || isSendingOtp || otpSent}
-                                                                    className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
-                                                                >
-                                                                    {isSendingOtp ? 'Enviando...' : otpSent ? 'Enviado ✓' : 'Enviar código'}
-                                                                </button>
-                                                            </div>
-                                                            {otpSent && (
-                                                                <div className="space-y-2">
-                                                                    <div className="flex gap-2">
-                                                                        <input
-                                                                            type="text"
-                                                                            inputMode="numeric"
-                                                                            maxLength={6}
-                                                                            value={otpCode}
-                                                                            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                                                                            placeholder="Código de 6 dígitos"
-                                                                            className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm tracking-widest text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
-                                                                        />
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => void handleVerifyOtp()}
-                                                                            disabled={otpCode.length !== 6 || isVerifyingOtp}
-                                                                            className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
-                                                                        >
-                                                                            {isVerifyingOtp ? 'Verificando...' : 'Confirmar'}
-                                                                        </button>
-                                                                    </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => { setOtpSent(false); setOtpCode(''); setOtpError(null); }}
-                                                                        className="text-xs text-[var(--eixo-text-muted)] hover:underline"
-                                                                    >
-                                                                        Não recebi — reenviar
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                            {otpError && <p className="text-xs text-[var(--eixo-danger)]">{otpError}</p>}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
-                                                            <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                            </svg>
-                                                            <span className="text-xs font-medium text-[var(--eixo-success)]">Celular verificado — {phone}</span>
-                                                        </div>
-                                                    )}
+                                                <div className="mt-3">
+                                                    <PhoneVerification
+                                                        docType="CNPJ"
+                                                        subtitle="Último passo: vamos confirmar que você é uma pessoa real."
+                                                        phone={phone}
+                                                        otpSent={otpSent}
+                                                        otpCode={otpCode}
+                                                        phoneVerified={phoneVerified}
+                                                        isSendingOtp={isSendingOtp}
+                                                        isVerifyingOtp={isVerifyingOtp}
+                                                        otpError={otpError}
+                                                        onPhoneChange={handlePhoneInput}
+                                                        onSendOtp={() => void handleSendOtp()}
+                                                        onOtpCodeChange={setOtpCode}
+                                                        onVerifyOtp={() => void handleVerifyOtp()}
+                                                        onResend={() => { setOtpSent(false); setOtpCode(''); setOtpError(null); }}
+                                                    />
                                                 </div>
                                             )}
                                         </div>
+
+                                        {/* ── Dados da empresa (CNPJ) ── */}
+                                        {docType === 'CNPJ' && cnpjResult && (
+                                            <>
+                                                <div>
+                                                    <label className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                                        Razão Social
+                                                    </label>
+                                                    <div className={`${inputClass} cursor-default select-all bg-[var(--eixo-surface)] opacity-70`}>
+                                                        {cnpjResult.razao_social || '—'}
+                                                    </div>
+                                                </div>
+                                                {cnpjResult.nome_fantasia && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                                            Nome Fantasia
+                                                        </label>
+                                                        <div className={`${inputClass} cursor-default select-all bg-[var(--eixo-surface)] opacity-70`}>
+                                                            {cnpjResult.nome_fantasia}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {(cnpjResult.logradouro || cnpjResult.municipio) && (
+                                                    <div>
+                                                        <label className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                                            Endereço
+                                                        </label>
+                                                        <div className={`${inputClass} cursor-default select-all bg-[var(--eixo-surface)] opacity-70`}>
+                                                            {[
+                                                                cnpjResult.logradouro,
+                                                                cnpjResult.bairro,
+                                                                [cnpjResult.municipio, cnpjResult.uf].filter(Boolean).join(' — '),
+                                                                cnpjResult.cep,
+                                                            ].filter(Boolean).join(', ')}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
 
                                         {/* ── Dados pessoais ── */}
                                         <div>
@@ -665,15 +707,25 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                             <label htmlFor="register-password" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                                                 Senha
                                             </label>
-                                            <input
-                                                id="register-password"
-                                                type="password"
-                                                value={password}
-                                                onChange={(e) => setPassword(e.target.value)}
-                                                className={inputClass}
-                                                placeholder="Mínimo de 8 caracteres"
-                                                required
-                                            />
+                                            <div className="relative mt-1">
+                                                <input
+                                                    id="register-password"
+                                                    type={showPassword ? 'text' : 'password'}
+                                                    value={password}
+                                                    onChange={(e) => setPassword(e.target.value)}
+                                                    className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 pr-12 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                    placeholder="Mínimo de 8 caracteres"
+                                                    required
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowPassword((v) => !v)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--eixo-text-muted)] hover:text-[var(--eixo-text)]"
+                                                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                                                >
+                                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                </button>
+                                            </div>
                                             <p className="mt-1 text-xs text-[var(--eixo-text)]/70">
                                                 {PASSWORD_POLICY_MESSAGE}
                                             </p>
@@ -682,40 +734,26 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                             <label htmlFor="register-password-confirm" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                                                 Confirmar senha
                                             </label>
-                                            <input
-                                                id="register-password-confirm"
-                                                type="password"
-                                                value={confirmPassword}
-                                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                                className={inputClass}
-                                                placeholder="Repita sua senha"
-                                                required
-                                            />
-                                        </div>
-
-                                        {error && (
-                                            <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]">
-                                                {error}
+                                            <div className="relative mt-1">
+                                                <input
+                                                    id="register-password-confirm"
+                                                    type={showConfirmPassword ? 'text' : 'password'}
+                                                    value={confirmPassword}
+                                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                                    className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 pr-12 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                    placeholder="Repita sua senha"
+                                                    required
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowConfirmPassword((v) => !v)}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--eixo-text-muted)] hover:text-[var(--eixo-text)]"
+                                                    aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                                                >
+                                                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                                </button>
                                             </div>
-                                        )}
-
-                                        <button
-                                            type="submit"
-                                            disabled={isSubmitting || !canSubmit}
-                                            className={`w-full rounded-2xl py-3 font-semibold transition-colors ${(isSubmitting || !canSubmit) ? disabledButtonClass : primaryButtonClass}`}
-                                        >
-                                            {isSubmitting ? 'Criando conta...' : 'Criar conta grátis'}
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={onBack}
-                                            className="-mt-1 w-full text-center text-sm text-[var(--eixo-text)]/72 transition-colors hover:text-[var(--eixo-green-dark)]"
-                                        >
-                                            <span className="font-semibold text-[var(--eixo-green-dark)] underline decoration-[var(--eixo-green)]/45 underline-offset-2">
-                                                Já tenho conta
-                                            </span>
-                                        </button>
+                                        </div>
 
                                         {/* ── Aceite legal ── */}
                                         <div className={`rounded-2xl border px-4 py-2.5 transition-colors ${
@@ -737,7 +775,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                             : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)]'
                                                     }`}>
                                                         {termsAccepted && (
-                                                            <svg className="h-3 w-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <svg className="h-3 w-3 text-[#1a1a1a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                                             </svg>
                                                         )}
@@ -772,6 +810,30 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                 </span>
                                             </label>
                                         </div>
+
+                                        {error && (
+                                            <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]">
+                                                {error}
+                                            </div>
+                                        )}
+
+                                        <button
+                                            type="submit"
+                                            disabled={isSubmitting || !canSubmit}
+                                            className={`w-full rounded-2xl py-3 font-semibold transition-colors ${(isSubmitting || !canSubmit) ? disabledButtonClass : primaryButtonClass}`}
+                                        >
+                                            {isSubmitting ? 'Criando conta...' : 'Criar conta grátis'}
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={onBack}
+                                            className="-mt-1 w-full text-center text-sm text-[var(--eixo-text)]/72 transition-colors hover:text-[var(--eixo-green-dark)]"
+                                        >
+                                            <span className="font-semibold text-[var(--eixo-green-dark)] underline decoration-[var(--eixo-green)]/45 underline-offset-2">
+                                                Já tenho conta
+                                            </span>
+                                        </button>
                                     </form>
                                 </div>
                             </div>
