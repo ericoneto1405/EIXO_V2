@@ -46,10 +46,15 @@ export default function App() {
     isAuthenticating,
     isLoggingIn,
     loginError,
+    loginEmail,
+    loginPassword,
     logout,
     paddocks,
     screenError,
     setActivationCode,
+    setLoginEmail,
+    setLoginPassword,
+    authMode,
   } = useAppAuth();
   const { enqueuePendingReport, isSyncing, pendingReports } = useSyncReports({
     shouldSync: isOnline && Boolean(currentUser && farm),
@@ -344,7 +349,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[var(--eixo-bg)] flex items-center justify-center p-6">
         <form
-          onSubmit={(event) => handleLogin(event, entryMode === 'management' ? 'ADMIN_CAMPO' : undefined)}
+          onSubmit={(event) => handleLogin(event, entryMode, entryMode === 'management' ? 'ADMIN_CAMPO' : undefined)}
           className="w-full max-w-sm bg-[var(--eixo-surface)] border border-[var(--eixo-border)] rounded-[2rem] p-8 shadow-xl"
         >
           <img src="/eixo-logo-render.png" alt="EIXO" className="mb-6 h-12 w-auto" />
@@ -353,22 +358,49 @@ export default function App() {
           </h1>
           <p className="text-sm text-[var(--eixo-text-muted)] mt-2">
             {entryMode === 'management'
-              ? 'Use o código de Admin de Campo para liberar pesagem e gerenciamento neste aparelho.'
+              ? 'Use o e-mail e a senha de Admin de Campo para entrar no gerenciamento.'
               : 'Use o código de ativação entregue pela fazenda para liberar este aparelho. Um novo código só será necessário se a fazenda gerar uma nova ativação.'}
           </p>
 
           <div className="mt-6 space-y-4">
-            <label className="block">
-              <span className="text-xs font-bold text-[var(--eixo-text-muted)] uppercase tracking-wider">Código de ativação</span>
-              <input
-                type="text"
-                value={activationCode}
-                onChange={(event) => setActivationCode(event.target.value.toUpperCase())}
-                className="mt-2 w-full border border-[var(--eixo-border)] rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
-                placeholder="Ex.: AB12-CD34-EF56"
-                required
-              />
-            </label>
+            {entryMode === 'management' ? (
+              <>
+                <label className="block">
+                  <span className="text-xs font-bold text-[var(--eixo-text-muted)] uppercase tracking-wider">E-mail</span>
+                  <input
+                    type="email"
+                    value={loginEmail}
+                    onChange={(event) => setLoginEmail(event.target.value)}
+                    className="mt-2 w-full border border-[var(--eixo-border)] rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                    placeholder="seu@email.com"
+                    required
+                  />
+                </label>
+                <label className="block">
+                  <span className="text-xs font-bold text-[var(--eixo-text-muted)] uppercase tracking-wider">Senha</span>
+                  <input
+                    type="password"
+                    value={loginPassword}
+                    onChange={(event) => setLoginPassword(event.target.value)}
+                    className="mt-2 w-full border border-[var(--eixo-border)] rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                    placeholder="Sua senha"
+                    required
+                  />
+                </label>
+              </>
+            ) : (
+              <label className="block">
+                <span className="text-xs font-bold text-[var(--eixo-text-muted)] uppercase tracking-wider">Código de ativação</span>
+                <input
+                  type="text"
+                  value={activationCode}
+                  onChange={(event) => setActivationCode(event.target.value.toUpperCase())}
+                  className="mt-2 w-full border border-[var(--eixo-border)] rounded-2xl px-4 py-3 outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                  placeholder="Ex.: AB12-CD34-EF56"
+                  required
+                />
+              </label>
+            )}
           </div>
 
           {loginError && (
@@ -384,7 +416,7 @@ export default function App() {
           <div className="mt-4 text-xs text-[var(--eixo-text-muted)] break-all">API detectada: {apiBaseUrl || getApiBaseUrl()}</div>
 
           <button type="submit" disabled={isLoggingIn} className="mt-6 w-full py-4 bg-[var(--eixo-green)] text-white rounded-2xl font-bold hover:bg-[var(--eixo-green-dark)] disabled:opacity-70">
-            {isLoggingIn ? 'Ativando...' : 'ATIVAR APP'}
+            {isLoggingIn ? 'Entrando...' : (entryMode === 'management' ? 'ENTRAR NO GERENCIAMENTO' : 'ATIVAR APP')}
           </button>
           <button
             type="button"
@@ -400,7 +432,7 @@ export default function App() {
 
   const modalVisible = Boolean(selectedAction || showSuccess || showFAQ || showAnimalLookup);
 
-  if (currentProfile === 'ADMIN_CAMPO' && farm) {
+  if (authMode === 'management' && farm) {
     return (
       <ManagementScreen
         user={currentUser}

@@ -19,7 +19,7 @@ import {
 import { buildApiUrl } from '../api';
 import type { Paddock } from '../types';
 
-type TabKey = 'overview' | 'lots' | 'animals' | 'weighings' | 'settings';
+type TabKey = 'overview' | 'animals' | 'pastures' | 'lots' | 'weighings' | 'settings';
 
 const LOT_OBJECTIVE_OPTIONS = [
     'Cria',
@@ -71,6 +71,7 @@ interface HerdModuleProps {
     isFreePlan?: boolean;
     onUpgradeRequest?: (animalCount?: number) => void;
     initialTabRequest?: { tab: TabKey; nonce: number } | null;
+    weighingOnlyMode?: boolean;
 }
 
 const LockIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
@@ -391,7 +392,7 @@ function detectField(header: string): string | null {
     return null;
 }
 
-const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdType, isFreePlan = false, onUpgradeRequest, initialTabRequest }) => {
+const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdType, isFreePlan = false, onUpgradeRequest, initialTabRequest, weighingOnlyMode = false }) => {
     const resolvedMode = mode ?? herdType ?? 'COMMERCIAL';
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
     const [animals, setAnimals] = useState<HerdAnimal[]>([]);
@@ -506,14 +507,18 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
     }, [farmId]);
 
     const tabs = useMemo(() => {
+        if (weighingOnlyMode) {
+            return [{ key: 'weighings', label: 'Pesagens' }];
+        }
         return [
             { key: 'overview', label: 'Visão do Rebanho' },
             { key: 'animals', label: 'Animais' },
+            { key: 'pastures', label: 'Pastos' },
             { key: 'lots', label: 'Lotes' },
             { key: 'weighings', label: 'Pesagens' },
             { key: 'settings', label: 'Configurações' },
         ];
-    }, []);
+    }, [weighingOnlyMode]);
 
     const title = 'Manejo do Rebanho';
 
@@ -543,6 +548,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
     useEffect(() => {
         loadData();
     }, [loadData]);
+
+    useEffect(() => {
+        if (weighingOnlyMode) {
+            setActiveTab('weighings');
+        }
+    }, [weighingOnlyMode]);
 
     useEffect(() => {
         setSelectedAnimal(null);
@@ -1568,6 +1579,45 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
         );
     };
 
+    const renderPastures = () => {
+        return (
+            <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm text-[var(--eixo-text-muted)]">
+                        <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
+                            <tr>
+                                <th scope="col" className="px-4 py-2.5">Pasto</th>
+                                <th scope="col" className="px-4 py-2.5">Área (ha)</th>
+                                <th scope="col" className="px-4 py-2.5">Capacidade</th>
+                                <th scope="col" className="px-4 py-2.5">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {paddocks.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
+                                        Nenhum pasto cadastrado em Fazendas e Pastos.
+                                    </td>
+                                </tr>
+                            ) : (
+                                paddocks.map((paddock) => (
+                                    <tr key={paddock.id} className="border-b border-[var(--eixo-border)] last:border-0">
+                                        <td className="px-4 py-3 font-medium text-[var(--eixo-text)]">{paddock.name}</td>
+                                        <td className="px-4 py-3">{paddock.areaHa ?? '—'}</td>
+                                        <td className="px-4 py-3">{paddock.capacity ?? '—'}</td>
+                                        <td className="px-4 py-3">
+                                            {paddock.active === false ? 'Inativo' : 'Ativo'}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <div>
             <div className="mb-4 rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
@@ -1796,12 +1846,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
             {activeTab === 'overview' && renderOverview()}
             {activeTab === 'lots' && renderLots()}
             {activeTab === 'animals' && renderTable()}
+            {activeTab === 'pastures' && renderPastures()}
             {activeTab === 'weighings' && farmId && (
                 <WeighingsTab
                     farmId={farmId}
                     animals={animals}
                     lots={lots}
                     herdType={resolvedMode}
+                    managementMode={weighingOnlyMode}
                 />
             )}
             {activeTab === 'settings' && farmId && (

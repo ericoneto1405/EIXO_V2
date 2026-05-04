@@ -42,6 +42,7 @@ export const createWebUser = async (payload: WebUserCreatePayload): Promise<Mana
 };
 
 export const createFieldCollaborator = async (payload: FieldCollaboratorCreatePayload): Promise<ManagedUser> => {
+  const isManagementMode = payload.fieldProfile === 'ADMIN_CAMPO';
   const response = await fetch(buildApiUrl('/users'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -49,9 +50,10 @@ export const createFieldCollaborator = async (payload: FieldCollaboratorCreatePa
     body: JSON.stringify({
       name: payload.name,
       modules: ['Rebanho Comercial'],
-      accessType: 'APP_MANEJO',
+      accessType: isManagementMode ? 'WEB_APP' : 'APP_MANEJO',
       fieldProfile: payload.fieldProfile,
       defaultFarmId: payload.defaultFarmId,
+      ...(isManagementMode ? { email: payload.email, password: payload.password } : {}),
     }),
   });
   const responsePayload = await readJson(response);

@@ -14,17 +14,7 @@ interface ManagementScreenProps {
 
 const todayInputValue = () => new Date().toISOString().slice(0, 10);
 
-const formatWeight = (value: number) => {
-  return `${value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} kg`;
-};
-
-const formatDate = (value: string) => {
-  const [year, month, day] = value.split('-');
-  if (!year || !month || !day) {
-    return value;
-  }
-  return `${day}/${month}/${year}`;
-};
+const formatWeight = (value: number) => `${value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 1 })} kg`;
 
 const statusClasses: Record<PendingWeighing['status'], string> = {
   pendente: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] border-[var(--eixo-border)]',
@@ -41,8 +31,13 @@ const statusLabel: Record<PendingWeighing['status'], string> = {
 };
 
 export default function ManagementScreen({ user, farm, animals, isOnline, onLogout }: ManagementScreenProps) {
+  const [weighingMode, setWeighingMode] = useState<'INDIVIDUAL' | 'GROUP'>('INDIVIDUAL');
   const [animalSearch, setAnimalSearch] = useState('');
   const [selectedAnimal, setSelectedAnimal] = useState<Animal | null>(null);
+  const [groupSearch, setGroupSearch] = useState('');
+  const [groupAnimalsCount, setGroupAnimalsCount] = useState('');
+  const [groupTotalWeight, setGroupTotalWeight] = useState('');
+  const [groupSelectedAnimalIds, setGroupSelectedAnimalIds] = useState<string[]>([]);
   const [weighingDate, setWeighingDate] = useState(todayInputValue());
   const [weightValue, setWeightValue] = useState('');
   const [formError, setFormError] = useState('');
@@ -85,12 +80,16 @@ export default function ManagementScreen({ user, farm, animals, isOnline, onLogo
       .slice(0, 10);
   }, [animalSearch, animals]);
 
-  const pendingCount = pendingWeighings.filter((item) => item.status === 'pendente' || item.status === 'erro').length;
+  const pendingCount = pendingWeighings.filter((item) => item.status === 'pendente' || item.status === 'erro' || item.status === 'conflito').length;
 
   const resetFormForNextAnimal = () => {
     setAnimalSearch('');
     setSelectedAnimal(null);
     setWeightValue('');
+    setGroupSearch('');
+    setGroupAnimalsCount('');
+    setGroupTotalWeight('');
+    setGroupSelectedAnimalIds([]);
     setFormError('');
   };
 
@@ -103,12 +102,52 @@ export default function ManagementScreen({ user, farm, animals, isOnline, onLogo
     event.preventDefault();
     setFormError('');
 
-    if (!selectedAnimal) {
-      setFormError('Selecione um animal.');
-      return;
-    }
     if (!weighingDate) {
       setFormError('Informe a data.');
+      return;
+    }
+
+    if (weighingMode === 'GROUP') {
+      const countNum = parseInt(groupAnimalsCount, 10);
+      if (!Number.isInteger(countNum) || countNum <= 0) {
+        setFormError('Informe a quantidade de animais da pesagem em grupo.');
+        return;
+      }
+      if (groupSelectedAnimalIds.length === 0) {
+        setFormError('Selecione ao menos um animal do grupo.');
+        return;
+      }
+      if (groupSelectedAnimalIds.length !== countNum) {
+        setFormError('A quantidade informada deve ser igual aos animais selecionados.');
+        return;
+      }
+      const parsedTotalWeight = Number(String(groupTotalWeight).replace(',', '.'));
+      if (!Number.isFinite(parsedTotalWeight) || parsedTotalWeight <= 0 || parsedTotalWeight > 999999) {
+        setFormError('Informe o peso total do grupo.');
+        return;
+      }
+      const averageWeight = Number((parsedTotalWeight / groupSelectedAnimalIds.length).toFixed(1));
+      const selectedAnimals = animals.filter((animal) => groupSelectedAnimalIds.includes(animal.id));
+      for (const animal of selectedAnimals) {
+        const existing = pendingWeighings.find((item) => item.animalId === animal.id);
+        if (existing) {
+          continue;
+        }
+        addWeighing({
+          animalId: animal.id,
+          animalLabel: buildAnimalLabel(animal),
+          animalType: animal.animalType ?? 'comercial',
+          farmId: farm.id,
+          data: weighingDate,
+          peso: averageWeight,
+        });
+      }
+      resetFormForNextAnimal();
+      return;
+    }
+
+    if (!selectedAnimal) {
+      setFormError('Selecione um animal.');
       return;
     }
 
@@ -144,6 +183,33 @@ export default function ManagementScreen({ user, farm, animals, isOnline, onLogo
     setSelectedAnimal(animal);
     setAnimalSearch(buildAnimalLabel(animal));
     setFormError('');
+  };
+
+  const filteredGroupAnimals = useMemo(() => {
+    const query = groupSearch.trim().toLowerCase();
+    if (!query) return animals.slice(0, 30);
+    return animals
+      .filter((animal) => {
+        const label = [
+          buildAnimalLabel(animal),
+          animal.brinco,
+          animal.identificacao,
+          animal.name,
+          animal.nome,
+          animal.registro,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return label.includes(query);
+      })
+      .slice(0, 30);
+  }, [groupSearch, animals]);
+
+  const toggleGroupAnimal = (animalId: string) => {
+    setGroupSelectedAnimalIds((current) =>
+      current.includes(animalId) ? current.filter((id) => id !== animalId) : [...current, animalId],
+    );
   };
 
   return (
@@ -191,38 +257,119 @@ export default function ManagementScreen({ user, farm, animals, isOnline, onLogo
                 <h2 className="font-bold text-[var(--eixo-text)]">Pesagem manual</h2>
               </div>
 
-              <label className="block">
-                <span className="text-xs font-bold text-[var(--eixo-text-soft)] uppercase tracking-widest">Buscar animal</span>
-                <div className="relative mt-2">
-                  <Search className="w-4 h-4 text-[var(--eixo-text-soft)] absolute left-4 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={animalSearch}
-                    onChange={(event) => {
-                      setAnimalSearch(event.target.value);
-                      setSelectedAnimal(null);
-                    }}
-                    placeholder="Brinco, identificacao ou nome"
-                    className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] py-3 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
-                  />
-                </div>
-              </label>
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWeighingMode('INDIVIDUAL');
+                    setFormError('');
+                  }}
+                  className={`rounded-xl border px-3 py-2 text-sm font-bold ${
+                    weighingMode === 'INDIVIDUAL'
+                      ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-green-dark)]'
+                      : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-[var(--eixo-text-muted)]'
+                  }`}
+                >
+                  Pesagem individual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWeighingMode('GROUP');
+                    setFormError('');
+                  }}
+                  className={`rounded-xl border px-3 py-2 text-sm font-bold ${
+                    weighingMode === 'GROUP'
+                      ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-green-dark)]'
+                      : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-[var(--eixo-text-muted)]'
+                  }`}
+                >
+                  Pesagem em grupo
+                </button>
+              </div>
 
-              {filteredAnimals.length > 0 && !selectedAnimal && (
-                <div className="mt-2 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
-                  {filteredAnimals.map((animal) => (
-                    <button
-                      key={`${animal.animalType || 'comercial'}-${animal.id}`}
-                      type="button"
-                      onClick={() => selectAnimal(animal)}
-                      className="block w-full border-b border-[var(--eixo-border)] px-4 py-3 text-left last:border-b-0"
-                    >
-                      <span className="block text-sm font-bold text-[var(--eixo-text)]">{buildAnimalLabel(animal)}</span>
-                      <span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--eixo-text-soft)]">
-                        {animal.animalType === 'po' ? 'Plantel P.O.' : 'Rebanho'}
-                      </span>
-                    </button>
-                  ))}
+              {weighingMode === 'INDIVIDUAL' ? (
+                <>
+                  <label className="block">
+                    <span className="text-xs font-bold text-[var(--eixo-text-soft)] uppercase tracking-widest">Buscar animal</span>
+                    <div className="relative mt-2">
+                      <Search className="w-4 h-4 text-[var(--eixo-text-soft)] absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={animalSearch}
+                        onChange={(event) => {
+                          setAnimalSearch(event.target.value);
+                          setSelectedAnimal(null);
+                        }}
+                        placeholder="Brinco, identificacao ou nome"
+                        className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] py-3 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                      />
+                    </div>
+                  </label>
+
+                  {filteredAnimals.length > 0 && !selectedAnimal && (
+                    <div className="mt-2 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+                      {filteredAnimals.map((animal) => (
+                        <button
+                          key={`${animal.animalType || 'comercial'}-${animal.id}`}
+                          type="button"
+                          onClick={() => selectAnimal(animal)}
+                          className="block w-full border-b border-[var(--eixo-border)] px-4 py-3 text-left last:border-b-0"
+                        >
+                          <span className="block text-sm font-bold text-[var(--eixo-text)]">{buildAnimalLabel(animal)}</span>
+                          <span className="mt-1 block text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--eixo-text-soft)]">
+                            {animal.animalType === 'po' ? 'Plantel P.O.' : 'Rebanho'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-3">
+                  <label className="block">
+                    <span className="text-xs font-bold text-[var(--eixo-text-soft)] uppercase tracking-widest">Quantidade de animais</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={groupAnimalsCount}
+                      onChange={(event) => setGroupAnimalsCount(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                      required
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="text-xs font-bold text-[var(--eixo-text-soft)] uppercase tracking-widest">Buscar animais do grupo</span>
+                    <div className="relative mt-2">
+                      <Search className="w-4 h-4 text-[var(--eixo-text-soft)] absolute left-4 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        value={groupSearch}
+                        onChange={(event) => setGroupSearch(event.target.value)}
+                        placeholder="Buscar por brinco, identificacao ou nome"
+                        className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] py-3 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                      />
+                    </div>
+                  </label>
+                  <div className="max-h-40 overflow-y-auto rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-2">
+                    {filteredGroupAnimals.map((animal) => {
+                      const checked = groupSelectedAnimalIds.includes(animal.id);
+                      return (
+                        <label key={`${animal.animalType || 'comercial'}-${animal.id}`} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-[var(--eixo-surface-soft)]">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleGroupAnimal(animal.id)}
+                          />
+                          <span className="font-medium text-[var(--eixo-text)]">{buildAnimalLabel(animal)}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-[var(--eixo-text-muted)]">
+                    Selecionados: {groupSelectedAnimalIds.length}
+                    {groupAnimalsCount ? ` / ${groupAnimalsCount}` : ''}
+                  </p>
                 </div>
               )}
 
@@ -238,14 +385,22 @@ export default function ManagementScreen({ user, farm, animals, isOnline, onLogo
                   />
                 </label>
                 <label className="block">
-                  <span className="text-xs font-bold text-[var(--eixo-text-soft)] uppercase tracking-widest">Peso kg</span>
+                  <span className="text-xs font-bold text-[var(--eixo-text-soft)] uppercase tracking-widest">
+                    {weighingMode === 'GROUP' ? 'Peso total kg' : 'Peso kg'}
+                  </span>
                   <input
                     type="number"
                     min="1"
-                    max="9999"
+                    max={weighingMode === 'GROUP' ? '999999' : '9999'}
                     step="0.1"
-                    value={weightValue}
-                    onChange={(event) => setWeightValue(event.target.value)}
+                    value={weighingMode === 'GROUP' ? groupTotalWeight : weightValue}
+                    onChange={(event) => {
+                      if (weighingMode === 'GROUP') {
+                        setGroupTotalWeight(event.target.value);
+                      } else {
+                        setWeightValue(event.target.value);
+                      }
+                    }}
                     className="mt-2 w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
                     required
                   />
@@ -259,7 +414,7 @@ export default function ManagementScreen({ user, farm, animals, isOnline, onLogo
               )}
 
               <button type="submit" className="mt-5 w-full rounded-2xl bg-[var(--eixo-green)] py-4 font-bold text-white shadow-lg shadow-[rgba(118,184,42,0.24)] hover:bg-[var(--eixo-green-dark)]">
-                PESAR
+                {weighingMode === 'GROUP' ? 'PESAR GRUPO' : 'PESAR'}
               </button>
             </form>
 
@@ -273,50 +428,43 @@ export default function ManagementScreen({ user, farm, animals, isOnline, onLogo
                 <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
                 {isSyncing ? 'Sincronizando...' : `Sincronizar agora (${pendingCount})`}
               </button>
-            </div>
-
-            <div className="mt-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h2 className="font-bold text-[var(--eixo-text)]">Pesagens desta sessão</h2>
-                <span className="rounded-full bg-[var(--eixo-surface-soft)] px-3 py-1 text-xs font-bold text-[var(--eixo-text-muted)]">
-                  {pendingWeighings.length}
-                </span>
-              </div>
-
-              <div className="space-y-3 pb-8">
-                {pendingWeighings.length === 0 ? (
-                  <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-6 text-sm text-[var(--eixo-text-muted)]">
-                    Nenhuma pesagem lancada neste aparelho.
-                  </div>
-                ) : (
-                  pendingWeighings.map((weighing) => (
-                    <button
-                      key={weighing.localId}
-                      type="button"
-                      onClick={() => {
-                        if (weighing.status === 'conflito') {
-                          setServerConflict(weighing);
-                        }
-                      }}
-                      className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-4 text-left"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="font-bold text-[var(--eixo-text)]">{weighing.animalLabel}</div>
-                          <div className="mt-1 text-sm text-[var(--eixo-text-muted)]">
-                            {formatDate(weighing.data)} · {formatWeight(weighing.peso)}
-                          </div>
-                        </div>
-                        <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] ${statusClasses[weighing.status]}`}>
-                          {statusLabel[weighing.status]}
-                        </span>
+              {pendingCount > 0 && (
+                <div className="mt-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs text-[var(--eixo-text-muted)]">
+                  {pendingCount} pesagem(ns) aguardando envio.
+                </div>
+              )}
+              {pendingWeighings.some((item) => item.status === 'conflito') && (
+                <div className="mt-3 space-y-2">
+                  {pendingWeighings
+                    .filter((item) => item.status === 'conflito')
+                    .map((item) => (
+                      <button
+                        key={item.localId}
+                        type="button"
+                        onClick={() => setServerConflict(item)}
+                        className="w-full rounded-xl border border-[#f2d48a] bg-[#fff8e6] px-3 py-2 text-left text-xs text-[#9a6a00]"
+                      >
+                        Conflito em {item.animalLabel} ({item.data}). Toque para resolver.
+                      </button>
+                    ))}
+                </div>
+              )}
+              {pendingWeighings.some((item) => item.status === 'erro') && (
+                <div className="mt-3 space-y-2">
+                  {pendingWeighings
+                    .filter((item) => item.status === 'erro')
+                    .map((item) => (
+                      <div
+                        key={item.localId}
+                        className="w-full rounded-xl border border-[#f1d1ca] bg-[#fff2ef] px-3 py-2 text-left text-xs text-[var(--eixo-danger)]"
+                      >
+                        Erro ao enviar {item.animalLabel}: {item.syncError || 'Falha de sincronização.'}
                       </div>
-                      {weighing.syncError && (
-                        <div className="mt-2 text-xs leading-5 text-[var(--eixo-text-muted)]">{weighing.syncError}</div>
-                      )}
-                    </button>
-                  ))
-                )}
+                    ))}
+                </div>
+              )}
+              <div className="mt-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-bg)] px-3 py-2 text-xs text-[var(--eixo-text-muted)]">
+                Este modo envia direto para a Aba de Pesagens. Não exibe histórico local de sessão.
               </div>
             </div>
           </div>
@@ -326,10 +474,10 @@ export default function ManagementScreen({ user, farm, animals, isOnline, onLogo
               <div className="w-full rounded-[2rem] bg-[var(--eixo-surface)] p-6 shadow-2xl">
                 <h2 className="text-xl font-bold text-[var(--eixo-text)]">Atenção na pesagem</h2>
                 <p className="mt-2 text-sm leading-6 text-[var(--eixo-text-muted)]">
-                  Já existe uma pesagem deste animal nesta sessão: {formatDate(localConflict.existing.data)} · {formatWeight(localConflict.existing.peso)}.
+                  Já existe uma pesagem deste animal nesta sessão: {localConflict.existing.data} · {formatWeight(localConflict.existing.peso)}.
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[var(--eixo-text-muted)]">
-                  Nova pesagem: {formatDate(localConflict.next.data)} · {formatWeight(localConflict.next.peso)}.
+                  Nova pesagem: {localConflict.next.data} · {formatWeight(localConflict.next.peso)}.
                 </p>
                 {localConflict.sameWeight ? (
                   <div className="mt-6 grid gap-3">
@@ -396,7 +544,7 @@ export default function ManagementScreen({ user, farm, animals, isOnline, onLogo
               <div className="w-full rounded-[2rem] bg-[var(--eixo-surface)] p-6 shadow-2xl">
                 <h2 className="text-xl font-bold text-[var(--eixo-text)]">Conflito no servidor</h2>
                 <p className="mt-2 text-sm leading-6 text-[var(--eixo-text-muted)]">
-                  Já existe uma pesagem para {serverConflict.animalLabel} em {formatDate(serverConflict.data)}.
+                  Já existe uma pesagem para {serverConflict.animalLabel} em {serverConflict.data}.
                 </p>
                 <div className="mt-6 grid gap-3">
                   <button

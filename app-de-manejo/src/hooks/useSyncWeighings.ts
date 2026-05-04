@@ -95,13 +95,7 @@ export function useSyncWeighings({ shouldSync }: UseSyncWeighingsOptions) {
           throw new Error(payload?.message || 'Falha ao sincronizar pesagem.');
         }
 
-        setPendingWeighings((prev) =>
-          prev.map((item) =>
-            item.localId === weighing.localId
-              ? { ...item, status: 'enviado', syncError: null, forceReplace: false }
-              : item,
-          ),
-        );
+        setPendingWeighings((prev) => prev.filter((item) => item.localId !== weighing.localId));
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Falha ao sincronizar pesagem.';
         setPendingWeighings((prev) =>

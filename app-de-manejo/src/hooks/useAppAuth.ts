@@ -31,6 +31,8 @@ export const useAppAuth = () => {
   const [apiBaseUrl, setApiBaseUrl] = useState('');
   const [isAuthenticating, setIsAuthenticating] = useState(true);
   const [activationCode, setActivationCode] = useState('');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -39,6 +41,7 @@ export const useAppAuth = () => {
   const [paddocks, setPaddocks] = useState<Paddock[]>([]);
   const [animals, setAnimals] = useState<Animal[]>([]);
   const [screenError, setScreenError] = useState('');
+  const [authMode, setAuthMode] = useState<'field' | 'management' | null>(null);
 
   const loadFieldContext = async (user: AuthUser) => {
     const defaultFarmId = user.defaultFarmId || user.allowedFarmIds?.[0] || null;
@@ -108,65 +111,110 @@ export const useAppAuth = () => {
     const bootstrap = async () => {
       const baseUrl = await detectApiBaseUrl();
       setApiBaseUrl(baseUrl);
-      try {
-        if (!getStoredSessionToken()) {
-          return;
-        }
-        const response = await apiFetch('/app/me', { method: 'GET' });
-        if (!response.ok) {
-          clearStoredSessionToken();
-          return;
-        }
-        const payload = await response.json();
-        await applyAuthenticatedState(payload);
-      } catch {
-        setScreenError(`Não foi possível conectar ao servidor em ${getApiBaseUrl()}.`);
-      } finally {
-        setIsAuthenticating(false);
+    try {
+      if (!getStoredSessionToken()) {
+        return;
       }
+      const appMeResponse = await apiFetch('/app/me', { method: 'GET' });
+      if (appMeResponse.ok) {
+        const payload = await appMeResponse.json();
+        await applyAuthenticatedState(payload);
+        setAuthMode('field');
+        return;
+      }
+
+      const authMeResponse = await apiFetch('/auth/me', { method: 'GET' });
+      if (!authMeResponse.ok) {
+        clearStoredSessionToken();
+        return;
+      }
+      const payload = await authMeResponse.json().catch(() => ({}));
+      await applyAuthenticatedState({
+        user: payload?.user,
+        profile: payload?.user?.fieldProfile || null,
+      });
+      setAuthMode('management');
+    } catch {
+      setScreenError(`Não foi possível conectar ao servidor em ${getApiBaseUrl()}.`);
+    } finally {
+      setIsAuthenticating(false);
+    }
     };
 
     void bootstrap();
   }, []);
 
-  const handleLogin = async (event: FormEvent, expectedProfile?: 'VAQUEIRO' | 'ADMIN_CAMPO') => {
+  const handleLogin = async (
+    event: FormEvent,
+    mode: 'field' | 'management',
+    expectedProfile?: 'VAQUEIRO' | 'ADMIN_CAMPO',
+  ) => {
     event.preventDefault();
     setLoginError('');
     setIsLoggingIn(true);
 
     try {
-      const deviceId = getDeviceId();
-      const response = await apiFetch('/app/activate', {
-        method: 'POST',
-        body: JSON.stringify({
-          code: activationCode.trim(),
-          deviceId,
-          deviceFingerprint: deviceId,
-          deviceLabel: 'Navegador atual',
-          platform: 'WEB',
-          appVersion: 'web-prototype',
-        }),
-      });
+      let response: Response;
+      if (mode === 'management') {
+        response = await apiFetch('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({
+            email: loginEmail.trim(),
+            password: loginPassword,
+            rememberMe: true,
+          }),
+        });
+      } else {
+        const deviceId = getDeviceId();
+        response = await apiFetch('/app/activate', {
+          method: 'POST',
+          body: JSON.stringify({
+            code: activationCode.trim(),
+            deviceId,
+            deviceFingerprint: deviceId,
+            deviceLabel: 'Navegador atual',
+            platform: 'WEB',
+            appVersion: 'web-prototype',
+          }),
+        });
+      }
+
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setLoginError(payload?.message || 'Não foi possível ativar o app.');
+        setLoginError(payload?.message || 'Não foi possível entrar no app.');
         return;
       }
-      if (!payload?.sessionToken) {
-        setLoginError('Resposta de ativação inválida.');
-        return;
+      if (mode === 'management') {
+        const user = payload?.user;
+        if (!user) {
+          setLoginError('Resposta de login inválida.');
+          return;
+        }
+        await applyAuthenticatedState({
+          user,
+          profile: user.fieldProfile || null,
+        });
+        setAuthMode('management');
+        setLoginEmail('');
+        setLoginPassword('');
+      } else {
+        if (!payload?.sessionToken) {
+          setLoginError('Resposta de ativação inválida.');
+          return;
+        }
+        const resolvedProfile = payload.profile || payload.user?.fieldProfile || null;
+        if (expectedProfile && resolvedProfile !== expectedProfile) {
+          clearStoredSessionToken();
+          setLoginError(expectedProfile === 'ADMIN_CAMPO'
+            ? 'Este código é de Vaqueiro. Use o botão Gerenciamento apenas com código de Admin de Campo.'
+            : 'Este código não é de Vaqueiro.');
+          return;
+        }
+        setStoredSessionToken(payload.sessionToken);
+        await applyAuthenticatedState(payload);
+        setAuthMode('field');
+        setActivationCode('');
       }
-      const resolvedProfile = payload.profile || payload.user?.fieldProfile || null;
-      if (expectedProfile && resolvedProfile !== expectedProfile) {
-        clearStoredSessionToken();
-        setLoginError(expectedProfile === 'ADMIN_CAMPO'
-          ? 'Este código é de Vaqueiro. Use o botão Gerenciamento apenas com código de Admin de Campo.'
-          : 'Este código não é de Vaqueiro.');
-        return;
-      }
-      setStoredSessionToken(payload.sessionToken);
-      await applyAuthenticatedState(payload);
-      setActivationCode('');
     } catch {
       setLoginError(`Falha ao conectar em ${getApiBaseUrl()}.`);
     } finally {
@@ -183,6 +231,7 @@ export const useAppAuth = () => {
     setPaddocks([]);
     setAnimals([]);
     setActivationCode('');
+    setAuthMode(null);
   };
 
   return {
@@ -200,5 +249,10 @@ export const useAppAuth = () => {
     paddocks,
     screenError,
     setActivationCode,
+    loginEmail,
+    loginPassword,
+    setLoginEmail,
+    setLoginPassword,
+    authMode,
   };
 };

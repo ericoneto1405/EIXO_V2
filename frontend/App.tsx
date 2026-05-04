@@ -31,6 +31,7 @@ import AcceptInvite from './components/AcceptInvite';
 import PublicLanding from './components/PublicLanding';
 import PlansPage from './components/PlansPage';
 import OnboardingChecklist from './components/OnboardingChecklist';
+import ModuleProgressCard from './components/ModuleProgressCard';
 import UserRegisterModal from './components/UserRegisterModal';
 import TeamPermissions from './components/TeamPermissions';
 import UpgradeScreen from './components/UpgradeScreen';
@@ -845,7 +846,33 @@ const AppContent: React.FC = () => {
     }
 
     if (currentUser?.accessType === 'APP_MANEJO') {
-        return <AppOnlyAccessPanel />;
+        if (!hasSelectedFarm) {
+            return (
+                <div className="relative min-h-screen overflow-hidden bg-[var(--eixo-surface-soft)] font-sans text-[var(--eixo-text)]">
+                    <main className="mx-auto max-w-5xl px-4 pb-6 pt-6 lg:px-6">
+                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
+                            Selecione uma fazenda válida para iniciar a pesagem.
+                        </div>
+                    </main>
+                </div>
+            );
+        }
+        return (
+            <div className="relative min-h-screen overflow-hidden bg-[var(--eixo-surface-soft)] font-sans text-[var(--eixo-text)]">
+                <main className="mx-auto max-w-6xl px-4 pb-6 pt-6 lg:px-6">
+                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4 lg:p-6">
+                        <HerdModule
+                            farmId={selectedFarmId}
+                            farmName={selectedFarm?.name}
+                            mode="COMMERCIAL"
+                            isFreePlan={isFreePlan}
+                            initialTabRequest={{ tab: 'weighings', nonce: Date.now() }}
+                            weighingOnlyMode
+                        />
+                    </div>
+                </main>
+            </div>
+        );
     }
 
     const renderContent = () => {
@@ -1052,12 +1079,22 @@ const AppContent: React.FC = () => {
                                 {hasNoFarms && !(activeView === 'Fazendas' && openFarmForm) ? <FirstFarmOnboarding /> : (
                                     <>
                                         {currentUser && activeView !== 'Mapa da Fazenda' && (
-                                            <OnboardingChecklist
-                                                userId={currentUser.id}
-                                                farmId={selectedFarmId}
-                                                farms={farms}
-                                                onNavigate={handleOnboardingNavigate}
-                                            />
+                                            <>
+                                                {(activeView === 'Rebanho Comercial' || activeView === 'Fazendas') ? (
+                                                    <OnboardingChecklist
+                                                        userId={currentUser.id}
+                                                        farmId={selectedFarmId}
+                                                        farms={farms}
+                                                        onNavigate={handleOnboardingNavigate}
+                                                        contextView={activeView === 'Rebanho Comercial' ? 'Rebanho Comercial' : 'Fazendas'}
+                                                    />
+                                                ) : (
+                                                    <ModuleProgressCard
+                                                        activeView={activeView}
+                                                        farmId={selectedFarmId}
+                                                    />
+                                                )}
+                                            </>
                                         )}
                                         {renderContent()}
                                     </>

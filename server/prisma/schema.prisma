@@ -236,6 +236,7 @@ model Weighing {
 model WeighingSession {
   id        String     @id @default(uuid())
   name      String
+  responsibleName String?
   farmId    String
   createdAt DateTime   @default(now())
   farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)

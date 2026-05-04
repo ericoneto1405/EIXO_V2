@@ -42,6 +42,57 @@ export interface SanitaryRecord {
     createdAt: string;
 }
 
+export interface WeighingSessionSummary {
+    sessionId: string;
+    sessionName: string;
+    sessionType: 'INDIVIDUAL' | 'GROUP';
+    sessionDateTime: string;
+    farmId: string;
+    farmName: string;
+    lotId: string | null;
+    lotName: string | null;
+    animalsCount: number;
+    totalWeightKg: number;
+    averageWeightKg: number | null;
+    responsibleUserId: string | null;
+    responsibleUserName: string | null;
+}
+
+export interface WeighingSessionItem {
+    weighingId: string;
+    animalId: string;
+    animalCode: string | null;
+    animalName: string | null;
+    category: string | null;
+    weightKg: number;
+    previousWeightKg: number | null;
+    gainKg: number | null;
+    gmd: number | null;
+    weighedAt: string;
+}
+
+export interface WeighingEditPayload {
+    animalId: string;
+    data: string;
+    peso: number;
+}
+
+export interface WeighingSessionDetail {
+    session: {
+        sessionId: string;
+        sessionName: string;
+        sessionType: 'INDIVIDUAL' | 'GROUP';
+        sessionDateTime: string;
+        farmName: string;
+        lotName: string | null;
+        animalsCount: number;
+        totalWeightKg: number;
+        averageWeightKg: number | null;
+        responsibleUserName: string | null;
+    };
+    items: WeighingSessionItem[];
+}
+
 // ---- Funções existentes (sem alteração) ----
 
 const getSexoLabel = (value: string) => {
@@ -214,12 +265,13 @@ export const createWeighing = async (
 export const createWeighingSession = async (
     farmId: string,
     name: string,
+    responsibleName?: string,
 ): Promise<HerdWeighingSession> => {
     const response = await fetch(buildApiUrl(`/farms/${farmId}/weighing-sessions`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, responsibleName }),
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -237,6 +289,108 @@ export const listWeighingSessions = async (farmId: string): Promise<HerdWeighing
         throw new Error(data?.message || 'Erro ao listar sessões de pesagem.');
     }
     return data.sessions || [];
+};
+
+export const updateWeighingSession = async (
+    farmId: string,
+    sessionId: string,
+    payload: { name: string; responsibleName: string },
+): Promise<HerdWeighingSession> => {
+    const response = await fetch(buildApiUrl(`/farms/${farmId}/weighing-sessions/${sessionId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao editar sessão de pesagem.');
+    }
+    return data;
+};
+
+export const deleteWeighingSession = async (
+    farmId: string,
+    sessionId: string,
+    masterPassword: string,
+): Promise<void> => {
+    const response = await fetch(buildApiUrl(`/farms/${farmId}/weighing-sessions/${sessionId}`), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ masterPassword }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao excluir sessão de pesagem.');
+    }
+};
+
+export const listWeighingSessionSummaries = async (
+    farmId: string,
+    params: Record<string, string | number | undefined> = {},
+): Promise<{ total: number; sessions: WeighingSessionSummary[] }> => {
+    const query = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') query.set(key, String(value));
+    });
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const response = await fetch(buildApiUrl(`/farms/${farmId}/weighing-sessions/summary${suffix}`), {
+        credentials: 'include',
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao listar sessões de pesagem.');
+    }
+    return {
+        total: data.total ?? 0,
+        sessions: data.sessions || [],
+    };
+};
+
+export const getWeighingSessionItems = async (farmId: string, sessionId: string): Promise<WeighingSessionDetail> => {
+    const response = await fetch(buildApiUrl(`/farms/${farmId}/weighing-sessions/${sessionId}/items`), {
+        credentials: 'include',
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao listar itens da sessão.');
+    }
+    return data;
+};
+
+export const updateWeighing = async (
+    farmId: string,
+    weighingId: string,
+    payload: WeighingEditPayload,
+): Promise<void> => {
+    const response = await fetch(buildApiUrl(`/farms/${farmId}/weighings/${weighingId}`), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao editar pesagem.');
+    }
+};
+
+export const deleteWeighing = async (
+    farmId: string,
+    weighingId: string,
+    masterPassword: string,
+): Promise<void> => {
+    const response = await fetch(buildApiUrl(`/farms/${farmId}/weighings/${weighingId}`), {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ masterPassword }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao excluir pesagem.');
+    }
 };
 
 export const listPaddockMoves = async (animalId: string, herdType: HerdType): Promise<PaddockMove[]> => {

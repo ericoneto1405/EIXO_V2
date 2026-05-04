@@ -107,6 +107,9 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
     const [name, setName] = React.useState('');
     const [fieldProfile, setFieldProfile] = React.useState<'VAQUEIRO' | 'ADMIN_CAMPO'>('VAQUEIRO');
     const [defaultFarmId, setDefaultFarmId] = React.useState('');
+    const [email, setEmail] = React.useState('');
+    const [password, setPassword] = React.useState('');
+    const [credentialsError, setCredentialsError] = React.useState<string | null>(null);
     const [farmError, setFarmError] = React.useState<string | null>(null);
 
     React.useEffect(() => {
@@ -114,6 +117,9 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
             setName('');
             setFieldProfile('VAQUEIRO');
             setDefaultFarmId('');
+            setEmail('');
+            setPassword('');
+            setCredentialsError(null);
             setFarmError(null);
         }
     }, [isOpen]);
@@ -150,12 +156,29 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                     className="space-y-4 px-6 py-5"
                     onSubmit={(event) => {
                         event.preventDefault();
+                        const isManagementMode = fieldProfile === 'ADMIN_CAMPO';
+                        if (isManagementMode) {
+                            if (!email.trim()) {
+                                setCredentialsError('Informe um e-mail para o modo gerenciamento.');
+                                return;
+                            }
+                            if (!password || password.length < 8) {
+                                setCredentialsError('Informe uma senha com pelo menos 8 caracteres.');
+                                return;
+                            }
+                        }
+                        setCredentialsError(null);
                         if (!defaultFarmId) {
                             setFarmError('Selecione a fazenda do colaborador.');
                             return;
                         }
                         setFarmError(null);
-                        onSubmit({ name, fieldProfile, defaultFarmId });
+                        onSubmit({
+                            name,
+                            fieldProfile,
+                            defaultFarmId,
+                            ...(isManagementMode ? { email: email.trim(), password } : {}),
+                        });
                     }}
                 >
                     <div>
@@ -188,6 +211,46 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                         </select>
                     </div>
 
+                    {fieldProfile === 'ADMIN_CAMPO' && (
+                        <>
+                            <div>
+                                <label htmlFor="field-collaborator-email" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                    E-mail de login
+                                </label>
+                                <input
+                                    id="field-collaborator-email"
+                                    type="email"
+                                    value={email}
+                                    onChange={(event) => {
+                                        setEmail(event.target.value);
+                                        setCredentialsError(null);
+                                    }}
+                                    className={inputClass}
+                                    placeholder="exemplo@fazenda.com"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="field-collaborator-password" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                    Senha de login
+                                </label>
+                                <input
+                                    id="field-collaborator-password"
+                                    type="password"
+                                    value={password}
+                                    onChange={(event) => {
+                                        setPassword(event.target.value);
+                                        setCredentialsError(null);
+                                    }}
+                                    className={inputClass}
+                                    placeholder="Mínimo 8 caracteres"
+                                    minLength={8}
+                                    required
+                                />
+                            </div>
+                        </>
+                    )}
+
                     <div>
                         <label htmlFor="field-collaborator-farm" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                             Fazenda
@@ -213,8 +276,16 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                     </div>
 
                     <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-sm text-[var(--eixo-text-muted)]">
-                        Esse colaborador entra somente por código de ativação. O sistema cria o identificador interno automaticamente.
+                        {fieldProfile === 'ADMIN_CAMPO'
+                            ? 'No modo gerenciamento, o acesso é por e-mail e senha (igual ao sistema web).'
+                            : 'No modo vaqueiro, o acesso continua por código de ativação.'}
                     </div>
+
+                    {credentialsError && (
+                        <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
+                            {credentialsError}
+                        </div>
+                    )}
 
                     {error && (
                         <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">

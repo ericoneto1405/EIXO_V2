@@ -113,6 +113,7 @@ export interface WeighingUI {
 export interface WeighingSessionUI {
     id: string;
     name: string;
+    responsibleName?: string | null;
     farmId: string;
     createdAt: string;
     weighingsCount?: number;
@@ -221,6 +222,8 @@ export interface FieldCollaboratorCreatePayload {
     name: string;
     fieldProfile: 'VAQUEIRO' | 'ADMIN_CAMPO';
     defaultFarmId: string;
+    email?: string;
+    password?: string;
 }
 
 export interface FieldCollaboratorUpdatePayload {

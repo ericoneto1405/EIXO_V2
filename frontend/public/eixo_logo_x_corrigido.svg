@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 768" role="img" aria-labelledby="title desc">
+  <title id="title">EIXO - logomarca vetorial com X corrigido</title>
+  <desc id="desc">Logomarca EIXO horizontal em grafite e verde, com o X redesenhado em peças separadas conforme a referência visual.</desc>
+  <defs>
+    <style>
+      .graphite { fill: #5E5E5E; stroke: #5E5E5E; }
+      .green { fill: #B6E23A; stroke: #B6E23A; }
+    </style>
+  </defs>
+
+  <!-- E -->
+  <g class="graphite">
+    <rect x="86" y="123" width="112" height="522" rx="34"/>
+    <rect x="86" y="123" width="414" height="112" rx="34"/>
+    <rect x="86" y="328" width="390" height="112" rx="34"/>
+    <rect x="86" y="533" width="414" height="112" rx="34"/>
+  </g>
+
+  <!-- I -->
+  <rect class="graphite" x="615" y="123" width="112" height="522" rx="34"/>
+
+  <!-- X corrigido -->
+  <!-- Estrutura grafite central em forma de > -->
+  <polyline points="870,123 1197,384 870,645"
+            fill="none"
+            stroke="#5E5E5E"
+            stroke-width="112"
+            stroke-linecap="butt"
+            stroke-linejoin="round"/>
+
+  <!-- Peça verde superior direita -->
+  <line x1="1426" y1="123" x2="1236" y2="348"
+        stroke="#B6E23A"
+        stroke-width="112"
+        stroke-linecap="butt"/>
+
+  <!-- Peça verde inferior direita -->
+  <line x1="1236" y1="420" x2="1426" y2="645"
+        stroke="#B6E23A"
+        stroke-width="112"
+        stroke-linecap="butt"/>
+
+  <!-- O -->
+  <path class="graphite" fill-rule="evenodd"
+        d="M1641 123H1857C1932 123 1980 171 1980 246V522C1980 597 1932 645 1857 645H1641C1566 645 1518 597 1518 522V246C1518 171 1566 123 1641 123ZM1677 235H1821C1849 235 1868 254 1868 282V486C1868 514 1849 533 1821 533H1677C1649 533 1630 514 1630 486V282C1630 254 1649 235 1677 235Z"/>
+</svg>

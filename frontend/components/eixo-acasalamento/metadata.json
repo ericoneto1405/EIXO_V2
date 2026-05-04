@@ -1,0 +1,6 @@
+{
+  "name": "EIXO ACASALAMENTO",
+  "description": "Sistema de acasalamento dirigido bovino com construção de base de touros via web scraping e auditoria de progênie.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
