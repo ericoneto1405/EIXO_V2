@@ -1251,7 +1251,9 @@ const serializeAuthUser = (user, saasContext = null, accessContext = null) => ({
     organizationId: saasContext?.organizationId || null,
     membershipRole: saasContext?.membershipRole || null,
     billingAccessState: saasContext?.billingAccessState || null,
-    entitlements: saasContext?.entitlements || [],
+    entitlements: user.roles?.includes('SUPER_ADMIN')
+        ? ['GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO', 'EIXO_NUTRITION']
+        : (saasContext?.entitlements || []),
     organization: saasContext?.organization || null,
     onboardingCompletedAt: user.onboardingCompletedAt || null,
     phone: user.phone || null,
