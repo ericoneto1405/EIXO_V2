@@ -1049,7 +1049,7 @@ const AppContent: React.FC = () => {
                         />
                         <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                             <div className={activeView === 'Mapa da Fazenda' ? 'h-full' : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'}>
-                                {hasNoFarms && !(activeView === 'Fazendas' && openFarmForm) ? <FirstFarmOnboarding /> : (
+                                {hasNoFarms && activeView !== 'Fazendas' ? <FirstFarmOnboarding /> : (
                                     <>
                                         {currentUser && activeView !== 'Mapa da Fazenda' && (
                                             <>
