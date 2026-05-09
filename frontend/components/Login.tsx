@@ -9,9 +9,10 @@ interface LoginProps {
     onBack?: () => void;
     onRegister?: () => void;
     onForgotPassword?: () => void;
+    onRecoverEmail?: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegister, onForgotPassword }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegister, onForgotPassword, onRecoverEmail }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
@@ -122,13 +123,24 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                                                     />
                                                     <span className="text-[var(--eixo-text)]/72">Lembrar de mim</span>
                                                 </label>
-                                                <button
-                                                    type="button"
-                                                    onClick={onForgotPassword}
-                                                    className="text-sm font-medium text-[var(--eixo-text)]/72 transition-colors hover:text-[var(--eixo-text)] hover:underline"
-                                                >
-                                                    Esqueci minha senha
-                                                </button>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={onForgotPassword}
+                                                        className="text-sm font-medium text-[var(--eixo-text)]/72 transition-colors hover:text-[var(--eixo-text)] hover:underline"
+                                                    >
+                                                        Esqueci minha senha
+                                                    </button>
+                                                    {onRecoverEmail && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={onRecoverEmail}
+                                                            className="text-sm font-medium text-[var(--eixo-text)]/72 transition-colors hover:text-[var(--eixo-text)] hover:underline"
+                                                        >
+                                                            Esqueci meu e-mail
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             {success && (

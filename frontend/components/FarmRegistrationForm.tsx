@@ -10,6 +10,8 @@ interface DivisionInput {
     name: string;
     areaHa: string;
     divisionType: string;
+    forrageira: string;
+    lotacaoUaHa: string;
 }
 
 interface FarmRegistrationFormProps {
@@ -89,6 +91,8 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 name: division.name || `Pasto ${index + 1}`,
                 areaHa: division.areaHa?.toString?.() || '',
                 divisionType: division.divisionType || 'pasto',
+                forrageira: division.forrageira || '',
+                lotacaoUaHa: division.lotacaoUaHa?.toString?.() || '1',
             })),
         );
         setCurrentStep('divisions');
@@ -103,6 +107,8 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 name: `Pasto ${divisionNumber}`,
                 areaHa: '',
                 divisionType: 'pasto',
+                forrageira: '',
+                lotacaoUaHa: '1',
             },
         ]);
     };
@@ -121,6 +127,14 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
 
     const handleDivisionTypeChange = (id: string, value: string) => {
         setDivisions(divisions.map((division) => division.id === id ? { ...division, divisionType: value } : division));
+    };
+
+    const handleDivisionForrageira = (id: string, value: string) => {
+        setDivisions(divisions.map((division) => division.id === id ? { ...division, forrageira: value } : division));
+    };
+
+    const handleDivisionLotacao = (id: string, value: string) => {
+        setDivisions(divisions.map((division) => division.id === id ? { ...division, lotacaoUaHa: value } : division));
     };
 
     const normalizeCoordinateInput = (value: string) => value.replace(',', '.');
@@ -307,6 +321,8 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             name: division.name.trim(),
             areaHa: parseFloat(division.areaHa) || 0,
             divisionType: division.divisionType,
+            forrageira: division.forrageira || null,
+            lotacaoUaHa: parseFloat(division.lotacaoUaHa) || null,
         }));
 
         const hasInvalidDivision = payloadDivisions.some(
@@ -429,8 +445,15 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             {/* ── Indicador de progresso ── */}
             <div className="mb-6 flex items-center gap-3">
                 <div className="flex items-center gap-2">
-                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'farm' ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>1</div>
+                    <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'farm' ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>
+                        {currentStep === 'divisions' ? '✓' : '1'}
+                    </div>
                     <span className={`text-sm font-semibold ${currentStep === 'farm' ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-muted)]'}`}>Dados da fazenda</span>
+                    {currentStep === 'divisions' && (
+                        <button type="button" onClick={() => setCurrentStep('farm')} className="text-xs text-[var(--eixo-green)] hover:underline">
+                            editar
+                        </button>
+                    )}
                 </div>
                 <div className="h-px flex-1 bg-[var(--eixo-surface-soft)]" />
                 <div className="flex items-center gap-2">
@@ -447,6 +470,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             </p>
             <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
                 {currentStep === 'farm' ? (
+                <div className="rounded-2xl bg-[#EDEDED] p-5">
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div>
                         <label htmlFor="farmName" className="block text-sm font-medium text-[var(--eixo-text)]">Nome da Fazenda</label>
@@ -549,24 +573,10 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         </button>
                     </div>
                 </div>
+                </div>
                 ) : (
                 <>
-                <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Dados salvos</p>
-                            <h3 className="mt-1 text-lg font-semibold text-[var(--eixo-text)]">{farmName}</h3>
-                            <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{farmCity}{farmState ? `/${farmState}` : ''}</p>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setCurrentStep('farm')}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
-                        >
-                            Editar dados da fazenda
-                        </button>
-                    </div>
-                </div>
+                <div className="rounded-2xl bg-[#f0f9d4] p-5">
                 <div ref={divisionsRef}>
                     <div className="flex items-center justify-between gap-4">
                         <div>
@@ -574,6 +584,15 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Cadastre as áreas que compõem a fazenda.</p>
                         </div>
                     </div>
+                    {divisions.length === 0 && (
+                        <div className="mt-4 flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#b6d97a] bg-white/50 py-8 text-center">
+                            <svg className="h-8 w-8 text-[#a3c95a] mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                            <p className="text-sm font-semibold text-[#5a7a2a]">Nenhum pasto cadastrado ainda</p>
+                            <p className="mt-1 text-xs text-[#7a9a3a]">Clique em "+ Adicionar pasto" para começar</p>
+                        </div>
+                    )}
                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                         {divisions.map((division, index) => (
                             <div key={division.id} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
@@ -618,9 +637,58 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                                 className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                                             >
                                                 <option value="pasto">Pasto</option>
+                                                <option value="piquete de maternidade">Piquete de maternidade</option>
                                                 <option value="curral de manejo">Curral de manejo</option>
+                                                <option value="curral de engorda">Curral de engorda</option>
+                                                <option value="aguada / reservatório">Aguada / Reservatório</option>
+                                                <option value="área de plantio">Área de plantio</option>
                                                 <option value="área de preservação">Área de preservação</option>
                                             </select>
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                        <div>
+                                            <label htmlFor={`division-forrageira-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">Forrageira</label>
+                                            <select
+                                                id={`division-forrageira-${division.id}`}
+                                                value={division.forrageira}
+                                                onChange={(e) => handleDivisionForrageira(division.id, e.target.value)}
+                                                className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                            >
+                                                <option value="">Selecione</option>
+                                                <option value="brachiaria">Brachiaria</option>
+                                                <option value="mombaca">Mombaça</option>
+                                                <option value="tifton">Tifton</option>
+                                                <option value="andropogon">Andropogon</option>
+                                                <option value="panicum">Panicum</option>
+                                                <option value="capim-buffel">Capim-buffel</option>
+                                                <option value="outros">Outros</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label htmlFor={`division-lotacao-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">Lotação (UA/ha)</label>
+                                            <input
+                                                type="number"
+                                                id={`division-lotacao-${division.id}`}
+                                                value={division.lotacaoUaHa}
+                                                onChange={(e) => handleDivisionLotacao(division.id, e.target.value)}
+                                                min="0.1"
+                                                step="0.1"
+                                                placeholder="1.0"
+                                                className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                            />
+                                            {(() => {
+                                                const area = parseFloat(division.areaHa);
+                                                const lotacao = parseFloat(division.lotacaoUaHa);
+                                                if (area > 0 && lotacao > 0) {
+                                                    return (
+                                                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                                                            Capacidade estimada: <span className="font-semibold text-[var(--eixo-text)]">{(area * lotacao).toFixed(1)} UA</span>
+                                                        </p>
+                                                    );
+                                                }
+                                                return null;
+                                            })()}
                                         </div>
                                     </div>
                                 </div>
@@ -630,7 +698,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     <button
                         type="button"
                         onClick={handleAddDivision}
-                        className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
+                        className="mt-3 flex w-auto items-center gap-2 rounded-xl border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-1.5 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
                     >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v12m6-6H6" />
@@ -638,8 +706,10 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         Adicionar pasto
                     </button>
                 </div>
+                </div>
                 </>
                 )}
+
 
                 {farmLimitReached && (
                     <div className="rounded-2xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] p-4">
@@ -667,10 +737,10 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             <span className="font-bold text-[var(--eixo-text)]">{totalDivisionSize.toFixed(2)} ha</span>
                         </div>
                         <div className="flex justify-between text-sm font-bold">
-                            <span className={isBalancedArea ? 'text-[var(--eixo-success)]' : remainingSize < 0 ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-text)]'}>
+                            <span className={isBalancedArea ? 'text-[var(--eixo-success)]' : remainingSize < 0 ? 'text-[var(--eixo-danger)]' : 'text-[#b45309]'}>
                                 {isBalancedArea ? '✓ Área totalmente distribuída' : remainingSize < 0 ? 'Área excedida' : 'Ainda não distribuído'}
                             </span>
-                            <span className={isBalancedArea ? 'text-[var(--eixo-success)]' : remainingSize < 0 ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-text)]'}>
+                            <span className={isBalancedArea ? 'text-[var(--eixo-success)]' : remainingSize < 0 ? 'text-[var(--eixo-danger)]' : 'text-[#b45309]'}>
                                 {isBalancedArea ? '' : `${remainingSize.toFixed(2)} ha`}
                             </span>
                         </div>

@@ -106,40 +106,16 @@ const getSexoLabel = (value: string) => {
     return value;
 };
 
-const normalizeAnimal = (animal: any, herdType: HerdType): HerdAnimal => {
-    if (herdType === 'PO') {
-        const identificacao = animal?.brinco || animal?.nome || 'Sem identificação';
-        return {
-            id: animal.id,
-            farmId: animal.farmId,
-            brinco: animal.brinco,
-            nome: animal.nome,
-            identificacao,
-            raca: animal.raca,
-            sexo: getSexoLabel(animal.sexo),
-            dataNascimento: animal.dataNascimento || null,
-            pesoAtual: typeof animal.pesoAtual === 'number' ? animal.pesoAtual : null,
-            gmd: typeof animal.gmd === 'number' ? animal.gmd : null,
-            gmdLast: typeof animal.gmdLast === 'number' ? animal.gmdLast : null,
-            gmd30: typeof animal.gmd30 === 'number' ? animal.gmd30 : null,
-            lotId: animal.lotId || null,
-            registro: animal.registro || null,
-            categoria: animal.categoria || null,
-            selectionDecision: animal.selectionDecision || null,
-            currentPaddockId: animal.currentPaddockId || null,
-            currentPaddockName: animal.currentPaddockName || null,
-            nutritionPlan: animal.nutritionPlan || null,
-        };
-    }
-
+const normalizeAnimal = (animal: any): HerdAnimal => {
     return {
         id: animal.id,
         farmId: animal.farmId,
         brinco: animal.brinco,
-        nome: null,
-        identificacao: animal.brinco || 'Sem identificação',
+        nome: animal.nome || null,
+        tipoCadastro: animal.tipoCadastro || null,
+        identificacao: animal.brinco || animal.nome || animal.registro || 'Sem identificação',
         raca: animal.raca,
-        sexo: animal.sexo,
+        sexo: getSexoLabel(animal.sexo),
         dataNascimento: animal.dataNascimento,
         pesoAtual: typeof animal.pesoAtual === 'number' ? animal.pesoAtual : null,
         gmd: typeof animal.gmd === 'number' ? animal.gmd : null,
@@ -156,13 +132,14 @@ const normalizeAnimal = (animal: any, herdType: HerdType): HerdAnimal => {
 };
 
 export const listAnimals = async (farmId: string, herdType: HerdType): Promise<HerdAnimal[]> => {
-    const endpoint = herdType === 'PO' ? `/po/animals?farmId=${farmId}` : `/animals?farmId=${farmId}`;
+    void herdType;
+    const endpoint = `/animals?farmId=${farmId}`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
         throw new Error(payload?.message || 'Erro ao listar animais.');
     }
-    return (payload.animals || []).map((animal: any) => normalizeAnimal(animal, herdType));
+    return (payload.animals || []).map((animal: any) => normalizeAnimal(animal));
 };
 
 export const createAnimal = async (
@@ -170,7 +147,8 @@ export const createAnimal = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<HerdAnimal> => {
-    const endpoint = herdType === 'PO' ? '/po/animals' : '/animals';
+    void herdType;
+    const endpoint = '/animals';
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -181,11 +159,12 @@ export const createAnimal = async (
     if (!response.ok) {
         throw new Error(data?.message || 'Erro ao salvar animal.');
     }
-    return normalizeAnimal(data.animal, herdType);
+    return normalizeAnimal(data.animal);
 };
 
 export const listLots = async (farmId: string, herdType: HerdType): Promise<HerdLot[]> => {
-    const endpoint = herdType === 'PO' ? `/po/lots?farmId=${farmId}` : `/lots?farmId=${farmId}`;
+    void herdType;
+    const endpoint = `/lots?farmId=${farmId}`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -199,7 +178,8 @@ export const createLot = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<HerdLot> => {
-    const endpoint = herdType === 'PO' ? '/po/lots' : '/lots';
+    void herdType;
+    const endpoint = '/lots';
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -214,21 +194,12 @@ export const createLot = async (
 };
 
 export const listWeighings = async (animalId: string, herdType: HerdType): Promise<HerdWeighing[]> => {
-    const endpoint = herdType === 'PO'
-        ? `/po/animals/${animalId}/pesagens`
-        : `/animals/${animalId}/pesagens`;
+    void herdType;
+    const endpoint = `/animals/${animalId}/pesagens`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
         throw new Error(payload?.message || 'Erro ao listar pesagens.');
-    }
-    if (herdType === 'PO') {
-        return (payload.pesagens || []).map((row: any) => ({
-            id: row.id,
-            data: row.data,
-            peso: row.peso,
-            gmd: row.gmd,
-        }));
     }
     return payload.pesagens || [];
 };
@@ -238,9 +209,8 @@ export const createWeighing = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<HerdWeighing> => {
-    const endpoint = herdType === 'PO'
-        ? `/po/animals/${animalId}/pesagens`
-        : `/animals/${animalId}/pesagens`;
+    void herdType;
+    const endpoint = `/animals/${animalId}/pesagens`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -250,14 +220,6 @@ export const createWeighing = async (
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
         throw new Error(data?.message || 'Erro ao salvar pesagem.');
-    }
-    if (herdType === 'PO') {
-        return {
-            id: data.pesagem?.id,
-            data: data.pesagem?.data,
-            peso: data.pesagem?.peso,
-            gmd: data.pesagem?.gmd,
-        };
     }
     return data.pesagem;
 };
@@ -394,9 +356,8 @@ export const deleteWeighing = async (
 };
 
 export const listPaddockMoves = async (animalId: string, herdType: HerdType): Promise<PaddockMove[]> => {
-    const endpoint = herdType === 'PO'
-        ? `/po/animals/${animalId}/paddock-moves`
-        : `/animals/${animalId}/paddock-moves`;
+    void herdType;
+    const endpoint = `/animals/${animalId}/paddock-moves`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -410,9 +371,8 @@ export const createPaddockMove = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<PaddockMove> => {
-    const endpoint = herdType === 'PO'
-        ? `/po/animals/${animalId}/paddock-moves`
-        : `/animals/${animalId}/paddock-moves`;
+    void herdType;
+    const endpoint = `/animals/${animalId}/paddock-moves`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -429,9 +389,8 @@ export const createPaddockMove = async (
 // ---- Funções novas: Eventos de Inventário ----
 
 export const listHerdEvents = async (animalId: string, herdType: HerdType): Promise<HerdEvent[]> => {
-    const endpoint = herdType === 'PO'
-        ? `/po/animals/${animalId}/eventos`
-        : `/animals/${animalId}/eventos`;
+    void herdType;
+    const endpoint = `/animals/${animalId}/eventos`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -445,9 +404,8 @@ export const createHerdEvent = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<HerdEvent> => {
-    const endpoint = herdType === 'PO'
-        ? `/po/animals/${animalId}/eventos`
-        : `/animals/${animalId}/eventos`;
+    void herdType;
+    const endpoint = `/animals/${animalId}/eventos`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -464,9 +422,8 @@ export const createHerdEvent = async (
 // ---- Funções novas: Manejo Sanitário ----
 
 export const listSanitaryRecords = async (animalId: string, herdType: HerdType): Promise<SanitaryRecord[]> => {
-    const endpoint = herdType === 'PO'
-        ? `/po/animals/${animalId}/sanitario`
-        : `/animals/${animalId}/sanitario`;
+    void herdType;
+    const endpoint = `/animals/${animalId}/sanitario`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -480,9 +437,8 @@ export const createSanitaryRecord = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<SanitaryRecord> => {
-    const endpoint = herdType === 'PO'
-        ? `/po/animals/${animalId}/sanitario`
-        : `/animals/${animalId}/sanitario`;
+    void herdType;
+    const endpoint = `/animals/${animalId}/sanitario`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -508,7 +464,8 @@ export const updateLot = async (
         startDate?: string;
     },
 ): Promise<HerdLot> => {
-    const endpoint = herdType === 'PO' ? `/po/lots/${lotId}` : `/lots/${lotId}`;
+    void herdType;
+    const endpoint = `/lots/${lotId}`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -521,7 +478,8 @@ export const updateLot = async (
 };
 
 export const deleteLot = async (lotId: string, herdType: HerdType): Promise<void> => {
-    const endpoint = herdType === 'PO' ? `/po/lots/${lotId}` : `/lots/${lotId}`;
+    void herdType;
+    const endpoint = `/lots/${lotId}`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'DELETE',
         credentials: 'include',
@@ -537,7 +495,8 @@ export const updateAnimalLot = async (
     herdType: HerdType,
     lotId: string | null,
 ): Promise<void> => {
-    const endpoint = herdType === 'PO' ? `/po/animals/${animalId}` : `/animals/${animalId}`;
+    void herdType;
+    const endpoint = `/animals/${animalId}`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

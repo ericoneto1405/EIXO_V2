@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { buildApiUrl } from '../api';
 
 interface ModuleProgressCardProps {
@@ -19,6 +19,23 @@ interface StepItem {
     description: string;
     done: boolean;
 }
+
+// ─── Cache de métricas (30s TTL por farmId+view) ──────────────────────────────
+const metricsCache = new Map<string, { data: MetricsState; ts: number }>();
+const CACHE_TTL_MS = 30_000;
+
+const getCached = (key: string): MetricsState | null => {
+    const entry = metricsCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.ts > CACHE_TTL_MS) { metricsCache.delete(key); return null; }
+    return entry.data;
+};
+
+const setCache = (key: string, data: MetricsState) => {
+    metricsCache.set(key, { data, ts: Date.now() });
+};
+
+// ─── Config por módulo ────────────────────────────────────────────────────────
 
 const cardConfig = (activeView: string, hasFarm: boolean, metrics: MetricsState): { title: string; steps: StepItem[] } | null => {
     switch (activeView) {
@@ -56,8 +73,8 @@ const cardConfig = (activeView: string, hasFarm: boolean, metrics: MetricsState)
                 title: 'Progresso de Implantação — Genetics',
                 steps: [
                     { title: 'Selecionar fazenda', description: 'Ative a fazenda para iniciar o controle genético.', done: hasFarm },
-                    { title: 'Cadastrar plantel P.O.', description: 'Inclua os primeiros animais P.O. no sistema.', done: metrics.poAnimals > 0 },
-                    { title: 'Registrar evolução genética', description: 'Avance com registros reprodutivos e de seleção.', done: metrics.poAnimals > 0 },
+                    { title: 'Cadastrar rebanho', description: 'Inclua os animais da fazenda no estoque único.', done: metrics.animals > 0 },
+                    { title: 'Classificar animais P.O.', description: 'Marque como P.O. os animais registrados quando existirem.', done: metrics.poAnimals > 0 },
                 ],
             };
         default:
@@ -65,8 +82,32 @@ const cardConfig = (activeView: string, hasFarm: boolean, metrics: MetricsState)
     }
 };
 
+// ─── CTA por módulo (próximo passo pendente) ──────────────────────────────────
+
+const getNextCta = (activeView: string, steps: StepItem[]): string | null => {
+    const nextPending = steps.find((s) => !s.done);
+    if (!nextPending) return null;
+
+    const ctaMap: Record<string, string> = {
+        'Selecionar fazenda': 'Selecione uma fazenda no menu superior para continuar.',
+        'Ter animais cadastrados': 'Acesse Rebanho Comercial e cadastre ou importe animais.',
+        'Registrar a primeira pesagem': 'Acesse Rebanho Comercial → Pesagens para registrar.',
+        'Lançar primeira transação': 'Registre uma entrada ou saída no módulo Financeiro.',
+        'Consolidar fluxo do mês': 'Lance ao menos uma transação para liberar o fluxo.',
+        'Receber a primeira ocorrência': 'Abra o EIXO Campo no celular e registre uma ocorrência.',
+        'Iniciar rotina de análise': 'Classifique as ocorrências recebidas nesta tela.',
+        'Cadastrar rebanho': 'Acesse Manejo do Rebanho e cadastre ou importe os animais.',
+        'Classificar animais P.O.': 'Na aba Animais, use o campo Tipo de cadastro para marcar P.O. quando houver registro.',
+    };
+
+    return ctaMap[nextPending.title] ?? null;
+};
+
+// ─── Componente ───────────────────────────────────────────────────────────────
+
 const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, farmId }) => {
     const [loading, setLoading] = useState(false);
+    const [visible, setVisible] = useState(true);
     const [metrics, setMetrics] = useState<MetricsState>({
         animals: 0,
         weighings: 0,
@@ -77,9 +118,24 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
 
     const hasFarm = Boolean(farmId);
     const config = cardConfig(activeView, hasFarm, metrics);
+    const prevViewRef = useRef<string>('');
 
     useEffect(() => {
+        // Resetar visibilidade ao trocar de módulo
+        if (prevViewRef.current !== activeView) {
+            prevViewRef.current = activeView;
+            setVisible(true);
+        }
+
         if (!config || !farmId) return;
+
+        const cacheKey = `${activeView}::${farmId}`;
+        const cached = getCached(cacheKey);
+        if (cached) {
+            setMetrics(cached);
+            return;
+        }
+
         let isActive = true;
         const run = async () => {
             setLoading(true);
@@ -87,54 +143,83 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
                 const now = new Date();
                 const mes = now.getMonth() + 1;
                 const ano = now.getFullYear();
-                const [animalsRes, weighingsRes, transactionsRes, occurrencesRes, poAnimalsRes] = await Promise.all([
-                    fetch(buildApiUrl(`/animals?farmId=${farmId}&limit=1`), { credentials: 'include' }),
+                const [animalsRes, weighingsRes, transactionsRes, occurrencesRes] = await Promise.all([
+                    fetch(buildApiUrl(`/animals?farmId=${farmId}`), { credentials: 'include' }),
                     fetch(buildApiUrl(`/farms/${farmId}/weighings?limit=1`), { credentials: 'include' }),
                     fetch(buildApiUrl(`/financial/transactions?farmId=${farmId}&mes=${mes}&ano=${ano}&limit=1`), { credentials: 'include' }),
                     fetch(buildApiUrl(`/field-occurrences?farmId=${farmId}&limit=1`), { credentials: 'include' }),
-                    fetch(buildApiUrl(`/po/animals?farmId=${farmId}&limit=1`), { credentials: 'include' }),
                 ]);
-                const [animalsData, weighingsData, transactionsData, occurrencesData, poAnimalsData] = await Promise.all([
+                const [animalsData, weighingsData, transactionsData, occurrencesData] = await Promise.all([
                     animalsRes.json().catch(() => ({})),
                     weighingsRes.json().catch(() => ({})),
                     transactionsRes.json().catch(() => ({})),
                     occurrencesRes.json().catch(() => ({})),
-                    poAnimalsRes.json().catch(() => ({})),
                 ]);
+                const animals = Array.isArray(animalsData?.animals) ? animalsData.animals : [];
                 if (!isActive) return;
-                setMetrics({
+                const data: MetricsState = {
                     animals: Number(animalsData?.total ?? animalsData?.animals?.length ?? 0),
                     weighings: Number(weighingsData?.total ?? weighingsData?.weighings?.length ?? 0),
                     transactions: Number(transactionsData?.total ?? transactionsData?.transactions?.length ?? 0),
                     occurrences: Number(occurrencesData?.total ?? occurrencesData?.items?.length ?? occurrencesData?.occurrences?.length ?? 0),
-                    poAnimals: Number(poAnimalsData?.total ?? poAnimalsData?.animals?.length ?? poAnimalsData?.poAnimals?.length ?? poAnimalsData?.items?.length ?? 0),
-                });
+                    poAnimals: animals.filter((animal: any) => animal?.tipoCadastro === 'PO').length,
+                };
+                setMetrics(data);
+                setCache(cacheKey, data);
             } finally {
                 if (isActive) setLoading(false);
             }
         };
         void run();
         return () => { isActive = false; };
-    }, [config, farmId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeView, farmId]);
 
-    if (!config) return null;
+    if (!config || !visible) return null;
 
     const completedCount = config.steps.filter((step) => step.done).length;
+    const allDone = completedCount === config.steps.length;
     const progressPct = Math.round((completedCount / config.steps.length) * 100);
+    const ctaHint = !allDone ? getNextCta(activeView, config.steps) : null;
+
+    // Auto-oculta após tudo concluído (mantém visível para mostrar celebração brevemente)
+    // O botão de fechar já resolve — não auto-oculta sem interação do usuário
 
     return (
         <div className="mb-6 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
-            <div className="border-b border-[var(--eixo-border)] px-5 py-4">
-                <p className="text-sm font-semibold text-[var(--eixo-text)]">
-                    {config.title} — {completedCount} de {config.steps.length}
-                </p>
-                <p className="text-xs text-[var(--eixo-text-muted)]">Acompanhe a evolução mínima para uso completo deste módulo.</p>
+            {/* Cabeçalho */}
+            <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-4">
+                <div>
+                    {allDone ? (
+                        <p className="text-sm font-semibold text-[var(--eixo-text)]">
+                            Módulo configurado! Tudo pronto para uso. 🎉
+                        </p>
+                    ) : (
+                        <>
+                            <p className="text-sm font-semibold text-[var(--eixo-text)]">
+                                {config.title} — {completedCount} de {config.steps.length}
+                            </p>
+                            <p className="text-xs text-[var(--eixo-text-muted)]">Acompanhe a evolução mínima para uso completo deste módulo.</p>
+                        </>
+                    )}
+                </div>
+                <button
+                    onClick={() => setVisible(false)}
+                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#a8a29e] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text-muted)]"
+                    aria-label="Fechar"
+                >
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
 
+            {/* Barra de progresso */}
             <div className="h-1 bg-[var(--eixo-surface-soft)]">
                 <div className="h-1 rounded-full bg-[var(--eixo-green)] transition-all duration-700" style={{ width: `${progressPct}%` }} />
             </div>
 
+            {/* Passos */}
             {loading ? (
                 <div className="px-5 py-4 text-sm text-[#a8a29e]">Verificando progresso do módulo…</div>
             ) : (
@@ -155,13 +240,23 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-semibold ${step.done ? 'text-[#a8a29e] line-through' : 'text-[var(--eixo-text)]'}`}>
+                                <p className={`text-sm font-semibold ${step.done ? 'text-[#a8a29e]' : 'text-[var(--eixo-text)]'}`}>
                                     {step.title}
                                 </p>
                                 <p className="mt-0.5 text-xs text-[#a8a29e]">{step.description}</p>
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* CTA — próximo passo */}
+            {!loading && ctaHint && (
+                <div className="border-t border-[var(--eixo-border)] px-5 py-3">
+                    <p className="text-xs text-[var(--eixo-text-muted)]">
+                        <span className="font-semibold text-[var(--eixo-text)]">Próximo passo: </span>
+                        {ctaHint}
+                    </p>
                 </div>
             )}
         </div>

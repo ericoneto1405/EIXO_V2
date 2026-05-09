@@ -36,7 +36,7 @@ const PLANS: Plan[] = [
             { text: 'Estrutura da Fazenda', included: true },
             { text: 'Financeiro básico', included: true },
             { text: 'Importação de planilha própria', included: true },
-            { text: 'Dashboard (Visão Geral)', included: false },
+            { text: 'Dashboard (Visão Geral)', included: true },
             { text: 'Nutrição avançada', included: false },
             { text: 'Exportação de dados (Excel/PDF)', included: false },
             { text: 'Múltiplas fazendas', included: false },
@@ -138,7 +138,12 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
                         <span aria-hidden="true">←</span>
                         Voltar
                     </button>
-                    <img src="/logo_eixo_official.svg" alt="EIXO" className="h-7" />
+                    <div className="inline-flex flex-col items-center leading-none">
+                        <img src="/logo_eixo_official.svg" alt="EIXO" className="h-7" />
+                        <span className="mt-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] whitespace-nowrap text-[var(--eixo-text)]/75">
+                            Tecnologia para Gestão Pecuária
+                        </span>
+                    </div>
                     <div className="w-[92px]" aria-hidden="true" />
                 </div>
             </header>

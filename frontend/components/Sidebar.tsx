@@ -53,7 +53,7 @@ const MODULE_INFO: Record<string, ModuleInfo> = {
     'Estoque e Equipamentos': {
         plan: 'PLUS',
         title: 'Disponível no Plano Decisão',
-        description: 'Este módulo faz parte dos recursos avançados para análise e decisão.',
+        description: 'Controle botijão de sêmen e estoque técnico usado nas decisões do EIXO.',
         cta: 'Conhecer Plano Decisão',
     },
     'Gestão Comercial': {
@@ -352,69 +352,57 @@ const SidebarPanelIcon: React.FC<{ collapsed: boolean }> = ({ collapsed }) => (
 
 // ─── Dados de navegação ──────────────────────────────────────────────────────
 
-const geneticsSubItems: NavSubItem[] = [
-    { label: 'Plantel', value: 'Eixo Genetics', path: '/genetics/plantel', allowedLabels: ['Eixo Genetics'] },
-    { label: 'Seleção', value: 'Eixo Genetics', path: '/genetics/selecao', allowedLabels: ['Eixo Genetics'] },
-    { label: 'Relatórios', value: 'Eixo Genetics', path: '/genetics/relatorios', allowedLabels: ['Eixo Genetics'] },
-];
+interface NavSection {
+    sectionLabel: string;
+    items: NavItem[];
+}
 
-const navItems: NavItem[] = [
-    { label: 'Visão Geral', icon: <HomeIcon />, value: 'Visão Geral', requiredPlanBadge: 'PRO' },
-    { label: 'Estrutura da Fazenda', icon: <FarmIcon />, value: 'Fazendas', allowedLabels: ['Fazendas'] },
+const navSections: NavSection[] = [
     {
-        label: 'Manejo do Rebanho',
-        icon: <HerdCommercialIcon />,
-        value: 'Rebanho Comercial',
-        allowedLabels: ['Rebanho Comercial'],
-    },
-    { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição', allowedLabels: ['Nutrição'], requiredPlanBadge: 'PRO' },
-    { label: 'Ocorrências do EIXO Campo', icon: <ReportIcon />, value: 'Ocorrências do EIXO Campo', allowedLabels: ['Operações'] },
-    { label: 'Confinamento e Contratos', icon: <OperationsIcon />, value: 'Confinamento e Contratos', allowedLabels: ['Operações'], requiredPlanBadge: 'PLUS' },
-    { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Reprodução', path: '/genetics/reproducao', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
-    {
-        label: 'Eixo Acasalamento',
-        icon: <HerdGeneticIcon />,
-        value: 'Eixo Acasalamento',
-        allowedLabels: ['Eixo Genetics'],
-        requiredPlanBadge: 'PLUS',
-        subItems: geneticsSubItems,
-    },
-    {
-        label: 'Estoque e Equipamentos',
-        icon: <SuppliersIcon />,
-        value: 'Estoque e Equipamentos',
-        allowedLabels: ['Fornecedores', 'Remédios', 'Rações', 'Suplementos'],
-        requiredPlanBadge: 'PLUS',
-        subItems: [
-            { label: 'Fornecedores', value: 'Fornecedores', allowedLabels: ['Fornecedores'] },
-            { label: 'Remédios', value: 'Remédios', allowedLabels: ['Remédios'] },
-            { label: 'Rações', value: 'Rações', allowedLabels: ['Rações'] },
-            { label: 'Suplementos', value: 'Suplementos', allowedLabels: ['Suplementos'] },
+        sectionLabel: 'Principal',
+        items: [
+            { label: 'Visão Geral', icon: <HomeIcon />, value: 'Visão Geral' },
+            { label: 'Estrutura da Fazenda', icon: <FarmIcon />, value: 'Fazendas', allowedLabels: ['Fazendas'] },
+            { label: 'Manejo do Rebanho', icon: <HerdCommercialIcon />, value: 'Rebanho Comercial', allowedLabels: ['Rebanho Comercial'] },
+            { label: 'Financeiro', icon: <MoneyDownIcon />, value: 'Financeiro' },
         ],
     },
     {
-        label: 'Financeiro',
-        icon: <MoneyDownIcon />,
-        value: 'Financeiro',
-        allowedLabels: ['Financeiro'],
+        sectionLabel: 'Produção',
+        items: [
+            { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição', allowedLabels: ['Nutrição'], requiredPlanBadge: 'PRO' },
+            { label: 'Eixo Acasalamento', icon: <HerdGeneticIcon />, value: 'Eixo Acasalamento', path: '/genetics/acasalamento', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
+            { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Reprodução', path: '/genetics/reproducao', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
+            { label: 'Confinamento e Contratos', icon: <OperationsIcon />, value: 'Confinamento e Contratos' },
+        ],
     },
-    { label: 'Gestão Comercial', icon: <ChartIcon />, value: 'Gestão Comercial', allowedLabels: ['Gestão Comercial'], requiredPlanBadge: 'PLUS' },
-    { label: 'Registro de Atividades', icon: <ReportIcon />, value: 'Registro de Atividades', allowedLabels: ['Registro de Atividades'], requiredPlanBadge: 'PRO' },
+    {
+        sectionLabel: 'Gestão',
+        items: [
+            { label: 'Gestão Comercial', icon: <ChartIcon />, value: 'Gestão Comercial', allowedLabels: ['Gestão Comercial'], requiredPlanBadge: 'PLUS' },
+            { label: 'Registro de Atividades', icon: <ReportIcon />, value: 'Registro de Atividades', status: 'coming_soon' },
+            { label: 'Ocorrências do EIXO Campo', icon: <ReportIcon />, value: 'Ocorrências do EIXO Campo', allowedLabels: ['Operações'] },
+            { label: 'Botijão de Sêmen', icon: <SuppliersIcon />, value: 'Estoque e Equipamentos' },
+        ],
+    },
 ];
 
-const navItemsWithStructureSubItems: NavItem[] = navItems.map((item) =>
-    item.label === 'Estrutura da Fazenda'
-        ? {
-              ...item,
-              subItems: [
-                  { label: 'Fazendas e Pastos', value: 'Fazendas', allowedLabels: ['Fazendas'] },
-                  { label: 'Mapa da Fazenda', value: 'Mapa da Fazenda', badge: 'Em breve', status: 'coming_soon' },
-                  { label: 'Estruturas da Fazenda', value: 'Estruturas da Fazenda', badge: 'Em breve', status: 'coming_soon' },
-                  { label: 'Usuários e Permissões', value: 'Usuários e Permissões', allowedLabels: ['Fazendas'] },
-              ],
-          }
-        : item,
-);
+const navSectionsWithSubItems: NavSection[] = navSections.map((section) => ({
+    ...section,
+    items: section.items.map((item) =>
+        item.label === 'Estrutura da Fazenda'
+            ? {
+                  ...item,
+                  subItems: [
+                      { label: 'Fazendas e Pastos', value: 'Fazendas', allowedLabels: ['Fazendas'] },
+                      { label: 'Mapa da Fazenda', value: 'Mapa da Fazenda', badge: 'Em breve', status: 'coming_soon' as const },
+                      { label: 'Estruturas da Fazenda', value: 'Estruturas da Fazenda', badge: 'Em breve', status: 'coming_soon' as const },
+                      { label: 'Usuários e Permissões', value: 'Usuários e Permissões', allowedLabels: ['Fazendas'] },
+                  ],
+              }
+            : item,
+    ),
+}));
 
 // ─── SidebarButton ───────────────────────────────────────────────────────────
 
@@ -494,20 +482,27 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
                             </span>
                         ) : (
                             // Cadeado clicável
-                            <button
-                                type="button"
+                            <span
+                                role="button"
+                                tabIndex={0}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    onLockClick?.(e);
+                                    onLockClick?.(e as unknown as React.MouseEvent<HTMLButtonElement>);
                                 }}
-                                className="ml-2 flex items-center justify-center rounded-md p-0.5 text-[#bfc6bf] transition-colors hover:text-[#eef2ec]"
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                        e.stopPropagation();
+                                        onLockClick?.(e as unknown as React.MouseEvent<HTMLButtonElement>);
+                                    }
+                                }}
+                                className="ml-2 flex items-center justify-center rounded-md p-0.5 text-[#bfc6bf] transition-colors hover:text-[#eef2ec] cursor-pointer"
                                 aria-label={`Saber mais sobre ${label}`}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                                     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                                     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                                 </svg>
-                            </button>
+                            </span>
                         )
                     )}
                     {!isLocked && suffix && <span className="ml-2">{suffix}</span>}
@@ -529,7 +524,14 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
     const navigate = useNavigate();
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
     const [openGroups, setOpenGroups] = React.useState<Record<string, boolean>>({});
-    const comingSoonItems = navItemsWithStructureSubItems.filter((item) => item.status === 'coming_soon');
+    const isPathActive = React.useCallback((path?: string) => (
+        Boolean(path && (location.pathname === path || location.pathname.startsWith(`${path}/`)))
+    ), [location.pathname]);
+    const hasActiveRoutePath = React.useMemo(() => (
+        navSectionsWithSubItems.flatMap((s) => s.items).some((item) => (
+            isPathActive(item.path) || item.subItems?.some((subItem) => isPathActive(subItem.path))
+        ))
+    ), [isPathActive]);
 
     // Estado do popover de upgrade
     const [openPopover, setOpenPopover] = React.useState<SidebarPopoverState | null>(null);
@@ -614,12 +616,12 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
 
     React.useEffect(() => {
         if (isGeneticsRoute) {
-            setOpenGroups((current) => ({ ...current, 'Eixo Genetics': true }));
+            setOpenGroups((current) => ({ ...current, 'Eixo Acasalamento': true }));
         }
     }, [isGeneticsRoute]);
 
     React.useEffect(() => {
-        navItemsWithStructureSubItems.forEach((item) => {
+        navSectionsWithSubItems.flatMap((s) => s.items).forEach((item) => {
             if (!item.subItems) return;
             const hasActiveChild = item.subItems.some((sub) => sub.value === activeItem);
             if (hasActiveChild) {
@@ -653,7 +655,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                     <div className="flex items-center justify-center">
                         {!isCollapsed && (
                             <div className="flex min-h-[108px] w-[88%] flex-col items-center justify-center">
-                                <img src="/eixo-logo-sidebar.png" alt="eixo" className="h-auto w-full max-w-[236px]" />
+                                <img src="/logo_eixo_official.svg" alt="EIXO" className="h-auto w-full max-w-[236px]" />
                                 <p className="mt-2 w-full max-w-[236px] text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-border-strong)]">
                                     Gestão Pecuária de Corte
                                 </p>
@@ -663,121 +665,106 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                 </div>
 
                 <nav className="flex-1 overflow-y-auto px-3 pb-6 pt-0">
-                    <ul className="space-y-1.5">
-                        {navItemsWithStructureSubItems.map((item) => {
-                            const itemLabels = item.allowedLabels || (item.value ? [item.value] : undefined);
-                            const isPlanLocked = isModuleLockedByPlan(itemLabels);
-                            const itemStatus: Exclude<NavStatus, 'available'> | 'available' = item.status || (isPlanLocked ? 'plan_locked' : 'available');
-                            const visibleSubItems = item.subItems?.filter((subItem) => {
-                                const subItemPlanLocked = isModuleLockedByPlan(subItem.allowedLabels || [subItem.value]);
-                                if (subItem.status === 'coming_soon' || subItem.status === 'needs_setup') {
-                                    return true;
-                                }
-                                if (!subItem.allowedLabels?.length && !subItem.path && !subItemPlanLocked) {
-                                    return true;
-                                }
-                                return subItemPlanLocked || isModuleAllowed(subItem.allowedLabels || [subItem.value]);
-                            }) || [];
-                            const hasSubItems = visibleSubItems.length > 0;
-                            const isExpanded = isGeneticsRoute && item.label === 'Eixo Acasalamento'
-                                ? true
-                                : Boolean(openGroups[item.label]);
-                            const isDirectPathActive = item.path
-                                ? location.pathname === item.path || location.pathname.startsWith(`${item.path}/`)
-                                : false;
-                            const isSubItemActive = visibleSubItems.some((subItem) =>
-                                subItem.path
-                                    ? location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`)
-                                    : activeItem === subItem.value,
-                            );
-                            const isParentActive = isDirectPathActive || isSubItemActive || (!!item.value && activeItem === item.value);
-                            return (
-                                <li key={item.label}>
-                                    <SidebarButton
-                                        label={item.label}
-                                        icon={item.icon}
-                                        isActive={isParentActive && !isSubItemActive}
-                                        isCollapsed={isCollapsed}
-                                        badge={item.badge || (itemStatus === 'plan_locked' ? item.requiredPlanBadge : undefined)}
-                                        status={itemStatus === 'available' ? undefined : itemStatus}
-                                        suffix={hasSubItems ? <ChevronIndicator isOpen={isExpanded} /> : undefined}
-                                        onLockClick={(e) => handleStatusClick(item.label, 'plan_locked', e)}
-                                        onClick={(e) => {
-                                            if (itemStatus !== 'available') {
-                                                handleStatusClick(item.label, itemStatus, e);
-                                                return;
-                                            }
-                                            if (hasSubItems) {
-                                                setOpenGroups((current) => ({ ...current, [item.label]: !isExpanded }));
-                                            }
-                                            if (item.value) {
-                                                handleSelect(item.value, item.path || visibleSubItems[0]?.path);
-                                            }
-                                        }}
-                                    />
-                                    {!isCollapsed && hasSubItems && isExpanded && (
-                                        <ul className="mt-1 space-y-1">
-                                            {visibleSubItems.map((subItem) => {
-                                                const isPlanLockedSubItem = isModuleLockedByPlan(subItem.allowedLabels || [subItem.value]);
-                                                const subItemStatus: Exclude<NavStatus, 'available'> | 'available' =
-                                                    subItem.status
-                                                        || (isPlanLockedSubItem ? 'plan_locked'
-                                                            : (!subItem.path && !isModuleAllowed(subItem.allowedLabels || [subItem.value]) ? 'needs_setup' : 'available'));
-                                                const isSubActive = subItem.path
-                                                    ? location.pathname === subItem.path || location.pathname.startsWith(`${subItem.path}/`)
-                                                    : activeItem === subItem.value;
-                                                return (
-                                                    <li key={subItem.label}>
-                                                        <SidebarButton
-                                                            label={subItem.label}
-                                                            isActive={isSubActive}
-                                                            isCollapsed={isCollapsed}
-                                                            isSubItem
-                                                            badge={subItem.badge || (subItemStatus === 'coming_soon' ? 'Em breve' : subItemStatus === 'plan_locked' ? (subItem.requiredPlanBadge || item.requiredPlanBadge) : undefined)}
-                                                            status={subItemStatus === 'available' ? undefined : subItemStatus}
-                                                            onLockClick={(e) => handleStatusClick(subItem.label, 'plan_locked', e)}
-                                                            onClick={(e) => {
-                                                                if (subItemStatus !== 'available') {
-                                                                    handleStatusClick(subItem.label, subItemStatus, e);
-                                                                    return;
-                                                                }
-                                                                handleSelect(subItem.value, subItem.path);
-                                                            }}
-                                                        />
-                                                    </li>
-                                                );
-                                            })}
-                                        </ul>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
-
-                    {/* Módulos em desenvolvimento */}
-                    {!isCollapsed && comingSoonItems.length > 0 && (
-                        <div className="mt-4 border-t border-[var(--eixo-graphite)] pt-4">
-                            <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#57534e]">
-                                Em desenvolvimento
-                            </p>
-                            <ul className="space-y-1">
-                                {comingSoonItems.map((item) => {
+                    {navSectionsWithSubItems.map((section, sectionIdx) => (
+                        <div
+                            key={section.sectionLabel}
+                            className={sectionIdx > 0 ? 'mt-4 border-t border-[var(--eixo-graphite)] pt-4' : ''}
+                        >
+                            {!isCollapsed && (
+                                <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#57534e]">
+                                    {section.sectionLabel}
+                                </p>
+                            )}
+                            <ul className="space-y-1.5">
+                                {section.items.map((item) => {
+                                    const itemLabels = item.allowedLabels || (item.value ? [item.value] : undefined);
+                                    const isPlanLocked = isModuleLockedByPlan(itemLabels);
+                                    const itemStatus: Exclude<NavStatus, 'available'> | 'available' = item.status || (isPlanLocked ? 'plan_locked' : 'available');
+                                    const visibleSubItems = item.subItems?.filter((subItem) => {
+                                        const subItemPlanLocked = isModuleLockedByPlan(subItem.allowedLabels || [subItem.value]);
+                                        if (subItem.status === 'coming_soon' || subItem.status === 'needs_setup') {
+                                            return true;
+                                        }
+                                        if (!subItem.allowedLabels?.length && !subItem.path && !subItemPlanLocked) {
+                                            return true;
+                                        }
+                                        return subItemPlanLocked || isModuleAllowed(subItem.allowedLabels || [subItem.value]);
+                                    }) || [];
+                                    const hasSubItems = visibleSubItems.length > 0;
+                                    const isExpanded = isGeneticsRoute && item.label === 'Eixo Acasalamento'
+                                        ? true
+                                        : Boolean(openGroups[item.label]);
+                                    const isDirectPathActive = isPathActive(item.path);
+                                    const isSubItemActive = visibleSubItems.some((subItem) =>
+                                        subItem.path
+                                            ? isPathActive(subItem.path)
+                                            : activeItem === subItem.value,
+                                    );
+                                    const isParentActive = isDirectPathActive || isSubItemActive || (!hasActiveRoutePath && !!item.value && activeItem === item.value);
                                     return (
                                         <li key={item.label}>
                                             <SidebarButton
                                                 label={item.label}
                                                 icon={item.icon}
-                                                isActive={false}
+                                                isActive={isParentActive && !isSubItemActive}
                                                 isCollapsed={isCollapsed}
-                                                status={item.status}
-                                                onClick={(e) => { handleStatusClick(item.label, 'coming_soon', e); }}
+                                                badge={item.badge || (itemStatus === 'plan_locked' ? item.requiredPlanBadge : undefined)}
+                                                status={itemStatus === 'available' ? undefined : itemStatus}
+                                                suffix={hasSubItems ? <ChevronIndicator isOpen={isExpanded} /> : undefined}
+                                                onLockClick={(e) => handleStatusClick(item.label, 'plan_locked', e)}
+                                                onClick={(e) => {
+                                                    if (itemStatus !== 'available') {
+                                                        handleStatusClick(item.label, itemStatus, e);
+                                                        return;
+                                                    }
+                                                    if (hasSubItems) {
+                                                        setOpenGroups((current) => ({ ...current, [item.label]: !isExpanded }));
+                                                    }
+                                                    if (item.value) {
+                                                        handleSelect(item.value, item.path || visibleSubItems[0]?.path);
+                                                    }
+                                                }}
                                             />
+                                            {!isCollapsed && hasSubItems && isExpanded && (
+                                                <ul className="mt-1 space-y-1">
+                                                    {visibleSubItems.map((subItem) => {
+                                                        const isPlanLockedSubItem = isModuleLockedByPlan(subItem.allowedLabels || [subItem.value]);
+                                                        const subItemStatus: Exclude<NavStatus, 'available'> | 'available' =
+                                                            subItem.status
+                                                                || (isPlanLockedSubItem ? 'plan_locked'
+                                                                    : (!subItem.path && !isModuleAllowed(subItem.allowedLabels || [subItem.value]) ? 'needs_setup' : 'available'));
+                                                        const isSubActive = subItem.path
+                                                            ? isPathActive(subItem.path)
+                                                            : activeItem === subItem.value;
+                                                        return (
+                                                            <li key={subItem.label}>
+                                                                <SidebarButton
+                                                                    label={subItem.label}
+                                                                    isActive={isSubActive}
+                                                                    isCollapsed={isCollapsed}
+                                                                    isSubItem
+                                                                    badge={subItem.badge || (subItemStatus === 'coming_soon' ? 'Em breve' : subItemStatus === 'plan_locked' ? (subItem.requiredPlanBadge || item.requiredPlanBadge) : undefined)}
+                                                                    status={subItemStatus === 'available' ? undefined : subItemStatus}
+                                                                    onLockClick={(e) => handleStatusClick(subItem.label, 'plan_locked', e)}
+                                                                    onClick={(e) => {
+                                                                        if (subItemStatus !== 'available') {
+                                                                            handleStatusClick(subItem.label, subItemStatus, e);
+                                                                            return;
+                                                                        }
+                                                                        handleSelect(subItem.value, subItem.path);
+                                                                    }}
+                                                                />
+                                                            </li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            )}
                                         </li>
                                     );
                                 })}
                             </ul>
                         </div>
-                    )}
+                    ))}
                 </nav>
 
                 </div>

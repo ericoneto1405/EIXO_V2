@@ -384,7 +384,7 @@ const Header: React.FC<HeaderProps> = ({
     };
 
     return (
-        <header className="relative z-20 rounded-[28px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+        <header className="relative z-20 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
 
             {/* ── Linha principal ──────────────────────────────────────────── */}
             <div className="flex items-center gap-3 px-4 py-3 lg:px-6">
@@ -393,7 +393,7 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="relative shrink-0" ref={farmRef}>
                     <button
                         onClick={() => setFarmOpen((v) => !v)}
-                        className="flex max-w-[270px] items-center gap-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 transition-colors hover:bg-[#ece9e6]"
+                        className="flex max-w-[270px] items-center gap-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 transition-colors hover:bg-[#EDEDED]"
                     >
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--eixo-text)] text-sm font-bold text-white">
                             {farmAvatar}
@@ -464,7 +464,7 @@ const Header: React.FC<HeaderProps> = ({
                 <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5">
                         <div className="flex shrink-0 items-center gap-2 pr-1">
-                            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[rgba(47,58,45,0.08)] text-[var(--eixo-text-muted)]">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#EDEDED] text-[var(--eixo-text-muted)]">
                                 <BellIcon />
                             </span>
                             <div className="min-w-0">
@@ -485,7 +485,7 @@ const Header: React.FC<HeaderProps> = ({
                             <button
                                 type="button"
                                 onClick={() => alertsRowRef.current?.scrollBy({ left: -220, behavior: 'smooth' })}
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--eixo-border)]/70 bg-[var(--eixo-surface)]/88 text-[var(--eixo-text-soft)] transition-colors hover:bg-[#ece9e6] hover:text-[var(--eixo-text-muted)]"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--eixo-border)]/70 bg-[var(--eixo-surface)]/88 text-[var(--eixo-text-soft)] transition-colors hover:bg-[#EDEDED] hover:text-[var(--eixo-text-muted)]"
                                 aria-label="Rolar alertas para a esquerda"
                             >
                                 <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -507,7 +507,7 @@ const Header: React.FC<HeaderProps> = ({
                                     onClick={(event) => handleAlertClick(alert, event)}
                                     title={alert.description}
                                     className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[14px] font-semibold leading-none transition-colors hover:brightness-[0.98] ${ALERT_PANEL_STYLE[alert.severity]}`}
-                                    style={{ fontFamily: 'Sora, "Plus Jakarta Sans", sans-serif' }}
+                                    style={{ fontFamily: 'Inter, sans-serif' }}
                                 >
                                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${ALERT_PANEL_DOT[alert.severity]}`} />
                                     <span className="whitespace-nowrap">{alert.chipLabel}</span>
@@ -523,7 +523,7 @@ const Header: React.FC<HeaderProps> = ({
                             <button
                                 type="button"
                                 onClick={() => alertsRowRef.current?.scrollBy({ left: 220, behavior: 'smooth' })}
-                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--eixo-border)]/70 bg-[var(--eixo-surface)]/88 text-[var(--eixo-text-soft)] transition-colors hover:bg-[#ece9e6] hover:text-[var(--eixo-text-muted)]"
+                                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--eixo-border)]/70 bg-[var(--eixo-surface)]/88 text-[var(--eixo-text-soft)] transition-colors hover:bg-[#EDEDED] hover:text-[var(--eixo-text-muted)]"
                                 aria-label="Rolar alertas para a direita"
                             >
                                 <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -539,7 +539,7 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="relative shrink-0" ref={userRef}>
                         <button
                             onClick={() => setUserOpen((v) => !v)}
-                            className="flex max-w-[138px] items-center gap-2.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 transition-colors hover:bg-[#ece9e6]"
+                            className="flex max-w-[138px] items-center gap-2.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 transition-colors hover:bg-[#EDEDED]"
                         >
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--eixo-text)] text-xs font-bold text-[#f5f0e8]">
                                 {getInitials(currentUser.name)}

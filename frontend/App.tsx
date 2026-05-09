@@ -19,13 +19,13 @@ import Medicines from './components/Medicines';
 import Feeds from './components/Feeds';
 import Supplements from './components/Supplements';
 import GeneticsReproducao from './components/GeneticsReproducao';
-import GeneticsSelecao from './components/GeneticsSelecao';
-import GeneticsRelatorios from './components/GeneticsRelatorios';
-import GeneticsPlantelPO from './components/GeneticsPlantelPO';
+import EixoAcasalamento from './components/EixoAcasalamento';
+import SemenTankModule from './components/SemenTankModule';
 import NutritionModule from './components/NutritionModule';
 import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
+import RecoverEmail from './components/RecoverEmail';
 import ResetPassword from './components/ResetPassword';
 import AcceptInvite from './components/AcceptInvite';
 import PublicLanding from './components/PublicLanding';
@@ -57,12 +57,13 @@ interface User {
         mode: string;
     };
     entitlements?: string[];
+    onboardingCompletedAt?: string | null;
 }
 
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda', 'Rebanho Comercial', 'Plantel P.O.', 'Eixo Genetics'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda', 'Rebanho Comercial', 'Eixo Genetics'],
     },
     {
         title: 'Cadastros',
@@ -156,19 +157,6 @@ const UPGRADE_CONTENT: Record<string, {
     previewItems: string[];
     icon: React.ReactNode;
 }> = {
-    'Visão Geral': {
-        accessLabels: ['Visão Geral'],
-        requiredPlan: 'PRO',
-        moduleName: 'Visão Geral',
-        tagline: 'Toda a fazenda em uma tela — rebanho, financeiro e alertas',
-        benefits: [
-            'Veja indicadores do rebanho, da operação e do caixa sem trocar de módulo.',
-            'Acompanhe alertas e pendências logo na abertura do sistema.',
-            'Descubra desvios mais cedo e aja antes de perder dinheiro no campo.',
-        ],
-        previewItems: ['Resumo do rebanho por categoria', 'Fluxo financeiro e alertas do mês', 'Tarefas e pendências em uma única visão'],
-        icon: <UpgradeHomeIcon />,
-    },
     'Nutrição': {
         accessLabels: ['Nutrição'],
         requiredPlan: 'PRO',
@@ -181,19 +169,6 @@ const UPGRADE_CONTENT: Record<string, {
         ],
         previewItems: ['Planos nutricionais por fase', 'Custos e consumo por lote', 'Comparativo de desempenho e meta'],
         icon: <UpgradeNutritionIcon />,
-    },
-    'Confinamento e Contratos': {
-        accessLabels: ['Operações'],
-        requiredPlan: 'PLUS',
-        moduleName: 'Confinamento e Contratos',
-        tagline: 'Centralize contratos, operações de curral e rotinas críticas da fazenda',
-        benefits: [
-            'Organize contratos, eventos operacionais e responsabilidades em um fluxo único.',
-            'Dê previsibilidade para entradas, saídas e etapas do manejo.',
-            'Reduza falhas de comunicação entre escritório, curral e fornecedores.',
-        ],
-        previewItems: ['Linha do tempo das operações', 'Contratos com status e vencimentos', 'Checklist operacional por etapa'],
-        icon: <UpgradeOperationsIcon />,
     },
     'Reprodução': {
         accessLabels: ['Eixo Genetics'],
@@ -221,19 +196,6 @@ const UPGRADE_CONTENT: Record<string, {
         previewItems: ['Sugestões por matriz e objetivo', 'Indicadores genéticos e restrições', 'Histórico consolidado do plantel'],
         icon: <UpgradeGeneticsIcon />,
     },
-    'Estoque e Equipamentos': {
-        accessLabels: ['Fornecedores', 'Remédios', 'Rações', 'Suplementos'],
-        requiredPlan: 'PLUS',
-        moduleName: 'Estoque e Equipamentos',
-        tagline: 'Saiba o que entra, o que sai e o que falta antes de travar a operação',
-        benefits: [
-            'Controle insumos, medicamentos e equipamentos em um só lugar.',
-            'Reduza perdas por falta de reposição ou compra fora de hora.',
-            'Tenha histórico confiável para auditoria e negociação com fornecedor.',
-        ],
-        previewItems: ['Saldo por item e almoxarifado', 'Movimentações de entrada e saída', 'Alertas de reposição e consumo'],
-        icon: <UpgradeSuppliersIcon />,
-    },
     'Registro de Atividades': {
         accessLabels: ['Registro de Atividades'],
         requiredPlan: 'PRO',
@@ -259,30 +221,28 @@ const UPGRADE_CONTENT: Record<string, {
         previewItems: ['Pipeline de negociações e compradores', 'Margem por lote e cenário de venda', 'Histórico comercial consolidado'],
         icon: <UpgradeChartIcon />,
     },
-    'Financeiro PRO': {
-        accessLabels: ['Financeiro'],
-        requiredPlan: 'PRO',
-        moduleName: 'Financeiro completo',
-        tagline: 'Veja para onde vai cada real da sua fazenda',
-        benefits: [
-            'Saia do controle básico e acompanhe o financeiro com profundidade.',
-            'Entenda despesas, receitas e fluxo com visão gerencial.',
-            'Ganhe clareza para decidir compra, venda e investimento.',
-        ],
-        previewItems: ['Fluxo de caixa detalhado', 'Contas a pagar e receber por status', 'Análise mensal de resultado e margem'],
-        icon: <UpgradeFinanceIcon />,
-    },
 };
 
 const AppContent: React.FC = () => {
     const location = useLocation();
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
     const isPlansRoute = location.pathname === '/planos';
-    const [activeView, setActiveView] = useState('Fazendas');
+    const [activeView, setActiveView] = useState('Visão Geral');
     const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number } | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
-    const [authScreen, setAuthScreen] = useState<'landing' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'accept-invite'>('landing');
+
+    // App autenticado é desktop-only — força viewport fixo para evitar layout mobile
+    useEffect(() => {
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (!viewport) return;
+        if (isAuthenticated) {
+            viewport.setAttribute('content', 'width=1280');
+        } else {
+            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
+        }
+    }, [isAuthenticated]);
+    const [authScreen, setAuthScreen] = useState<'landing' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'accept-invite' | 'recover-email'>('landing');
     const [resetToken, setResetToken] = useState<string | null>(null);
     const [inviteToken, setInviteToken] = useState<string | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
@@ -301,7 +261,7 @@ const AppContent: React.FC = () => {
     const PAID_ENTITLEMENTS = ['GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'];
     const isFreePlan = !(currentUser?.entitlements?.some(e => PAID_ENTITLEMENTS.includes(e)));
     // Módulos exclusivos de planos pagos — bloqueados mesmo que estejam no banco do usuário
-    const PAID_ONLY_MODULES = ['Visão Geral'];
+    const PAID_ONLY_MODULES: string[] = [];
     const currentAllowedModules = React.useMemo(() => {
         const hasNutritionEntitlement = (currentUser?.entitlements || []).some((code) =>
             ['NUTRITION', 'EIXO_NUTRITION'].includes(code),
@@ -314,7 +274,8 @@ const AppContent: React.FC = () => {
         }
         const LEGACY_MODULE_MAP: Record<string, string> = {
             'Rebanho Genética': 'Eixo Genetics',
-            'Rebanho P.O.': 'Plantel P.O.',
+            'Rebanho P.O.': 'Rebanho Comercial',
+            'Plantel P.O.': 'Rebanho Comercial',
             'Contas a Pagar': 'Financeiro',
             'Contas a Receber': 'Financeiro',
             'Fluxo de Caixa': 'Financeiro',
@@ -770,6 +731,10 @@ const AppContent: React.FC = () => {
             return <ForgotPassword onBack={() => setAuthScreen('login')} />;
         }
 
+        if (authScreen === 'recover-email') {
+            return <RecoverEmail onBack={() => setAuthScreen('login')} />;
+        }
+
         if (authScreen === 'accept-invite' && inviteToken) {
             return (
                 <AcceptInvite
@@ -841,37 +806,13 @@ const AppContent: React.FC = () => {
                     setRegisterMessage(null);
                     setAuthScreen('forgot-password');
                 }}
+                onRecoverEmail={() => {
+                    setAuthError(null);
+                    setRegisterError(null);
+                    setRegisterMessage(null);
+                    setAuthScreen('recover-email');
+                }}
             />
-        );
-    }
-
-    if (currentUser?.accessType === 'APP_MANEJO') {
-        if (!hasSelectedFarm) {
-            return (
-                <div className="relative min-h-screen overflow-hidden bg-[var(--eixo-surface-soft)] font-sans text-[var(--eixo-text)]">
-                    <main className="mx-auto max-w-5xl px-4 pb-6 pt-6 lg:px-6">
-                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
-                            Selecione uma fazenda válida para iniciar a pesagem.
-                        </div>
-                    </main>
-                </div>
-            );
-        }
-        return (
-            <div className="relative min-h-screen overflow-hidden bg-[var(--eixo-surface-soft)] font-sans text-[var(--eixo-text)]">
-                <main className="mx-auto max-w-6xl px-4 pb-6 pt-6 lg:px-6">
-                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4 lg:p-6">
-                        <HerdModule
-                            farmId={selectedFarmId}
-                            farmName={selectedFarm?.name}
-                            mode="COMMERCIAL"
-                            isFreePlan={isFreePlan}
-                            initialTabRequest={{ tab: 'weighings', nonce: Date.now() }}
-                            weighingOnlyMode
-                        />
-                    </div>
-                </main>
-            </div>
         );
     }
 
@@ -895,6 +836,21 @@ const AppContent: React.FC = () => {
         }
 
         if (isGeneticsRoute) {
+            if (location.pathname.startsWith('/genetics/acasalamento') && isFreePlan) {
+                const acasalamentoUpgrade = UPGRADE_CONTENT['Eixo Acasalamento'];
+                return (
+                    <UpgradeScreen
+                        moduleName={acasalamentoUpgrade.moduleName}
+                        icon={acasalamentoUpgrade.icon}
+                        tagline={acasalamentoUpgrade.tagline}
+                        benefits={acasalamentoUpgrade.benefits}
+                        requiredPlan={acasalamentoUpgrade.requiredPlan}
+                        previewItems={acasalamentoUpgrade.previewItems}
+                        onUpgrade={() => setUpgradeModal(acasalamentoUpgrade.moduleName)}
+                    />
+                );
+            }
+
             const withFarmGuard = (content: React.ReactNode) =>
                 hasSelectedFarm ? content : (
                     <FarmRequiredPanel title="Selecione uma fazenda para continuar" />
@@ -902,22 +858,17 @@ const AppContent: React.FC = () => {
 
             return (
                 <Routes>
-                    <Route path="/genetics" element={<Navigate to="/genetics/plantel" replace />} />
-                    <Route
-                        path="/genetics/plantel"
-                        element={withFarmGuard(<GeneticsPlantelPO farmId={selectedFarmId} mode="full" />)}
-                    />
+                    <Route path="/genetics" element={<Navigate to="/genetics/acasalamento" replace />} />
+                    <Route path="/genetics/plantel" element={<Navigate to="/genetics/acasalamento" replace />} />
                     <Route
                         path="/genetics/reproducao"
                         element={withFarmGuard(<GeneticsReproducao farmId={selectedFarmId} />)}
                     />
+                    <Route path="/genetics/selecao" element={<Navigate to="/genetics/acasalamento" replace />} />
+                    <Route path="/genetics/relatorios" element={<Navigate to="/genetics/acasalamento" replace />} />
                     <Route
-                        path="/genetics/selecao"
-                        element={withFarmGuard(<GeneticsSelecao farmId={selectedFarmId} />)}
-                    />
-                    <Route
-                        path="/genetics/relatorios"
-                        element={withFarmGuard(<GeneticsRelatorios farmId={selectedFarmId} />)}
+                        path="/genetics/acasalamento"
+                        element={withFarmGuard(<EixoAcasalamento farmId={selectedFarmId} />)}
                     />
                 </Routes>
             );
@@ -990,7 +941,6 @@ const AppContent: React.FC = () => {
                     <HerdModule
                         farmId={selectedFarmId}
                         farmName={selectedFarm?.name}
-                        mode="COMMERCIAL"
                         isFreePlan={isFreePlan}
                         initialTabRequest={herdTabRequest}
                         onUpgradeRequest={() => setUpgradeModal('Plano pago')}
@@ -1006,9 +956,17 @@ const AppContent: React.FC = () => {
                         />
                     );
                 }
-                return <HerdModule farmId={selectedFarmId} farmName={selectedFarm?.name} mode="PO" isFreePlan={isFreePlan} onUpgradeRequest={() => setUpgradeModal('Plano pago')} />;
+                return (
+                    <HerdModule
+                        farmId={selectedFarmId}
+                        farmName={selectedFarm?.name}
+                        isFreePlan={isFreePlan}
+                        initialTabRequest={herdTabRequest}
+                        onUpgradeRequest={() => setUpgradeModal('Plano pago')}
+                    />
+                );
             case 'Eixo Genetics':
-                return <Navigate to="/genetics/plantel" replace />;
+                return <Navigate to="/genetics/acasalamento" replace />;
             case 'Financeiro':
                 return <FinanceModule farmId={selectedFarmId} farmName={selectedFarm?.name} isFreePlan={isFreePlan} onUpgradeRequest={() => setUpgradeModal('Financeiro completo')} />;
             case 'Registro de Atividades':
@@ -1020,7 +978,16 @@ const AppContent: React.FC = () => {
             case 'Confinamento e Contratos':
                 return <ConfinementContracts />;
             case 'Estoque e Equipamentos':
-                return <Suppliers />;
+                if (!hasSelectedFarm) {
+                    return (
+                        <FarmRequiredPanel
+                            title="Cadastre uma fazenda para controlar o botijão"
+                            actionLabel="Cadastrar fazenda"
+                            onAction={handleRegisterFarmView}
+                        />
+                    );
+                }
+                return <SemenTankModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
             case 'Configurações':
                 return <Settings />;
             case 'Usuários e Permissões':
@@ -1043,7 +1010,13 @@ const AppContent: React.FC = () => {
                 );
             case 'Visão Geral':
             default:
-                return <Dashboard farmId={selectedFarmId} farmSize={selectedFarm?.size ?? null} />;
+                return <Dashboard
+                    farmId={selectedFarmId}
+                    farmSize={selectedFarm?.size ?? null}
+                    farmCity={selectedFarm?.city ?? null}
+                    farmLat={selectedFarm?.lat ?? null}
+                    farmLng={selectedFarm?.lng ?? null}
+                />;
         }
     };
 
@@ -1087,6 +1060,7 @@ const AppContent: React.FC = () => {
                                                         farms={farms}
                                                         onNavigate={handleOnboardingNavigate}
                                                         contextView={activeView === 'Rebanho Comercial' ? 'Rebanho Comercial' : 'Fazendas'}
+                                                        onboardingCompletedAt={currentUser.onboardingCompletedAt}
                                                     />
                                                 ) : (
                                                     <ModuleProgressCard
@@ -1189,7 +1163,7 @@ const AppContent: React.FC = () => {
                             style={{ minWidth: '88px' }}
                         >
                             {/* Logo eixo */}
-                            <img src="/logo_eixo_negative.svg" alt="eixo" className="h-4 w-auto" />
+                            <img src="/logo_eixo_official.svg" alt="EIXO" className="h-4 w-auto" />
                             <span className="mt-1 border-t border-white/10 pt-1 text-[10px] font-bold uppercase leading-none tracking-[0.1em] text-[var(--eixo-green-soft)]">
                                 suporte
                             </span>

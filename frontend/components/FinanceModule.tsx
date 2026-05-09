@@ -26,8 +26,8 @@ interface FinanceModuleProps {
     onUpgradeRequest?: () => void;
 }
 
-// Plano gratuito: libera só o financeiro básico
-const LOCKED_TABS_FREE: FinanceTab[] = ['fluxo', 'dre', 'plano_contas'];
+// Financeiro completo liberado para todos os planos
+const LOCKED_TABS_FREE: FinanceTab[] = [];
 
 // ── Ícones ────────────────────────────────────────────────────────────────────
 

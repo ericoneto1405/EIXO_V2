@@ -80,6 +80,7 @@ export interface AnimalUI {
     farmId: string;
     brinco?: string | null;
     nome?: string | null;
+    tipoCadastro?: 'PO' | 'MESTICO' | string | null;
     identificacao: string;
     raca: string;
     sexo: string;
@@ -137,6 +138,8 @@ export interface Paddock {
     name: string;
     areaHa?: number | null;
     divisionType?: string | null;
+    forrageira?: string | null;
+    lotacaoUaHa?: number | null;
     capacity?: number | null;
     lat?: number | null;
     lng?: number | null;

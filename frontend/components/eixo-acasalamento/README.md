@@ -1,20 +1,59 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Eixo Acasalamento (EIXO V2)
 
-# Run and deploy your AI Studio app
+Este diretório contém um **protótipo local** de interface do módulo de acasalamento.
 
-This contains everything you need to run your app locally.
+## Importante
 
-View your app in AI Studio: https://ai.studio/apps/d9f9fc08-61e1-41f6-a8f8-a44bddbaf9e3
+No sistema EIXO V2 em produção/desenvolvimento principal, o módulo oficial de acasalamento é:
 
-## Run Locally
+- `frontend/components/EixoAcasalamento.tsx`
 
-**Prerequisites:**  Node.js
+Ele é carregado pela rota:
 
+- `/genetics/acasalamento` (definida em `frontend/App.tsx`)
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+E consome a API oficial via adapter:
+
+- `frontend/adapters/acasalamentoApi.ts`
+
+Com backend em:
+
+- `server/acasalamentoModule.js`
+
+## Sobre esta pasta (`frontend/components/eixo-acasalamento`)
+
+Esta pasta funciona como um projeto isolado (Vite/React) para experimentação visual e técnica.
+
+Arquivos deste protótipo incluem:
+
+- `src/App.tsx`
+- `src/main.tsx`
+- `server.ts`
+- `package.json`
+
+## Quando usar esta pasta
+
+Use esta pasta apenas se você quiser:
+
+- testar ideias de interface sem impactar o app principal;
+- validar fluxos de forma isolada;
+- fazer experimentos locais.
+
+## Quando **não** usar esta pasta
+
+Não use esta pasta como referência única para:
+
+- regras finais de negócio do EIXO;
+- integração oficial com frontend principal;
+- documentação de deploy do produto principal.
+
+## Referência rápida do fluxo oficial
+
+1. Usuário acessa `/genetics/acasalamento` no app principal.
+2. Componente `frontend/components/EixoAcasalamento.tsx` é renderizado.
+3. Adapter `frontend/adapters/acasalamentoApi.ts` chama endpoints `/genetics/acasalamento/*`.
+4. Rotas são atendidas por `server/acasalamentoModule.js`.
+
+## Observação
+
+Se este protótipo evoluir para virar fonte oficial, este README deve ser atualizado junto com a arquitetura.

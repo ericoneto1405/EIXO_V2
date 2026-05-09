@@ -268,7 +268,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                 </div>
             )}
 
-            {farms.length > 0 && (
+            {!showForm && farms.length > 0 && (
                 <div className="overflow-hidden rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left text-[var(--eixo-text-muted)]">
@@ -345,7 +345,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
             )}
 
             {/* Estado vazio de pastos — prioriza a base operacional da fazenda */}
-            {firstFarmWithoutPaddocks && (
+            {!showForm && firstFarmWithoutPaddocks && (
                 <div className="mt-4 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-4">

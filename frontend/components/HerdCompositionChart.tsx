@@ -27,20 +27,16 @@ const HerdCompositionChart: React.FC<HerdCompositionChartProps> = ({ farmId }) =
 
             setIsLoading(true);
             try {
-                const [commercialResponse, poResponse] = await Promise.all([
-                    fetch(buildApiUrl(`/animals?farmId=${farmId}`), { credentials: 'include' }),
-                    fetch(buildApiUrl(`/po/animals?farmId=${farmId}`), { credentials: 'include' }),
-                ]);
+                const response = await fetch(buildApiUrl(`/animals?farmId=${farmId}`), { credentials: 'include' });
+                const payload = await response.json().catch(() => ({}));
 
-                const commercialPayload = await commercialResponse.json().catch(() => ({}));
-                const poPayload = await poResponse.json().catch(() => ({}));
-
-                if (!commercialResponse.ok || !poResponse.ok) {
+                if (!response.ok) {
                     throw new Error('Erro ao carregar composição do rebanho.');
                 }
 
-                const commercialAnimals = Array.isArray(commercialPayload?.animals) ? commercialPayload.animals : [];
-                const poAnimals = Array.isArray(poPayload?.animals) ? poPayload.animals : [];
+                const animals = Array.isArray(payload?.animals) ? payload.animals : [];
+                const poAnimals = animals.filter((animal: any) => animal?.tipoCadastro === 'PO');
+                const commercialAnimals = animals.filter((animal: any) => animal?.tipoCadastro !== 'PO');
 
                 const nextData: ComposicaoRebanhoData[] = [
                     { name: 'Comercial', value: commercialAnimals.length },

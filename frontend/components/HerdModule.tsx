@@ -143,9 +143,11 @@ const MAX_IMPORT_COLUMNS = 40;
 type SortDirection = 'asc' | 'desc';
 type SortColumn = 'identificacao' | 'raca' | 'sexo' | 'idade' | 'pasto' | 'pesoAtual' | 'gmd' | 'lote' | 'categoria';
 
-const FIELD_PLAN: Record<string, 'free' | 'paid1' | 'paid2'> = {
+// Campos P.O. (tatuagem, mae, pai, sisbov) liberados para todos os planos
+const FIELD_PLAN: Record<string, 'free' | 'paid2'> = {
     brinco: 'free',
     nome: 'free',
+    tipoCadastro: 'free',
     raca: 'free',
     sexo: 'free',
     dataNascimento: 'free',
@@ -157,10 +159,10 @@ const FIELD_PLAN: Record<string, 'free' | 'paid1' | 'paid2'> = {
     dataEntrada: 'free',
     valorCompra: 'free',
     dataPesagem: 'free',
-    tatuagem: 'paid1',
-    mae: 'paid1',
-    pai: 'paid1',
-    sisbov: 'paid1',
+    tatuagem: 'free',
+    mae: 'free',
+    pai: 'free',
+    sisbov: 'free',
     eid: 'paid2',
     ncf: 'paid2',
     rgd: 'paid2',
@@ -168,9 +170,13 @@ const FIELD_PLAN: Record<string, 'free' | 'paid1' | 'paid2'> = {
     abcz: 'paid2',
 };
 
+// Campos P.O. que indicam planilha de Puro de Origem
+const PO_IMPORT_FIELDS = ['tatuagem', 'mae', 'pai', 'sisbov'];
+
 const FIELD_LABELS: Record<string, string> = {
     brinco: 'Identificação / Brinco',
     nome: 'Nome',
+    tipoCadastro: 'Tipo de Cadastro',
     raca: 'Raça',
     sexo: 'Sexo',
     dataNascimento: 'Data de Nascimento',
@@ -182,10 +188,10 @@ const FIELD_LABELS: Record<string, string> = {
     observacoes: 'Observações',
     dataEntrada: 'Data de Entrada',
     valorCompra: 'Valor de Compra (R$)',
-    tatuagem: 'Tatuagem 🔒',
-    mae: 'Mãe / Matriz 🔒',
-    pai: 'Pai / Touro 🔒',
-    sisbov: 'SISBOV 🔒',
+    tatuagem: 'Tatuagem',
+    mae: 'Mãe / Matriz',
+    pai: 'Pai / Touro',
+    sisbov: 'SISBOV',
     eid: 'EID / Chip Eletrônico 🔒',
     ncf: 'NCF 🔒',
     rgd: 'RGD 🔒',
@@ -270,6 +276,11 @@ const FIELD_KEYWORDS: Record<string, string[]> = {
     nome: [
         'nome', 'name', 'apelido', 'alcunha', 'denominacao', 'denominação',
         'nome_animal', 'designacao', 'nomo', 'nmae', 'nom', 'nm', 'nme',
+    ],
+    tipoCadastro: [
+        'tipo cadastro', 'tipo de cadastro', 'po comercial', 'p.o comercial',
+        'p.o.', 'puro origem', 'puro de origem', 'comercial', 'mestiço',
+        'mestico', 'tipo animal registro', 'registro tipo',
     ],
     raca: [
         'raca', 'raça', 'breed', 'raca do animal', 'raça do animal',
@@ -393,7 +404,9 @@ function detectField(header: string): string | null {
 }
 
 const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdType, isFreePlan = false, onUpgradeRequest, initialTabRequest, weighingOnlyMode = false }) => {
-    const resolvedMode = mode ?? herdType ?? 'COMMERCIAL';
+    void mode;
+    void herdType;
+    const resolvedMode: HerdType = 'COMMERCIAL';
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
     const [animals, setAnimals] = useState<HerdAnimal[]>([]);
     const [lots, setLots] = useState<HerdLot[]>([]);
@@ -431,6 +444,19 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+    // Modal de nascimento
+    const [nascimentoModalOpen, setNascimentoModalOpen] = useState(false);
+    const [nascimentoForm, setNascimentoForm] = useState({
+        sexo: 'Fêmea',
+        dataNascimento: new Date().toISOString().slice(0, 10),
+        pesoNascimento: '',
+        brinco: '',
+        maeId: '',
+        maeNome: '',
+    });
+    const [nascimentoError, setNascimentoError] = useState<string | null>(null);
+    const [nascimentoSaving, setNascimentoSaving] = useState(false);
+
     const [animalForm, setAnimalForm] = useState({
         brinco: '',
         nome: '',
@@ -439,6 +465,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
         dataNascimento: '',
         pesoAtual: '',
         registro: '',
+        tipoCadastro: 'MESTICO',
         categoria: '',
         observacoes: '',
         lotId: '',
@@ -457,7 +484,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
     const [paddocks, setPaddocks] = useState<Paddock[]>([]);
     const [farmBreeds, setFarmBreeds] = useState<string[]>([]);
 
-    const isPo = resolvedMode === 'PO';
+    const isPo = false;
 
     useEffect(() => {
         let isActive = true;
@@ -636,23 +663,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                 }
             }
 
-            if (isPo) {
-                const haystack = [
-                    animal.identificacao,
-                    animal.nome,
-                    animal.brinco,
-                    animal.registro,
-                    animal.raca,
-                ]
-                    .filter(Boolean)
-                    .join(' ')
-                    .toLowerCase();
-                return !term || haystack.includes(term);
-            }
             if (!term) {
                 return true;
             }
-            return [animal.identificacao, animal.raca, animal.sexo, animal.registro]
+            return [animal.identificacao, animal.nome, animal.raca, animal.sexo, animal.registro, animal.tipoCadastro]
                 .filter(Boolean)
                 .join(' ')
                 .toLowerCase()
@@ -667,7 +681,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
         filterPaddock,
         filterRaca,
         filterSexo,
-        isPo,
         lotFilter,
         paddocks,
         searchTerm,
@@ -821,11 +834,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
             dataNascimento: '',
             pesoAtual: '',
             registro: '',
+            tipoCadastro: 'MESTICO',
             categoria: '',
             observacoes: '',
             lotId: '',
             paddockId: '',
             paddockStartAt: '',
+            valorCompra: '',
+            dataCompra: '',
         });
     };
 
@@ -856,24 +872,23 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
     };
 
     const handleDownloadTemplate = () => {
-        const fileName = isPo ? 'modelo_rebanho_po.xlsx' : 'modelo_rebanho_comercial.xlsx';
-        const sheetName = isPo ? 'Rebanho P.O.' : 'Rebanho Comercial';
-        const headers = isPo
-            ? ['Brinco', 'Nome', 'Raça', 'Sexo (Macho|Fêmea)', 'Data Nascimento (DD/MM/AAAA)', 'Peso Atual (kg)', 'Registro', 'Categoria']
-            : [
-                'Brinco',
-                'Raça',
-                'Sexo (Macho|Fêmea)',
-                'Data Nascimento (DD/MM/AAAA)',
-                'Peso Atual (kg)',
-                'Data Pesagem 1 (DD/MM/AAAA)',
-                'Peso Pesagem 1 (kg)',
-                'Data Pesagem 2 (DD/MM/AAAA)',
-                'Peso Pesagem 2 (kg)',
-            ];
-        const sampleRow = isPo
-            ? ['PO001', 'Matriz Top', 'Nelore', 'Fêmea', '01/01/2022', '450', 'ABCZ-123', 'Doadora']
-            : ['BR001', 'Nelore', 'Macho', '01/01/2023', '450', '15/02/2024', '455', '', ''];
+        const fileName = 'modelo_rebanho.xlsx';
+        const sheetName = 'Rebanho';
+        const headers = [
+            'Brinco',
+            'Tipo Cadastro (Comercial|P.O.)',
+            'Raça',
+            'Sexo (Macho|Fêmea)',
+            'Data Nascimento (DD/MM/AAAA)',
+            'Peso Atual (kg)',
+            'Registro',
+            'Categoria',
+            'Data Pesagem 1 (DD/MM/AAAA)',
+            'Peso Pesagem 1 (kg)',
+            'Data Pesagem 2 (DD/MM/AAAA)',
+            'Peso Pesagem 2 (kg)',
+        ];
+        const sampleRow = ['BR001', 'Comercial', 'Nelore', 'Macho', '01/01/2023', '450', '', 'Recria', '15/02/2024', '455', '', ''];
         void downloadWorkbook(fileName, sheetName, [headers, sampleRow]);
     };
 
@@ -1039,6 +1054,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                     observacoes: get('observacoes') || undefined,
                     dataEntrada: dataEntrada || undefined,
                     valorCompra: valorCompra || undefined,
+                    tipoCadastro: get('tipoCadastro') || undefined,
+                    // Campos P.O. — liberados para todos os planos
+                    tatuagem: get('tatuagem') || undefined,
+                    sisbov: get('sisbov') || undefined,
+                    maeNome: get('mae') || undefined,
+                    paiNome: get('pai') || undefined,
                 });
                 success++;
                 setImportProgress({ total, success, errors: [...errors] });
@@ -1071,12 +1092,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
             setAnimalFormError('Selecione o pasto do animal.');
             return;
         }
-        if (isPo) {
-            if (!animalForm.nome.trim() || !animalForm.raca.trim()) {
-                setAnimalFormError('Preencha nome e raça.');
-                return;
-            }
-        } else if (!animalForm.brinco.trim() || !animalForm.raca.trim() || !animalForm.dataNascimento) {
+        if (!animalForm.brinco.trim() || !animalForm.raca.trim() || !animalForm.dataNascimento) {
             setAnimalFormError('Preencha brinco, raça e data de nascimento.');
             return;
         }
@@ -1089,33 +1105,22 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
 
         try {
             setAnimalFormError(null);
-            const payload = isPo
-                ? {
-                    brinco: animalForm.brinco.trim() || undefined,
-                    nome: animalForm.nome.trim(),
-                    raca: animalForm.raca.trim(),
-                    sexo: animalForm.sexo,
-                    dataNascimento: animalForm.dataNascimento || undefined,
-                    pesoAtual: parsedPeso ?? undefined,
-                    registro: animalForm.registro.trim() || undefined,
-                    categoria: animalForm.categoria.trim() || undefined,
-                    observacoes: animalForm.observacoes.trim() || undefined,
-                    lotId: animalForm.lotId || undefined,
-                    paddockId: animalForm.paddockId,
-                    paddockStartAt: animalForm.paddockStartAt || undefined,
-                }
-                : {
-                    brinco: animalForm.brinco.trim(),
-                    raca: animalForm.raca.trim(),
-                    sexo: animalForm.sexo,
-                    dataNascimento: animalForm.dataNascimento,
-                    pesoAtual: parsedPeso ?? undefined,
-                    lotId: animalForm.lotId || undefined,
-                    paddockId: animalForm.paddockId,
-                    paddockStartAt: animalForm.paddockStartAt || undefined,
-                    valorCompra: animalForm.valorCompra ? parseFloat(animalForm.valorCompra.replace(',', '.')) || undefined : undefined,
-                    dataCompra: animalForm.dataCompra || undefined,
-                };
+            const payload = {
+                brinco: animalForm.brinco.trim(),
+                raca: animalForm.raca.trim(),
+                sexo: animalForm.sexo,
+                dataNascimento: animalForm.dataNascimento,
+                pesoAtual: parsedPeso ?? undefined,
+                tipoCadastro: animalForm.tipoCadastro,
+                registro: animalForm.registro.trim() || undefined,
+                categoria: animalForm.categoria.trim() || undefined,
+                observacoes: animalForm.observacoes.trim() || undefined,
+                lotId: animalForm.lotId || undefined,
+                paddockId: animalForm.paddockId,
+                paddockStartAt: animalForm.paddockStartAt || undefined,
+                valorCompra: animalForm.valorCompra ? parseFloat(animalForm.valorCompra.replace(',', '.')) || undefined : undefined,
+                dataCompra: animalForm.dataCompra || undefined,
+            };
             await createAnimal(farmId, resolvedMode, payload);
             closeAnimalForm();
             await loadData();
@@ -1275,6 +1280,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                     >
                                         <th scope="row" className="whitespace-nowrap px-4 py-3 font-bold text-[var(--eixo-text)]">
                                             <div>{animal.identificacao}</div>
+                                            <div className="mt-1">
+                                                <span className="rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
+                                                    {animal.tipoCadastro === 'PO' ? 'P.O.' : 'Comercial'}
+                                                </span>
+                                            </div>
                                             {animal.registro && (
                                                 <div className="text-xs text-[var(--eixo-text-muted)]">Registro: {animal.registro}</div>
                                             )}
@@ -1643,6 +1653,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                     </button>
                                     <button
                                         type="button"
+                                        onClick={() => setNascimentoModalOpen(true)}
+                                        className="flex h-10 items-center rounded-[10px] border-2 border-[#B6E23A] bg-[#f0f9d4] px-[14px] text-sm font-bold text-[#2F2F2F] transition-colors duration-200 hover:bg-[#e4f7b0]"
+                                    >
+                                        <span className="mr-1.5">🐄</span>
+                                        <span className="hidden sm:block">Registrar nascimento</span>
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={() => setLoteModalOpen(true)}
                                         className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-green)] bg-[var(--eixo-surface)] px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface)]"
                                     >
@@ -1882,18 +1900,20 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                             </button>
                         </header>
                         <form onSubmit={handleCreateAnimal} className="space-y-4 p-6">
-                            {isPo && (
-                                <div>
-                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Nome</label>
-                                    <input
-                                        type="text"
-                                        value={animalForm.nome}
-                                        onChange={(event) => setAnimalForm((prev) => ({ ...prev, nome: event.target.value }))}
-                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                        required
-                                    />
-                                </div>
-                            )}
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Tipo de cadastro</label>
+                                <select
+                                    value={animalForm.tipoCadastro}
+                                    onChange={(event) => setAnimalForm((prev) => ({ ...prev, tipoCadastro: event.target.value }))}
+                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                >
+                                    <option value="MESTICO">Comercial</option>
+                                    <option value="PO">P.O.</option>
+                                </select>
+                                <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                                    Todos ficam no mesmo Rebanho. Este campo apenas classifica o animal.
+                                </p>
+                            </div>
                             <div>
                                 <label className="block text-sm font-medium text-[var(--eixo-text)]">Brinco</label>
                                 <input
@@ -1901,7 +1921,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                     value={animalForm.brinco}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, brinco: event.target.value }))}
                                     className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                    required={!isPo}
+                                    required
                                 />
                             </div>
                             <div>
@@ -1941,7 +1961,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                     value={animalForm.dataNascimento}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, dataNascimento: event.target.value }))}
                                     className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                    required={!isPo}
+                                    required
                                 />
                             </div>
                             <div>
@@ -2023,37 +2043,34 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                 <p className="mt-2 text-[11px] text-[var(--eixo-text-muted)]">Se informado, o lançamento cai automaticamente no Financeiro.</p>
                             </div>
 
-                            {isPo && (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Registro</label>
-                                        <input
-                                            type="text"
-                                            value={animalForm.registro}
-                                            onChange={(event) => setAnimalForm((prev) => ({ ...prev, registro: event.target.value }))}
-                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Categoria</label>
-                                        <input
-                                            type="text"
-                                            value={animalForm.categoria}
-                                            onChange={(event) => setAnimalForm((prev) => ({ ...prev, categoria: event.target.value }))}
-                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Observações</label>
-                                        <textarea
-                                            value={animalForm.observacoes}
-                                            onChange={(event) => setAnimalForm((prev) => ({ ...prev, observacoes: event.target.value }))}
-                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                            rows={3}
-                                        />
-                                    </div>
-                                </>
-                            )}
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Registro</label>
+                                <input
+                                    type="text"
+                                    value={animalForm.registro}
+                                    onChange={(event) => setAnimalForm((prev) => ({ ...prev, registro: event.target.value }))}
+                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                    placeholder="RGN, RGD ou registro interno"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Categoria</label>
+                                <input
+                                    type="text"
+                                    value={animalForm.categoria}
+                                    onChange={(event) => setAnimalForm((prev) => ({ ...prev, categoria: event.target.value }))}
+                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Observações</label>
+                                <textarea
+                                    value={animalForm.observacoes}
+                                    onChange={(event) => setAnimalForm((prev) => ({ ...prev, observacoes: event.target.value }))}
+                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                    rows={3}
+                                />
+                            </div>
                             {animalFormError && (
                                 <p className="text-sm text-[var(--eixo-danger)]">{animalFormError}</p>
                             )}
@@ -2233,6 +2250,23 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                         )}
                                     </div>
 
+                                    {/* Banner P.O. — aparece quando a planilha tem dados de genética */}
+                                    {PO_IMPORT_FIELDS.some(f => Object.values(importMapping).includes(f)) && (
+                                        <div className="rounded-xl border-2 border-[#B6E23A] bg-[#f0f9d4] p-4">
+                                            <div className="flex items-start gap-3">
+                                                <span className="text-2xl">🧬</span>
+                                                <div>
+                                                    <p className="text-sm font-bold text-[#2F2F2F]">
+                                                        Planilha com dados de P.O. detectada
+                                                    </p>
+                                                    <p className="mt-0.5 text-xs text-[#5E5E5E]">
+                                                        O EIXO identificou campos de genealogia — tatuagem, mãe, pai ou SISBOV. Esses dados serão importados e vinculados ao plantel.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
                                         <p className="mb-1 text-sm font-semibold text-[var(--eixo-text)]">
                                             Mapeamento de colunas
@@ -2255,10 +2289,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                             {importHeaders.map((h) => {
                                                 const mapped = importMapping[h] || '';
                                                 const plan = mapped ? FIELD_PLAN[mapped] : null;
-                                                const isLocked = plan === 'paid1' || plan === 'paid2';
+                                                const isLocked = plan === 'paid2';
                                                 const isUnmapped = !mapped;
+                                                const isPO = mapped ? PO_IMPORT_FIELDS.includes(mapped) : false;
                                                 return (
-                                                <div key={h} className={`flex items-center gap-3 rounded-lg px-2 py-1 transition-colors ${isUnmapped ? 'bg-[var(--eixo-green-soft)]' : ''}`}>
+                                                <div key={h} className={`flex items-center gap-3 rounded-lg px-2 py-1 transition-colors ${isUnmapped ? 'bg-[var(--eixo-green-soft)]' : isPO ? 'bg-[#f0f9d4]' : ''}`}>
                                                     <span className="w-44 truncate text-sm text-[var(--eixo-text-muted)]" title={h}>
                                                         "{h}"
                                                     </span>
@@ -2274,14 +2309,17 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                                         className={`flex-1 rounded-xl border px-3 py-1.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none ${
                                                             isUnmapped
                                                                 ? 'border-[#d9ead0] bg-[var(--eixo-green-soft)]'
+                                                                : isPO
+                                                                ? 'border-[#B6E23A] bg-[#f0f9d4]'
                                                                 : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)]'
                                                         }`}
                                                     >
                                                         <option value="">
                                                             — Selecionar campo —
                                                         </option>
-                                                        <optgroup label="Plano Grátis">
+                                                        <optgroup label="Campos básicos">
                                                             <option value="brinco">{FIELD_LABELS.brinco}</option>
+                                                            <option value="tipoCadastro">{FIELD_LABELS.tipoCadastro}</option>
                                                             <option value="nome">{FIELD_LABELS.nome}</option>
                                                             <option value="raca">{FIELD_LABELS.raca}</option>
                                                             <option value="sexo">{FIELD_LABELS.sexo}</option>
@@ -2295,22 +2333,24 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                                             <option value="dataEntrada">{FIELD_LABELS.dataEntrada}</option>
                                                             <option value="valorCompra">{FIELD_LABELS.valorCompra}</option>
                                                         </optgroup>
-                                                        <optgroup label="── Plano Pago 1 — faça upgrade para importar ──">
-                                                            <option value="" disabled>{FIELD_LABELS.tatuagem} 🔒</option>
-                                                            <option value="" disabled>{FIELD_LABELS.mae} 🔒</option>
-                                                            <option value="" disabled>{FIELD_LABELS.pai} 🔒</option>
-                                                            <option value="" disabled>{FIELD_LABELS.sisbov} 🔒</option>
+                                                        <optgroup label="🧬 Genealogia / P.O.">
+                                                            <option value="tatuagem">{FIELD_LABELS.tatuagem}</option>
+                                                            <option value="mae">{FIELD_LABELS.mae}</option>
+                                                            <option value="pai">{FIELD_LABELS.pai}</option>
+                                                            <option value="sisbov">{FIELD_LABELS.sisbov}</option>
                                                         </optgroup>
-                                                        <optgroup label="── Plano Pago 2 — faça upgrade para importar ──">
-                                                            <option value="" disabled>{FIELD_LABELS.eid} 🔒</option>
-                                                            <option value="" disabled>{FIELD_LABELS.ncf} 🔒</option>
-                                                            <option value="" disabled>{FIELD_LABELS.rgd} 🔒</option>
-                                                            <option value="" disabled>{FIELD_LABELS.rgn} 🔒</option>
-                                                            <option value="" disabled>{FIELD_LABELS.abcz} 🔒</option>
+                                                        <optgroup label="── Eixo Decisão — faça upgrade para importar ──">
+                                                            <option value="" disabled>{FIELD_LABELS.eid}</option>
+                                                            <option value="" disabled>{FIELD_LABELS.ncf}</option>
+                                                            <option value="" disabled>{FIELD_LABELS.rgd}</option>
+                                                            <option value="" disabled>{FIELD_LABELS.rgn}</option>
+                                                            <option value="" disabled>{FIELD_LABELS.abcz}</option>
                                                         </optgroup>
                                                     </select>
                                                     {mapped && !isLocked && (
-                                                        <span className="text-[var(--eixo-success)] text-sm font-bold">✓</span>
+                                                        <span className={`text-sm font-bold ${isPO ? 'text-[#3a5c10]' : 'text-[var(--eixo-success)]'}`}>
+                                                            {isPO ? '🧬' : '✓'}
+                                                        </span>
                                                     )}
                                                     {mapped && isLocked && (
                                                         <span className="text-[var(--eixo-text)] text-sm">🔒</span>
@@ -2453,6 +2493,151 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                 lots={lots}
                 onSuccess={loadData}
             />
+
+            {/* ── Modal de Nascimento ─────────────────────────────────────── */}
+            {nascimentoModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-[#B6E23A] bg-white shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-[#B6E23A] bg-[#f0f9d4] px-6 py-4 rounded-t-2xl">
+                            <div>
+                                <h3 className="text-base font-bold text-[#2F2F2F]">🐄 Registrar nascimento</h3>
+                                <p className="text-xs text-[#5E5E5E]">O EIXO herda raça e pasto da mãe automaticamente</p>
+                            </div>
+                            <button type="button" onClick={() => { setNascimentoModalOpen(false); setNascimentoError(null); }}
+                                className="rounded-full p-1.5 text-[#5E5E5E] hover:bg-[#e4f7b0]">✕</button>
+                        </div>
+
+                        <form className="space-y-4 p-6" onSubmit={async (e) => {
+                            e.preventDefault();
+                            if (!farmId) return;
+                            setNascimentoError(null);
+                            setNascimentoSaving(true);
+                            try {
+                                const res = await fetch(`/animals/nascimento`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include',
+                                    body: JSON.stringify({
+                                        farmId,
+                                        sexo: nascimentoForm.sexo,
+                                        dataNascimento: nascimentoForm.dataNascimento,
+                                        pesoNascimento: nascimentoForm.pesoNascimento ? Number(nascimentoForm.pesoNascimento) : undefined,
+                                        brinco: nascimentoForm.brinco || undefined,
+                                        maeId: nascimentoForm.maeId || undefined,
+                                        maeNome: nascimentoForm.maeNome || undefined,
+                                    }),
+                                });
+                                const data = await res.json();
+                                if (!res.ok) throw new Error(data.message || 'Erro ao registrar nascimento');
+                                await loadData();
+                                setNascimentoModalOpen(false);
+                                setNascimentoForm({ sexo: 'Fêmea', dataNascimento: new Date().toISOString().slice(0, 10), pesoNascimento: '', brinco: '', maeId: '', maeNome: '' });
+                                if (data.brincoProvisorio) {
+                                    alert(`Nascimento registrado! Brinco provisório: ${data.animal?.brinco}. Edite o animal para atribuir o brinco definitivo.`);
+                                }
+                            } catch (err: any) {
+                                setNascimentoError(err.message || 'Erro ao registrar nascimento');
+                            } finally {
+                                setNascimentoSaving(false);
+                            }
+                        }}>
+                            {/* Mãe */}
+                            <div>
+                                <label className="block text-sm font-semibold text-[#2F2F2F]">Mãe (brinco ou nome)</label>
+                                <input
+                                    type="text"
+                                    placeholder="Digite o brinco da mãe..."
+                                    value={nascimentoForm.maeNome}
+                                    list="mae-suggestions"
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        const found = animals.find(a => a.brinco === val || a.nome === val);
+                                        setNascimentoForm(prev => ({ ...prev, maeNome: val, maeId: found?.id || '' }));
+                                    }}
+                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm focus:border-[#B6E23A] focus:outline-none focus:ring-2 focus:ring-[#B6E23A]/20"
+                                />
+                                <datalist id="mae-suggestions">
+                                    {animals.filter(a => a.sexo === 'Fêmea' || a.sexo === 'FEMEA').map(a => (
+                                        <option key={a.id} value={a.brinco}>{a.brinco}{a.nome ? ` — ${a.nome}` : ''}</option>
+                                    ))}
+                                </datalist>
+                                {nascimentoForm.maeId && (
+                                    <p className="mt-1 text-xs text-[#3a5c10]">✓ Mãe encontrada no plantel — raça e pasto serão herdados</p>
+                                )}
+                                {nascimentoForm.maeNome && !nascimentoForm.maeId && (
+                                    <p className="mt-1 text-xs text-[#5E5E5E]">Mãe salva como texto — pode ser vinculada depois</p>
+                                )}
+                            </div>
+
+                            {/* Sexo */}
+                            <div>
+                                <label className="block text-sm font-semibold text-[#2F2F2F]">Sexo do bezerro</label>
+                                <div className="mt-1 flex gap-3">
+                                    {(['Fêmea', 'Macho'] as const).map(s => (
+                                        <button key={s} type="button"
+                                            onClick={() => setNascimentoForm(prev => ({ ...prev, sexo: s }))}
+                                            className={`flex-1 rounded-xl border py-2 text-sm font-semibold transition-colors ${
+                                                nascimentoForm.sexo === s
+                                                    ? 'border-[#B6E23A] bg-[#B6E23A] text-[#1a1a1a]'
+                                                    : 'border-[var(--eixo-border)] text-[#5E5E5E] hover:bg-[#f5f5f5]'
+                                            }`}>
+                                            {s === 'Fêmea' ? '♀ Fêmea' : '♂ Macho'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Data */}
+                            <div>
+                                <label className="block text-sm font-semibold text-[#2F2F2F]">Data do nascimento</label>
+                                <input type="date"
+                                    value={nascimentoForm.dataNascimento}
+                                    max={new Date().toISOString().slice(0, 10)}
+                                    onChange={(e) => setNascimentoForm(prev => ({ ...prev, dataNascimento: e.target.value }))}
+                                    required
+                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm focus:border-[#B6E23A] focus:outline-none focus:ring-2 focus:ring-[#B6E23A]/20"
+                                />
+                            </div>
+
+                            {/* Campos opcionais */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-sm font-medium text-[#5E5E5E]">Peso ao nascer (kg) <span className="text-xs">(opcional)</span></label>
+                                    <input type="number" min="0" step="0.1"
+                                        value={nascimentoForm.pesoNascimento}
+                                        onChange={(e) => setNascimentoForm(prev => ({ ...prev, pesoNascimento: e.target.value }))}
+                                        placeholder="ex: 32"
+                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm focus:border-[#B6E23A] focus:outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-[#5E5E5E]">Brinco do bezerro <span className="text-xs">(opcional)</span></label>
+                                    <input type="text"
+                                        value={nascimentoForm.brinco}
+                                        onChange={(e) => setNascimentoForm(prev => ({ ...prev, brinco: e.target.value }))}
+                                        placeholder="ex: 0847"
+                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm focus:border-[#B6E23A] focus:outline-none"
+                                    />
+                                </div>
+                            </div>
+                            {!nascimentoForm.brinco && (
+                                <p className="text-xs text-[#5E5E5E]">
+                                    Sem brinco? O sistema gera um ID provisório — você completa depois.
+                                </p>
+                            )}
+
+                            {nascimentoError && (
+                                <p className="rounded-xl bg-[#fce8e8] px-3 py-2 text-sm text-[#8c2020]">{nascimentoError}</p>
+                            )}
+
+                            <button type="submit" disabled={nascimentoSaving || !nascimentoForm.dataNascimento}
+                                className="w-full rounded-xl bg-[#B6E23A] py-2.5 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130] disabled:opacity-50">
+                                {nascimentoSaving ? 'Registrando...' : '🐄 Registrar nascimento'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

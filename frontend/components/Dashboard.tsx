@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import CashFlowChart from './CashFlowChart';
-import HerdCompositionChart from './HerdCompositionChart';
+import WeatherCard from './WeatherCard';
+import CattleNewsCard from './CattleNewsCard';
 import { buildApiUrl } from '../api';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -50,6 +50,9 @@ const MoneyIcon: React.FC = () => (
 interface DashboardProps {
     farmId?: string | null;
     farmSize?: number | null;
+    farmCity?: string | null;
+    farmLat?: number | null;
+    farmLng?: number | null;
 }
 
 interface CategoryCount {
@@ -66,6 +69,7 @@ interface KpiData {
     entradas: number | null;
     saidas: number | null;
     saldoMes: number | null;
+    animaisSemPesagem: number;     // animais sem pesagem nos últimos 30 dias
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -111,16 +115,17 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, icon, loading, children }) => 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
+const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmLat, farmLng }) => {
     const [kpis, setKpis] = useState<KpiData>({
         totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null,
-        gmdMedio: null, entradas: null, saidas: null, saldoMes: null,
+        gmdMedio: null, entradas: null, saidas: null, saldoMes: null, animaisSemPesagem: 0,
     });
     const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
         if (!farmId) {
-            setKpis({ totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null, gmdMedio: null, entradas: null, saidas: null, saldoMes: null });
+            setKpis({ totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null, gmdMedio: null, entradas: null, saidas: null, saldoMes: null, animaisSemPesagem: 0 });
             return;
         }
 
@@ -188,6 +193,15 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
                         lastByAnimal.set(aid, { gmd: w.gmd, date: w.date });
                     }
                 }
+                // Animais sem pesagem nos últimos 30 dias
+                const cutoff30 = new Date();
+                cutoff30.setDate(cutoff30.getDate() - 30);
+                const animaisSemPesagem = animals.filter(a => {
+                    const last = lastByAnimal.get(a.id);
+                    if (!last) return true; // nunca pesado
+                    return new Date(last.date) < cutoff30;
+                }).length;
+
                 const validGmds = Array.from(lastByAnimal.values())
                     .map(w => w.gmd)
                     .filter((g): g is number => g !== null && g > 0);
@@ -208,9 +222,10 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
                     saldoMes = entradas - saidas;
                 }
 
-                setKpis({ totalAnimais, nascimentosMes, categorias, taxaOcupacao, gmdMedio, entradas, saidas, saldoMes });
+                setKpis({ totalAnimais, nascimentosMes, categorias, taxaOcupacao, gmdMedio, entradas, saidas, saldoMes, animaisSemPesagem });
             } catch (err) {
                 console.error('Dashboard load error', err);
+                if (active) setLoadError('Não foi possível carregar os dados. Verifique sua conexão.');
             } finally {
                 if (active) setLoading(false);
             }
@@ -225,6 +240,13 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
 
     return (
         <div className="space-y-6">
+
+            {/* Erro de carregamento */}
+            {loadError && (
+                <div className="rounded-2xl border border-[#fca5a5] bg-[#fef2f2] px-5 py-4 text-sm text-[#8c2020]">
+                    {loadError}
+                </div>
+            )}
 
             {/* Cabeçalho */}
             <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
@@ -340,10 +362,67 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize }) => {
 
             </div>
 
-            {/* Gráficos */}
+            {/* Raio-X da Fazenda */}
+            {!loading && farmId && (() => {
+                const alertas: { tipo: 'aviso' | 'atencao' | 'ok'; texto: string }[] = [];
+
+                if (kpis.taxaOcupacao !== null && kpis.taxaOcupacao > 1.5) {
+                    alertas.push({ tipo: 'aviso', texto: `Taxa de ocupação sobrecarregada — ${fmt(kpis.taxaOcupacao, 2)} cab/ha` });
+                }
+                if (kpis.gmdMedio !== null && kpis.gmdMedio < 0.5) {
+                    alertas.push({ tipo: 'aviso', texto: `GMD médio baixo — ${fmt(kpis.gmdMedio)} kg/dia (abaixo de 0,5 kg/dia)` });
+                }
+                if (kpis.totalAnimais > 0 && kpis.gmdMedio === null) {
+                    alertas.push({ tipo: 'atencao', texto: 'Nenhuma pesagem registrada — cadastre pesagens para acompanhar o GMD' });
+                }
+                if (kpis.animaisSemPesagem > 0) {
+                    alertas.push({ tipo: 'atencao', texto: `${kpis.animaisSemPesagem} ${kpis.animaisSemPesagem === 1 ? 'animal sem pesagem' : 'animais sem pesagem'} nos últimos 30 dias` });
+                }
+
+                const tudo_ok = alertas.length === 0 && kpis.totalAnimais > 0;
+
+                return (
+                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+                        <div className="mb-4 flex items-center gap-2">
+                            <svg className="h-4 w-4 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Raio-X da Fazenda</p>
+                        </div>
+
+                        {tudo_ok && (
+                            <div className="flex items-center gap-3 rounded-xl bg-[var(--eixo-green-soft)] px-4 py-3">
+                                <span className="text-lg">✅</span>
+                                <p className="text-sm font-semibold text-[var(--eixo-graphite)]">Tudo em ordem — nenhum alerta no momento.</p>
+                            </div>
+                        )}
+
+                        {!tudo_ok && kpis.totalAnimais === 0 && (
+                            <div className="flex items-center gap-3 rounded-xl bg-[var(--eixo-surface-soft)] px-4 py-3">
+                                <span className="text-lg">ℹ️</span>
+                                <p className="text-sm text-[var(--eixo-text-muted)]">Cadastre animais para ver o diagnóstico da fazenda.</p>
+                            </div>
+                        )}
+
+                        {alertas.length > 0 && (
+                            <div className="space-y-2">
+                                {alertas.map((a, i) => (
+                                    <div key={i} className={`flex items-start gap-3 rounded-xl px-4 py-3 ${a.tipo === 'aviso' ? 'bg-[rgba(184,66,50,0.07)]' : 'bg-[rgba(213,150,0,0.07)]'}`}>
+                                        <span className="mt-0.5 text-base">{a.tipo === 'aviso' ? '⚠️' : '📋'}</span>
+                                        <p className={`text-sm font-medium ${a.tipo === 'aviso' ? 'text-[var(--eixo-danger)]' : 'text-[#8a6000]'}`}>{a.texto}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
+
+            {/* Clima + Notícias */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <CashFlowChart farmId={farmId} />
-                <HerdCompositionChart farmId={farmId} />
+                <WeatherCard city={farmCity ?? null} lat={farmLat} lng={farmLng} />
+                <CattleNewsCard />
             </div>
         </div>
     );

@@ -1,37 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 882 300">
-  <defs>
-    <clipPath id="x-top">
-      <rect x="0" y="0" width="882" height="150"/>
-    </clipPath>
-    <clipPath id="x-bot">
-      <rect x="0" y="150" width="882" height="150"/>
-    </clipPath>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1884 530" role="img" aria-label="EIXO">
+  <title>EIXO</title>
+  <desc>Logomarca vetorial limpa do EIXO com X corrigido em peças separadas.</desc>
+  <g id="eixo-logo" fill="none" fill-rule="evenodd">
+    <!-- E -->
+    <g id="letter-e" fill="#5E5E5E">
+      <path d="M38.00,8.00 H84.00 Q116.00,8.00 116.00,40.00 V486.00 Q116.00,518.00 84.00,518.00 H38.00 Q6.00,518.00 6.00,486.00 V40.00 Q6.00,8.00 38.00,8.00 Z"/>
+      <path d="M34.00,8.00 H383.00 Q411.00,8.00 411.00,36.00 V80.00 Q411.00,108.00 383.00,108.00 H34.00 Q6.00,108.00 6.00,80.00 V36.00 Q6.00,8.00 34.00,8.00 Z"/>
+      <path d="M26.00,215.00 H388.00 Q408.00,215.00 408.00,235.00 V295.00 Q408.00,315.00 388.00,315.00 H26.00 Q6.00,315.00 6.00,295.00 V235.00 Q6.00,215.00 26.00,215.00 Z"/>
+      <path d="M34.00,416.00 H383.00 Q411.00,416.00 411.00,444.00 V490.00 Q411.00,518.00 383.00,518.00 H34.00 Q6.00,518.00 6.00,490.00 V444.00 Q6.00,416.00 34.00,416.00 Z"/>
+    </g>
 
-  <!-- E -->
-  <path d="M 50,30 H 62 Q 82,30 82,50 V 250 Q 82,270 62,270 H 50 Q 30,270 30,250 V 50 Q 30,30 50,30 Z M 50,30 H 225 Q 245,30 245,50 V 62 Q 245,82 225,82 H 50 Q 30,82 30,62 V 50 Q 30,30 50,30 Z M 50,124 H 195 Q 215,124 215,144 V 156 Q 215,176 195,176 H 50 Q 30,176 30,156 V 144 Q 30,124 50,124 Z M 50,218 H 225 Q 245,218 245,238 V 250 Q 245,270 225,270 H 50 Q 30,270 30,250 V 238 Q 30,218 50,218 Z" fill="#5E5E5E"/>
+    <!-- I -->
+    <path id="letter-i" d="M552.00,8.00 H616.00 Q634.00,8.00 634.00,26.00 V500.00 Q634.00,518.00 616.00,518.00 H552.00 Q534.00,518.00 534.00,500.00 V26.00 Q534.00,8.00 552.00,8.00 Z" fill="#5E5E5E"/>
 
-  <!-- I -->
-  <path d="M 288,30 H 308 Q 328,30 328,50 V 250 Q 328,270 308,270 H 288 Q 268,270 268,250 V 50 Q 268,30 288,30 Z" fill="#5E5E5E"/>
+    <!-- X - graphite chevron -->
+    <path id="x-graphite" fill="#5E5E5E" d="
+      M 780 7
+      L 902 7
+      Q 918 7 928 21
+      L 1105 250
+      Q 1116 264 1105 278
+      L 928 506
+      Q 918 519 902 519
+      L 780 519
+      Q 764 519 773 506
+      L 989 264
+      L 773 20
+      Q 764 7 780 7
+      Z"/>
 
-  <!-- X -->
-  <!-- Verde: braço superior-direito = metade de cima da diagonal / -->
-  <g clip-path="url(#x-top)" fill="#B6E23A">
-    <rect x="303.21" y="124.0" width="325.58" height="52" rx="20" transform="rotate(-47.49 466 150)"/>
-  </g>
-  <!-- Verde: braço inferior-direito = metade de baixo da diagonal \ -->
-  <g clip-path="url(#x-bot)" fill="#B6E23A">
-    <rect x="303.21" y="124.0" width="325.58" height="52" rx="20" transform="rotate(47.49 466 150)"/>
-  </g>
-  <!-- Grafite: braço superior-esquerdo = metade de cima da diagonal \ (por cima) -->
-  <g clip-path="url(#x-top)" fill="#5E5E5E">
-    <rect x="303.21" y="124.0" width="325.58" height="52" rx="20" transform="rotate(47.49 466 150)"/>
-  </g>
-  <!-- Grafite: braço inferior-esquerdo + centro = metade de baixo da diagonal / (por cima) -->
-  <g clip-path="url(#x-bot)" fill="#5E5E5E">
-    <rect x="303.21" y="124.0" width="325.58" height="52" rx="20" transform="rotate(-47.49 466 150)"/>
-  </g>
+    <!-- X - green upper arm -->
+    <path id="x-green-upper" fill="#B6E23A" d="
+      M 1212 7
+      L 1320 7
+      Q 1338 7 1326 23
+      L 1144 224
+      Q 1134 238 1123 224
+      L 1085 181
+      Q 1073 168 1085 154
+      L 1197 22
+      Q 1203 7 1212 7
+      Z"/>
 
-  <!-- O -->
-  <path d="M 644,30 H 782 Q 822,30 822,70 V 230 Q 822,270 782,270 H 644 Q 604,270 604,230 V 70 Q 604,30 644,30 Z M 664,82 H 762 Q 770,82 770,90 V 210 Q 770,218 762,218 H 664 Q 656,218 656,210 V 90 Q 656,82 664,82 Z" fill-rule="evenodd" fill="#5E5E5E"/>
+    <!-- X - green lower arm -->
+    <path id="x-green-lower" fill="#B6E23A" d="
+      M 1085 349
+      L 1123 306
+      Q 1134 292 1144 306
+      L 1326 503
+      Q 1338 519 1320 519
+      L 1212 519
+      Q 1203 519 1197 504
+      L 1085 374
+      Q 1073 361 1085 349
+      Z"/>
+
+    <!-- O -->
+    <path id="letter-o" fill="#5E5E5E" fill-rule="evenodd" d="
+      M1483.00,8.00 H1793.00 Q1875.00,8.00 1875.00,90.00 V436.00 Q1875.00,518.00 1793.00,518.00 H1483.00 Q1401.00,518.00 1401.00,436.00 V90.00 Q1401.00,8.00 1483.00,8.00 Z
+      M1533.00,101.00 H1743.00 Q1785.00,101.00 1785.00,143.00 V384.00 Q1785.00,426.00 1743.00,426.00 H1533.00 Q1491.00,426.00 1491.00,384.00 V143.00 Q1491.00,101.00 1533.00,101.00 Z
+    "/>
+  </g>
 </svg>

@@ -9,13 +9,12 @@ interface PublicLandingProps {
 const FREE_FEATURES = [
   'Animais ilimitados',
   'Pesagens e GMD automático',
-  'Manejo do Rebanho (básico)',
+  'Manejo do Rebanho completo',
   'Lotes e pastos',
   'Estrutura da Fazenda',
-  'Financeiro básico',
+  'Financeiro completo',
+  'Visão Geral — Dashboard',
   'Importação de planilha própria',
-  'Sem cartão de crédito',
-  'Sem prazo para acabar',
 ];
 
 const STEPS = [
@@ -83,7 +82,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
   };
 
-  const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
+  const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
   const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]';
 
   return (
@@ -91,25 +90,25 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
       {/* ── Nav ── */}
       <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${isScrolled ? 'border-b border-[var(--eixo-border)] bg-[var(--eixo-bg)]/95 shadow-sm backdrop-blur' : 'bg-[rgba(247,248,246,0.58)] backdrop-blur-[2px]'}`}>
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:h-18 lg:px-8">
+        <div className="mx-auto flex h-[75px] max-w-7xl items-center justify-between px-4 lg:px-8">
           <div className="inline-flex flex-col items-center leading-none">
             <img src="/logo_eixo_official.svg" alt="EIXO" className="h-[2.53575rem] w-auto" />
-            <div className="-mt-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] whitespace-nowrap text-[var(--eixo-text)]/75">
+            <div className="mt-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] whitespace-nowrap text-[var(--eixo-text)]/75">
               Tecnologia para Gestão Pecuária
             </div>
           </div>
-          <nav className="hidden items-center gap-7 lg:flex">
+          <nav className="hidden items-center gap-3 lg:flex">
             {[
               { label: 'Plano Grátis', action: () => scrollTo('gratis') },
               { label: 'Como funciona', action: () => scrollTo('como') },
               { label: 'Dúvidas', action: () => scrollTo('faq') },
               { label: 'Planos', action: () => { window.location.href = '/planos'; } },
             ].map((item) => (
-              <button key={item.label} type="button" onClick={item.action} className="text-sm font-medium text-[var(--eixo-graphite)]/88 transition-colors hover:text-[var(--eixo-text)]">{item.label}</button>
+              <button key={item.label} type="button" onClick={item.action} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-base font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)] hover:border-[var(--eixo-graphite)]/30">{item.label}</button>
             ))}
           </nav>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onEnter} className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-[var(--eixo-graphite)]/88 transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)] sm:inline-flex">
+            <button type="button" onClick={onEnter} className="hidden rounded-xl border border-[var(--eixo-border)] bg-transparent px-6 py-3 text-lg font-semibold text-[var(--eixo-text)] transition-colors hover:border-[var(--eixo-graphite)]/40 hover:bg-[var(--eixo-surface)] sm:inline-flex">
               Entrar
             </button>
             <button type="button" onClick={onRegister} className={btnPrimary}>
@@ -124,7 +123,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         {/* ── Hero ── */}
         <section className="relative overflow-hidden pb-20 pt-28 lg:pt-36 lg:pb-28">
           <div
-            className="absolute inset-0 opacity-[0.08]"
+            className="absolute inset-0 opacity-[0.25]"
             style={{ backgroundImage: "url('/pasture-horizon.jpg')", backgroundPosition: 'center', backgroundSize: 'cover' }}
           />
           <div className="absolute inset-0 bg-[rgba(255,250,241,0.58)]" />
@@ -132,18 +131,25 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
           <div className="relative mx-auto max-w-5xl px-4 text-center lg:px-8">
 
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
-              ACESSO ANTECIPADO • 100% GRÁTIS
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--eixo-green)]" />
+              <svg className="h-3 w-3 text-[var(--eixo-graphite)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Vagas limitadas — 100 primeiros grátis para sempre
             </div>
 
-            <h1 className="font-brand text-balance text-4xl font-extrabold leading-tight text-[var(--eixo-text)] lg:text-6xl">
-              Chega de caderno e planilha.<br />
-              <span className="text-[var(--eixo-text)]">Gestão pecuária completa — 100% grátis para começar.</span>
+            <h1 className="font-brand text-balance text-4xl font-extrabold leading-[1.15] text-[var(--eixo-text)] lg:text-6xl">
+              Sua fazenda no controle.<br />
+              <span className="text-[#7aad1a]">Sem planilha, sem custo<sup className="text-[0.5em] font-normal text-[var(--eixo-text-muted)]">*</sup>, sem enrolação.</span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--eixo-text-muted)] lg:text-xl">
-              Organize seu rebanho, controle financeiro e tome decisões com dados reais. O Acasalamento Inteligente está disponível nos planos pagos para quem quer ir além.
+              Rebanho, financeiro e pesagens no mesmo lugar — sem caderno, sem cartão. Veja sua operação com clareza desde o primeiro dia.
+            </p>
+
+            <p className="mt-3 text-xs text-[var(--eixo-text-muted)]/70">
+              * Plano gratuito vitalício disponível. Planos pagos para recursos avançados.
             </p>
 
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -156,11 +162,19 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               </button>
             </div>
 
-            {/* Mini prova social */}
-            <div className="mx-auto mt-12 grid max-w-xl grid-cols-3 gap-4 border-t border-[var(--eixo-border)]/80 pt-10">
-              {[['Acesso Antecipado', 'Vagas limitadas'], ['R$ 0', 'para sempre'], ['2 min', 'para começar']].map(([value, label]) => (
+            {/* Prova social + mini stats */}
+            <p className="mt-10 text-sm font-semibold text-[var(--eixo-text-muted)]">
+              <span className="inline-flex items-center gap-1.5">
+                <svg className="h-3.5 w-3.5 text-[var(--eixo-green-dark)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Produtores já organizando o rebanho no EIXO — junte-se a eles.
+              </span>
+            </p>
+            <div className="mx-auto mt-5 grid max-w-xl grid-cols-3 gap-4 border-t border-[var(--eixo-border)]/80 pt-8">
+              {[['Grátis', 'para sempre'], ['R$ 0', 'sem cartão'], ['2 min', 'para começar']].map(([value, label]) => (
                 <div key={label} className="flex min-h-[80px] flex-col items-center justify-center rounded-2xl border border-[var(--eixo-border)]/70 bg-[rgba(255,250,241,0.42)] px-3 py-4 text-center shadow-[0_10px_24px_rgba(47,58,45,0.06)] backdrop-blur-[1px]">
-                  <p className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)] [text-shadow:0_1px_0_rgba(255,250,241,0.3)]">{value}</p>
+                  <p className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">{value}</p>
                   <p className="mt-1.5 text-xs font-semibold leading-5 text-[var(--eixo-text)]/72">{label}</p>
                 </div>
               ))}
@@ -187,10 +201,10 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {FREE_FEATURES.map((f) => (
                   <div key={f} className="flex items-center gap-3">
-                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--eixo-surface-soft)]">
-                      <CheckCircle2 className="h-4 w-4 text-[var(--eixo-text)]" />
+                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[var(--eixo-green-soft)]">
+                      <CheckCircle2 className="h-4 w-4 text-[var(--eixo-green-dark)]" />
                     </div>
-                    <span className="text-sm font-medium text-[var(--eixo-text)]">{f}</span>
+                    <span className="text-sm font-semibold text-[var(--eixo-text)]">{f}</span>
                   </div>
                 ))}
               </div>
@@ -198,13 +212,21 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               <div className="mt-10 flex flex-col items-center gap-3 border-t border-[var(--eixo-border)] pt-8 sm:flex-row sm:justify-between">
                 <div>
                   <p className="text-2xl font-extrabold text-[var(--eixo-text)]">R$ 0 / mês</p>
-                  <p className="text-sm text-[var(--eixo-text-muted)]">Para sempre. Sem cartão.</p>
+                  <p className="text-sm text-[var(--eixo-text-muted)]">Não precisa cadastrar cartão para começar!</p>
                 </div>
-                <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8`}>
-                  Cadastrar minha fazenda grátis
-                  <ArrowRight className="h-4 w-4" />
-                </button>
+                <div className="flex flex-col items-center gap-2 sm:items-end">
+                  <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8`}>
+                    Cadastrar minha fazenda grátis
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                  <button type="button" onClick={() => scrollTo('como')} className="text-sm font-medium text-[var(--eixo-text-muted)] underline underline-offset-2 transition-colors hover:text-[var(--eixo-text)]">
+                    Como funciona? →
+                  </button>
+                </div>
               </div>
+              <p className="mt-4 text-center text-xl font-semibold text-[var(--eixo-text-muted)]">
+                Aproveite todo esse pacote grátis, somente para os 100 primeiros cadastrados.
+              </p>
             </div>
           </div>
         </section>
@@ -298,20 +320,64 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         {/* ── Como funciona ── */}
         <section id="como" className="bg-[var(--eixo-surface)] py-20 lg:py-28">
           <div className="mx-auto max-w-5xl px-4 lg:px-8">
-            <div className="mb-12 text-center">
+            <div className="mb-16 text-center">
               <h2 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] lg:text-4xl">Como começar</h2>
               <p className="mt-4 text-lg text-[var(--eixo-text-muted)]">Três passos. Menos de 10 minutos.</p>
             </div>
-            <div className="grid gap-6 md:grid-cols-3">
-              {STEPS.map((step) => (
-                <div key={step.n} className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-bg)] p-8">
-                  <div className="font-brand mb-4 text-5xl font-extrabold text-[var(--eixo-border)]">{step.n}</div>
-                  <h3 className="text-lg font-bold text-[var(--eixo-text)]">{step.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--eixo-text-muted)]">{step.desc}</p>
+
+            {/* Timeline */}
+            <div className="relative">
+              {/* Linha conectora — visível só em desktop */}
+              <div className="absolute left-0 right-0 top-10 hidden h-px bg-gradient-to-r from-transparent via-[var(--eixo-border)] to-transparent md:block" />
+
+              <div className="grid gap-10 md:grid-cols-3">
+
+                {/* Passo 1 */}
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-6">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--eixo-green)] shadow-lg shadow-[var(--eixo-green)]/30">
+                      <svg className="h-8 w-8 text-[#1a1a1a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                    <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--eixo-text)] text-xs font-bold text-white">1</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-[var(--eixo-text)]">Crie sua conta</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--eixo-text-muted)]">Leva menos de 2 minutos. Sem cartão, sem burocracia.</p>
                 </div>
-              ))}
+
+                {/* Passo 2 */}
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-6">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--eixo-green)] shadow-lg shadow-[var(--eixo-green)]/30">
+                      <svg className="h-8 w-8 text-[#1a1a1a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                      </svg>
+                    </div>
+                    <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--eixo-text)] text-xs font-bold text-white">2</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-[var(--eixo-text)]">Cadastre sua fazenda e o rebanho</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--eixo-text-muted)]">Comece do zero ou importe sua planilha existente.</p>
+                </div>
+
+                {/* Passo 3 */}
+                <div className="flex flex-col items-center text-center">
+                  <div className="relative mb-6">
+                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--eixo-green)] shadow-lg shadow-[var(--eixo-green)]/30">
+                      <svg className="h-8 w-8 text-[#1a1a1a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                    </div>
+                    <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--eixo-text)] text-xs font-bold text-white">3</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-[var(--eixo-text)]">Comece a enxergar sua operação</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--eixo-text-muted)]">Pesagens, compras, vendas e financeiro no mesmo lugar.</p>
+                </div>
+
+              </div>
             </div>
-            <div className="mt-10 text-center">
+
+            <div className="mt-14 text-center">
               <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8`}>
                 Cadastrar minha fazenda grátis
                 <ArrowRight className="h-4 w-4" />
@@ -354,18 +420,18 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               Sua fazenda merece mais que caderno e planilha.
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-[var(--eixo-text-soft)]">
-              Comece grátis agora e teste o Acasalamento Inteligente. Sem risco. Sem cartão. Sem prazo.
+              Sem risco. Sem cartão. Sem prazo. Animais ilimitados desde o primeiro dia.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-              <button type="button" onClick={onRegister} className="inline-flex items-center gap-2 rounded-xl bg-[var(--eixo-surface)] px-8 py-4 text-base font-bold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]">
+              <button type="button" onClick={onRegister} className="inline-flex items-center gap-2 rounded-xl bg-[var(--eixo-green)] px-8 py-4 text-base font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]">
                 Cadastrar minha fazenda grátis
                 <ArrowRight className="h-5 w-5" />
               </button>
-              <button type="button" onClick={() => { window.location.href = '/planos'; }} className="inline-flex items-center gap-2 rounded-xl border border-[var(--eixo-border-strong)] px-8 py-4 text-base font-semibold text-[var(--eixo-text-soft)] transition-colors hover:border-[var(--eixo-border)] hover:text-white">
+              <button type="button" onClick={() => { window.location.href = '/planos'; }} className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-8 py-4 text-base font-semibold text-white/70 transition-colors hover:border-white/40 hover:text-white">
                 Ver planos
               </button>
             </div>
-            <p className="mt-4 text-sm text-[#57534e]">Sem cartão · Sem prazo · Animais ilimitados</p>
+            <p className="mt-4 text-sm text-[#57534e]">Sem cartão · Sem prazo · Animais ilimitados · Somente 100 vagas</p>
           </div>
         </section>
 
