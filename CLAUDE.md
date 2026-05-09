@@ -86,10 +86,12 @@ Nunca avançar sem TypeScript limpo.
 - Modo escuro/claro/sistema: **não existe** — tema único light
 - `window.confirm` e `window.alert` proibidos — sempre usar modal visual
 - HerdModule — aba "Relatórios" removida: relatórios aparecem contextualmente dentro de cada aba por módulo
-- HerdModule — aba "Configurações" mantida: será desenvolvida (peso alvo de abate, raças, intervalo de pesagem)
-- HerdModule — paginação da tabela de Animais: 30 por página
 - HerdModule — abas na ordem: Visão do Rebanho → Animais → Lotes/Grupos → Pesagens → Configurações
+- HerdModule — paginação da tabela de Animais: 30 por página
 - Busca e filtros da aba Animais posicionados abaixo das abas (não acima)
+- Header: `rounded-[24px]`, hover `bg-[#EDEDED]`, chips de alerta usam fonte Inter, sineta com `bg-[#EDEDED]`
+- Dashboard: seção "Raio-X da Fazenda" entre KPIs e gráficos — alertas automáticos de rebanho e operações pendentes
+- Logomarca: `logo_eixo_official.svg` é o arquivo único usado em todo o sistema (sidebar, login, landing, app)
 
 ### Importação de rebanho
 - O produtor importa **qualquer planilha que já usa** — não precisa de modelo específico
@@ -100,20 +102,19 @@ Nunca avançar sem TypeScript limpo.
 
 ### Logomarca
 - Marca guarda-chuva: **EIXO** — cobre todo o ecossistema de produtos
-- Logo: "EIXO" maiúsculo, tipografia geométrica bold, com o X bicolor (uma diagonal em Grafite `#2F2F2F` ou branco, outra diagonal em Verde EIXO `#B6E23A`)
+- Logo: "EIXO" maiúsculo, tipografia geométrica bold, com o X bicolor — diagonal esquerda em Grafite `#5E5E5E`, diagonal direita em Verde EIXO `#B6E23A`
 - Tipografia institucional: **Manrope** | Tipografia de apoio: **Inter**
 - Arquivos SVG disponíveis em `frontend/public/`:
 
 | Arquivo | Versão | Uso |
 |---------|--------|-----|
-| `logo_eixo_official.svg` | Principal colorida (grafite + verde) | Fundos claros |
-| `logo_eixo_white.svg` | Para fundos escuros (branco + verde) | Sidebar, fundos escuros |
-| `logo_eixo_negative.svg` | Monocromática branca | Fundos escuros sem cor |
+| `logo_eixo_official.svg` | Logo oficial unificada (grafite `#5E5E5E` + verde) | **Todo o sistema** — sidebar, login, landing, app |
+| `logo_eixo_white.svg` | Versão branca (legado) | Não usar — substituída pelo oficial |
+| `logo_eixo_negative.svg` | Monocromática branca (legado) | Não usar — substituída pelo oficial |
 | `eixo-x-icon.svg` | Símbolo X isolado | Favicon, ícone de app |
 
-- No sidebar: `<img src="/logo_eixo_white.svg" />`
-- Nas telas públicas (Login, Register, Landing): `<img src="/logo_eixo_official.svg" />`
-- Todos os SVGs usam `#B6E23A` como verde — já corrigido e padronizado
+- **Todo o sistema usa `logo_eixo_official.svg`** — sidebar, telas públicas, AssistantChat, PlansPage
+- O arquivo `logo_eixo_official.svg` contém o SVG vetorial fiel com letras em `#5E5E5E` e X bicolor
 
 ### Eixo Suporte (chat de suporte)
 - Componente: `frontend/components/AssistantChat.tsx`
@@ -128,9 +129,9 @@ Nunca avançar sem TypeScript limpo.
 
 | Módulo | Status |
 |--------|--------|
-| Visão Geral (dashboard) | Ativo |
+| Visão Geral (dashboard) | Ativo — disponível em todos os planos, inclui Raio-X automático |
 | Estrutura da Fazenda | Ativo — fazendas e pastos |
-| Manejo do Rebanho | Ativo (importação ✅, animais ✅) — Pesagens e Configurações pendentes |
+| Manejo do Rebanho | Ativo (importação ✅, animais ✅, pesagens ✅, configurações ✅) |
 | Nutrição | Ativo — paleta visual desatualizada (pendente) |
 | Confinamento e Contratos | Placeholder |
 | Reprodução / Eixo Acasalamento | Placeholder parcial |
@@ -159,8 +160,7 @@ Nunca avançar sem TypeScript limpo.
 - Animais: **ilimitado**
 - Fazendas: **1**
 - Usuários: **até 3**
-- Módulos: Rebanho (básico), Estrutura da Fazenda, Financeiro básico
-- **Visão Geral (Dashboard): bloqueado** — exclusivo de planos pagos
+- Módulos: Rebanho (básico), Estrutura da Fazenda, Financeiro completo, Visão Geral (Dashboard)
 - Importação: campos básicos (brinco, raça, sexo, data nasc, peso, lote, pasto, categoria, obs) + data de entrada + valor de compra
 - Exportação de dados: não
 
@@ -168,7 +168,7 @@ Nunca avançar sem TypeScript limpo.
 - Animais: **ilimitado**
 - Fazendas: **até 3**
 - Usuários: **até 5**
-- Módulos: tudo do grátis + Financeiro, Nutrição, Pesagens avançadas
+- Módulos: tudo do grátis + Nutrição, Pesagens avançadas
 - Importação: campos do grátis + data/valor de compra, tatuagem, mãe, pai, SISBOV
 - Exportação de dados: sim (Excel/PDF)
 
@@ -196,15 +196,39 @@ Nunca avançar sem TypeScript limpo.
 
 ---
 
-## Próximos passos
+## Estado atual — maio 2026
 
-1. **Paleta nova** — atualizar `index.css` e `tailwind.config.cjs` com Verde EIXO `#B6E23A` e Grafite `#2F2F2F` (Codex)
-2. **HerdModule** — aba Pesagens com sessões nomeadas, modal de detalhe, aba Configurações
-3. **Nutrição** — revisar paleta visual com nova identidade
-4. **Eixo Suporte** — atualizar system prompt (usar `-` para listas, corrigir info sobre importação)
-5. **Planos e billing** — integração com Asaas para mensalidade
-6. **EIXO Campo — Gerenciamento V1** — pesagem manual, offline, conflitos (ver `EIXOCAMPO.md`)
-7. **Integração com balanças eletrônicas** — MVP: Bluetooth SPP (Coimma) + BLE (Tru-Test S3)
+### O que foi feito (concluído)
+- ✅ Fase 3: OnboardingChecklist migrado para backend (campo `onboardingCompletedAt` no User)
+- ✅ Fase 3: PublicLanding revisada — textos e CTAs alinhados ao plano grátis
+- ✅ Fase 4: Auditoria multi-tenant — todas as rotas usam `req.saas.organizationId`, nunca do body
+- ✅ Fase 4: Dashboard com tratamento de erro visual (antes era silencioso)
+- ✅ Fase 5: Scripts criados — `deploy.sh`, `server/backup.sh`, `infra/nginx.conf`, `infra/DEPLOY.md`
+- ✅ Fase 5: Template `.env.production.example` criado
+
+### Estado real do produto
+O sistema está estável para **beta fechado** — adequado para 5 a 10 produtores de confiança que topem testar e reportar problemas. Não é produção plena ainda.
+
+**O que falta para produção real:**
+- Fluxo completo nunca testado com Twilio e Resend reais (só local)
+- Importação com planilhas reais de diferentes produtores
+- VPS configurado com HTTPS, PM2, backup no cron
+- Módulos placeholder visíveis no menu (Confinamento, Acasalamento, Estoque) — usuário vê mas não funciona
+- Integração Asaas não processa pagamento real — planos pagos não cobram
+
+### Próximos passos prioritários
+
+#### Para abrir beta fechado
+1. **Testar fluxo completo** com Twilio + Resend reais — Landing → Cadastro → OTP → Onboarding → Importar → Pesagem → Financeiro
+2. **Configurar servidor** seguindo `infra/DEPLOY.md` — VPS + HTTPS + PM2 + cron de backup
+3. **Reset de senha** — validar com `RESEND_API_KEY` real em produção
+
+#### Pendências de produto
+4. **Nutrição** — revisar paleta visual com nova identidade
+5. **Eixo Suporte** — atualizar system prompt (usar `-` para listas, corrigir info sobre importação)
+6. **Planos e billing** — integração com Asaas para cobrança real (enforcement de acesso já implementado)
+7. **EIXO Campo — Gerenciamento V1** — pesagem manual offline, conflitos (ver `EIXOCAMPO.md`)
+8. **Integração com balanças eletrônicas** — MVP: Bluetooth SPP (Coimma) + BLE (Tru-Test S3)
 
 ---
 

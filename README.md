@@ -37,7 +37,7 @@ cd frontend && npm run dev
 
 | Módulo | Status |
 |--------|--------|
-| Visão Geral (Dashboard) | Ativo — exclusivo planos pagos |
+| Visão Geral (Dashboard) | Ativo — disponível em todos os planos |
 | Estrutura da Fazenda | Ativo |
 | Manejo do Rebanho | Ativo |
 | Financeiro | Ativo |
@@ -54,8 +54,8 @@ O sistema aceita qualquer planilha do produtor — não é necessário usar um m
 
 ## Planos
 
-- **Gratuito:** 1 fazenda, até 3 usuários, módulos básicos, animais ilimitados
-- **Pago 1:** até 3 fazendas, até 5 usuários, Financeiro completo, Nutrição
+- **Plano Grátis:** 1 fazenda, até 3 usuários, Rebanho básico + Estrutura da Fazenda + Financeiro + Dashboard (Visão Geral), animais ilimitados
+- **Pago 1:** até 3 fazendas, até 5 usuários, Nutrição, Pesagens avançadas
 - **Pago 2:** ilimitado, todos os módulos, Acasalamento, Confinamento, Rastreabilidade
 
 ## Identidade visual
@@ -68,9 +68,7 @@ Logo: "EIXO" maiúsculo, tipografia geométrica bold, com o X bicolor — uma di
 
 | Arquivo | Uso |
 |---------|-----|
-| `logo_eixo_official.svg` | Fundos claros (telas públicas, Login, Landing) |
-| `logo_eixo_white.svg` | Fundos escuros (sidebar) |
-| `logo_eixo_negative.svg` | Monocromático branco |
+| `logo_eixo_official.svg` | **Todo o sistema** — sidebar, login, landing, app (logo vetorial fiel) |
 | `eixo-x-icon.svg` | Favicon e ícone de app |
 
 ### Paleta EIXO (Manual de Marca v1.0)
