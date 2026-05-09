@@ -8,239 +8,239 @@ datasource db {
 }
 
 model User {
-  id                   String                  @id @default(uuid())
-  name                 String
-  email                String                  @unique
-  password             String
-  modules              String[]
-  roles                String[]                @default([])
-  accessType           AppAccessType           @default(WEB)
-  fieldProfile         FieldProfile?
-  appActivationStatus  AppActivationStatus?
-  lastFarmId           String?
-  activeOrganizationId String?
-  document             String?
-  documentType         String?
-  cnpjData             Json?
-  phone                String?
-  termsAcceptedAt      DateTime?
-  termsVersion         String?
-  createdAt            DateTime                @default(now())
-  farms                Farm[]
-  sessions             Session[]
-  passwordResetTokens  PasswordResetToken[]
-  memberships          OrganizationMembership[]
-  farmAccesses         UserFarmAccess[]
-  appActivationCodes   AppActivationCode[]
-  appDevices           AppDevice[]
-  activityLogs         ActivityLog[]
-  fieldOccurrences     FieldOccurrence[]       @relation("FieldOccurrenceCreatedBy")
-  geneticsAnalysisRuns GeneticsAnalysisRun[]   @relation("GeneticsAnalysisCreatedBy")
-  externalOperations   ExternalOperation[]     @relation("ExternalOperationCreatedBy")
+  id                             String                         @id @default(uuid())
+  name                           String
+  email                          String                         @unique
+  password                       String
+  modules                        String[]
+  roles                          String[]                       @default([])
+  lastFarmId                     String?
+  activeOrganizationId           String?
+  createdAt                      DateTime                       @default(now())
+  cnpjData                       Json?
+  document                       String?
+  documentType                   String?
+  phone                          String?
+  termsAcceptedAt                DateTime?
+  termsVersion                   String?
+  onboardingCompletedAt          DateTime?
+  accessType                     AppAccessType                  @default(WEB)
+  appActivationStatus            AppActivationStatus?
+  fieldProfile                   FieldProfile?
+  acasalamentoSessions           AcasalamentoSession[]          @relation("AcasalamentoSessionCreatedBy")
+  activityLogs                   ActivityLog[]
+  appActivationCodes             AppActivationCode[]
+  appDevices                     AppDevice[]
+  externalOperations             ExternalOperation[]            @relation("ExternalOperationCreatedBy")
   externalOperationLedgerEntries ExternalOperationLedgerEntry[] @relation("ExternalOperationLedgerCreatedBy")
-  externalOperationSettlements  ExternalOperationSettlement[]   @relation("ExternalOperationSettlementCreatedBy")
-  feedlotContracts     FeedlotContract[]       @relation("FeedlotContractCreatedBy")
-  feedlotLedgerEntries FeedlotLedgerEntry[]    @relation("FeedlotLedgerCreatedBy")
-  feedlotSettlements   FeedlotSettlement[]     @relation("FeedlotSettlementCreatedBy")
-  reproCheckupSessions ReproCheckupSession[]   @relation("ReproCheckupCreatedBy")
-  activeOrganization   Organization?           @relation("ActiveOrganization", fields: [activeOrganizationId], references: [id], onDelete: SetNull)
+  externalOperationSettlements   ExternalOperationSettlement[]  @relation("ExternalOperationSettlementCreatedBy")
+  farms                          Farm[]
+  feedlotContracts               FeedlotContract[]              @relation("FeedlotContractCreatedBy")
+  feedlotLedgerEntries           FeedlotLedgerEntry[]           @relation("FeedlotLedgerCreatedBy")
+  feedlotSettlements             FeedlotSettlement[]            @relation("FeedlotSettlementCreatedBy")
+  fieldOccurrences               FieldOccurrence[]              @relation("FieldOccurrenceCreatedBy")
+  geneticsAnalysisRuns           GeneticsAnalysisRun[]          @relation("GeneticsAnalysisCreatedBy")
+  memberships                    OrganizationMembership[]
+  passwordResetTokens            PasswordResetToken[]
+  sessions                       Session[]
+  activeOrganization             Organization?                  @relation("ActiveOrganization", fields: [activeOrganizationId], references: [id])
+  farmAccesses                   UserFarmAccess[]
+  reproCheckupSessions           ReproCheckupSession[]          @relation("ReproCheckupCreatedBy")
 }
 
 model Farm {
-  id                 String                @id @default(uuid())
-  name               String
-  city               String
-  lat                Float?
-  lng                Float?
-  size               Float
-  notes              String?
-  responsibleName    String?               @map("responsible_name")
-  mapAssetPath       String?
-  mapData            Json?
-  organizationId     String?
-  createdAt          DateTime              @default(now())
-  reproMode          ReproMode             @default(CONTINUO)
-  paddocks           Paddock[]
-  lots               Lot[]
-  animals            Animal[]
-  seasons            BreedingSeason[]
-  reproEvents        ReproEvent[]
-  selectionDecisions SelectionDecision[]
-  poAnimals          PoAnimal[]
-  poLots             PoLot[]
-  semenBatches       SemenBatch[]
-  embryoBatches      EmbryoBatch[]
-  poWeighings        PoWeighing[]
-  weighingSessions   WeighingSession[]
-  paddockMoves       PaddockMove[]
-  nutritionPlans     NutritionPlan[]
-  nutritionAssignments NutritionAssignment[]
-  nutritionSettings  NutritionSettings?
-  nutritionPhases    NutritionPhase[]
-  nutritionUnits     NutritionUnit[]
-  nutritionIngredients NutritionIngredient[]
-  nutritionPreparedFeeds NutritionPreparedFeed[]
-  nutritionFabrications NutritionFabrication[]
-  nutritionExecutions NutritionExecution[]
+  id                      String                   @id @default(uuid())
+  name                    String
+  city                    String
+  lat                     Float?
+  lng                     Float?
+  mapAssetPath            String?
+  mapData                 Json?
+  size                    Float
+  notes                   String?
+  organizationId          String?
+  createdAt               DateTime                 @default(now())
+  reproMode               ReproMode                @default(CONTINUO)
+  userId                  String
+  responsibleName         String?                  @map("responsible_name")
+  acasalamentoSessions    AcasalamentoSession[]
+  accountCategories       AccountCategory[]
+  animals                 Animal[]
+  breeds                  Breed[]
+  seasons                 BreedingSeason[]
+  criaMortalities         CriaMortality[]
+  embryoBatches           EmbryoBatch[]
+  externalOperations      ExternalOperation[]
+  organization            Organization?            @relation(fields: [organizationId], references: [id])
+  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feedlotContracts        FeedlotContract[]
+  fieldOccurrences        FieldOccurrence[]
+  financialPayables       FinancialPayable[]
+  financialReceivables    FinancialReceivable[]
+  financialTransactions   FinancialTransaction[]
+  geneticsAnalysisRuns    GeneticsAnalysisRun[]
+  herdCategoryTargets     HerdCategoryTarget[]
+  herdEvents              HerdEvent[]
+  herdImportPendings      HerdImportPending[]
+  herdSettings            HerdSettings?
+  lots                    Lot[]
+  nutritionAssignments    NutritionAssignment[]
+  nutritionCostEntries    NutritionCostEntry[]
+  nutritionExecutions     NutritionExecution[]
+  nutritionFabrications   NutritionFabrication[]
+  nutritionIngredients    NutritionIngredient[]
+  nutritionPhases         NutritionPhase[]
+  nutritionPlans          NutritionPlan[]
+  nutritionPreparedFeeds  NutritionPreparedFeed[]
+  nutritionSettings       NutritionSettings?
   nutritionTroughReadings NutritionTroughReading[]
-  nutritionCostEntries NutritionCostEntry[]
-  financialPayables  FinancialPayable[]
-  financialReceivables FinancialReceivable[]
-  financialTransactions FinancialTransaction[]
-  accountCategories  AccountCategory[]
-  criaMortalities    CriaMortality[]
-  breeds             Breed[]
-  geneticsAnalysisRuns GeneticsAnalysisRun[]
-  herdImportPendings HerdImportPending[]
-  userAccesses       UserFarmAccess[]
-  fieldOccurrences   FieldOccurrence[]
-  externalOperations ExternalOperation[]
-  feedlotContracts   FeedlotContract[]
-  reproCheckupSessions ReproCheckupSession[]
-  reproCheckupRecords  ReproCheckupRecord[]
-  herdEvents           HerdEvent[]
-  sanitaryRecords      SanitaryRecord[]
-  herdSettings         HerdSettings?
-  herdCategoryTargets  HerdCategoryTarget[]
-  user               User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId             String
-  organization       Organization?         @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  nutritionUnits          NutritionUnit[]
+  paddocks                Paddock[]
+  paddockMoves            PaddockMove[]
+  poAnimals               PoAnimal[]
+  poLots                  PoLot[]
+  poWeighings             PoWeighing[]
+  reproEvents             ReproEvent[]
+  sanitaryRecords         SanitaryRecord[]
+  selectionDecisions      SelectionDecision[]
+  semenBatches            SemenBatch[]
+  userAccesses            UserFarmAccess[]
+  weighingSessions        WeighingSession[]
+  reproCheckupRecords     ReproCheckupRecord[]
+  reproCheckupSessions    ReproCheckupSession[]
 
   @@index([userId])
   @@index([organizationId])
 }
 
 model Paddock {
-  id               String        @id @default(uuid())
+  id               String            @id @default(uuid())
   name             String
-  areaHa           Float?        @map("size")
-  divisionType     String?       @map("division_type")
+  areaHa           Float?            @map("size")
   capacity         Float?
   lat              Float?
   lng              Float?
   mapGeometry      Json?
-  active           Boolean       @default(true)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  farm             Farm          @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  active           Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   farmId           String
-  paddockMoves     PaddockMove[]
-  currentAnimals   Animal[]      @relation("AnimalCurrentPaddock")
-  currentPoAnimals PoAnimal[]    @relation("PoAnimalCurrentPaddock")
+  divisionType     String?           @map("division_type")
+  forrageira       String?
+  lotacaoUaHa      Float?
+  currentAnimals   Animal[]          @relation("AnimalCurrentPaddock")
   fieldOccurrences FieldOccurrence[]
+  farm             Farm              @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  paddockMoves     PaddockMove[]
+  currentPoAnimals PoAnimal[]        @relation("PoAnimalCurrentPaddock")
 
   @@index([farmId])
 }
 
-enum AnimalSexo {
-  MACHO
-  FEMEA
-}
-
-enum AnimalTipoCadastro {
-  PO
-  MESTICO
-}
-
 model Lot {
-  id        String   @id @default(uuid())
-  name      String
-  notes     String?
-  objective String?
-  phase     String?
-  status    String   @default("ATIVO")
-  startDate DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId    String
-  animals   Animal[]
+  id                   String                @id @default(uuid())
+  name                 String
+  notes                String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  farmId               String
+  objective            String?
+  phase                String?
+  startDate            DateTime?
+  status               String                @default("ATIVO")
+  animals              Animal[]
+  farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
   nutritionAssignments NutritionAssignment[]
-  nutritionUnits NutritionUnit[]
-  nutritionExecutions NutritionExecution[]
   nutritionCostEntries NutritionCostEntry[]
+  nutritionExecutions  NutritionExecution[]
+  nutritionUnits       NutritionUnit[]
 
   @@index([farmId])
 }
 
 model Animal {
-  id             String             @id @default(uuid())
-  brinco         String
-  registro       String?
-  identityKey    String
-  raca           String?
-  tipoCadastro   AnimalTipoCadastro @default(MESTICO)
-  sexo           AnimalSexo?
-  categoria      String?
-  dataNascimento DateTime?
-  pesoAtual      Float?
-  gmd            Float?
-  gmd30          Float?
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  farm           Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId         String
-  lot            Lot?         @relation(fields: [lotId], references: [id], onDelete: SetNull)
-  lotId          String?
-  currentPaddock   Paddock?   @relation("AnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
-  currentPaddockId String?
-  pesagens       Weighing[]
-  exposures      Exposure[]
-  reproEvents    ReproEvent[]
-  selectionDecisions SelectionDecision[]
+  id                   String                @id @default(uuid())
+  brinco               String
+  registro             String?
+  identityKey          String
+  raca                 String?
+  tipoCadastro         AnimalTipoCadastro    @default(MESTICO)
+  sexo                 AnimalSexo?
+  categoria            String?
+  dataNascimento       DateTime?
+  pesoAtual            Float?
+  gmd                  Float?
+  gmd30                Float?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  farmId               String
+  lotId                String?
+  currentPaddockId     String?
+  maeId                String?
+  maeNome              String?
+  paiId                String?
+  paiNome              String?
+  sisbov               String?
+  tatuagem             String?
+  currentPaddock       Paddock?              @relation("AnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
+  farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  lot                  Lot?                  @relation(fields: [lotId], references: [id])
+  mae                  Animal?               @relation("AnimalMae", fields: [maeId], references: [id])
+  filhosMae            Animal[]              @relation("AnimalMae")
+  pai                  Animal?               @relation("AnimalPai", fields: [paiId], references: [id])
+  filhosPai            Animal[]              @relation("AnimalPai")
+  criaMortalities      CriaMortality[]
+  exposures            Exposure[]
+  fieldOccurrences     FieldOccurrence[]
+  herdEvents           HerdEvent[]
   nutritionAssignments NutritionAssignment[]
-  paddockMoves   PaddockMove[]
-  reproCheckupRecords ReproCheckupRecord[]
-  criaMortalities CriaMortality[]
-  herdEvents     HerdEvent[]
-  sanitaryRecords SanitaryRecord[]
-  fieldOccurrences FieldOccurrence[]
+  paddockMoves         PaddockMove[]
+  reproEvents          ReproEvent[]
+  sanitaryRecords      SanitaryRecord[]
+  selectionDecisions   SelectionDecision[]
+  pesagens             Weighing[]
+  reproCheckupRecords  ReproCheckupRecord[]
+  semenBatches         SemenBatch[]          @relation("SemenBullAnimal")
+  embryoDonorBatches   EmbryoBatch[]         @relation("EmbryoDonorAnimal")
+  embryoSireBatches    EmbryoBatch[]         @relation("EmbryoSireAnimal")
 
-  @@index([farmId, brinco], map: "Animal_farmId_brinco_idx")
-  @@unique([farmId, identityKey], map: "Animal_farmId_identityKey_key")
-  @@index([farmId, registro], map: "Animal_farmId_registro_idx")
+  @@unique([farmId, identityKey])
+  @@index([farmId, brinco])
+  @@index([farmId, registro])
   @@index([farmId])
   @@index([lotId])
   @@index([currentPaddockId])
-}
-
-enum WeighingSource {
-  MANUAL
-  COIMMA
-}
-
-enum ScaleIntegrationProvider {
-  COIMMA
+  @@index([maeId])
+  @@index([paiId])
 }
 
 model Weighing {
-  id             String                   @id @default(uuid())
-  data           DateTime
-  peso           Float
-  gmd            Float
-  source         WeighingSource           @default(MANUAL)
-  provider       ScaleIntegrationProvider?
-  rawPayload     String?
-  createdAt      DateTime                 @default(now())
-  animal         Animal                   @relation(fields: [animalId], references: [id], onDelete: Cascade)
-  animalId       String
-  scaleSessionId String?
+  id                String                    @id @default(uuid())
+  data              DateTime
+  peso              Float
+  gmd               Float
+  source            WeighingSource            @default(MANUAL)
+  provider          ScaleIntegrationProvider?
+  rawPayload        String?
+  createdAt         DateTime                  @default(now())
+  animalId          String
+  scaleSessionId    String?                   @unique
   weighingSessionId String?
-  weighingSession   WeighingSession?      @relation(fields: [weighingSessionId], references: [id], onDelete: SetNull)
+  animal            Animal                    @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  weighingSession   WeighingSession?          @relation(fields: [weighingSessionId], references: [id])
 
   @@unique([animalId, data])
-  @@unique([scaleSessionId], map: "Weighing_scaleSessionId_key")
   @@index([weighingSessionId])
 }
 
 model WeighingSession {
-  id        String     @id @default(uuid())
-  name      String
+  id              String     @id @default(uuid())
+  name            String
+  farmId          String
+  createdAt       DateTime   @default(now())
   responsibleName String?
-  farmId    String
-  createdAt DateTime   @default(now())
-  farm      Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  weighings Weighing[]
+  weighings       Weighing[]
+  farm            Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
   @@index([farmId])
 }
@@ -256,33 +256,1620 @@ model CriaMortality {
   notes      String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
+  animal     Animal?   @relation(fields: [animalId], references: [id])
   farm       Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  animal     Animal?   @relation(fields: [animalId], references: [id], onDelete: SetNull)
-  poAnimal   PoAnimal? @relation(fields: [poAnimalId], references: [id], onDelete: SetNull)
+  poAnimal   PoAnimal? @relation(fields: [poAnimalId], references: [id])
 
   @@index([animalId])
-  @@index([farmId, date], map: "CriaMortality_farmId_date_idx")
+  @@index([farmId, date])
   @@index([poAnimalId])
 }
 
 model Session {
-  id        String    @id @default(uuid())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String     @id @default(uuid())
   userId    String
-  deviceId  String?
-  tokenHash String    @unique
-  createdAt DateTime  @default(now())
+  tokenHash String     @unique
+  createdAt DateTime   @default(now())
   expiresAt DateTime
   revokedAt DateTime?
   userAgent String?
   ip        String?
-  device    AppDevice? @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  deviceId  String?
+  device    AppDevice? @relation(fields: [deviceId], references: [id])
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([deviceId])
   @@index([expiresAt])
 }
 
+model Organization {
+  id                   String                           @id @default(uuid())
+  name                 String
+  slug                 String                           @unique
+  billingProvider      BillingProvider                  @default(INTERNAL)
+  billingCustomerId    String?
+  accessState          BillingAccessState               @default(ACTIVE)
+  accessStateUpdatedAt DateTime                         @default(now())
+  graceUntil           DateTime?
+  trialEndsAt          DateTime?
+  createdAt            DateTime                         @default(now())
+  updatedAt            DateTime                         @updatedAt
+  acasalamentoSessions AcasalamentoSession[]
+  billingEvents        BillingEvent[]
+  billingSubscriptions BillingSubscription[]
+  farms                Farm[]
+  geneticsAnalysisRuns GeneticsAnalysisRun[]
+  invitations          Invitation[]
+  memberships          OrganizationMembership[]
+  entitlements         OrganizationProductEntitlement[]
+  activeUsers          User[]                           @relation("ActiveOrganization")
+
+  @@index([accessState])
+}
+
+model Product {
+  id           String                           @id @default(uuid())
+  code         String                           @unique
+  name         String
+  description  String?
+  isActive     Boolean                          @default(true)
+  createdAt    DateTime                         @default(now())
+  updatedAt    DateTime                         @updatedAt
+  entitlements OrganizationProductEntitlement[]
+}
+
+model OrganizationProductEntitlement {
+  id             String       @id @default(uuid())
+  organizationId String
+  productId      String
+  status         String       @default("ACTIVE")
+  startedAt      DateTime     @default(now())
+  endedAt        DateTime?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, productId])
+  @@index([organizationId, status])
+}
+
+model OrganizationMembership {
+  id             String           @id @default(uuid())
+  organizationId String
+  userId         String
+  role           OrganizationRole @default(MEMBER)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model Invitation {
+  id             String           @id @default(uuid())
+  organizationId String
+  email          String
+  role           OrganizationRole @default(MEMBER)
+  token          String           @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([token])
+}
+
+model BreedingSeason {
+  id        String       @id @default(uuid())
+  farmId    String
+  name      String
+  startAt   DateTime
+  endAt     DateTime
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  farm      Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  exposures Exposure[]
+  events    ReproEvent[]
+
+  @@index([farmId, startAt])
+}
+
+model Exposure {
+  id        String         @id @default(uuid())
+  seasonId  String
+  animalId  String
+  createdAt DateTime       @default(now())
+  animal    Animal         @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  season    BreedingSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, animalId])
+  @@index([animalId])
+}
+
+model ReproEvent {
+  id        String          @id @default(uuid())
+  farmId    String
+  animalId  String
+  type      ReproEventType
+  date      DateTime
+  seasonId  String?
+  payload   Json?
+  notes     String?
+  bullId    String?
+  protocol  String?
+  createdAt DateTime        @default(now())
+  animal    Animal          @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  farm      Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  season    BreedingSeason? @relation(fields: [seasonId], references: [id])
+
+  @@index([animalId, date])
+  @@index([farmId, date])
+  @@index([seasonId])
+}
+
+model SelectionDecision {
+  id        String                @id @default(uuid())
+  farmId    String
+  animalId  String
+  decision  SelectionDecisionType
+  reason    String?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  animal    Animal                @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  farm      Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, animalId])
+  @@index([animalId])
+  @@index([farmId])
+}
+
+model PoAnimal {
+  id                   String                @id @default(uuid())
+  farmId               String
+  brinco               String?
+  nome                 String
+  raca                 String
+  sexo                 AnimalSexo
+  dataNascimento       DateTime?
+  pesoAtual            Float                 @default(0)
+  gmd                  Float?
+  gmd30                Float?
+  lotId                String?
+  currentPaddockId     String
+  registro             String?
+  categoria            String?
+  observacoes          String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  criaMortalities      CriaMortality[]
+  embryoDonorBatches   EmbryoBatch[]         @relation("EmbryoDonor")
+  embryoSireBatches    EmbryoBatch[]         @relation("EmbryoSire")
+  herdEvents           HerdEvent[]
+  nutritionAssignments NutritionAssignment[]
+  paddockMoves         PaddockMove[]
+  currentPaddock       Paddock               @relation("PoAnimalCurrentPaddock", fields: [currentPaddockId], references: [id])
+  farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  lot                  PoLot?                @relation(fields: [lotId], references: [id])
+  pesagens             PoWeighing[]
+  sanitaryRecords      SanitaryRecord[]
+  semenBatches         SemenBatch[]          @relation("SemenBull")
+
+  @@unique([farmId, brinco])
+  @@index([farmId])
+  @@index([lotId])
+  @@index([currentPaddockId])
+}
+
+model PoLot {
+  id                   String                @id @default(uuid())
+  name                 String
+  notes                String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  farmId               String
+  nutritionAssignments NutritionAssignment[]
+  nutritionCostEntries NutritionCostEntry[]
+  nutritionExecutions  NutritionExecution[]
+  animals              PoAnimal[]
+  farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId])
+}
+
+model PoWeighing {
+  id         String   @id @default(uuid())
+  data       DateTime
+  peso       Float
+  gmd        Float
+  notes      String?
+  createdAt  DateTime @default(now())
+  poAnimalId String
+  farmId     String
+  farm       Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  poAnimal   PoAnimal @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
+
+  @@unique([poAnimalId, data])
+  @@index([poAnimalId, data])
+  @@index([farmId])
+  @@index([farmId, data])
+}
+
+model NutritionPlan {
+  id                            String                       @id @default(uuid())
+  farmId                        String
+  nome                          String
+  fase                          String?
+  startAt                       DateTime
+  endAt                         DateTime?
+  metaGmd                       Float?
+  observacoes                   String?
+  reviewStatus                  ReviewStatus                 @default(PENDING)
+  createdAt                     DateTime                     @default(now())
+  updatedAt                     DateTime                     @updatedAt
+  estimatedCostPerHeadDay       Float?
+  feedingSlot                   String?
+  objetivo                      String?
+  phaseId                       String?
+  plannedIntakeDryKgPerHead     Float?
+  plannedIntakeDryKgTotal       Float?
+  plannedIntakeNaturalKgPerHead Float?
+  plannedIntakeNaturalKgTotal   Float?
+  preparedFeedId                String?
+  previousVersionId             String?
+  status                        NutritionPlanLifecycleStatus @default(ACTIVE)
+  versionNumber                 Int                          @default(1)
+  assignments                   NutritionAssignment[]
+  executions                    NutritionExecution[]
+  farm                          Farm                         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  phase                         NutritionPhase?              @relation(fields: [phaseId], references: [id])
+  preparedFeed                  NutritionPreparedFeed?       @relation(fields: [preparedFeedId], references: [id])
+
+  @@index([farmId])
+  @@index([preparedFeedId])
+  @@index([phaseId])
+  @@index([status])
+}
+
+model NutritionAssignment {
+  id           String         @id @default(uuid())
+  farmId       String
+  planId       String
+  lotId        String?
+  poLotId      String?
+  animalId     String?
+  poAnimalId   String?
+  startAt      DateTime
+  endAt        DateTime?
+  reviewStatus ReviewStatus   @default(PENDING)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  unitId       String?
+  animal       Animal?        @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  farm         Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  lot          Lot?           @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  plan         NutritionPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
+  poAnimal     PoAnimal?      @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
+  poLot        PoLot?         @relation(fields: [poLotId], references: [id], onDelete: Cascade)
+  unit         NutritionUnit? @relation(fields: [unitId], references: [id])
+
+  @@index([farmId])
+  @@index([planId])
+  @@index([lotId])
+  @@index([poLotId])
+  @@index([animalId])
+  @@index([poAnimalId])
+  @@index([unitId])
+  @@index([farmId, startAt])
+}
+
+model NutritionSettings {
+  id                           String                    @id @default(uuid())
+  farmId                       String                    @unique
+  operationContext             NutritionOperationContext @default(PASTO)
+  adjustmentMode               NutritionAdjustmentMode   @default(SUGESTAO)
+  indicatorsApprovedOnly       Boolean                   @default(false)
+  requireFabricationApproval   Boolean                   @default(true)
+  requireExecutionApproval     Boolean                   @default(true)
+  requireTroughApproval        Boolean                   @default(true)
+  predictiveSafeDays           Int                       @default(7)
+  predictiveWarningDays        Int                       @default(3)
+  diffWarningPercent           Float                     @default(3)
+  diffCriticalPercent          Float                     @default(7)
+  manualReviewThresholdPercent Float                     @default(5)
+  createdAt                    DateTime                  @default(now())
+  updatedAt                    DateTime                  @updatedAt
+  farm                         Farm                      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+}
+
+model NutritionPhase {
+  id                    String          @id @default(uuid())
+  farmId                String
+  name                  String
+  periodStart           DateTime?
+  periodEnd             DateTime?
+  primaryPlanId         String?
+  targetIntakeDryKgHead Float?
+  targetGmd             Float?
+  targetFeedConversion  Float?
+  targetCostPerHeadDay  Float?
+  notes                 String?
+  active                Boolean         @default(true)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  farm                  Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  plans                 NutritionPlan[]
+  units                 NutritionUnit[]
+
+  @@index([farmId])
+  @@index([active])
+}
+
+model NutritionUnit {
+  id               String                   @id @default(uuid())
+  farmId           String
+  lotId            String?
+  phaseId          String?
+  type             NutritionUnitType
+  name             String
+  currentHeadCount Int?
+  active           Boolean                  @default(true)
+  notes            String?
+  createdAt        DateTime                 @default(now())
+  updatedAt        DateTime                 @updatedAt
+  assignments      NutritionAssignment[]
+  executions       NutritionExecution[]
+  troughReadings   NutritionTroughReading[]
+  farm             Farm                     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  lot              Lot?                     @relation(fields: [lotId], references: [id])
+  phase            NutritionPhase?          @relation(fields: [phaseId], references: [id])
+
+  @@index([farmId])
+  @@index([lotId])
+  @@index([phaseId])
+  @@index([type])
+}
+
+model NutritionIngredient {
+  id                      String                                @id @default(uuid())
+  farmId                  String
+  name                    String
+  category                String
+  unit                    String
+  currentCost             Float
+  supplier                String?
+  currentDryMatterPercent Float
+  dryMatterUpdatedAt      DateTime?
+  currentStockNatural     Float                                 @default(0)
+  minStockNatural         Float                                 @default(0)
+  active                  Boolean                               @default(true)
+  createdAt               DateTime                              @default(now())
+  updatedAt               DateTime                              @updatedAt
+  fabricationItems        NutritionFabricationItem[]
+  farm                    Farm                                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  priceHistory            NutritionIngredientCostHistory[]
+  dryMatterHistory        NutritionIngredientDryMatterHistory[]
+  preparedFeedItems       NutritionPreparedFeedItem[]
+
+  @@index([farmId])
+  @@index([active])
+}
+
+model NutritionIngredientCostHistory {
+  id              String              @id @default(uuid())
+  ingredientId    String
+  cost            Float
+  recordedAt      DateTime
+  notes           String?
+  createdByUserId String?
+  createdByName   String?
+  ingredient      NutritionIngredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@index([ingredientId])
+  @@index([recordedAt])
+}
+
+model NutritionIngredientDryMatterHistory {
+  id               String              @id @default(uuid())
+  ingredientId     String
+  dryMatterPercent Float
+  recordedAt       DateTime
+  notes            String?
+  createdByUserId  String?
+  createdByName    String?
+  ingredient       NutritionIngredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@index([ingredientId])
+  @@index([recordedAt])
+}
+
+model NutritionPreparedFeed {
+  id                      String                      @id @default(uuid())
+  farmId                  String
+  name                    String
+  expectedYieldNaturalKg  Float
+  expectedYieldDryKg      Float?
+  currentDryMatterPercent Float
+  currentTotalCost        Float
+  currentCostPerNaturalKg Float
+  currentCostPerDryKg     Float?
+  currentStockNatural     Float                       @default(0)
+  currentStockDry         Float                       @default(0)
+  status                  NutritionPreparedFeedStatus @default(ACTIVE)
+  notes                   String?
+  createdAt               DateTime                    @default(now())
+  updatedAt               DateTime                    @updatedAt
+  executions              NutritionExecution[]
+  fabrications            NutritionFabrication[]
+  plans                   NutritionPlan[]
+  farm                    Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  items                   NutritionPreparedFeedItem[]
+
+  @@index([farmId])
+  @@index([status])
+}
+
+model NutritionPreparedFeedItem {
+  id                String                @id @default(uuid())
+  preparedFeedId    String
+  ingredientId      String
+  proportionPercent Float
+  sequence          Int                   @default(0)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  ingredient        NutritionIngredient   @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  preparedFeed      NutritionPreparedFeed @relation(fields: [preparedFeedId], references: [id], onDelete: Cascade)
+
+  @@unique([preparedFeedId, ingredientId])
+  @@index([ingredientId])
+}
+
+model NutritionFabrication {
+  id                 String                     @id @default(uuid())
+  farmId             String
+  preparedFeedId     String
+  batchCode          String
+  producedAt         DateTime
+  outputNaturalKg    Float
+  outputDryKg        Float
+  remainingNaturalKg Float
+  remainingDryKg     Float
+  totalCost          Float
+  costPerNaturalKg   Float
+  costPerDryKg       Float?
+  status             NutritionFabricationStatus @default(PENDING)
+  notes              String?
+  createdByUserId    String?
+  createdByName      String?
+  approvedAt         DateTime?
+  approvedByUserId   String?
+  approvedByName     String?
+  canceledAt         DateTime?
+  canceledByUserId   String?
+  canceledByName     String?
+  cancelReason       String?
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+  executions         NutritionExecution[]
+  farm               Farm                       @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  preparedFeed       NutritionPreparedFeed      @relation(fields: [preparedFeedId], references: [id], onDelete: Cascade)
+  items              NutritionFabricationItem[]
+
+  @@index([farmId])
+  @@index([preparedFeedId])
+  @@index([producedAt])
+  @@index([status])
+}
+
+model NutritionFabricationItem {
+  id                String               @id @default(uuid())
+  fabricationId     String
+  ingredientId      String
+  ingredientName    String
+  quantityNaturalKg Float
+  quantityDryKg     Float
+  dryMatterPercent  Float
+  unitCost          Float
+  lineCost          Float
+  fabrication       NutritionFabrication @relation(fields: [fabricationId], references: [id], onDelete: Cascade)
+  ingredient        NutritionIngredient  @relation(fields: [ingredientId], references: [id])
+
+  @@index([fabricationId])
+  @@index([ingredientId])
+}
+
+model NutritionCostEntry {
+  id           String       @id @default(uuid())
+  farmId       String
+  lotId        String?
+  poLotId      String?
+  date         DateTime
+  costType     String
+  amount       Float
+  notes        String?
+  reviewStatus ReviewStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  farm         Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  lot          Lot?         @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  poLot        PoLot?       @relation(fields: [poLotId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, date])
+  @@index([farmId, lotId, date])
+  @@index([farmId, poLotId, date])
+  @@index([reviewStatus])
+}
+
+model NutritionExecution {
+  id                 String                 @id @default(uuid())
+  farmId             String
+  lotId              String?
+  poLotId            String?
+  date               DateTime
+  plannedDryMatterKg Float?
+  actualDryMatterKg  Float
+  refusalDryMatterKg Float?
+  notes              String?
+  reviewStatus       ReviewStatus           @default(APPROVED)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+  actualNaturalKg    Float?
+  approvedAt         DateTime?
+  approvedByName     String?
+  approvedByUserId   String?
+  cancelReason       String?
+  canceledAt         DateTime?
+  canceledByName     String?
+  canceledByUserId   String?
+  costPerHeadDay     Float?
+  createdByName      String?
+  createdByUserId    String?
+  fabricationId      String?
+  feedingSlot        String?
+  headCountSnapshot  Int?
+  planId             String?
+  plannedNaturalKg   Float?
+  preparedFeedId     String?
+  refusalNaturalKg   Float?
+  rejectedAt         DateTime?
+  rejectedByName     String?
+  rejectedByUserId   String?
+  rejectionReason    String?
+  totalCost          Float?
+  unitId             String?
+  fabrication        NutritionFabrication?  @relation(fields: [fabricationId], references: [id])
+  farm               Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  lot                Lot?                   @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  plan               NutritionPlan?         @relation(fields: [planId], references: [id])
+  poLot              PoLot?                 @relation(fields: [poLotId], references: [id], onDelete: Cascade)
+  preparedFeed       NutritionPreparedFeed? @relation(fields: [preparedFeedId], references: [id])
+  unit               NutritionUnit?         @relation(fields: [unitId], references: [id])
+
+  @@index([farmId, date])
+  @@index([farmId, lotId, date])
+  @@index([farmId, poLotId, date])
+  @@index([reviewStatus])
+  @@index([unitId])
+  @@index([planId])
+  @@index([preparedFeedId])
+  @@index([fabricationId])
+}
+
+model NutritionTroughReading {
+  id                         String                  @id @default(uuid())
+  farmId                     String
+  unitId                     String
+  date                       DateTime
+  readingType                NutritionReadingType
+  score                      Int
+  supplyObservation          String?
+  observedDryMatterPercent   Float?
+  animalBehavior             NutritionAnimalBehavior
+  notes                      String?
+  reviewStatus               ReviewStatus            @default(PENDING)
+  suggestedAdjustmentPercent Float?
+  suggestedNextNaturalKg     Float?
+  suggestedNextDryKg         Float?
+  syncSource                 String?
+  createdByUserId            String?
+  createdByName              String?
+  approvedAt                 DateTime?
+  approvedByUserId           String?
+  approvedByName             String?
+  rejectedAt                 DateTime?
+  rejectedByUserId           String?
+  rejectedByName             String?
+  rejectionReason            String?
+  createdAt                  DateTime                @default(now())
+  updatedAt                  DateTime                @updatedAt
+  farm                       Farm                    @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  unit                       NutritionUnit           @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, date])
+  @@index([unitId])
+  @@index([reviewStatus])
+}
+
+model SemenBatch {
+  id                 String      @id @default(uuid())
+  farmId             String
+  bullAnimalId       String?
+  bullPoAnimalId     String?
+  bullName           String?
+  bullRegistry       String?
+  fornecedor         String?
+  lote               String
+  dataColeta         DateTime?
+  dosesTotal         Int
+  dosesDisponiveis   Int
+  localArmazenamento String?
+  observacoes        String?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+  bullAnimal         Animal?     @relation("SemenBullAnimal", fields: [bullAnimalId], references: [id])
+  bullPoAnimal       PoAnimal?   @relation("SemenBull", fields: [bullPoAnimalId], references: [id])
+  farm               Farm        @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  moves              SemenMove[]
+
+  @@unique([farmId, lote])
+  @@index([farmId])
+  @@index([bullAnimalId])
+  @@index([bullPoAnimalId])
+}
+
+model EmbryoBatch {
+  id                   String          @id @default(uuid())
+  farmId               String
+  donorAnimalId        String?
+  donorPoAnimalId      String?
+  donorName            String?
+  donorRegistry        String?
+  sireAnimalId         String?
+  sirePoAnimalId       String?
+  sireName             String?
+  sireRegistry         String?
+  tecnica              EmbryoTechnique
+  estagio              String?
+  qualidade            String?
+  lote                 String
+  quantidadeTotal      Int
+  quantidadeDisponivel Int
+  localArmazenamento   String?
+  observacoes          String?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  donorAnimal          Animal?         @relation("EmbryoDonorAnimal", fields: [donorAnimalId], references: [id])
+  donorPoAnimal        PoAnimal?       @relation("EmbryoDonor", fields: [donorPoAnimalId], references: [id])
+  farm                 Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  sireAnimal           Animal?         @relation("EmbryoSireAnimal", fields: [sireAnimalId], references: [id])
+  sirePoAnimal         PoAnimal?       @relation("EmbryoSire", fields: [sirePoAnimalId], references: [id])
+  moves                EmbryoMove[]
+
+  @@unique([farmId, lote])
+  @@index([farmId])
+  @@index([donorAnimalId])
+  @@index([donorPoAnimalId])
+  @@index([sireAnimalId])
+  @@index([sirePoAnimalId])
+}
+
+model SemenMove {
+  id           String        @id @default(uuid())
+  semenBatchId String
+  date         DateTime
+  qty          Int
+  type         SemenMoveType
+  notes        String?
+  createdAt    DateTime      @default(now())
+  semenBatch   SemenBatch    @relation(fields: [semenBatchId], references: [id], onDelete: Cascade)
+
+  @@index([semenBatchId])
+}
+
+model EmbryoMove {
+  id            String         @id @default(uuid())
+  embryoBatchId String
+  date          DateTime
+  qty           Int
+  type          EmbryoMoveType
+  notes         String?
+  createdAt     DateTime       @default(now())
+  embryoBatch   EmbryoBatch    @relation(fields: [embryoBatchId], references: [id], onDelete: Cascade)
+
+  @@index([embryoBatchId])
+}
+
+model PaddockMove {
+  id         String    @id @default(uuid())
+  farmId     String
+  paddockId  String
+  animalId   String?
+  poAnimalId String?
+  startAt    DateTime
+  endAt      DateTime?
+  notes      String?
+  createdAt  DateTime  @default(now())
+  animal     Animal?   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  farm       Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  paddock    Paddock   @relation(fields: [paddockId], references: [id], onDelete: Cascade)
+  poAnimal   PoAnimal? @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
+
+  @@index([farmId])
+  @@index([paddockId])
+  @@index([animalId])
+  @@index([poAnimalId])
+  @@index([farmId, startAt])
+}
+
+model ActivityLog {
+  id             String   @id
+  userId         String
+  organizationId String?
+  method         String?
+  path           String?
+  statusCode     Int?
+  ip             String?
+  userAgent      String?
+  requestMeta    Json?
+  createdAt      DateTime @default(now())
+  action         String?
+  entity         String?
+  entityId       String?
+  description    String?
+  farmId         String?
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([userId, createdAt])
+  @@index([farmId, createdAt])
+}
+
+model UserFarmAccess {
+  id        String   @id @default(uuid())
+  userId    String
+  farmId    String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, farmId])
+  @@index([userId])
+  @@index([farmId])
+}
+
+model AppActivationCode {
+  id             String    @id @default(uuid())
+  userId         String
+  organizationId String
+  farmId         String
+  codeHash       String
+  expiresAt      DateTime
+  usedAt         DateTime?
+  revokedAt      DateTime?
+  createdById    String
+  createdAt      DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([organizationId, expiresAt])
+  @@index([farmId, expiresAt])
+}
+
+model AppDevice {
+  id                String    @id @default(uuid())
+  userId            String
+  organizationId    String
+  farmId            String
+  deviceFingerprint String
+  deviceLabel       String?
+  platform          String?
+  appVersion        String?
+  activatedAt       DateTime  @default(now())
+  lastSeenAt        DateTime?
+  revokedAt         DateTime?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions          Session[]
+
+  @@index([userId, isActive])
+  @@index([organizationId, farmId, isActive])
+  @@index([deviceFingerprint])
+}
+
+model FieldOccurrence {
+  id               String                      @id @default(uuid())
+  organizationId   String
+  farmId           String
+  createdById      String
+  type             FieldOccurrenceType
+  status           FieldOccurrenceStatus       @default(PENDENTE)
+  description      String?
+  animalId         String?
+  paddockId        String?
+  occurredAt       DateTime
+  lat              Float?
+  lng              Float?
+  offlineCreatedAt DateTime?
+  syncSource       String?
+  createdAt        DateTime                    @default(now())
+  updatedAt        DateTime                    @updatedAt
+  animal           Animal?                     @relation(fields: [animalId], references: [id])
+  createdBy        User                        @relation("FieldOccurrenceCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  farm             Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  paddock          Paddock?                    @relation(fields: [paddockId], references: [id])
+  attachments      FieldOccurrenceAttachment[]
+
+  @@index([organizationId, farmId, occurredAt])
+  @@index([createdById, occurredAt])
+  @@index([farmId, status, occurredAt])
+  @@index([animalId])
+  @@index([paddockId])
+}
+
+model FieldOccurrenceAttachment {
+  id           String          @id @default(uuid())
+  occurrenceId String
+  fileName     String
+  mimeType     String
+  storagePath  String
+  uploadedAt   DateTime        @default(now())
+  occurrence   FieldOccurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+
+  @@index([occurrenceId])
+}
+
+model BillingSubscription {
+  id                     String          @id
+  organizationId         String
+  provider               BillingProvider @default(INTERNAL)
+  providerSubscriptionId String?
+  planCode               String
+  status                 String
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean         @default(false)
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime
+  organization           Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubscriptionId])
+  @@index([organizationId])
+}
+
+model BillingEvent {
+  id             String             @id
+  organizationId String?
+  provider       BillingProvider    @default(INTERNAL)
+  eventId        String
+  eventType      String
+  status         BillingEventStatus @default(RECEIVED)
+  payload        Json
+  processedAt    DateTime?
+  createdAt      DateTime           @default(now())
+  organization   Organization?      @relation(fields: [organizationId], references: [id])
+
+  @@unique([provider, eventId])
+  @@index([organizationId, createdAt])
+}
+
+model ReproCheckupSession {
+  id              String               @id
+  farmId          String               @map("farm_id")
+  createdById     String               @map("created_by_id")
+  occurredAt      DateTime             @map("occurred_at") @db.Timestamptz(6)
+  responsibleName String?              @map("responsible_name")
+  notes           String?
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  records         ReproCheckupRecord[]
+  createdBy       User                 @relation("ReproCheckupCreatedBy", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  farm            Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([farmId, occurredAt(sort: Desc)], map: "idx_repro_checkup_sessions_farm")
+  @@map("repro_checkup_sessions")
+}
+
+model ReproCheckupRecord {
+  id                   String              @id
+  sessionId            String              @map("session_id")
+  farmId               String              @map("farm_id")
+  animalId             String              @map("animal_id")
+  aptitude             String
+  diagnosis            String?
+  notes                String?
+  discardLight         String?             @map("discard_light")
+  discardReason        String?             @map("discard_reason")
+  calfQuality          String?             @map("calf_quality")
+  veterinarianDecision String?             @map("veterinarian_decision")
+  iatfCount            Int                 @default(0) @map("iatf_count")
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  animal               Animal              @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  farm                 Farm                @relation(fields: [farmId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  session              ReproCheckupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([farmId, animalId, createdAt(sort: Desc)], map: "idx_repro_checkup_records_farm_animal")
+  @@map("repro_checkup_records")
+}
+
+model FinancialPayable {
+  id          String                 @id
+  farmId      String
+  description String
+  amount      Float
+  dueDate     DateTime
+  paidAt      DateTime?
+  status      FinancialPayableStatus @default(PENDING)
+  category    String?
+  notes       String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  farm        Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, dueDate])
+  @@index([farmId, status])
+}
+
+model FinancialReceivable {
+  id          String                    @id
+  farmId      String
+  description String
+  amount      Float
+  dueDate     DateTime
+  receivedAt  DateTime?
+  status      FinancialReceivableStatus @default(PENDING)
+  category    String?
+  notes       String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  farm        Farm                      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, dueDate])
+  @@index([farmId, status])
+}
+
+model AccountCategory {
+  id           String                 @id @default(cuid())
+  farmId       String?
+  name         String
+  group        String
+  type         AccountCategoryType
+  isSystem     Boolean                @default(false)
+  isActive     Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  farm         Farm?                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  transactions FinancialTransaction[]
+
+  @@index([farmId])
+  @@index([type])
+  @@index([isSystem])
+}
+
+model FinancialTransaction {
+  id                String                        @id @default(cuid())
+  farmId            String
+  type              FinancialTransactionType
+  categoria         FinancialTransactionCategoria @default(OUTROS)
+  valor             Decimal                       @db.Decimal(12, 2)
+  data              DateTime
+  descricao         String?
+  herdEventId       String?
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+  accountCategoryId String?
+  sanitaryRecordId  String?
+  status            String                        @default("PAGO")
+  vencimento        DateTime?
+  accountCategory   AccountCategory?              @relation(fields: [accountCategoryId], references: [id])
+  farm              Farm                          @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  herdEvent         HerdEvent?                    @relation(fields: [herdEventId], references: [id])
+  sanitaryRecord    SanitaryRecord?               @relation(fields: [sanitaryRecordId], references: [id])
+
+  @@index([farmId, data])
+  @@index([farmId, type])
+  @@index([farmId, status])
+  @@index([herdEventId])
+  @@index([sanitaryRecordId])
+  @@index([accountCategoryId])
+}
+
+model GeneticsAnalysisRun {
+  id             String                      @id
+  organizationId String
+  farmId         String?
+  createdById    String
+  herdType       String
+  strategy       String
+  objective      String?
+  inputFileName  String?
+  resultCount    Int                         @default(0)
+  summary        Json?
+  createdAt      DateTime                    @default(now())
+  createdBy      User                        @relation("GeneticsAnalysisCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  farm           Farm?                       @relation(fields: [farmId], references: [id])
+  organization   Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  topResults     GeneticsAnalysisTopResult[]
+
+  @@index([createdById, createdAt])
+  @@index([farmId, createdAt])
+  @@index([organizationId, createdAt])
+}
+
+model GeneticsAnalysisTopResult {
+  id            String              @id
+  analysisRunId String
+  referenceId   String
+  topBullName   String
+  central       String
+  score         Float
+  trustSeal     String?
+  analysisRun   GeneticsAnalysisRun @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
+
+  @@index([analysisRunId])
+}
+
+model AcasalamentoSource {
+  id                 String                          @id @default(uuid())
+  code               String                          @unique
+  name               String
+  sourceType         AcasalamentoSourceType
+  breed              String                          @default("Nelore")
+  baseUrl            String
+  status             AcasalamentoSyncStatus          @default(PENDING)
+  lastSyncAt         DateTime?
+  lastSuccessAt      DateTime?
+  lastError          String?
+  createdAt          DateTime                        @default(now())
+  updatedAt          DateTime                        @updatedAt
+  bulls              AcasalamentoBull[]
+  issues             AcasalamentoCollectionIssue[]
+  commercialListings AcasalamentoCommercialListing[]
+  officialProofs     AcasalamentoOfficialProof[]
+
+  @@index([sourceType, breed])
+  @@index([status, lastSyncAt])
+}
+
+model AcasalamentoBull {
+  id                    String                             @id @default(uuid())
+  sourceId              String
+  name                  String
+  normalizedName        String
+  registration          String?
+  breed                 String                             @default("Nelore")
+  central               String
+  commercialUrl         String?
+  semenAvailable        Boolean                            @default(true)
+  sourceStatus          AcasalamentoSyncStatus             @default(OK)
+  lastSeenAt            DateTime                           @default(now())
+  rawData               Json?
+  createdAt             DateTime                           @default(now())
+  updatedAt             DateTime                           @updatedAt
+  officialRgn           String?
+  officialSeries        String?
+  officialKeyNormalized String?
+  officialRegistryType  AcasalamentoRegistryType           @default(UNKNOWN)
+  source                AcasalamentoSource                 @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  commercialListings    AcasalamentoCommercialListing[]
+  officialProofs        AcasalamentoOfficialProof[]
+  results               AcasalamentoRecommendationResult[]
+
+  @@unique([sourceId, normalizedName])
+  @@unique([breed, officialKeyNormalized])
+  @@index([breed, normalizedName])
+  @@index([breed, officialSeries, officialRgn])
+  @@index([central, semenAvailable])
+}
+
+model AcasalamentoCommercialListing {
+  id             String                 @id @default(uuid())
+  bullId         String
+  sourceId       String
+  central        String
+  name           String
+  normalizedName String
+  registration   String?
+  commercialUrl  String?
+  semenAvailable Boolean                @default(true)
+  sourceStatus   AcasalamentoSyncStatus @default(OK)
+  lastSeenAt     DateTime               @default(now())
+  rawData        Json?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  bull           AcasalamentoBull       @relation(fields: [bullId], references: [id], onDelete: Cascade)
+  source         AcasalamentoSource     @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, normalizedName])
+  @@index([bullId])
+  @@index([sourceId, semenAvailable])
+  @@index([central, semenAvailable])
+}
+
+model AcasalamentoOfficialProof {
+  id           String                  @id @default(uuid())
+  bullId       String
+  sourceId     String
+  breed        String                  @default("Nelore")
+  registry     String?
+  proofTrait   AcasalamentoProofTrait
+  traitLabel   String
+  dep          Float?
+  deca         Int?
+  accuracy     Float?
+  progenyCount Int?
+  proofStatus  AcasalamentoProofStatus @default(INCONCLUSIVE)
+  referenceUrl String?
+  collectedAt  DateTime                @default(now())
+  rawData      Json?
+  createdAt    DateTime                @default(now())
+  bull         AcasalamentoBull        @relation(fields: [bullId], references: [id], onDelete: Cascade)
+  source       AcasalamentoSource      @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([bullId, sourceId, proofTrait])
+  @@index([proofTrait, proofStatus])
+  @@index([breed, registry])
+}
+
+model AcasalamentoSession {
+  id             String                             @id @default(uuid())
+  organizationId String
+  farmId         String
+  createdById    String
+  targetMode     AcasalamentoTargetMode
+  objective      AcasalamentoProofTrait
+  breed          String                             @default("Nelore")
+  inputSnapshot  Json
+  summary        Json?
+  createdAt      DateTime                           @default(now())
+  results        AcasalamentoRecommendationResult[]
+  createdBy      User                               @relation("AcasalamentoSessionCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  farm           Farm                               @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  organization   Organization                       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([farmId, createdAt])
+  @@index([createdById, createdAt])
+}
+
+model AcasalamentoRecommendationResult {
+  id                 String              @id @default(uuid())
+  sessionId          String
+  bullId             String
+  rank               Int?
+  score              Float
+  status             String              @default("RECOMMENDED")
+  reason             String
+  alerts             Json?
+  proofSnapshot      Json?
+  commercialSnapshot Json?
+  createdAt          DateTime            @default(now())
+  bull               AcasalamentoBull    @relation(fields: [bullId], references: [id], onDelete: Cascade)
+  session            AcasalamentoSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, rank])
+  @@index([bullId])
+}
+
+model AcasalamentoCollectionIssue {
+  id           String                    @id @default(uuid())
+  sourceId     String?
+  sourceCode   String
+  severity     AcasalamentoIssueSeverity @default(WARNING)
+  message      String
+  detail       String?
+  referenceUrl String?
+  resolvedAt   DateTime?
+  createdAt    DateTime                  @default(now())
+  source       AcasalamentoSource?       @relation(fields: [sourceId], references: [id])
+
+  @@index([sourceCode, createdAt])
+  @@index([severity, resolvedAt])
+}
+
+model HerdImportPending {
+  id             String   @id
+  farmId         String
+  herdType       String
+  batchId        String
+  sourceFileName String
+  rowNumber      Int
+  message        String
+  cells          Json
+  totalRows      Int
+  importedRows   Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  farm           Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, batchId])
+  @@index([farmId, herdType, createdAt])
+}
+
+model ExternalOperation {
+  id                String                           @id
+  farmId            String
+  createdById       String
+  code              String
+  title             String
+  partnerName       String
+  partnerDocument   String?
+  partnerRoleLabel  String?
+  operationNature   ExternalOperationNature
+  pricingModel      ExternalPricingModel
+  allocationType    ExternalAllocationType
+  externalFarmName  String?
+  externalFarmCity  String?
+  externalFarmState String?
+  externalUnitName  String?
+  status            ExternalOperationStatus          @default(DRAFT)
+  startDate         DateTime?
+  minDays           Int?
+  maxDays           Int?
+  notes             String?
+  createdAt         DateTime                         @default(now())
+  updatedAt         DateTime                         @updatedAt
+  createdBy         User                             @relation("ExternalOperationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  farm              Farm                             @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  documents         ExternalOperationDocument[]
+  ledgerEntries     ExternalOperationLedgerEntry[]
+  lots              ExternalOperationLot[]
+  responsibilities  ExternalOperationResponsibility?
+  rules             ExternalOperationRule?
+  settlements       ExternalOperationSettlement[]
+
+  @@unique([farmId, code])
+  @@index([farmId, status])
+}
+
+model ExternalOperationDocument {
+  id          String                        @id
+  operationId String
+  type        ExternalOperationDocumentType
+  fileName    String
+  storagePath String?
+  uploadedAt  DateTime                      @default(now())
+  operation   ExternalOperation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@index([operationId])
+}
+
+model ExternalOperationLedgerEntry {
+  id                String                       @id
+  operationId       String
+  createdById       String
+  type              ExternalLedgerEntryType
+  occurredAt        DateTime
+  description       String
+  amount            Float
+  quantityHeads     Int?
+  responsibility    ExternalResponsibilityParty?
+  evaluatedWeightKg Float?
+  evaluatedAmount   Float?
+  offsetReference   String?
+  notes             String?
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+  createdBy         User                         @relation("ExternalOperationLedgerCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  operation         ExternalOperation            @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@index([operationId, occurredAt])
+  @@index([operationId, type])
+}
+
+model ExternalOperationLot {
+  id                   String            @id
+  operationId          String
+  label                String
+  category             String
+  quantityAnimals      Int
+  avgEntryWeightArroba Float
+  entryDate            DateTime?
+  originFarmName       String?
+  originCity           String?
+  originState          String?
+  gtaNumber            String?
+  notes                String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  operation            ExternalOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@index([operationId])
+}
+
+model ExternalOperationResponsibility {
+  id                                 String                      @id
+  operationId                        String                      @unique
+  freightInboundResponsibility       ExternalResponsibilityParty
+  freightOutboundResponsibility      ExternalResponsibilityParty
+  gtaResponsibility                  ExternalResponsibilityParty
+  nfResponsibility                   ExternalResponsibilityParty
+  transportMortalityResponsibility   ExternalResponsibilityParty
+  postArrivalMortalityResponsibility ExternalResponsibilityParty
+  sanitaryProtocolResponsibility     ExternalResponsibilityParty
+  extraordinaryCostResponsibility    ExternalResponsibilityParty
+  customNotes                        String?
+  createdAt                          DateTime                    @default(now())
+  updatedAt                          DateTime                    @updatedAt
+  operation                          ExternalOperation           @relation(fields: [operationId], references: [id], onDelete: Cascade)
+}
+
+model ExternalOperationRule {
+  id                    String            @id
+  operationId           String            @unique
+  lockedArrobaValue     Float?
+  dailyHeadValue        Float?
+  partnerSharePct       Float?
+  operatorSharePct      Float?
+  returnEntryArroba     Boolean           @default(false)
+  customRuleDescription String?
+  sanitaryCostPerHead   Float?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  operation             ExternalOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+}
+
+model ExternalOperationSettlement {
+  id                   String                 @id
+  operationId          String
+  createdById          String
+  type                 ExternalSettlementType
+  exitDate             DateTime
+  destination          String
+  quantityAnimals      Int
+  avgExitWeightArroba  Float
+  allocatedEntryArroba Float
+  totalExitArroba      Float
+  grossAmount          Float
+  discountAmount       Float
+  creditAmount         Float
+  netAmount            Float
+  remainingAnimals     Int
+  remainingEntryArroba Float
+  notes                String?
+  commercialValue      Float?
+  gtaNumber            String?
+  paymentTerms         String?
+  calcMemory           Json
+  romaneio             Json
+  addendumData         Json?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  createdBy            User                   @relation("ExternalOperationSettlementCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  operation            ExternalOperation      @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@index([operationId, exitDate])
+  @@index([operationId, type])
+}
+
+model FeedlotContract {
+  id                 String                         @id
+  farmId             String
+  createdById        String
+  code               String
+  title              String
+  type               FeedlotContractType
+  status             FeedlotContractStatus          @default(DRAFT)
+  allocationType     FeedlotOperationAllocationType
+  allocationFarmName String?
+  partnerName        String
+  minDays            Int?
+  maxDays            Int?
+  lockedArrobaValue  Float?
+  sharePartnerPct    Float?
+  shareOperatorPct   Float?
+  returnEntryArroba  Boolean                        @default(true)
+  notes              String?
+  createdAt          DateTime                       @default(now())
+  updatedAt          DateTime                       @updatedAt
+  createdBy          User                           @relation("FeedlotContractCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  farm               Farm                           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  attachments        FeedlotContractAttachment[]
+  lots               FeedlotContractLot[]
+  ledgerEntries      FeedlotLedgerEntry[]
+  settlements        FeedlotSettlement[]
+
+  @@unique([farmId, code])
+  @@index([farmId, status])
+}
+
+model FeedlotContractAttachment {
+  id          String                @id
+  contractId  String
+  type        FeedlotAttachmentType
+  fileName    String
+  storagePath String?
+  createdAt   DateTime              @default(now())
+  contract    FeedlotContract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+}
+
+model FeedlotContractLot {
+  id                   String          @id
+  contractId           String
+  label                String
+  category             String
+  quantityAnimals      Int
+  avgEntryWeightArroba Float
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  contract             FeedlotContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  @@index([contractId])
+}
+
+model FeedlotLedgerEntry {
+  id                String                 @id
+  contractId        String
+  createdById       String
+  type              FeedlotLedgerEntryType
+  occurredAt        DateTime
+  description       String
+  amount            Float
+  quantityHeads     Int?
+  responsibility    String?
+  notes             String?
+  evaluatedWeightKg Float?
+  evaluatedAmount   Float?
+  offsetReference   String?
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+  contract          FeedlotContract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  createdBy         User                   @relation("FeedlotLedgerCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([contractId, occurredAt])
+  @@index([contractId, type])
+}
+
+model FeedlotSettlement {
+  id                   String                @id
+  contractId           String
+  createdById          String
+  type                 FeedlotSettlementType
+  exitDate             DateTime
+  destination          String
+  quantityAnimals      Int
+  avgExitWeightArroba  Float
+  allocatedEntryArroba Float
+  totalExitArroba      Float
+  grossAmount          Float
+  discountAmount       Float
+  creditAmount         Float
+  netAmount            Float
+  remainingAnimals     Int
+  remainingEntryArroba Float
+  notes                String?
+  commercialValue      Float?
+  gtaNumber            String?
+  paymentTerms         String?
+  calcMemory           Json
+  romaneio             Json
+  addendumData         Json?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  contract             FeedlotContract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  createdBy            User                  @relation("FeedlotSettlementCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([contractId, exitDate])
+  @@index([contractId, type])
+}
+
+model HerdEvent {
+  id                    String                 @id @default(cuid())
+  farmId                String
+  animalId              String?
+  poAnimalId            String?
+  type                  String
+  date                  DateTime
+  peso                  Float?
+  valor                 Float?
+  origem                String?
+  destino               String?
+  observacoes           String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  financialTransactions FinancialTransaction[]
+  animal                Animal?                @relation(fields: [animalId], references: [id])
+  farm                  Farm                   @relation(fields: [farmId], references: [id])
+  poAnimal              PoAnimal?              @relation(fields: [poAnimalId], references: [id])
+
+  @@index([farmId])
+  @@index([animalId])
+  @@index([poAnimalId])
+}
+
+model SanitaryRecord {
+  id                    String                 @id @default(cuid())
+  farmId                String
+  animalId              String?
+  poAnimalId            String?
+  tipo                  String
+  produto               String
+  date                  DateTime
+  dose                  String?
+  proximaAplicacao      DateTime?
+  observacoes           String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  valorUnitario         Decimal?               @db.Decimal(12, 2)
+  financialTransactions FinancialTransaction[]
+  animal                Animal?                @relation(fields: [animalId], references: [id])
+  farm                  Farm                   @relation(fields: [farmId], references: [id])
+  poAnimal              PoAnimal?              @relation(fields: [poAnimalId], references: [id])
+
+  @@index([farmId])
+  @@index([animalId])
+  @@index([poAnimalId])
+}
+
+model HerdSettings {
+  id                   String   @id @default(uuid())
+  farmId               String   @unique
+  weighingIntervalDays Int      @default(30)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  farm                 Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+}
+
+model HerdCategoryTarget {
+  id         String   @id @default(uuid())
+  farmId     String
+  categoria  String
+  pesoAlvoKg Float?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  farm       Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, categoria])
+  @@index([farmId])
+}
+
+model Breed {
+  id        String   @id @default(uuid())
+  name      String
+  farmId    String
+  createdAt DateTime @default(now())
+  farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, name])
+  @@index([farmId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+enum AnimalSexo {
+  MACHO
+  FEMEA
+}
+
+enum AnimalTipoCadastro {
+  PO
+  MESTICO
+}
+
+enum WeighingSource {
+  MANUAL
+  COIMMA
+}
+
+enum ScaleIntegrationProvider {
+  COIMMA
+}
 
 enum OrganizationRole {
   OWNER
@@ -421,84 +2008,6 @@ enum FeedlotSettlementType {
   PARTIAL
 }
 
-model Organization {
-  id                   String                         @id @default(uuid())
-  name                 String
-  slug                 String                         @unique
-  billingProvider      BillingProvider                @default(INTERNAL)
-  billingCustomerId    String?
-  accessState          BillingAccessState             @default(ACTIVE)
-  accessStateUpdatedAt DateTime                       @default(now())
-  graceUntil           DateTime?
-  trialEndsAt          DateTime?
-  createdAt            DateTime                       @default(now())
-  updatedAt            DateTime                       @updatedAt
-  memberships          OrganizationMembership[]
-  farms                Farm[]
-  activeUsers          User[]                         @relation("ActiveOrganization")
-  entitlements         OrganizationProductEntitlement[]
-  billingEvents        BillingEvent[]
-  billingSubscriptions BillingSubscription[]
-  geneticsAnalysisRuns GeneticsAnalysisRun[]
-  invitations          Invitation[]
-
-  @@index([accessState])
-}
-
-model Product {
-  id           String                         @id @default(uuid())
-  code         String                         @unique
-  name         String
-  description  String?
-  isActive     Boolean                        @default(true)
-  createdAt    DateTime                       @default(now())
-  updatedAt    DateTime                       @updatedAt
-  entitlements OrganizationProductEntitlement[]
-}
-
-model OrganizationProductEntitlement {
-  id             String       @id @default(uuid())
-  organizationId String
-  productId      String
-  status         String       @default("ACTIVE")
-  startedAt      DateTime     @default(now())
-  endedAt        DateTime?
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, productId])
-  @@index([organizationId, status])
-}
-
-model OrganizationMembership {
-  id             String           @id @default(uuid())
-  organizationId String
-  userId         String
-  role           OrganizationRole @default(MEMBER)
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([organizationId, userId])
-  @@index([userId])
-}
-
-model Invitation {
-  id             String           @id @default(uuid())
-  organizationId String
-  email          String
-  role           OrganizationRole @default(MEMBER)
-  token          String           @unique
-  expiresAt      DateTime
-  acceptedAt     DateTime?
-  createdAt      DateTime         @default(now())
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId])
-  @@index([token])
-}
-
 enum ReproMode {
   CONTINUO
   ESTACAO
@@ -607,677 +2116,6 @@ enum EmbryoMoveType {
   ADJUST
 }
 
-model BreedingSeason {
-  id        String      @id @default(uuid())
-  farm      Farm        @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId    String
-  name      String
-  startAt   DateTime
-  endAt     DateTime
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  exposures Exposure[]
-  events    ReproEvent[]
-
-  @@index([farmId, startAt])
-}
-
-model Exposure {
-  id        String         @id @default(uuid())
-  season    BreedingSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  seasonId  String
-  animal    Animal         @relation(fields: [animalId], references: [id], onDelete: Cascade)
-  animalId  String
-  createdAt DateTime       @default(now())
-
-  @@unique([seasonId, animalId])
-  @@index([animalId])
-}
-
-model ReproEvent {
-  id        String          @id @default(uuid())
-  farm      Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId    String
-  animal    Animal          @relation(fields: [animalId], references: [id], onDelete: Cascade)
-  animalId  String
-  type      ReproEventType
-  date      DateTime
-  season    BreedingSeason? @relation(fields: [seasonId], references: [id], onDelete: SetNull)
-  seasonId  String?
-  payload   Json?
-  notes     String?
-  bullId    String?
-  protocol  String?
-  createdAt DateTime        @default(now())
-
-  @@index([animalId, date])
-  @@index([farmId, date])
-  @@index([seasonId])
-}
-
-model SelectionDecision {
-  id        String                 @id @default(uuid())
-  farm      Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId    String
-  animal    Animal                 @relation(fields: [animalId], references: [id], onDelete: Cascade)
-  animalId  String
-  decision  SelectionDecisionType
-  reason    String?
-  createdAt DateTime               @default(now())
-  updatedAt DateTime               @updatedAt
-
-  @@unique([farmId, animalId])
-  @@index([animalId])
-  @@index([farmId])
-}
-
-model PoAnimal {
-  id             String      @id @default(uuid())
-  farm           Farm        @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId         String
-  brinco         String?
-  nome           String
-  raca           String
-  sexo           AnimalSexo
-  dataNascimento DateTime?
-  pesoAtual      Float       @default(0)
-  gmd            Float?
-  gmd30          Float?
-  lot            PoLot?      @relation(fields: [lotId], references: [id], onDelete: SetNull)
-  lotId          String?
-  currentPaddock   Paddock   @relation("PoAnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
-  currentPaddockId String
-  registro       String?
-  categoria      String?
-  observacoes    String?
-  criaMortalities CriaMortality[]
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  pesagens       PoWeighing[]
-  semenBatches   SemenBatch[] @relation("SemenBull")
-  embryoDonorBatches EmbryoBatch[] @relation("EmbryoDonor")
-  embryoSireBatches EmbryoBatch[] @relation("EmbryoSire")
-  nutritionAssignments NutritionAssignment[]
-  paddockMoves   PaddockMove[]
-  herdEvents     HerdEvent[]
-  sanitaryRecords SanitaryRecord[]
-
-  @@index([farmId])
-  @@unique([farmId, brinco])
-  @@index([lotId])
-  @@index([currentPaddockId])
-}
-
-model PoLot {
-  id        String   @id @default(uuid())
-  name      String
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId    String
-  animals   PoAnimal[]
-  nutritionAssignments NutritionAssignment[]
-  nutritionExecutions NutritionExecution[]
-  nutritionCostEntries NutritionCostEntry[]
-
-  @@index([farmId])
-}
-
-model PoWeighing {
-  id         String   @id @default(uuid())
-  data       DateTime
-  peso       Float
-  gmd        Float
-  notes      String?
-  createdAt  DateTime @default(now())
-  poAnimal   PoAnimal @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
-  poAnimalId String
-  farm       Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId     String
-
-  @@unique([poAnimalId, data])
-  @@index([poAnimalId, data])
-  @@index([farmId])
-  @@index([farmId, data])
-}
-
-model NutritionPlan {
-  id         String   @id @default(uuid())
-  farm       Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId     String
-  nome       String
-  fase       String?
-  objetivo   String?
-  startAt    DateTime
-  endAt      DateTime?
-  metaGmd    Float?
-  preparedFeedId String?
-  phaseId    String?
-  feedingSlot String?
-  plannedIntakeNaturalKgPerHead Float?
-  plannedIntakeDryKgPerHead Float?
-  plannedIntakeNaturalKgTotal Float?
-  plannedIntakeDryKgTotal Float?
-  estimatedCostPerHeadDay Float?
-  versionNumber Int @default(1)
-  previousVersionId String?
-  status     NutritionPlanLifecycleStatus @default(ACTIVE)
-  observacoes String?
-  reviewStatus ReviewStatus @default(PENDING)
-  assignments NutritionAssignment[]
-  preparedFeed NutritionPreparedFeed? @relation(fields: [preparedFeedId], references: [id], onDelete: SetNull)
-  phase      NutritionPhase? @relation(fields: [phaseId], references: [id], onDelete: SetNull)
-  executions NutritionExecution[]
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@index([farmId])
-  @@index([preparedFeedId])
-  @@index([phaseId])
-  @@index([status])
-}
-
-model NutritionAssignment {
-  id         String   @id @default(uuid())
-  farm       Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId     String
-  plan       NutritionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
-  planId     String
-  lot        Lot?     @relation(fields: [lotId], references: [id], onDelete: Cascade)
-  lotId      String?
-  poLot      PoLot?   @relation(fields: [poLotId], references: [id], onDelete: Cascade)
-  poLotId    String?
-  animal     Animal?  @relation(fields: [animalId], references: [id], onDelete: Cascade)
-  animalId   String?
-  poAnimal   PoAnimal? @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
-  poAnimalId String?
-  unit       NutritionUnit? @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  unitId     String?
-  startAt    DateTime
-  endAt      DateTime?
-  reviewStatus ReviewStatus @default(PENDING)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@index([farmId])
-  @@index([planId])
-  @@index([lotId])
-  @@index([poLotId])
-  @@index([animalId])
-  @@index([poAnimalId])
-  @@index([unitId])
-  @@index([farmId, startAt])
-}
-
-model NutritionSettings {
-  id                         String                    @id @default(uuid())
-  farmId                     String                    @unique
-  operationContext           NutritionOperationContext @default(PASTO)
-  adjustmentMode             NutritionAdjustmentMode   @default(SUGESTAO)
-  indicatorsApprovedOnly     Boolean                   @default(false)
-  requireFabricationApproval Boolean                   @default(true)
-  requireExecutionApproval   Boolean                   @default(true)
-  requireTroughApproval      Boolean                   @default(true)
-  predictiveSafeDays         Int                       @default(7)
-  predictiveWarningDays      Int                       @default(3)
-  diffWarningPercent         Float                     @default(3)
-  diffCriticalPercent        Float                     @default(7)
-  manualReviewThresholdPercent Float                   @default(5)
-  createdAt                  DateTime                  @default(now())
-  updatedAt                  DateTime                  @updatedAt
-  farm                       Farm                      @relation(fields: [farmId], references: [id], onDelete: Cascade)
-}
-
-model NutritionPhase {
-  id                    String          @id @default(uuid())
-  farmId                String
-  name                  String
-  periodStart           DateTime?
-  periodEnd             DateTime?
-  primaryPlanId         String?
-  targetIntakeDryKgHead Float?
-  targetGmd             Float?
-  targetFeedConversion  Float?
-  targetCostPerHeadDay  Float?
-  notes                 String?
-  active                Boolean         @default(true)
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
-  farm                  Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  units                 NutritionUnit[]
-  plans                 NutritionPlan[]
-
-  @@index([farmId])
-  @@index([active])
-}
-
-model NutritionUnit {
-  id               String             @id @default(uuid())
-  farmId           String
-  lotId            String?
-  phaseId          String?
-  type             NutritionUnitType
-  name             String
-  currentHeadCount Int?
-  active           Boolean            @default(true)
-  notes            String?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  farm             Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  lot              Lot?               @relation(fields: [lotId], references: [id], onDelete: SetNull)
-  phase            NutritionPhase?    @relation(fields: [phaseId], references: [id], onDelete: SetNull)
-  assignments      NutritionAssignment[]
-  executions       NutritionExecution[]
-  troughReadings   NutritionTroughReading[]
-
-  @@index([farmId])
-  @@index([lotId])
-  @@index([phaseId])
-  @@index([type])
-}
-
-model NutritionIngredient {
-  id                     String                           @id @default(uuid())
-  farmId                 String
-  name                   String
-  category               String
-  unit                   String
-  currentCost            Float
-  supplier               String?
-  currentDryMatterPercent Float
-  dryMatterUpdatedAt     DateTime?
-  currentStockNatural    Float                            @default(0)
-  minStockNatural        Float                            @default(0)
-  active                 Boolean                          @default(true)
-  createdAt              DateTime                         @default(now())
-  updatedAt              DateTime                         @updatedAt
-  farm                   Farm                             @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  priceHistory           NutritionIngredientCostHistory[]
-  dryMatterHistory       NutritionIngredientDryMatterHistory[]
-  preparedFeedItems      NutritionPreparedFeedItem[]
-  fabricationItems       NutritionFabricationItem[]
-
-  @@index([farmId])
-  @@index([active])
-}
-
-model NutritionIngredientCostHistory {
-  id              String               @id @default(uuid())
-  ingredientId    String
-  cost            Float
-  recordedAt      DateTime
-  notes           String?
-  createdByUserId String?
-  createdByName   String?
-  ingredient      NutritionIngredient  @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-
-  @@index([ingredientId])
-  @@index([recordedAt])
-}
-
-model NutritionIngredientDryMatterHistory {
-  id              String               @id @default(uuid())
-  ingredientId    String
-  dryMatterPercent Float
-  recordedAt      DateTime
-  notes           String?
-  createdByUserId String?
-  createdByName   String?
-  ingredient      NutritionIngredient  @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-
-  @@index([ingredientId])
-  @@index([recordedAt])
-}
-
-model NutritionPreparedFeed {
-  id                    String                       @id @default(uuid())
-  farmId                String
-  name                  String
-  expectedYieldNaturalKg Float
-  expectedYieldDryKg    Float?
-  currentDryMatterPercent Float
-  currentTotalCost      Float
-  currentCostPerNaturalKg Float
-  currentCostPerDryKg   Float?
-  currentStockNatural   Float                        @default(0)
-  currentStockDry       Float                        @default(0)
-  status                NutritionPreparedFeedStatus  @default(ACTIVE)
-  notes                 String?
-  createdAt             DateTime                     @default(now())
-  updatedAt             DateTime                     @updatedAt
-  farm                  Farm                         @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  items                 NutritionPreparedFeedItem[]
-  fabrications          NutritionFabrication[]
-  plans                 NutritionPlan[]
-  executions            NutritionExecution[]
-
-  @@index([farmId])
-  @@index([status])
-}
-
-model NutritionPreparedFeedItem {
-  id             String                @id @default(uuid())
-  preparedFeedId String
-  ingredientId   String
-  proportionPercent Float
-  sequence       Int                   @default(0)
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  preparedFeed   NutritionPreparedFeed @relation(fields: [preparedFeedId], references: [id], onDelete: Cascade)
-  ingredient     NutritionIngredient   @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
-
-  @@unique([preparedFeedId, ingredientId])
-  @@index([ingredientId])
-}
-
-model NutritionFabrication {
-  id                 String                    @id @default(uuid())
-  farmId             String
-  preparedFeedId     String
-  batchCode          String
-  producedAt         DateTime
-  outputNaturalKg    Float
-  outputDryKg        Float
-  remainingNaturalKg Float
-  remainingDryKg     Float
-  totalCost          Float
-  costPerNaturalKg   Float
-  costPerDryKg       Float?
-  status             NutritionFabricationStatus @default(PENDING)
-  notes              String?
-  createdByUserId    String?
-  createdByName      String?
-  approvedAt         DateTime?
-  approvedByUserId   String?
-  approvedByName     String?
-  canceledAt         DateTime?
-  canceledByUserId   String?
-  canceledByName     String?
-  cancelReason       String?
-  createdAt          DateTime                  @default(now())
-  updatedAt          DateTime                  @updatedAt
-  farm               Farm                      @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  preparedFeed       NutritionPreparedFeed     @relation(fields: [preparedFeedId], references: [id], onDelete: Cascade)
-  items              NutritionFabricationItem[]
-  executions         NutritionExecution[]
-
-  @@index([farmId])
-  @@index([preparedFeedId])
-  @@index([producedAt])
-  @@index([status])
-}
-
-model NutritionFabricationItem {
-  id               String                @id @default(uuid())
-  fabricationId    String
-  ingredientId     String
-  ingredientName   String
-  quantityNaturalKg Float
-  quantityDryKg    Float
-  dryMatterPercent Float
-  unitCost         Float
-  lineCost         Float
-  fabrication      NutritionFabrication @relation(fields: [fabricationId], references: [id], onDelete: Cascade)
-  ingredient       NutritionIngredient  @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
-
-  @@index([fabricationId])
-  @@index([ingredientId])
-}
-
-model NutritionCostEntry {
-  id           String       @id @default(uuid())
-  farmId       String
-  lotId        String?
-  poLotId      String?
-  date         DateTime
-  costType     String
-  amount       Float
-  notes        String?
-  reviewStatus ReviewStatus @default(PENDING)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  farm         Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  lot          Lot?         @relation(fields: [lotId], references: [id], onDelete: Cascade)
-  poLot        PoLot?       @relation(fields: [poLotId], references: [id], onDelete: Cascade)
-
-  @@index([farmId, date], map: "NutritionCostEntry_farmId_date_idx")
-  @@index([farmId, lotId, date], map: "NutritionCostEntry_farmId_lotId_date_idx")
-  @@index([farmId, poLotId, date], map: "NutritionCostEntry_farmId_poLotId_date_idx")
-  @@index([reviewStatus], map: "NutritionCostEntry_reviewStatus_idx")
-}
-
-model NutritionExecution {
-  id                 String                @id @default(uuid())
-  farmId             String
-  lotId              String?
-  poLotId            String?
-  unitId             String?
-  planId             String?
-  preparedFeedId     String?
-  fabricationId      String?
-  date               DateTime
-  feedingSlot        String?
-  plannedNaturalKg   Float?
-  plannedDryMatterKg Float?
-  actualNaturalKg    Float?
-  actualDryMatterKg  Float
-  refusalNaturalKg   Float?
-  refusalDryMatterKg Float?
-  headCountSnapshot  Int?
-  totalCost          Float?
-  costPerHeadDay     Float?
-  notes              String?
-  reviewStatus       ReviewStatus         @default(APPROVED)
-  createdByUserId    String?
-  createdByName      String?
-  approvedAt         DateTime?
-  approvedByUserId   String?
-  approvedByName     String?
-  rejectedAt         DateTime?
-  rejectedByUserId   String?
-  rejectedByName     String?
-  rejectionReason    String?
-  canceledAt         DateTime?
-  canceledByUserId   String?
-  canceledByName     String?
-  cancelReason       String?
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  farm               Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  lot                Lot?                 @relation(fields: [lotId], references: [id], onDelete: Cascade)
-  poLot              PoLot?               @relation(fields: [poLotId], references: [id], onDelete: Cascade)
-  unit               NutritionUnit?       @relation(fields: [unitId], references: [id], onDelete: SetNull)
-  plan               NutritionPlan?       @relation(fields: [planId], references: [id], onDelete: SetNull)
-  preparedFeed       NutritionPreparedFeed? @relation(fields: [preparedFeedId], references: [id], onDelete: SetNull)
-  fabrication        NutritionFabrication? @relation(fields: [fabricationId], references: [id], onDelete: SetNull)
-
-  @@index([farmId, date], map: "NutritionExecution_farmId_date_idx")
-  @@index([farmId, lotId, date], map: "NutritionExecution_farmId_lotId_date_idx")
-  @@index([farmId, poLotId, date], map: "NutritionExecution_farmId_poLotId_date_idx")
-  @@index([reviewStatus], map: "NutritionExecution_reviewStatus_idx")
-  @@index([unitId])
-  @@index([planId])
-  @@index([preparedFeedId])
-  @@index([fabricationId])
-}
-
-model NutritionTroughReading {
-  id                      String                  @id @default(uuid())
-  farmId                  String
-  unitId                  String
-  date                    DateTime
-  readingType             NutritionReadingType
-  score                   Int
-  supplyObservation       String?
-  observedDryMatterPercent Float?
-  animalBehavior          NutritionAnimalBehavior
-  notes                   String?
-  reviewStatus            ReviewStatus           @default(PENDING)
-  suggestedAdjustmentPercent Float?
-  suggestedNextNaturalKg  Float?
-  suggestedNextDryKg      Float?
-  syncSource              String?
-  createdByUserId         String?
-  createdByName           String?
-  approvedAt              DateTime?
-  approvedByUserId        String?
-  approvedByName          String?
-  rejectedAt              DateTime?
-  rejectedByUserId        String?
-  rejectedByName          String?
-  rejectionReason         String?
-  createdAt               DateTime               @default(now())
-  updatedAt               DateTime               @updatedAt
-  farm                    Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  unit                    NutritionUnit          @relation(fields: [unitId], references: [id], onDelete: Cascade)
-
-  @@index([farmId, date])
-  @@index([unitId])
-  @@index([reviewStatus])
-}
-
-model SemenBatch {
-  id                String       @id @default(uuid())
-  farm              Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId            String
-  bullPoAnimal      PoAnimal?    @relation("SemenBull", fields: [bullPoAnimalId], references: [id], onDelete: SetNull)
-  bullPoAnimalId    String?
-  bullName          String?
-  bullRegistry      String?
-  fornecedor        String?
-  lote              String
-  dataColeta        DateTime?
-  dosesTotal        Int
-  dosesDisponiveis  Int
-  localArmazenamento String?
-  observacoes       String?
-  moves             SemenMove[]
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-
-  @@index([farmId])
-  @@index([bullPoAnimalId])
-  @@unique([farmId, lote])
-}
-
-model EmbryoBatch {
-  id                   String       @id @default(uuid())
-  farm                 Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId               String
-  donorPoAnimal        PoAnimal?    @relation("EmbryoDonor", fields: [donorPoAnimalId], references: [id], onDelete: SetNull)
-  donorPoAnimalId      String?
-  donorName            String?
-  donorRegistry        String?
-  sirePoAnimal         PoAnimal?    @relation("EmbryoSire", fields: [sirePoAnimalId], references: [id], onDelete: SetNull)
-  sirePoAnimalId       String?
-  sireName             String?
-  sireRegistry         String?
-  tecnica              EmbryoTechnique
-  estagio              String?
-  qualidade            String?
-  lote                 String
-  quantidadeTotal      Int
-  quantidadeDisponivel Int
-  localArmazenamento   String?
-  observacoes          String?
-  moves                EmbryoMove[]
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-
-  @@index([farmId])
-  @@index([donorPoAnimalId])
-  @@index([sirePoAnimalId])
-  @@unique([farmId, lote])
-}
-
-model SemenMove {
-  id           String       @id @default(uuid())
-  semenBatch   SemenBatch   @relation(fields: [semenBatchId], references: [id], onDelete: Cascade)
-  semenBatchId String
-  date         DateTime
-  qty          Int
-  type         SemenMoveType
-  notes        String?
-  createdAt    DateTime     @default(now())
-
-  @@index([semenBatchId])
-}
-
-model EmbryoMove {
-  id            String        @id @default(uuid())
-  embryoBatch   EmbryoBatch   @relation(fields: [embryoBatchId], references: [id], onDelete: Cascade)
-  embryoBatchId String
-  date          DateTime
-  qty           Int
-  type          EmbryoMoveType
-  notes         String?
-  createdAt     DateTime      @default(now())
-
-  @@index([embryoBatchId])
-}
-
-model PaddockMove {
-  id         String   @id @default(uuid())
-  farm       Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  farmId     String
-  paddock    Paddock  @relation(fields: [paddockId], references: [id], onDelete: Cascade)
-  paddockId  String
-  animal     Animal?  @relation(fields: [animalId], references: [id], onDelete: Cascade)
-  animalId   String?
-  poAnimal   PoAnimal? @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
-  poAnimalId String?
-  startAt    DateTime
-  endAt      DateTime?
-  notes      String?
-  createdAt  DateTime @default(now())
-
-  @@index([farmId])
-  @@index([paddockId])
-  @@index([animalId])
-  @@index([poAnimalId])
-  @@index([farmId, startAt])
-}
-
-
-model ActivityLog {
-  id             String        @id
-  userId         String
-  organizationId String?
-  farmId         String?
-  action         String?
-  entity         String?
-  entityId       String?
-  description    String?
-  method         String?
-  path           String?
-  statusCode     Int?
-  ip             String?
-  userAgent      String?
-  requestMeta    Json?
-  createdAt      DateTime      @default(now())
-  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([organizationId, createdAt], map: "ActivityLog_organizationId_createdAt_idx")
-  @@index([userId, createdAt], map: "ActivityLog_userId_createdAt_idx")
-  @@index([farmId, createdAt], map: "ActivityLog_farmId_createdAt_idx")
-}
-
-model UserFarmAccess {
-  id        String   @id @default(uuid())
-  userId    String
-  farmId    String
-  isDefault Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, farmId])
-  @@index([userId])
-  @@index([farmId])
-}
-
 enum AppAccessType {
   WEB
   APP_MANEJO
@@ -1295,198 +2133,6 @@ enum AppActivationStatus {
   CODIGO_EXPIRADO
   BLOQUEADO
   APARELHO_REVOGADO
-}
-
-model AppActivationCode {
-  id            String   @id @default(uuid())
-  userId        String
-  organizationId String
-  farmId        String
-  codeHash      String
-  expiresAt     DateTime
-  usedAt        DateTime?
-  revokedAt     DateTime?
-  createdById   String
-  createdAt     DateTime @default(now())
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
-  @@index([organizationId, expiresAt])
-  @@index([farmId, expiresAt])
-}
-
-model AppDevice {
-  id                String   @id @default(uuid())
-  userId            String
-  organizationId    String
-  farmId            String
-  deviceFingerprint String
-  deviceLabel       String?
-  platform          String?
-  appVersion        String?
-  activatedAt       DateTime @default(now())
-  lastSeenAt        DateTime?
-  revokedAt         DateTime?
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sessions          Session[]
-
-  @@index([userId, isActive])
-  @@index([organizationId, farmId, isActive])
-  @@index([deviceFingerprint])
-}
-
-model FieldOccurrence {
-  id              String                 @id @default(uuid())
-  organizationId  String
-  farmId          String
-  createdById     String
-  type            FieldOccurrenceType
-  status          FieldOccurrenceStatus  @default(PENDENTE)
-  description     String?
-  animalId        String?
-  paddockId       String?
-  occurredAt      DateTime
-  lat             Float?
-  lng             Float?
-  offlineCreatedAt DateTime?
-  syncSource      String?
-  createdAt       DateTime               @default(now())
-  updatedAt       DateTime               @updatedAt
-  farm            Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  createdBy       User                   @relation("FieldOccurrenceCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-  animal          Animal?                @relation(fields: [animalId], references: [id], onDelete: SetNull)
-  paddock         Paddock?               @relation(fields: [paddockId], references: [id], onDelete: SetNull)
-  attachments     FieldOccurrenceAttachment[]
-
-  @@index([organizationId, farmId, occurredAt])
-  @@index([createdById, occurredAt])
-  @@index([farmId, status, occurredAt])
-  @@index([animalId])
-  @@index([paddockId])
-}
-
-model FieldOccurrenceAttachment {
-  id           String          @id @default(uuid())
-  occurrenceId String
-  fileName     String
-  mimeType     String
-  storagePath  String
-  uploadedAt   DateTime        @default(now())
-  occurrence   FieldOccurrence @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
-
-  @@index([occurrenceId])
-}
-
-model BillingSubscription {
-  id                     String           @id
-  organizationId         String
-  provider               BillingProvider  @default(INTERNAL)
-  providerSubscriptionId String?
-  planCode               String
-  status                 String
-  currentPeriodStart     DateTime?
-  currentPeriodEnd       DateTime?
-  cancelAtPeriodEnd      Boolean          @default(false)
-  createdAt              DateTime         @default(now())
-  updatedAt              DateTime
-  organization           Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerSubscriptionId], map: "BillingSubscription_provider_providerSubscriptionId_key")
-  @@index([organizationId], map: "BillingSubscription_organizationId_idx")
-}
-
-model BillingEvent {
-  id             String             @id
-  organizationId String?
-  provider       BillingProvider    @default(INTERNAL)
-  eventId        String
-  eventType      String
-  status         BillingEventStatus @default(RECEIVED)
-  payload        Json
-  processedAt    DateTime?
-  createdAt      DateTime           @default(now())
-  organization   Organization?      @relation(fields: [organizationId], references: [id], onDelete: SetNull)
-
-  @@unique([provider, eventId], map: "BillingEvent_provider_eventId_key")
-  @@index([organizationId, createdAt], map: "BillingEvent_organizationId_createdAt_idx")
-}
-
-model ReproCheckupSession {
-  id              String              @id
-  farmId          String              @map("farm_id")
-  createdById     String              @map("created_by_id")
-  occurredAt      DateTime            @db.Timestamptz(6) @map("occurred_at")
-  responsibleName String?             @map("responsible_name")
-  notes           String?
-  createdAt       DateTime            @default(now()) @db.Timestamptz(6) @map("created_at")
-  farm            Farm                @relation(fields: [farmId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  createdBy       User                @relation("ReproCheckupCreatedBy", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  records         ReproCheckupRecord[]
-
-  @@index([farmId, occurredAt(sort: Desc)], map: "idx_repro_checkup_sessions_farm")
-  @@map("repro_checkup_sessions")
-}
-
-model ReproCheckupRecord {
-  id                   String             @id
-  sessionId            String             @map("session_id")
-  farmId               String             @map("farm_id")
-  animalId             String             @map("animal_id")
-  aptitude             String
-  diagnosis            String?
-  notes                String?
-  discardLight         String?            @map("discard_light")
-  discardReason        String?            @map("discard_reason")
-  calfQuality          String?            @map("calf_quality")
-  veterinarianDecision String?            @map("veterinarian_decision")
-  iatfCount            Int                @default(0) @map("iatf_count")
-  createdAt            DateTime           @default(now()) @db.Timestamptz(6) @map("created_at")
-  session              ReproCheckupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  farm                 Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  animal               Animal             @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([farmId, animalId, createdAt(sort: Desc)], map: "idx_repro_checkup_records_farm_animal")
-  @@map("repro_checkup_records")
-}
-
-
-model FinancialPayable {
-  id          String                 @id
-  farmId      String
-  description String
-  amount      Float
-  dueDate     DateTime
-  paidAt      DateTime?
-  status      FinancialPayableStatus @default(PENDING)
-  category    String?
-  notes       String?
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-  farm        Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
-
-  @@index([farmId, dueDate], map: "FinancialPayable_farmId_dueDate_idx")
-  @@index([farmId, status], map: "FinancialPayable_farmId_status_idx")
-}
-
-model FinancialReceivable {
-  id          String                    @id
-  farmId      String
-  description String
-  amount      Float
-  dueDate     DateTime
-  receivedAt  DateTime?
-  status      FinancialReceivableStatus @default(PENDING)
-  category    String?
-  notes       String?
-  createdAt   DateTime                  @default(now())
-  updatedAt   DateTime                  @updatedAt
-  farm        Farm                      @relation(fields: [farmId], references: [id], onDelete: Cascade)
-
-  @@index([farmId, dueDate], map: "FinancialReceivable_farmId_dueDate_idx")
-  @@index([farmId, status], map: "FinancialReceivable_farmId_status_idx")
 }
 
 enum FinancialTransactionType {
@@ -1508,470 +2154,50 @@ enum AccountCategoryType {
   SAIDA
 }
 
-model AccountCategory {
-  id           String              @id @default(cuid())
-  farmId       String?
-  name         String
-  group        String
-  type         AccountCategoryType
-  isSystem     Boolean             @default(false)
-  isActive     Boolean             @default(true)
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
-  farm         Farm?               @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  transactions FinancialTransaction[]
-
-  @@index([farmId])
-  @@index([type])
-  @@index([isSystem])
+enum AcasalamentoSourceType {
+  COMMERCIAL_CENTER
+  OFFICIAL_ASSOCIATION
 }
 
-model FinancialTransaction {
-  id                String                         @id @default(cuid())
-  farmId            String
-  type              FinancialTransactionType
-  categoria         FinancialTransactionCategoria  @default(OUTROS)
-  accountCategoryId String?
-  valor             Decimal                        @db.Decimal(12, 2)
-  data              DateTime
-  descricao         String?
-  vencimento        DateTime?
-  status            String                         @default("PAGO")
-  herdEventId       String?
-  sanitaryRecordId  String?
-  createdAt         DateTime                       @default(now())
-  updatedAt         DateTime                       @updatedAt
-  farm              Farm                           @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  herdEvent         HerdEvent?                     @relation(fields: [herdEventId], references: [id], onDelete: SetNull)
-  sanitaryRecord    SanitaryRecord?                @relation(fields: [sanitaryRecordId], references: [id], onDelete: SetNull)
-  accountCategory   AccountCategory?               @relation(fields: [accountCategoryId], references: [id], onDelete: SetNull)
-
-  @@index([farmId, data])
-  @@index([farmId, type])
-  @@index([farmId, status])
-  @@index([herdEventId])
-  @@index([sanitaryRecordId])
-  @@index([accountCategoryId])
+enum AcasalamentoSyncStatus {
+  PENDING
+  OK
+  PARTIAL
+  FAILED
 }
 
-
-model GeneticsAnalysisRun {
-  id             String                    @id
-  organizationId String
-  farmId         String?
-  createdById    String
-  herdType       String
-  strategy       String
-  objective      String?
-  inputFileName  String?
-  resultCount    Int                       @default(0)
-  summary        Json?
-  createdAt      DateTime                  @default(now())
-  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  farm           Farm?                     @relation(fields: [farmId], references: [id], onDelete: SetNull)
-  createdBy      User                      @relation("GeneticsAnalysisCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-  topResults     GeneticsAnalysisTopResult[]
-
-  @@index([createdById, createdAt], map: "GeneticsAnalysisRun_createdById_createdAt_idx")
-  @@index([farmId, createdAt], map: "GeneticsAnalysisRun_farmId_createdAt_idx")
-  @@index([organizationId, createdAt], map: "GeneticsAnalysisRun_organizationId_createdAt_idx")
+enum AcasalamentoProofTrait {
+  PRECOCIDADE
+  DESMAMA
+  CARCACA
+  MATERNAL
+  NASCIMENTO
+  INDICE_GERAL
 }
 
-model GeneticsAnalysisTopResult {
-  id           String               @id
-  analysisRunId String
-  referenceId  String
-  topBullName  String
-  central      String
-  score        Float
-  trustSeal    String?
-  analysisRun  GeneticsAnalysisRun  @relation(fields: [analysisRunId], references: [id], onDelete: Cascade)
-
-  @@index([analysisRunId], map: "GeneticsAnalysisTopResult_analysisRunId_idx")
+enum AcasalamentoProofStatus {
+  VERIFIED
+  MISSING
+  INCONCLUSIVE
+  PENDING
+  NOT_FOUND
 }
 
-model HerdImportPending {
-  id             String   @id
-  farmId         String
-  herdType       String
-  batchId        String
-  sourceFileName String
-  rowNumber      Int
-  message        String
-  cells          Json
-  totalRows      Int
-  importedRows   Int
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  farm           Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-
-  @@index([farmId, batchId], map: "HerdImportPending_farmId_batchId_idx")
-  @@index([farmId, herdType, createdAt], map: "HerdImportPending_farmId_herdType_createdAt_idx")
+enum AcasalamentoRegistryType {
+  RGN
+  RGD
+  UNKNOWN
 }
 
-
-model ExternalOperation {
-  id                 String                          @id
-  farmId             String
-  createdById        String
-  code               String
-  title              String
-  partnerName        String
-  partnerDocument    String?
-  partnerRoleLabel   String?
-  operationNature    ExternalOperationNature
-  pricingModel       ExternalPricingModel
-  allocationType     ExternalAllocationType
-  externalFarmName   String?
-  externalFarmCity   String?
-  externalFarmState  String?
-  externalUnitName   String?
-  status             ExternalOperationStatus        @default(DRAFT)
-  startDate          DateTime?
-  minDays            Int?
-  maxDays            Int?
-  notes              String?
-  createdAt          DateTime                        @default(now())
-  updatedAt          DateTime                        @updatedAt
-  farm               Farm                            @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  createdBy          User                            @relation("ExternalOperationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-  documents          ExternalOperationDocument[]
-  ledgerEntries      ExternalOperationLedgerEntry[]
-  lots               ExternalOperationLot[]
-  responsibilities   ExternalOperationResponsibility[]
-  rules              ExternalOperationRule[]
-  settlements        ExternalOperationSettlement[]
-
-  @@unique([farmId, code], map: "ExternalOperation_farmId_code_key")
-  @@index([farmId, status], map: "ExternalOperation_farmId_status_idx")
+enum AcasalamentoTargetMode {
+  LOT
+  GROUP
+  INDIVIDUAL
+  UPLOAD
 }
 
-model ExternalOperationDocument {
-  id          String                        @id
-  operationId String
-  type        ExternalOperationDocumentType
-  fileName    String
-  storagePath String?
-  uploadedAt  DateTime                      @default(now())
-  operation   ExternalOperation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
-
-  @@index([operationId], map: "ExternalOperationDocument_operationId_idx")
-}
-
-model ExternalOperationLedgerEntry {
-  id                String                        @id
-  operationId       String
-  createdById       String
-  type              ExternalLedgerEntryType
-  occurredAt        DateTime
-  description       String
-  amount            Float
-  quantityHeads     Int?
-  responsibility    ExternalResponsibilityParty?
-  evaluatedWeightKg Float?
-  evaluatedAmount   Float?
-  offsetReference   String?
-  notes             String?
-  createdAt         DateTime                      @default(now())
-  updatedAt         DateTime                      @updatedAt
-  operation         ExternalOperation             @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  createdBy         User                          @relation("ExternalOperationLedgerCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-
-  @@index([operationId, occurredAt], map: "ExternalOperationLedgerEntry_operationId_occurredAt_idx")
-  @@index([operationId, type], map: "ExternalOperationLedgerEntry_operationId_type_idx")
-}
-
-model ExternalOperationLot {
-  id                  String            @id
-  operationId         String
-  label               String
-  category            String
-  quantityAnimals     Int
-  avgEntryWeightArroba Float
-  entryDate           DateTime?
-  originFarmName      String?
-  originCity          String?
-  originState         String?
-  gtaNumber           String?
-  notes               String?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  operation           ExternalOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
-
-  @@index([operationId], map: "ExternalOperationLot_operationId_idx")
-}
-
-model ExternalOperationResponsibility {
-  id                                 String                     @id
-  operationId                        String
-  freightInboundResponsibility       ExternalResponsibilityParty
-  freightOutboundResponsibility      ExternalResponsibilityParty
-  gtaResponsibility                  ExternalResponsibilityParty
-  nfResponsibility                   ExternalResponsibilityParty
-  transportMortalityResponsibility   ExternalResponsibilityParty
-  postArrivalMortalityResponsibility ExternalResponsibilityParty
-  sanitaryProtocolResponsibility     ExternalResponsibilityParty
-  extraordinaryCostResponsibility    ExternalResponsibilityParty
-  customNotes                        String?
-  createdAt                          DateTime                   @default(now())
-  updatedAt                          DateTime                   @updatedAt
-  operation                          ExternalOperation          @relation(fields: [operationId], references: [id], onDelete: Cascade)
-
-  @@unique([operationId], map: "ExternalOperationResponsibility_operationId_key")
-}
-
-model ExternalOperationRule {
-  id                    String            @id
-  operationId           String
-  lockedArrobaValue     Float?
-  dailyHeadValue        Float?
-  partnerSharePct       Float?
-  operatorSharePct      Float?
-  returnEntryArroba     Boolean           @default(false)
-  customRuleDescription String?
-  sanitaryCostPerHead   Float?
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
-  operation             ExternalOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
-
-  @@unique([operationId], map: "ExternalOperationRule_operationId_key")
-}
-
-model ExternalOperationSettlement {
-  id                   String                 @id
-  operationId          String
-  createdById          String
-  type                 ExternalSettlementType
-  exitDate             DateTime
-  destination          String
-  quantityAnimals      Int
-  avgExitWeightArroba  Float
-  allocatedEntryArroba Float
-  totalExitArroba      Float
-  grossAmount          Float
-  discountAmount       Float
-  creditAmount         Float
-  netAmount            Float
-  remainingAnimals     Int
-  remainingEntryArroba Float
-  notes                String?
-  commercialValue      Float?
-  gtaNumber            String?
-  paymentTerms         String?
-  calcMemory           Json
-  romaneio             Json
-  addendumData         Json?
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
-  operation            ExternalOperation      @relation(fields: [operationId], references: [id], onDelete: Cascade)
-  createdBy            User                   @relation("ExternalOperationSettlementCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-
-  @@index([operationId, exitDate], map: "ExternalOperationSettlement_operationId_exitDate_idx")
-  @@index([operationId, type], map: "ExternalOperationSettlement_operationId_type_idx")
-}
-
-model FeedlotContract {
-  id                   String                       @id
-  farmId               String
-  createdById          String
-  code                 String
-  title                String
-  type                 FeedlotContractType
-  status               FeedlotContractStatus       @default(DRAFT)
-  allocationType       FeedlotOperationAllocationType
-  allocationFarmName   String?
-  partnerName          String
-  minDays              Int?
-  maxDays              Int?
-  lockedArrobaValue    Float?
-  sharePartnerPct      Float?
-  shareOperatorPct     Float?
-  returnEntryArroba    Boolean                      @default(true)
-  notes                String?
-  createdAt            DateTime                     @default(now())
-  updatedAt            DateTime                     @updatedAt
-  farm                 Farm                         @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  createdBy            User                         @relation("FeedlotContractCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-  attachments          FeedlotContractAttachment[]
-  lots                 FeedlotContractLot[]
-  ledgerEntries        FeedlotLedgerEntry[]
-  settlements          FeedlotSettlement[]
-
-  @@unique([farmId, code], map: "FeedlotContract_farmId_code_key")
-  @@index([farmId, status], map: "FeedlotContract_farmId_status_idx")
-}
-
-model FeedlotContractAttachment {
-  id          String                 @id
-  contractId  String
-  type        FeedlotAttachmentType
-  fileName    String
-  storagePath String?
-  createdAt   DateTime               @default(now())
-  contract    FeedlotContract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
-
-  @@index([contractId], map: "FeedlotContractAttachment_contractId_idx")
-}
-
-model FeedlotContractLot {
-  id                   String           @id
-  contractId           String
-  label                String
-  category             String
-  quantityAnimals      Int
-  avgEntryWeightArroba Float
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  contract             FeedlotContract  @relation(fields: [contractId], references: [id], onDelete: Cascade)
-
-  @@index([contractId], map: "FeedlotContractLot_contractId_idx")
-}
-
-model FeedlotLedgerEntry {
-  id                String                 @id
-  contractId        String
-  createdById       String
-  type              FeedlotLedgerEntryType
-  occurredAt        DateTime
-  description       String
-  amount            Float
-  quantityHeads     Int?
-  responsibility    String?
-  notes             String?
-  evaluatedWeightKg Float?
-  evaluatedAmount   Float?
-  offsetReference   String?
-  createdAt         DateTime               @default(now())
-  updatedAt         DateTime               @updatedAt
-  contract          FeedlotContract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  createdBy         User                   @relation("FeedlotLedgerCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-
-  @@index([contractId, occurredAt], map: "FeedlotLedgerEntry_contractId_occurredAt_idx")
-  @@index([contractId, type], map: "FeedlotLedgerEntry_contractId_type_idx")
-}
-
-model FeedlotSettlement {
-  id                   String                @id
-  contractId           String
-  createdById          String
-  type                 FeedlotSettlementType
-  exitDate             DateTime
-  destination          String
-  quantityAnimals      Int
-  avgExitWeightArroba  Float
-  allocatedEntryArroba Float
-  totalExitArroba      Float
-  grossAmount          Float
-  discountAmount       Float
-  creditAmount         Float
-  netAmount            Float
-  remainingAnimals     Int
-  remainingEntryArroba Float
-  notes                String?
-  commercialValue      Float?
-  gtaNumber            String?
-  paymentTerms         String?
-  calcMemory           Json
-  romaneio             Json
-  addendumData         Json?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  contract             FeedlotContract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  createdBy            User                  @relation("FeedlotSettlementCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
-
-  @@index([contractId, exitDate], map: "FeedlotSettlement_contractId_exitDate_idx")
-  @@index([contractId, type], map: "FeedlotSettlement_contractId_type_idx")
-}
-
-model HerdEvent {
-  id           String    @id @default(cuid())
-  farmId       String
-  animalId     String?
-  poAnimalId   String?
-  type         String
-  date         DateTime
-  peso         Float?
-  valor        Float?
-  origem       String?
-  destino      String?
-  observacoes  String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  farm         Farm      @relation(fields: [farmId], references: [id])
-  animal       Animal?   @relation(fields: [animalId], references: [id])
-  poAnimal     PoAnimal? @relation(fields: [poAnimalId], references: [id])
-  financialTransactions FinancialTransaction[]
-
-  @@index([farmId])
-  @@index([animalId])
-  @@index([poAnimalId])
-}
-
-model SanitaryRecord {
-  id                   String               @id @default(cuid())
-  farmId               String
-  animalId             String?
-  poAnimalId           String?
-  tipo                 String
-  produto              String
-  date                 DateTime
-  dose                 String?
-  proximaAplicacao     DateTime?
-  observacoes          String?
-  valorUnitario        Decimal?             @db.Decimal(12, 2)
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
-  farm                 Farm                 @relation(fields: [farmId], references: [id])
-  animal               Animal?              @relation(fields: [animalId], references: [id])
-  poAnimal             PoAnimal?            @relation(fields: [poAnimalId], references: [id])
-  financialTransactions FinancialTransaction[]
-
-  @@index([farmId])
-  @@index([animalId])
-  @@index([poAnimalId])
-}
-
-model HerdSettings {
-  id                  String   @id @default(uuid())
-  farmId              String   @unique
-  weighingIntervalDays Int     @default(30)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  farm                Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-}
-
-model HerdCategoryTarget {
-  id          String   @id @default(uuid())
-  farmId      String
-  categoria   String
-  pesoAlvoKg  Float?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  farm        Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-
-  @@unique([farmId, categoria])
-  @@index([farmId])
-}
-
-model Breed {
-  id        String   @id @default(uuid())
-  name      String
-  farmId    String
-  createdAt DateTime @default(now())
-  farm      Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-
-  @@unique([farmId, name])
-  @@index([farmId])
-}
-
-model PasswordResetToken {
-  id        String    @id @default(uuid())
-  userId    String
-  token     String    @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime  @default(now())
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
+enum AcasalamentoIssueSeverity {
+  INFO
+  WARNING
+  CRITICAL
 }

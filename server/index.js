@@ -9,6 +9,7 @@ import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 import { registerNutritionModuleRoutes } from './nutritionModule.js';
+import { registerAcasalamentoRoutes } from './acasalamentoModule.js';
 import { upsertSystemAccountCategories } from './accountCategoryDefaults.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import twilio from 'twilio';
@@ -433,10 +434,45 @@ const normalizeSelectionDecision = (value) => {
     return ['KEEP', 'WATCH', 'DISCARD'].includes(normalized) ? normalized : null;
 };
 
+const normalizeAnimalTipoCadastro = (value) => {
+    if (typeof value !== 'string') {
+        return 'MESTICO';
+    }
+    const normalized = value
+        .trim()
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Z0-9]/g, '');
+    if (['PO', 'PUROORIGEM', 'PURODEORIGEM'].includes(normalized)) {
+        return 'PO';
+    }
+    return 'MESTICO';
+};
+
+const findInventoryAnimal = async ({ id, farmId }) => {
+    if (!id) {
+        return null;
+    }
+    return prisma.animal.findFirst({
+        where: { id: String(id), farmId: String(farmId) },
+    });
+};
+
+const findLegacyPoAnimal = async ({ id, farmId }) => {
+    if (!id) {
+        return null;
+    }
+    return prisma.poAnimal.findFirst({
+        where: { id: String(id), farmId: String(farmId) },
+    });
+};
+
 const serializeAnimal = (animal) => ({
     id: animal.id,
     brinco: animal.brinco,
     registro: animal.registro,
+    tipoCadastro: animal.tipoCadastro,
     raca: animal.raca,
     sexo: formatSexoLabel(animal.sexo),
     categoria: animal.categoria,
@@ -451,6 +487,13 @@ const serializeAnimal = (animal) => ({
     currentPaddockName: animal.currentPaddock?.name || null,
     nutritionPlan: animal.currentNutritionPlan || null,
     selectionDecision: animal.selectionDecision || null,
+    // Campos P.O.
+    tatuagem: animal.tatuagem || null,
+    sisbov: animal.sisbov || null,
+    maeId: animal.maeId || null,
+    maeNome: animal.maeNome || null,
+    paiId: animal.paiId || null,
+    paiNome: animal.paiNome || null,
     createdAt: animal.createdAt.toISOString(),
     updatedAt: animal.updatedAt.toISOString(),
 });
@@ -518,6 +561,7 @@ const serializePaddockMove = (move) => ({
 const serializeSemenBatch = (batch) => ({
     id: batch.id,
     farmId: batch.farmId,
+    bullAnimalId: batch.bullAnimalId,
     bullPoAnimalId: batch.bullPoAnimalId,
     bullName: batch.bullName,
     bullRegistry: batch.bullRegistry,
@@ -534,6 +578,14 @@ const serializeSemenBatch = (batch) => ({
               brinco: batch.bullPoAnimal.brinco,
               nome: batch.bullPoAnimal.nome,
               registro: batch.bullPoAnimal.registro,
+          }
+        : null,
+    bullAnimal: batch.bullAnimal
+        ? {
+              id: batch.bullAnimal.id,
+              brinco: batch.bullAnimal.brinco,
+              registro: batch.bullAnimal.registro,
+              tipoCadastro: batch.bullAnimal.tipoCadastro,
           }
         : null,
     createdAt: batch.createdAt.toISOString(),
@@ -570,9 +622,11 @@ const serializeNutritionAssignment = (assignment) => ({
 const serializeEmbryoBatch = (batch) => ({
     id: batch.id,
     farmId: batch.farmId,
+    donorAnimalId: batch.donorAnimalId,
     donorPoAnimalId: batch.donorPoAnimalId,
     donorName: batch.donorName,
     donorRegistry: batch.donorRegistry,
+    sireAnimalId: batch.sireAnimalId,
     sirePoAnimalId: batch.sirePoAnimalId,
     sireName: batch.sireName,
     sireRegistry: batch.sireRegistry,
@@ -592,12 +646,28 @@ const serializeEmbryoBatch = (batch) => ({
               registro: batch.donorPoAnimal.registro,
           }
         : null,
+    donorAnimal: batch.donorAnimal
+        ? {
+              id: batch.donorAnimal.id,
+              brinco: batch.donorAnimal.brinco,
+              registro: batch.donorAnimal.registro,
+              tipoCadastro: batch.donorAnimal.tipoCadastro,
+          }
+        : null,
     sirePoAnimal: batch.sirePoAnimal
         ? {
               id: batch.sirePoAnimal.id,
               brinco: batch.sirePoAnimal.brinco,
               nome: batch.sirePoAnimal.nome,
               registro: batch.sirePoAnimal.registro,
+          }
+        : null,
+    sireAnimal: batch.sireAnimal
+        ? {
+              id: batch.sireAnimal.id,
+              brinco: batch.sireAnimal.brinco,
+              registro: batch.sireAnimal.registro,
+              tipoCadastro: batch.sireAnimal.tipoCadastro,
           }
         : null,
     createdAt: batch.createdAt.toISOString(),
@@ -610,6 +680,8 @@ const serializePaddock = (paddock) => ({
     name: paddock.name,
     areaHa: paddock.areaHa ?? null,
     divisionType: paddock.divisionType ?? null,
+    forrageira: paddock.forrageira ?? null,
+    lotacaoUaHa: paddock.lotacaoUaHa ?? null,
     capacity: paddock.capacity ?? null,
     lat: paddock.lat ?? null,
     lng: paddock.lng ?? null,
@@ -1180,6 +1252,7 @@ const serializeAuthUser = (user, saasContext = null, accessContext = null) => ({
     billingAccessState: saasContext?.billingAccessState || null,
     entitlements: saasContext?.entitlements || [],
     organization: saasContext?.organization || null,
+    onboardingCompletedAt: user.onboardingCompletedAt || null,
 });
 
 const app = express();
@@ -1625,6 +1698,24 @@ const requireNonFieldWorker = (req, res, next) => {
         return res.status(403).json({ message: 'Ação não permitida para operação de campo.' });
     }
     return next();
+};
+
+// Verifica se a organização possui um entitlement de módulo pago
+const requireEntitlement = (...codes) => async (req, res, next) => {
+    const orgId = req.saas?.organizationId || null;
+    if (!orgId) return res.status(403).json({ message: 'Organização não encontrada.' });
+    const entitlements = req.saas?.entitlements || [];
+    const hasEntitlement = codes.some((code) => entitlements.includes(code));
+    if (hasEntitlement) return next();
+    // Dupla verificação no banco (evita cache desatualizado)
+    const count = await prisma.organizationProductEntitlement.count({
+        where: { organizationId: orgId, product: { code: { in: codes } } },
+    });
+    if (count > 0) return next();
+    return res.status(403).json({
+        code: 'entitlement_required',
+        message: 'Este módulo não está disponível no seu plano atual.',
+    });
 };
 
 const serializeAuthUserWithContext = async (userId, options) => {
@@ -2249,9 +2340,8 @@ app.post('/register', async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(String(password), 10);
-        // Plano grátis: Estrutura da Fazenda + Manejo do Rebanho + Financeiro básico
-        // Visão Geral é exclusiva dos planos pagos
-        const FREE_PLAN_MODULES = ['Fazendas', 'Rebanho Comercial', 'Financeiro'];
+        // Plano grátis: Estrutura da Fazenda + Manejo do Rebanho + Financeiro + Visão Geral (Dashboard)
+        const FREE_PLAN_MODULES = ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'];
         const newUser = await prisma.user.create({
             data: {
                 name: normalizedName,
@@ -2278,6 +2368,51 @@ app.post('/register', async (req, res) => {
             });
         }
 
+        // Registra plano gratuito formalmente no banco
+        if (saasCtx?.organizationId) {
+            await prisma.billingSubscription.upsert({
+                where: {
+                    provider_providerSubscriptionId: {
+                        provider: 'INTERNAL',
+                        providerSubscriptionId: `gratis-${saasCtx.organizationId}`,
+                    },
+                },
+                update: {},
+                create: {
+                    id: `gratis-${saasCtx.organizationId}`,
+                    organizationId: saasCtx.organizationId,
+                    provider: 'INTERNAL',
+                    providerSubscriptionId: `gratis-${saasCtx.organizationId}`,
+                    planCode: 'gratis',
+                    status: 'ACTIVE',
+                    updatedAt: new Date(),
+                },
+            });
+        }
+
+        // Email de boas-vindas
+        if (resend) {
+            const safeName = escapeHtml(normalizedName.split(' ')[0] || normalizedName);
+            resend.emails.send({
+                from: RESEND_FROM_EMAIL,
+                to: normalizedEmail,
+                subject: 'Bem-vindo ao EIXO 🌿',
+                html: `
+                    <p>Olá, ${safeName}!</p>
+                    <p>Sua conta no <strong>EIXO</strong> foi criada com sucesso. Você está no <strong>Plano Grátis</strong> — sem cartão, sem prazo.</p>
+                    <p>Com ele você já pode:</p>
+                    <ul>
+                        <li>Cadastrar e importar seu rebanho</li>
+                        <li>Registrar pesagens e acompanhar o GMD</li>
+                        <li>Controlar o financeiro da fazenda</li>
+                        <li>Gerenciar a estrutura de pastos</li>
+                    </ul>
+                    <p><a href="${escapeHtml(APP_BASE_URL)}" style="background:#B6E23A;color:#1a1a1a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;">Acessar o EIXO</a></p>
+                    <p style="color:#888;font-size:12px;">Dúvidas? Use o botão "Eixo Suporte" dentro do sistema.</p>
+                `,
+            }).catch((err) => console.error('welcome email error:', err));
+        }
+
         return res.status(201).json({ user: sanitizeUser(newUser) });
     } catch (error) {
         console.error(error);
@@ -2291,10 +2426,113 @@ app.use(
 );
 
 app.use(
-    ['/users', '/seasons', '/repro-events', '/genetics', '/po', '/nutrition'],
+    ['/users', '/seasons', '/repro-events'],
     requireAuth,
     requireBillingAccess,
 );
+
+// Módulos exclusivos de planos pagos — bloqueados no backend por entitlement
+app.use(
+    ['/genetics', '/po'],
+    requireAuth,
+    requireBillingAccess,
+    requireEntitlement('GENETICS', 'EIXO_DECISAO'),
+);
+
+app.use(
+    ['/nutrition'],
+    requireAuth,
+    requireBillingAccess,
+    requireEntitlement('NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'),
+);
+
+// ─── Recuperação de e-mail por CNPJ ──────────────────────────────────────────
+
+// Passo 1: recebe CNPJ, acha usuário, envia OTP para o celular cadastrado
+app.post('/auth/recover-email/request', async (req, res) => {
+    const { document } = req.body || {};
+    const normalizedCnpj = typeof document === 'string' ? document.replace(/\D/g, '') : '';
+
+    if (normalizedCnpj.length !== 14) {
+        return res.status(400).json({ message: 'Informe um CNPJ válido com 14 dígitos.' });
+    }
+
+    try {
+        const user = await prisma.user.findFirst({
+            where: { document: normalizedCnpj, documentType: 'CNPJ' },
+            select: { phone: true, email: true },
+        });
+
+        // Resposta genérica para não revelar se o CNPJ existe ou não
+        if (!user?.phone) {
+            return res.json({ message: 'Se este CNPJ estiver cadastrado, um código será enviado ao celular vinculado.' });
+        }
+
+        const digits = user.phone.replace(/\D/g, '');
+        const e164 = `+55${digits}`;
+
+        if (!twilioClient || !TWILIO_VERIFY_SID) {
+            return res.status(503).json({ message: 'Serviço de SMS não configurado.' });
+        }
+
+        await twilioClient.verify.v2.services(TWILIO_VERIFY_SID)
+            .verifications.create({ to: e164, channel: 'sms' });
+
+        // Mascara o celular para exibir na tela: (11) 9****-1234
+        const masked = digits.length === 11
+            ? `(${digits.slice(0,2)}) ${digits[2]}****-${digits.slice(-4)}`
+            : `(${digits.slice(0,2)}) ****-${digits.slice(-4)}`;
+
+        return res.json({ maskedPhone: masked });
+    } catch (error) {
+        console.error('recover-email/request error:', error);
+        return res.status(500).json({ message: 'Erro ao processar a solicitação.' });
+    }
+});
+
+// Passo 2: recebe CNPJ + código OTP, valida e retorna e-mail mascarado
+app.post('/auth/recover-email/verify', async (req, res) => {
+    const { document, code } = req.body || {};
+    const normalizedCnpj = typeof document === 'string' ? document.replace(/\D/g, '') : '';
+
+    if (normalizedCnpj.length !== 14 || !code) {
+        return res.status(400).json({ message: 'CNPJ e código são obrigatórios.' });
+    }
+
+    try {
+        const user = await prisma.user.findFirst({
+            where: { document: normalizedCnpj, documentType: 'CNPJ' },
+            select: { phone: true, email: true },
+        });
+
+        if (!user?.phone || !user?.email) {
+            return res.status(404).json({ message: 'Cadastro não encontrado.' });
+        }
+
+        const digits = user.phone.replace(/\D/g, '');
+        const e164 = `+55${digits}`;
+
+        if (!twilioClient || !TWILIO_VERIFY_SID) {
+            return res.status(503).json({ message: 'Serviço de SMS não configurado.' });
+        }
+
+        const check = await twilioClient.verify.v2.services(TWILIO_VERIFY_SID)
+            .verificationChecks.create({ to: e164, code: String(code).trim() });
+
+        if (check.status !== 'approved') {
+            return res.status(400).json({ message: 'Código inválido ou expirado.' });
+        }
+
+        // Mascara o e-mail: e***@gmail.com
+        const [localPart, domain] = user.email.split('@');
+        const maskedEmail = `${localPart[0]}***@${domain}`;
+
+        return res.json({ maskedEmail });
+    } catch (error) {
+        console.error('recover-email/verify error:', error);
+        return res.status(500).json({ message: 'Erro ao verificar o código.' });
+    }
+});
 
 app.post('/auth/login', async (req, res) => {
     const { email, password, rememberMe } = req.body || {};
@@ -2483,6 +2721,23 @@ app.get('/auth/me', async (req, res) => {
     }
 });
 
+app.patch('/auth/me/onboarding', requireAuth, async (req, res) => {
+    try {
+        const session = await getSessionFromRequest(req);
+        if (!session?.user) {
+            return res.status(401).json({ message: 'Usuário não autenticado.' });
+        }
+        await prisma.user.update({
+            where: { id: session.user.id },
+            data: { onboardingCompletedAt: new Date() },
+        });
+        return res.json({ success: true });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar onboarding.' });
+    }
+});
+
 app.get('/users', async (req, res) => {
     try {
         if (!canManageOrganizationUsers(req)) {
@@ -2605,7 +2860,11 @@ app.post('/users', async (req, res) => {
 
         // Limite de usuários do plano gratuito (3 usuários por org)
         const paidSub = await prisma.billingSubscription.findFirst({
-            where: { organizationId, status: 'ACTIVE' },
+            where: {
+                organizationId,
+                status: 'ACTIVE',
+                NOT: { planCode: { in: ['gratis', 'free', 'gratuito'] } },
+            },
         });
         if (!paidSub) {
             const memberCount = await prisma.organizationMembership.count({
@@ -3548,7 +3807,7 @@ app.post('/farms', requireNonFieldWorker, async (req, res) => {
             const activePaidSubscription = await prisma.billingSubscription.findFirst({
                 where: {
                     organizationId: orgId,
-                    status: 'active',
+                    status: 'ACTIVE',
                     NOT: { planCode: { in: ['gratis', 'free', 'gratuito'] } },
                 },
             });
@@ -3630,6 +3889,11 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                       ? null
                       : Number(areaRaw);
                   const divisionType = (paddock?.divisionType || paddock?.type || '').trim() || null;
+                  const forrageira = (paddock?.forrageira || '').trim() || null;
+                  const lotacaoRaw = paddock?.lotacaoUaHa;
+                  const lotacaoUaHa = lotacaoRaw !== undefined && lotacaoRaw !== null && lotacaoRaw !== ''
+                      ? Number(lotacaoRaw) || null
+                      : null;
                   if (!paddockName) {
                       return null;
                   }
@@ -3641,6 +3905,8 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                       name: paddockName,
                       areaHa: areaValue,
                       divisionType,
+                      forrageira,
+                      lotacaoUaHa,
                   };
               })
               .filter(Boolean)
@@ -3685,6 +3951,8 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                             name: division.name,
                             areaHa: division.areaHa,
                             divisionType: division.divisionType,
+                            forrageira: division.forrageira,
+                            lotacaoUaHa: division.lotacaoUaHa,
                             ...(division.mapGeometry !== undefined ? { mapGeometry: division.mapGeometry } : {}),
                         },
                     });
@@ -3697,6 +3965,8 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                         name: division.name,
                         areaHa: division.areaHa,
                         divisionType: division.divisionType,
+                        forrageira: division.forrageira,
+                        lotacaoUaHa: division.lotacaoUaHa,
                         ...(division.mapGeometry !== undefined ? { mapGeometry: division.mapGeometry } : {}),
                         active: true,
                     },
@@ -5876,6 +6146,13 @@ registerNutritionModuleRoutes({
     buildFarmScopeFilter,
 });
 
+registerAcasalamentoRoutes({
+    app,
+    prisma,
+    buildFarmScopeFilter,
+    buildFarmRelationFilter,
+});
+
 app.get('/po/semen', async (req, res) => {
     const { farmId } = req.query || {};
     if (!farmId) {
@@ -5892,7 +6169,7 @@ app.get('/po/semen', async (req, res) => {
 
         const batches = await prisma.semenBatch.findMany({
             where: { farmId: farm.id },
-            include: { bullPoAnimal: true },
+            include: { bullAnimal: true, bullPoAnimal: true },
             orderBy: { createdAt: 'desc' },
         });
 
@@ -5906,6 +6183,7 @@ app.get('/po/semen', async (req, res) => {
 app.post('/po/semen', async (req, res) => {
     const {
         farmId,
+        bullAnimalId,
         bullPoAnimalId,
         bullName,
         bullRegistry,
@@ -5953,27 +6231,35 @@ app.post('/po/semen', async (req, res) => {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
 
+        let validAnimalBullId = null;
+        if (bullAnimalId) {
+            const bull = await findInventoryAnimal({ id: bullAnimalId, farmId: farm.id });
+            if (!bull) {
+                return res.status(404).json({ message: 'Reprodutor não encontrado no rebanho.' });
+            }
+            validAnimalBullId = bull.id;
+        }
+
         let validBullId = null;
         if (bullPoAnimalId) {
-            const bull = await prisma.poAnimal.findFirst({
-                where: { id: String(bullPoAnimalId), farmId: farm.id },
-            });
+            const bull = await findLegacyPoAnimal({ id: bullPoAnimalId, farmId: farm.id });
             if (!bull) {
                 return res.status(404).json({ message: 'Reprodutor P.O. não encontrado.' });
             }
             validBullId = bull.id;
         }
 
-        if (!validBullId && !trimmedName) {
+        if (!validAnimalBullId && !validBullId && !trimmedName) {
             return res.status(400).json({ message: 'Informe o nome do reprodutor externo.' });
         }
 
         const batch = await prisma.semenBatch.create({
             data: {
                 farmId: farm.id,
+                bullAnimalId: validAnimalBullId,
                 bullPoAnimalId: validBullId,
-                bullName: validBullId ? null : trimmedName,
-                bullRegistry: validBullId ? null : trimmedRegistry || null,
+                bullName: validAnimalBullId || validBullId ? null : trimmedName,
+                bullRegistry: validAnimalBullId || validBullId ? null : trimmedRegistry || null,
                 fornecedor: trimmedFornecedor || null,
                 lote: lote.trim(),
                 dataColeta: collectionDate,
@@ -5984,7 +6270,7 @@ app.post('/po/semen', async (req, res) => {
             },
         });
 
-        return res.status(201).json({ batch: serializeSemenBatch({ ...batch, bullPoAnimal: null }) });
+        return res.status(201).json({ batch: serializeSemenBatch({ ...batch, bullAnimal: null, bullPoAnimal: null }) });
     } catch (error) {
         if (error?.code === 'P2002') {
             return res.status(409).json({ message: 'Lote já cadastrado para esta fazenda.' });
@@ -5997,6 +6283,7 @@ app.post('/po/semen', async (req, res) => {
 app.patch('/po/semen/:id', async (req, res) => {
     const { id } = req.params;
     const {
+        bullAnimalId,
         bullPoAnimalId,
         bullName,
         bullRegistry,
@@ -6024,17 +6311,33 @@ app.patch('/po/semen/:id', async (req, res) => {
         const trimmedLocal = typeof localArmazenamento === 'string' ? localArmazenamento.trim() : '';
         const trimmedObservacoes = typeof observacoes === 'string' ? observacoes.trim() : '';
 
-        let nextBullId = batch.bullPoAnimalId;
+        let nextAnimalBullId = batch.bullAnimalId;
+        if (bullAnimalId !== undefined) {
+            nextAnimalBullId = bullAnimalId ? String(bullAnimalId) : null;
+            if (nextAnimalBullId) {
+                const bull = await findInventoryAnimal({ id: nextAnimalBullId, farmId: batch.farmId });
+                if (!bull) {
+                    return res.status(404).json({ message: 'Reprodutor não encontrado no rebanho.' });
+                }
+                updates.bullAnimalId = bull.id;
+                updates.bullPoAnimalId = null;
+                updates.bullName = bullName !== undefined ? trimmedName || null : null;
+                updates.bullRegistry = bullRegistry !== undefined ? trimmedRegistry || null : null;
+            } else {
+                updates.bullAnimalId = null;
+            }
+        }
+
+        let nextBullId = bullAnimalId !== undefined && bullAnimalId ? null : batch.bullPoAnimalId;
         if (bullPoAnimalId !== undefined) {
             nextBullId = bullPoAnimalId ? String(bullPoAnimalId) : null;
             if (nextBullId) {
-                const bull = await prisma.poAnimal.findFirst({
-                    where: { id: nextBullId, farmId: batch.farmId },
-                });
+                const bull = await findLegacyPoAnimal({ id: nextBullId, farmId: batch.farmId });
                 if (!bull) {
                     return res.status(404).json({ message: 'Reprodutor P.O. não encontrado.' });
                 }
                 updates.bullPoAnimalId = bull.id;
+                updates.bullAnimalId = null;
                 updates.bullName = bullName !== undefined ? trimmedName || null : null;
                 updates.bullRegistry = bullRegistry !== undefined ? trimmedRegistry || null : null;
             } else {
@@ -6042,7 +6345,7 @@ app.patch('/po/semen/:id', async (req, res) => {
             }
         }
 
-        if (nextBullId === null) {
+        if (nextAnimalBullId === null && nextBullId === null) {
             const nextName = bullName !== undefined ? trimmedName : batch.bullName;
             if (!nextName) {
                 return res.status(400).json({ message: 'Informe o nome do reprodutor externo.' });
@@ -6110,7 +6413,7 @@ app.patch('/po/semen/:id', async (req, res) => {
 
         const updatedWithBull = await prisma.semenBatch.findUnique({
             where: { id: updated.id },
-            include: { bullPoAnimal: true },
+            include: { bullAnimal: true, bullPoAnimal: true },
         });
 
         return res.json({ batch: serializeSemenBatch(updatedWithBull) });
@@ -6243,7 +6546,7 @@ app.get('/po/embryos', async (req, res) => {
 
         const batches = await prisma.embryoBatch.findMany({
             where: { farmId: farm.id },
-            include: { donorPoAnimal: true, sirePoAnimal: true },
+            include: { donorAnimal: true, donorPoAnimal: true, sireAnimal: true, sirePoAnimal: true },
             orderBy: { createdAt: 'desc' },
         });
 
@@ -6257,9 +6560,11 @@ app.get('/po/embryos', async (req, res) => {
 app.post('/po/embryos', async (req, res) => {
     const {
         farmId,
+        donorAnimalId,
         donorPoAnimalId,
         donorName,
         donorRegistry,
+        sireAnimalId,
         sirePoAnimalId,
         sireName,
         sireRegistry,
@@ -6311,44 +6616,60 @@ app.post('/po/embryos', async (req, res) => {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
 
+        let validDonorAnimalId = null;
+        if (donorAnimalId) {
+            const donor = await findInventoryAnimal({ id: donorAnimalId, farmId: farm.id });
+            if (!donor) {
+                return res.status(404).json({ message: 'Doadora não encontrada no rebanho.' });
+            }
+            validDonorAnimalId = donor.id;
+        }
+
         let validDonorId = null;
         if (donorPoAnimalId) {
-            const donor = await prisma.poAnimal.findFirst({
-                where: { id: String(donorPoAnimalId), farmId: farm.id },
-            });
+            const donor = await findLegacyPoAnimal({ id: donorPoAnimalId, farmId: farm.id });
             if (!donor) {
                 return res.status(404).json({ message: 'Doadora P.O. não encontrada.' });
             }
             validDonorId = donor.id;
         }
 
+        let validSireAnimalId = null;
+        if (sireAnimalId) {
+            const sire = await findInventoryAnimal({ id: sireAnimalId, farmId: farm.id });
+            if (!sire) {
+                return res.status(404).json({ message: 'Reprodutor não encontrado no rebanho.' });
+            }
+            validSireAnimalId = sire.id;
+        }
+
         let validSireId = null;
         if (sirePoAnimalId) {
-            const sire = await prisma.poAnimal.findFirst({
-                where: { id: String(sirePoAnimalId), farmId: farm.id },
-            });
+            const sire = await findLegacyPoAnimal({ id: sirePoAnimalId, farmId: farm.id });
             if (!sire) {
                 return res.status(404).json({ message: 'Reprodutor P.O. não encontrado.' });
             }
             validSireId = sire.id;
         }
 
-        if (!validDonorId && !trimmedDonorName) {
+        if (!validDonorAnimalId && !validDonorId && !trimmedDonorName) {
             return res.status(400).json({ message: 'Informe o nome da doadora externa.' });
         }
-        if (!validSireId && !trimmedSireName) {
+        if (!validSireAnimalId && !validSireId && !trimmedSireName) {
             return res.status(400).json({ message: 'Informe o nome do reprodutor externo.' });
         }
 
         const batch = await prisma.embryoBatch.create({
             data: {
                 farmId: farm.id,
+                donorAnimalId: validDonorAnimalId,
                 donorPoAnimalId: validDonorId,
-                donorName: validDonorId ? null : trimmedDonorName,
-                donorRegistry: validDonorId ? null : trimmedDonorRegistry || null,
+                donorName: validDonorAnimalId || validDonorId ? null : trimmedDonorName,
+                donorRegistry: validDonorAnimalId || validDonorId ? null : trimmedDonorRegistry || null,
+                sireAnimalId: validSireAnimalId,
                 sirePoAnimalId: validSireId,
-                sireName: validSireId ? null : trimmedSireName,
-                sireRegistry: validSireId ? null : trimmedSireRegistry || null,
+                sireName: validSireAnimalId || validSireId ? null : trimmedSireName,
+                sireRegistry: validSireAnimalId || validSireId ? null : trimmedSireRegistry || null,
                 tecnica: tecnicaEnum,
                 estagio: trimmedEstagio || null,
                 qualidade: trimmedQualidade || null,
@@ -6360,7 +6681,7 @@ app.post('/po/embryos', async (req, res) => {
             },
         });
 
-        return res.status(201).json({ batch: serializeEmbryoBatch({ ...batch, donorPoAnimal: null, sirePoAnimal: null }) });
+        return res.status(201).json({ batch: serializeEmbryoBatch({ ...batch, donorAnimal: null, donorPoAnimal: null, sireAnimal: null, sirePoAnimal: null }) });
     } catch (error) {
         if (error?.code === 'P2002') {
             return res.status(409).json({ message: 'Lote já cadastrado para esta fazenda.' });
@@ -6373,9 +6694,11 @@ app.post('/po/embryos', async (req, res) => {
 app.patch('/po/embryos/:id', async (req, res) => {
     const { id } = req.params;
     const {
+        donorAnimalId,
         donorPoAnimalId,
         donorName,
         donorRegistry,
+        sireAnimalId,
         sirePoAnimalId,
         sireName,
         sireRegistry,
@@ -6407,17 +6730,33 @@ app.patch('/po/embryos/:id', async (req, res) => {
         const trimmedLocal = typeof localArmazenamento === 'string' ? localArmazenamento.trim() : '';
         const trimmedObservacoes = typeof observacoes === 'string' ? observacoes.trim() : '';
 
-        let nextDonorId = batch.donorPoAnimalId;
+        let nextDonorAnimalId = batch.donorAnimalId;
+        if (donorAnimalId !== undefined) {
+            nextDonorAnimalId = donorAnimalId ? String(donorAnimalId) : null;
+            if (nextDonorAnimalId) {
+                const donor = await findInventoryAnimal({ id: nextDonorAnimalId, farmId: batch.farmId });
+                if (!donor) {
+                    return res.status(404).json({ message: 'Doadora não encontrada no rebanho.' });
+                }
+                updates.donorAnimalId = donor.id;
+                updates.donorPoAnimalId = null;
+                updates.donorName = donorName !== undefined ? trimmedDonorName || null : null;
+                updates.donorRegistry = donorRegistry !== undefined ? trimmedDonorRegistry || null : null;
+            } else {
+                updates.donorAnimalId = null;
+            }
+        }
+
+        let nextDonorId = donorAnimalId !== undefined && donorAnimalId ? null : batch.donorPoAnimalId;
         if (donorPoAnimalId !== undefined) {
             nextDonorId = donorPoAnimalId ? String(donorPoAnimalId) : null;
             if (nextDonorId) {
-                const donor = await prisma.poAnimal.findFirst({
-                    where: { id: nextDonorId, farmId: batch.farmId },
-                });
+                const donor = await findLegacyPoAnimal({ id: nextDonorId, farmId: batch.farmId });
                 if (!donor) {
                     return res.status(404).json({ message: 'Doadora P.O. não encontrada.' });
                 }
                 updates.donorPoAnimalId = donor.id;
+                updates.donorAnimalId = null;
                 updates.donorName = donorName !== undefined ? trimmedDonorName || null : null;
                 updates.donorRegistry = donorRegistry !== undefined ? trimmedDonorRegistry || null : null;
             } else {
@@ -6425,17 +6764,33 @@ app.patch('/po/embryos/:id', async (req, res) => {
             }
         }
 
-        let nextSireId = batch.sirePoAnimalId;
+        let nextSireAnimalId = batch.sireAnimalId;
+        if (sireAnimalId !== undefined) {
+            nextSireAnimalId = sireAnimalId ? String(sireAnimalId) : null;
+            if (nextSireAnimalId) {
+                const sire = await findInventoryAnimal({ id: nextSireAnimalId, farmId: batch.farmId });
+                if (!sire) {
+                    return res.status(404).json({ message: 'Reprodutor não encontrado no rebanho.' });
+                }
+                updates.sireAnimalId = sire.id;
+                updates.sirePoAnimalId = null;
+                updates.sireName = sireName !== undefined ? trimmedSireName || null : null;
+                updates.sireRegistry = sireRegistry !== undefined ? trimmedSireRegistry || null : null;
+            } else {
+                updates.sireAnimalId = null;
+            }
+        }
+
+        let nextSireId = sireAnimalId !== undefined && sireAnimalId ? null : batch.sirePoAnimalId;
         if (sirePoAnimalId !== undefined) {
             nextSireId = sirePoAnimalId ? String(sirePoAnimalId) : null;
             if (nextSireId) {
-                const sire = await prisma.poAnimal.findFirst({
-                    where: { id: nextSireId, farmId: batch.farmId },
-                });
+                const sire = await findLegacyPoAnimal({ id: nextSireId, farmId: batch.farmId });
                 if (!sire) {
                     return res.status(404).json({ message: 'Reprodutor P.O. não encontrado.' });
                 }
                 updates.sirePoAnimalId = sire.id;
+                updates.sireAnimalId = null;
                 updates.sireName = sireName !== undefined ? trimmedSireName || null : null;
                 updates.sireRegistry = sireRegistry !== undefined ? trimmedSireRegistry || null : null;
             } else {
@@ -6443,7 +6798,7 @@ app.patch('/po/embryos/:id', async (req, res) => {
             }
         }
 
-        if (nextDonorId === null) {
+        if (nextDonorAnimalId === null && nextDonorId === null) {
             const nextName = donorName !== undefined ? trimmedDonorName : batch.donorName;
             if (!nextName) {
                 return res.status(400).json({ message: 'Informe o nome da doadora externa.' });
@@ -6456,7 +6811,7 @@ app.patch('/po/embryos/:id', async (req, res) => {
             }
         }
 
-        if (nextSireId === null) {
+        if (nextSireAnimalId === null && nextSireId === null) {
             const nextName = sireName !== undefined ? trimmedSireName : batch.sireName;
             if (!nextName) {
                 return res.status(400).json({ message: 'Informe o nome do reprodutor externo.' });
@@ -6523,7 +6878,7 @@ app.patch('/po/embryos/:id', async (req, res) => {
 
         const updatedWithRelations = await prisma.embryoBatch.findUnique({
             where: { id: updated.id },
-            include: { donorPoAnimal: true, sirePoAnimal: true },
+            include: { donorAnimal: true, donorPoAnimal: true, sireAnimal: true, sirePoAnimal: true },
         });
 
         return res.json({ batch: serializeEmbryoBatch(updatedWithRelations) });
@@ -6721,7 +7076,8 @@ app.get('/animals', async (req, res) => {
 });
 
 app.post('/animals', async (req, res) => {
-    const { farmId, lotId, brinco, raca, sexo, dataNascimento, pesoAtual, paddockId, paddockStartAt, valorCompra, dataCompra } = req.body || {};
+    const { farmId, lotId, brinco, raca, sexo, dataNascimento, pesoAtual, paddockId, paddockStartAt, valorCompra, dataCompra, tipoCadastro,
+            tatuagem, sisbov, maeId, maeNome, paiId, paiNome } = req.body || {};
 
     if (!farmId || !brinco?.trim() || !raca?.trim() || !sexo) {
         return res.status(400).json({ message: 'Dados obrigatórios do animal ausentes.' });
@@ -6781,6 +7137,18 @@ app.post('/animals', async (req, res) => {
         const parsedValorCompra = valorCompra ? parseFloat(valorCompra) : null;
         const compraDate = dataCompra ? parseDateValue(dataCompra) : (moveStartAt || new Date());
 
+        // Resolver maeId/paiId por brinco se não vier como UUID direto
+        let resolvedMaeId = maeId || null;
+        let resolvedPaiId = paiId || null;
+        if (!resolvedMaeId && maeNome?.trim()) {
+            const maeAnimal = await prisma.animal.findFirst({ where: { farmId, brinco: maeNome.trim() } });
+            if (maeAnimal) resolvedMaeId = maeAnimal.id;
+        }
+        if (!resolvedPaiId && paiNome?.trim()) {
+            const paiAnimal = await prisma.animal.findFirst({ where: { farmId, brinco: paiNome.trim() } });
+            if (paiAnimal) resolvedPaiId = paiAnimal.id;
+        }
+
         const animal = await prisma.$transaction(async (tx) => {
             const created = await tx.animal.create({
                 data: {
@@ -6789,12 +7157,19 @@ app.post('/animals', async (req, res) => {
                     brinco: brinco.trim(),
                     identityKey: brinco.trim(),
                     raca: raca.trim(),
+                    tipoCadastro: normalizeAnimalTipoCadastro(tipoCadastro),
                     sexo: sexoEnum,
                     dataNascimento: birthDate,
                     pesoAtual: parsedPesoAtual,
                     gmd: null,
                     gmd30: null,
                     currentPaddockId: validPaddockId,
+                    tatuagem: tatuagem?.trim() || null,
+                    sisbov: sisbov?.trim() || null,
+                    maeId: resolvedMaeId,
+                    maeNome: resolvedMaeId ? null : (maeNome?.trim() || null),
+                    paiId: resolvedPaiId,
+                    paiNome: resolvedPaiId ? null : (paiNome?.trim() || null),
                 },
             });
             if (validPaddockId && moveStartAt) {
@@ -6848,6 +7223,96 @@ app.post('/animals', async (req, res) => {
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar animal.' });
+    }
+});
+
+// ── Registrar nascimento — fluxo dedicado ─────────────────────────────────────
+// Cria o bezerro puxando raça e pasto da mãe automaticamente quando possível
+app.post('/animals/nascimento', async (req, res) => {
+    const { farmId, maeId, maeNome, sexo, dataNascimento, pesoNascimento, brinco, lotId, paddockId } = req.body || {};
+
+    if (!farmId || !sexo || !dataNascimento) {
+        return res.status(400).json({ message: 'farmId, sexo e dataNascimento são obrigatórios.' });
+    }
+
+    const sexoEnum = normalizeSexo(sexo);
+    if (!sexoEnum) return res.status(400).json({ message: 'Sexo inválido.' });
+
+    const birthDate = parseDateValue(dataNascimento);
+    if (!birthDate) return res.status(400).json({ message: 'Data de nascimento inválida.' });
+
+    try {
+        const farm = await prisma.farm.findFirst({ where: buildFarmScopeFilter(req, { id: farmId }) });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+        // Resolver mãe
+        let resolvedMaeId = maeId || null;
+        let resolvedMaeNome = maeNome?.trim() || null;
+        let maeAnimal = null;
+        if (resolvedMaeId) {
+            maeAnimal = await prisma.animal.findFirst({ where: { id: resolvedMaeId, farmId } });
+        } else if (resolvedMaeNome) {
+            maeAnimal = await prisma.animal.findFirst({ where: { farmId, brinco: resolvedMaeNome } });
+            if (maeAnimal) resolvedMaeId = maeAnimal.id;
+        }
+
+        // Herdar pasto e lote da mãe se não informados
+        const validPaddockId = paddockId || maeAnimal?.currentPaddockId || null;
+        const validLotId = lotId || maeAnimal?.lotId || null;
+
+        // Raça herdada da mãe
+        const racaBezerro = maeAnimal?.raca || 'Não informada';
+
+        // Brinco provisório se não informado
+        const brincoFinal = brinco?.trim() || `NAS-${Date.now()}`;
+
+        const peso = pesoNascimento ? parseNumber(pesoNascimento) : null;
+
+        const bezerro = await prisma.$transaction(async (tx) => {
+            const created = await tx.animal.create({
+                data: {
+                    farmId,
+                    brinco: brincoFinal,
+                    identityKey: brincoFinal,
+                    raca: racaBezerro,
+                    sexo: sexoEnum,
+                    dataNascimento: birthDate,
+                    pesoAtual: peso,
+                    gmd: null,
+                    gmd30: null,
+                    currentPaddockId: validPaddockId,
+                    lotId: validLotId,
+                    maeId: resolvedMaeId,
+                    maeNome: resolvedMaeId ? null : resolvedMaeNome,
+                },
+            });
+
+            if (validPaddockId) {
+                await tx.paddockMove.create({
+                    data: { farmId, paddockId: validPaddockId, animalId: created.id, startAt: birthDate },
+                });
+            }
+
+            await tx.herdEvent.create({
+                data: {
+                    farmId,
+                    animalId: created.id,
+                    type: 'NASCIMENTO',
+                    date: birthDate,
+                    peso: peso ?? null,
+                    observacoes: `Nascimento registrado${maeAnimal ? ` — mãe: ${maeAnimal.brinco}` : ''}`,
+                },
+            });
+
+            return created;
+        });
+
+        logActivity(req, { action: 'NASCIMENTO_REGISTRADO', entity: 'Animal', entityId: bezerro.id, description: `Registrou nascimento — brinco ${brincoFinal}`, farmId });
+        return res.status(201).json({ animal: serializeAnimal(bezerro), brincoProvisorio: !brinco?.trim() });
+    } catch (error) {
+        if (error?.code === 'P2002') return res.status(409).json({ message: 'Brinco já cadastrado para esta fazenda.' });
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao registrar nascimento.' });
     }
 });
 
@@ -9218,6 +9683,95 @@ app.get('/activity-logs', requireAuth, async (req, res) => {
         res.status(500).json({ message: 'Erro ao carregar logs.' });
     }
 });
+
+// ─── News proxy ───────────────────────────────────────────────────────────────
+
+const NEWS_SOURCES = [
+    { url: 'https://www.canalrural.com.br/feed/',             source: 'Canal Rural' },
+    { url: 'https://www.beefpoint.com.br/feed/',              source: 'BeefPoint'   },
+    { url: 'https://revistagloborural.globo.com/rss/',        source: 'Globo Rural' },
+    { url: 'https://www.dbo.com.br/feed/',                    source: 'DBO'         },
+];
+
+const NEWS_KEYWORDS = [
+    // Pecuária e animais
+    'boi','vaca','bovino','gado','bezerro','novilho','novilha',
+    'nelore','angus','brahman','zebu','rebanho','plantel','matriz',
+    'reprodutor','touro',
+    // Mercado e preços
+    'arroba','@boi','carcaça','frigorífico','abate','carne bovina','proteína animal',
+    // Manejo e produção
+    'confinamento','pastagem','pasto','forrageira','brachiaria','capim',
+    'suplementação','sal mineral','vermífugo','sanidade','vacinação','aftosa','brucelose',
+    // Agro geral que impacta o pecuarista
+    'clima','seca','chuva','ração','milho','soja','câmbio','dólar','exportação','importação',
+    // Instituições e mercado
+    'cepea','esalq','mapa','sif','rastreabilidade','gtb','minerva','jbs','marfrig','frigol',
+];
+
+const newsMatchesKeyword = (text) => {
+    const lower = text.toLowerCase();
+    return NEWS_KEYWORDS.some((kw) => lower.includes(kw));
+};
+
+const parseRssItems = (xml, source) => {
+    const items = [];
+    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
+    let m;
+    while ((m = itemRegex.exec(xml)) !== null) {
+        const c = m[1];
+        const title = (c.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/s) || c.match(/<title>(.*?)<\/title>/s))?.[1]?.trim();
+        const link = (c.match(/<link>(https?:\/\/[^<]+)<\/link>/) || c.match(/<guid[^>]*>(https?:\/\/[^<]+)<\/guid>/))?.[1]?.trim();
+        const pubDate = c.match(/<pubDate>(.*?)<\/pubDate>/)?.[1]?.trim() || null;
+        const rawDesc = (c.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/) || c.match(/<description>([\s\S]*?)<\/description>/))?.[1] || '';
+        const description = rawDesc.replace(/<[^>]+>/g, '').replace(/&[a-z#0-9]+;/g, ' ').trim().slice(0, 140) || null;
+        if (title && link && newsMatchesKeyword(title + ' ' + (description || ''))) {
+            items.push({ title, link, pubDate, description, source });
+        }
+    }
+    return items;
+};
+
+let _newsCache = null;
+let _newsCacheTs = 0;
+const NEWS_CACHE_TTL = 30 * 60 * 1000; // 30 min
+
+app.get('/api/news/cattle', requireAuth, async (req, res) => {
+    try {
+        if (_newsCache && Date.now() - _newsCacheTs < NEWS_CACHE_TTL) {
+            return res.json(_newsCache);
+        }
+
+        const fetches = NEWS_SOURCES.map(({ url, source }) =>
+            fetch(url, { headers: { 'User-Agent': 'EIXO-Sistema/1.0' }, signal: AbortSignal.timeout(8000) })
+                .then((r) => r.ok ? r.text() : Promise.resolve(''))
+                .then((xml) => parseRssItems(xml, source))
+                .catch(() => [])
+        );
+
+        const results = await Promise.all(fetches);
+        const allItems = results.flat();
+
+        // Ordena por data (mais recente primeiro) e pega os 6 melhores
+        allItems.sort((a, b) => {
+            const da = a.pubDate ? new Date(a.pubDate).getTime() : 0;
+            const db = b.pubDate ? new Date(b.pubDate).getTime() : 0;
+            return db - da;
+        });
+
+        const items = allItems.slice(0, 6);
+        const result = { items, fetchedAt: new Date().toISOString() };
+        _newsCache = result;
+        _newsCacheTs = Date.now();
+        res.json(result);
+    } catch (err) {
+        console.error('News proxy error:', err.message);
+        if (_newsCache) return res.json({ ..._newsCache, stale: true });
+        res.status(502).json({ error: 'Não foi possível carregar as notícias.' });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const MAX_PORT_ATTEMPTS = Number(process.env.PORT_ATTEMPTS) || 10;
 const BASE_PORT = Number(PORT) || 3001;
