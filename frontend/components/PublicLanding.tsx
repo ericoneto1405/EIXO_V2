@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowRight, CheckCircle2, ChevronDown, TrendingDown, TrendingUp, Lightbulb } from 'lucide-react';
+import { ArrowRight, CheckCircle2, ChevronDown, TrendingDown, TrendingUp, Lightbulb, Menu, X } from 'lucide-react';
 
 interface PublicLandingProps {
   onEnter: () => void;
@@ -69,6 +69,7 @@ const FAQS = [
 const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) => {
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
   React.useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -108,6 +109,14 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             ))}
           </nav>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((prev) => !prev)}
+              className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-2 text-[var(--eixo-text)] lg:hidden"
+              aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+            >
+              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
             <button type="button" onClick={onEnter} className="hidden rounded-xl border border-[var(--eixo-border)] bg-transparent px-6 py-3 text-lg font-semibold text-[var(--eixo-text)] transition-colors hover:border-[var(--eixo-graphite)]/40 hover:bg-[var(--eixo-surface)] sm:inline-flex">
               Entrar
             </button>
@@ -116,6 +125,60 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </button>
           </div>
         </div>
+        {menuOpen && (
+          <div className="border-b border-[var(--eixo-border)] bg-[var(--eixo-bg)] px-4 py-3 lg:hidden">
+            <button
+              type="button"
+              onClick={() => {
+                scrollTo('gratis');
+                setMenuOpen(false);
+              }}
+              className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
+            >
+              Plano Grátis
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                scrollTo('como');
+                setMenuOpen(false);
+              }}
+              className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
+            >
+              Como funciona
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                scrollTo('faq');
+                setMenuOpen(false);
+              }}
+              className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
+            >
+              Dúvidas
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                window.location.href = '/planos';
+              }}
+              className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
+            >
+              Planos
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onEnter();
+              }}
+              className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
+            >
+              Entrar
+            </button>
+          </div>
+        )}
       </header>
 
       <main>
@@ -139,7 +202,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               Vagas limitadas — 100 primeiros grátis para sempre
             </div>
 
-            <h1 className="font-brand text-balance text-4xl font-extrabold leading-[1.15] text-[var(--eixo-text)] lg:text-6xl">
+            <h1 className="font-brand text-balance text-3xl font-extrabold leading-[1.15] text-[var(--eixo-text)] sm:text-4xl lg:text-6xl">
               Sua fazenda no controle.<br />
               <span className="text-[#7aad1a]">Sem planilha, sem custo<sup className="text-[0.5em] font-normal text-[var(--eixo-text-muted)]">*</sup>, sem enrolação.</span>
             </h1>
@@ -171,7 +234,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 Produtores já organizando o rebanho no EIXO — junte-se a eles.
               </span>
             </p>
-            <div className="mx-auto mt-5 grid max-w-xl grid-cols-3 gap-4 border-t border-[var(--eixo-border)]/80 pt-8">
+            <div className="mx-auto mt-5 grid max-w-xl grid-cols-1 gap-4 border-t border-[var(--eixo-border)]/80 pt-8 sm:grid-cols-3">
               {[['Grátis', 'para sempre'], ['R$ 0', 'sem cartão'], ['2 min', 'para começar']].map(([value, label]) => (
                 <div key={label} className="flex min-h-[80px] flex-col items-center justify-center rounded-2xl border border-[var(--eixo-border)]/70 bg-[rgba(255,250,241,0.42)] px-3 py-4 text-center shadow-[0_10px_24px_rgba(47,58,45,0.06)] backdrop-blur-[1px]">
                   <p className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">{value}</p>
@@ -243,9 +306,22 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               </p>
             </div>
             <div className="grid gap-6 lg:grid-cols-2">
+              <div className="block sm:hidden rounded-2xl border border-[var(--eixo-border)] bg-[#f7f8f6] p-6">
+                <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-text-soft)]">Sem sistema</p>
+                <div className="space-y-2 text-base text-[var(--eixo-graphite)]" style={{ fontFamily: "'Caveat', cursive" }}>
+                  <p>Lote 14 - 247 cab - pesagem 12/03</p>
+                  <p style={{ color: '#1e3f72' }}>comprou ração 15t ontem</p>
+                  <p>morreu 2 no pasto B-08 <span style={{ color: '#c0392b' }}></span></p>
+                  <p style={{ color: '#1e3f72' }}>santa rita precisa vacinar</p>
+                  <p>vender lote A? preço tá ruim...</p>
+                  <p style={{ color: '#2a4a80' }}>peso médio caiu? conferir amanhã</p>
+                </div>
+              </div>
+
               {/* Antes — caderno amassado */}
+              <div className="hidden sm:block">
               <div className="relative" style={{ perspective: '600px' }}>
-                <div className="absolute inset-x-2 bottom-0 h-full overflow-hidden rounded-2xl" style={{ background: '#eef1e7', transform: 'rotate(2.5deg) translateY(4px)', zIndex: 0 }}>
+                <div className="absolute inset-x-2 bottom-0 hidden h-full overflow-hidden rounded-2xl lg:block" style={{ background: '#eef1e7', transform: 'rotate(2.5deg) translateY(4px)', zIndex: 0 }}>
                   <div style={{ fontFamily: "'Caveat', cursive", fontSize: '1.15rem', color: 'var(--eixo-graphite)', opacity: 0.28, filter: 'blur(2.5px)', padding: '52px 56px 0 56px', lineHeight: '28px' }}>
                     <p style={{ transform: 'rotate(-0.5deg)' }}>vacina aftosa — 340 cab</p>
                     <p style={{ transform: 'rotate(0.3deg)', marginTop: 28 }}>custo ração jun: R$ 18.400</p>
@@ -255,7 +331,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                   </div>
                 </div>
 
-                <div className="absolute inset-x-1 bottom-0 h-full overflow-hidden rounded-2xl" style={{ background: '#f3f5f1', transform: 'rotate(-1.5deg) translateY(2px)', zIndex: 1 }}>
+                <div className="absolute inset-x-1 bottom-0 hidden h-full overflow-hidden rounded-2xl lg:block" style={{ background: '#f3f5f1', transform: 'rotate(-1.5deg) translateY(2px)', zIndex: 1 }}>
                   <div style={{ fontFamily: "'Caveat', cursive", fontSize: '1.15rem', color: 'var(--eixo-graphite)', opacity: 0.32, filter: 'blur(1.8px)', padding: '52px 52px 0 52px', lineHeight: '28px' }}>
                     <p style={{ transform: 'rotate(0.4deg)' }}>boi gordo @ R$ 312 arr.</p>
                     <p style={{ transform: 'rotate(-0.5deg)', marginTop: 28 }}>lote 14 — GMD caindo</p>
@@ -283,6 +359,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                     <p className="text-xl leading-7" style={{ transform: 'rotate(0.2deg)', color: '#2a4a80' }}>peso médio caiu? conferir amanhã</p>
                   </div>
                 </div>
+              </div>
               </div>
 
               {/* Depois */}
@@ -414,7 +491,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         </section>
 
         {/* ── CTA Final ── */}
-        <section className="bg-[var(--eixo-text)] py-20 lg:py-28">
+        <section className="bg-[var(--eixo-text)] py-20 pb-28 sm:pb-20 lg:py-28">
           <div className="mx-auto max-w-3xl px-4 text-center lg:px-8">
             <h2 className="font-brand text-balance text-3xl font-extrabold text-[#f5f0e8] lg:text-5xl">
               Sua fazenda merece mais que caderno e planilha.

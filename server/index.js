@@ -1234,12 +1234,20 @@ const computeSelectionKpis = ({ events, animalId, seasonId, exposuresSet }) => {
     };
 };
 
+const SUPER_ADMIN_ALL_MODULES = [
+    'Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda',
+    'Rebanho Comercial', 'Eixo Genetics',
+    'Fornecedores', 'Remédios', 'Rações', 'Suplementos',
+    'Nutrição', 'Financeiro',
+    'Operações', 'Configurações', 'Registro de Atividades',
+];
+
 const serializeAuthUser = (user, saasContext = null, accessContext = null) => ({
     id: user.id,
     name: user.name,
     email: user.email,
-    modules: accessContext?.allowedModules || user.modules,
-    allowedModules: accessContext?.allowedModules || user.modules,
+    modules: user.roles?.includes('SUPER_ADMIN') ? SUPER_ADMIN_ALL_MODULES : (accessContext?.allowedModules || user.modules),
+    allowedModules: user.roles?.includes('SUPER_ADMIN') ? SUPER_ADMIN_ALL_MODULES : (accessContext?.allowedModules || user.modules),
     roles: user.roles,
     accessType: getDerivedAccessType(user),
     fieldProfile: getDerivedFieldProfile(user),
