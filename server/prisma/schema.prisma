@@ -46,6 +46,8 @@ model User {
   activeOrganization             Organization?                  @relation("ActiveOrganization", fields: [activeOrganizationId], references: [id])
   farmAccesses                   UserFarmAccess[]
   reproCheckupSessions           ReproCheckupSession[]          @relation("ReproCheckupCreatedBy")
+
+  @@index([phone])
 }
 
 model Farm {
