@@ -18,6 +18,7 @@ import { Resend } from 'resend';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const FIELD_OCCURRENCE_UPLOAD_ROOT = path.join(__dirname, 'uploads', 'field-occurrences');
+const AVATAR_UPLOAD_ROOT = path.join(__dirname, 'uploads', 'avatars');
 const FIELD_WORKER_ROLE = 'field_worker';
 const FIELD_ADMIN_ROLE = 'field_admin';
 const FIELD_WORKER_DEFAULT_MODULES = ['Rebanho Comercial'];
@@ -1253,6 +1254,8 @@ const serializeAuthUser = (user, saasContext = null, accessContext = null) => ({
     entitlements: saasContext?.entitlements || [],
     organization: saasContext?.organization || null,
     onboardingCompletedAt: user.onboardingCompletedAt || null,
+    phone: user.phone || null,
+    avatarUrl: user.avatarUrl || null,
 });
 
 const app = express();
@@ -2330,6 +2333,12 @@ app.post('/register', async (req, res) => {
         }
         verifiedPhones.delete(normalizedPhone); // uso único
 
+        // Verifica se celular já está em uso por outro usuário
+        const phoneAlreadyUsed = await prisma.user.findFirst({ where: { phone: normalizedPhone } });
+        if (phoneAlreadyUsed) {
+            return res.status(400).json({ message: 'Este celular já está vinculado a outra conta. Use outro número ou recupere sua conta.' });
+        }
+
         let trustedCnpjData = undefined;
         if (normalizedDocumentType === 'CNPJ') {
             try {
@@ -2725,6 +2734,131 @@ app.get('/auth/me', async (req, res) => {
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao validar sessão.' });
+    }
+});
+
+// ─── Avatares estáticos ───────────────────────────────────────────────────────
+app.get('/avatars/:filename', async (req, res) => {
+    try {
+        const safeFilename = path.basename(req.params.filename);
+        const filePath = path.join(AVATAR_UPLOAD_ROOT, safeFilename);
+        await fs.access(filePath);
+        res.sendFile(filePath);
+    } catch {
+        return res.status(404).json({ message: 'Avatar não encontrado.' });
+    }
+});
+
+// ─── Meu Perfil — rotas ───────────────────────────────────────────────────────
+
+// PATCH /auth/me/profile — atualiza nome e e-mail
+app.patch('/auth/me/profile', requireAuth, async (req, res) => {
+    try {
+        const { name, email } = req.body || {};
+        const userId = req.user.id;
+        const updates = {};
+
+        if (name && typeof name === 'string') {
+            updates.name = name.trim();
+        }
+        if (email && typeof email === 'string') {
+            const normalizedEmail = email.trim().toLowerCase();
+            if (normalizedEmail !== req.user.email) {
+                const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+                if (existing && existing.id !== userId) {
+                    return res.status(400).json({ message: 'Este e-mail já está em uso.' });
+                }
+                updates.email = normalizedEmail;
+            }
+        }
+
+        if (!Object.keys(updates).length) {
+            return res.status(400).json({ message: 'Nenhum campo para atualizar.' });
+        }
+
+        const updated = await prisma.user.update({ where: { id: userId }, data: updates });
+        return res.json({ user: sanitizeUser(updated) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar perfil.' });
+    }
+});
+
+// PATCH /auth/me/password — troca senha
+app.patch('/auth/me/password', requireAuth, async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body || {};
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ message: 'Informe a senha atual e a nova senha.' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: 'A nova senha deve ter pelo menos 6 caracteres.' });
+        }
+        const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+        const valid = await bcrypt.compare(currentPassword, user.password);
+        if (!valid) {
+            return res.status(400).json({ message: 'Senha atual incorreta.' });
+        }
+        const hashed = await bcrypt.hash(newPassword, 12);
+        await prisma.user.update({ where: { id: req.user.id }, data: { password: hashed } });
+        return res.json({ message: 'Senha atualizada com sucesso.' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar senha.' });
+    }
+});
+
+// PATCH /auth/me/phone — atualiza celular (exige OTP verificado)
+app.patch('/auth/me/phone', requireAuth, async (req, res) => {
+    try {
+        const { phone } = req.body || {};
+        const digits = typeof phone === 'string' ? phone.replace(/\D/g, '') : '';
+        if (!digits || digits.length < 10) {
+            return res.status(400).json({ message: 'Número de celular inválido.' });
+        }
+        const phoneEntry = verifiedPhones.get(digits);
+        const phoneIsValid = phoneEntry && (Date.now() - phoneEntry.verifiedAt) < PHONE_VERIFY_TTL_MS;
+        if (!phoneIsValid) {
+            return res.status(400).json({ message: 'Celular não verificado. Complete a verificação por SMS antes de salvar.' });
+        }
+        // Unicidade
+        const existing = await prisma.user.findFirst({ where: { phone: digits, NOT: { id: req.user.id } } });
+        if (existing) {
+            return res.status(400).json({ message: 'Este celular já está vinculado a outra conta.' });
+        }
+        verifiedPhones.delete(digits);
+        await prisma.user.update({ where: { id: req.user.id }, data: { phone: digits } });
+        return res.json({ message: 'Celular atualizado com sucesso.' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar celular.' });
+    }
+});
+
+// POST /auth/me/avatar — upload de foto (base64)
+app.post('/auth/me/avatar', requireAuth, async (req, res) => {
+    try {
+        const { contentBase64, mimeType } = req.body || {};
+        const normalizedMime = String(mimeType || '').trim().toLowerCase();
+        const ALLOWED_AVATAR_MIMES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+        if (!ALLOWED_AVATAR_MIMES.has(normalizedMime)) {
+            return res.status(400).json({ message: 'Formato inválido. Use JPEG, PNG ou WebP.' });
+        }
+        const buffer = decodeBase64Payload(contentBase64);
+        if (!buffer || buffer.length > 5 * 1024 * 1024) {
+            return res.status(400).json({ message: 'Arquivo inválido ou maior que 5 MB.' });
+        }
+        await fs.mkdir(AVATAR_UPLOAD_ROOT, { recursive: true });
+        const ext = normalizedMime === 'image/png' ? 'png' : normalizedMime === 'image/webp' ? 'webp' : 'jpg';
+        const filename = `${req.user.id}-${Date.now()}.${ext}`;
+        const filePath = path.join(AVATAR_UPLOAD_ROOT, filename);
+        await fs.writeFile(filePath, buffer);
+        const avatarUrl = `/avatars/${filename}`;
+        await prisma.user.update({ where: { id: req.user.id }, data: { avatarUrl } });
+        return res.json({ avatarUrl });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar avatar.' });
     }
 });
 

@@ -36,6 +36,7 @@ import UserRegisterModal from './components/UserRegisterModal';
 import TeamPermissions from './components/TeamPermissions';
 import UpgradeScreen from './components/UpgradeScreen';
 import HQPage from './components/HQPage';
+import ProfileModal from './components/ProfileModal';
 import { Alert, Farm, WebUserCreatePayload } from './types';
 import { createWebUser } from './adapters/usersApi';
 
@@ -59,6 +60,8 @@ interface User {
     };
     entitlements?: string[];
     onboardingCompletedAt?: string | null;
+    phone?: string | null;
+    avatarUrl?: string | null;
 }
 
 const MODULE_CATEGORIES = [
@@ -250,6 +253,7 @@ const AppContent: React.FC = () => {
     const [registerMessage, setRegisterMessage] = useState<string | null>(null);
     const [registerError, setRegisterError] = useState<string | null>(null);
     const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
     const [usersRefreshKey, setUsersRefreshKey] = useState(0);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [farms, setFarms] = useState<Farm[]>([]);
@@ -1052,6 +1056,7 @@ const AppContent: React.FC = () => {
                                 }
                                 setIsRegisterModalOpen(true);
                             }}
+                            onOpenProfile={() => setIsProfileModalOpen(true)}
                         />
                         <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                             <div className={activeView === 'Mapa da Fazenda' ? 'h-full' : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'}>
@@ -1107,6 +1112,15 @@ const AppContent: React.FC = () => {
                 error={registerError}
                 successMessage={registerMessage}
             />
+
+            {/* Modal de Perfil */}
+            {isProfileModalOpen && currentUser && (
+                <ProfileModal
+                    user={currentUser}
+                    onClose={() => setIsProfileModalOpen(false)}
+                    onUpdated={(updates) => setCurrentUser(prev => prev ? { ...prev, ...updates } : prev)}
+                />
+            )}
 
             {/* Modal de upgrade — módulo bloqueado */}
             {upgradeModal && (

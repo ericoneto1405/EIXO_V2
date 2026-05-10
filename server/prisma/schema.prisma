@@ -21,6 +21,7 @@ model User {
   document                       String?
   documentType                   String?
   phone                          String?
+  avatarUrl                      String?
   termsAcceptedAt                DateTime?
   termsVersion                   String?
   onboardingCompletedAt          DateTime?

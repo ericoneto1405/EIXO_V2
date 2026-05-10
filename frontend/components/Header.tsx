@@ -68,10 +68,11 @@ interface HeaderProps {
     farms: Farm[];
     selectedFarmId: string | null;
     onSelectFarm: (farmId: string | null) => void;
-    currentUser?: { name: string; email: string } | null;
+    currentUser?: { name: string; email: string; phone?: string | null; avatarUrl?: string | null } | null;
     onLogout?: () => void;
     canRegisterUsers?: boolean;
     onOpenUserRegister?: () => void;
+    onOpenProfile?: () => void;
     onAlertAction?: (alert: Alert) => boolean;
 }
 
@@ -266,6 +267,7 @@ const Header: React.FC<HeaderProps> = ({
     onLogout,
     canRegisterUsers,
     onOpenUserRegister,
+    onOpenProfile,
     onAlertAction,
 }) => {
     const [farmOpen, setFarmOpen] = useState(false);
@@ -541,8 +543,11 @@ const Header: React.FC<HeaderProps> = ({
                             onClick={() => setUserOpen((v) => !v)}
                             className="flex max-w-[138px] items-center gap-2.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 transition-colors hover:bg-[#EDEDED]"
                         >
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[var(--eixo-text)] text-xs font-bold text-[#f5f0e8]">
-                                {getInitials(currentUser.name)}
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--eixo-text)] text-xs font-bold text-[#f5f0e8]">
+                                {currentUser.avatarUrl
+                                    ? <img src={currentUser.avatarUrl} alt={currentUser.name} className="h-full w-full object-cover" />
+                                    : getInitials(currentUser.name)
+                                }
                             </div>
                             <div className="hidden min-w-0 flex-1 text-left sm:block">
                                 <p className="max-w-[62px] truncate text-sm font-semibold leading-tight text-[var(--eixo-text)]">
@@ -562,12 +567,11 @@ const Header: React.FC<HeaderProps> = ({
                                     <li>
                                         <button
                                             type="button"
-                                            disabled
-                                            className="flex w-full cursor-not-allowed items-center gap-3 px-4 py-2 text-sm text-[#a8a29e]"
+                                            onClick={() => { onOpenProfile?.(); setUserOpen(false); }}
+                                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                                         >
                                             <UserIcon />
                                             <span>Meu Perfil</span>
-                                            <span className="ml-auto text-[10px] font-semibold text-[#a8a29e]">Em breve</span>
                                         </button>
                                     </li>
                                     {canRegisterUsers && (
