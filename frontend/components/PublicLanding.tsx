@@ -199,7 +199,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               <svg className="h-3 w-3 text-[var(--eixo-graphite)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Vagas limitadas — 100 primeiros grátis para sempre
+              Plano Grátis · Apenas os 100 primeiros
             </div>
 
             <h1 className="font-brand text-balance text-3xl font-extrabold leading-[1.15] text-[var(--eixo-text)] sm:text-4xl lg:text-6xl">
@@ -212,10 +212,17 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </p>
 
             <p className="mt-3 text-xs text-[var(--eixo-text-muted)]/70">
-              * Plano gratuito vitalício disponível. Planos pagos para recursos avançados.
+              * Sem custo no Plano Grátis. Planos pagos disponíveis para recursos avançados.
             </p>
 
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <div className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-graphite)]">
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Acesso imediato — sem espera
+            </div>
+
+            <div className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8 text-base`}>
                 Cadastrar minha fazenda grátis
                 <ArrowRight className="h-4 w-4" />
