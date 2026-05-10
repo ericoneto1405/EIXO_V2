@@ -509,17 +509,20 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     {/* ── Localização opcional ── */}
                     <div className="md:col-span-2">
                         {!showLocation ? (
-                            <button
-                                type="button"
-                                onClick={() => setShowLocation(true)}
-                                className="flex items-center gap-1.5 text-sm text-[var(--eixo-green)] hover:underline"
-                            >
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                </svg>
-                                Adicionar localização da fazenda (opcional)
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowLocation(true)}
+                                    className="inline-flex items-center gap-2 rounded-xl border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--eixo-graphite)] transition-colors hover:bg-[var(--eixo-green)]/20"
+                                >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    </svg>
+                                    Adicionar localização da fazenda
+                                </button>
+                                <span className="text-xs text-[var(--eixo-text-muted)]">opcional</span>
+                            </div>
                         ) : (
                             <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4 space-y-3">
                                 <div className="flex items-center justify-between">
