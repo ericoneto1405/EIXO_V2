@@ -8,6 +8,28 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
+ENV_FILE="server/.env.production"
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo "Erro: arquivo $ENV_FILE não encontrado."
+    exit 1
+fi
+
+# Carrega variáveis de ambiente de forma segura (sem quebrar com comentários)
+set -a
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+set +a
+
+if [ -z "${DATABASE_URL:-}" ]; then
+    echo "Erro: DATABASE_URL não definido em $ENV_FILE."
+    exit 1
+fi
+
+PM2_CMD=("pm2")
+if ! command -v pm2 >/dev/null 2>&1; then
+    PM2_CMD=("npx" "pm2")
+fi
 
 echo "======================================================"
 echo "  EIXO Deploy — $(date)"
@@ -21,34 +43,44 @@ bash server/backup.sh
 # ── 2. Atualiza o código ──────────────────────────────────────────────────────
 echo ""
 echo "▶ 2/6 Atualizando código (git pull)..."
-git pull origin main
+git pull --ff-only origin main
 
 # ── 3. Instala dependências ───────────────────────────────────────────────────
 echo ""
 echo "▶ 3/6 Instalando dependências..."
-npm install --production=false
+if [ -f package-lock.json ]; then
+    npm ci --include=dev
+else
+    npm install --include=dev
+fi
 
 # ── 4. Aplica migrações do banco ──────────────────────────────────────────────
 echo ""
 echo "▶ 4/6 Aplicando migrações do banco..."
-export $(grep -v '^#' server/.env.production | xargs)
 npx prisma migrate deploy --schema server/prisma/schema.prisma
 npx prisma generate --schema server/prisma/schema.prisma
 
 # ── 5. Build do frontend ──────────────────────────────────────────────────────
 echo ""
 echo "▶ 5/6 Build do frontend..."
-cd frontend && npm install && npm run build && cd ..
+pushd frontend >/dev/null
+if [ -f package-lock.json ]; then
+    npm ci --include=dev
+else
+    npm install --include=dev
+fi
+npm run build
+popd >/dev/null
 
 # ── 6. Reinicia o servidor via PM2 ────────────────────────────────────────────
 echo ""
 echo "▶ 6/6 Reiniciando servidor..."
-if pm2 list | grep -q "eixo-server"; then
-    pm2 reload eixo-server --update-env
+if "${PM2_CMD[@]}" describe eixo-server >/dev/null 2>&1; then
+    "${PM2_CMD[@]}" reload eixo-server --update-env
 else
-    pm2 start server/index.js --name eixo-server --env production
-    pm2 save
+    "${PM2_CMD[@]}" start server/index.js --name eixo-server
 fi
+"${PM2_CMD[@]}" save --force
 
 echo ""
 echo "======================================================"
