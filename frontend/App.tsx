@@ -35,6 +35,7 @@ import ModuleProgressCard from './components/ModuleProgressCard';
 import UserRegisterModal from './components/UserRegisterModal';
 import TeamPermissions from './components/TeamPermissions';
 import UpgradeScreen from './components/UpgradeScreen';
+import HQPage from './components/HQPage';
 import { Alert, Farm, WebUserCreatePayload } from './types';
 import { createWebUser } from './adapters/usersApi';
 
@@ -253,6 +254,7 @@ const AppContent: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [farms, setFarms] = useState<Farm[]>([]);
     const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+    const isSuperAdmin = React.useMemo(() => currentUser?.roles?.includes('SUPER_ADMIN') ?? false, [currentUser]);
     const canManageUsers = React.useMemo(() => {
         const normalizedRoles = (currentUser?.roles || []).map((role) => String(role || '').trim().toLowerCase());
         const membershipRole = String(currentUser?.membershipRole || '').trim().toUpperCase();
@@ -558,15 +560,17 @@ const AppContent: React.FC = () => {
 
     React.useEffect(() => {
         const parentView = SUB_VIEW_PARENT[activeView] ?? activeView;
+        const canAccessHq = parentView === 'EIXO HQ' && isSuperAdmin;
         if (
             isAuthenticated &&
             currentAllowedModules.length &&
-            !currentAllowedModules.includes(parentView)
+            !currentAllowedModules.includes(parentView) &&
+            !canAccessHq
         ) {
             const fallbackView = currentAllowedModules[0] || 'Fazendas';
             setActiveView(fallbackView);
         }
-    }, [isAuthenticated, currentAllowedModules, activeView]);
+    }, [isAuthenticated, currentAllowedModules, activeView, isSuperAdmin]);
 
     const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
         setAuthError(null);
@@ -1008,6 +1012,8 @@ const AppContent: React.FC = () => {
                         refreshKey={usersRefreshKey}
                     />
                 );
+            case 'EIXO HQ':
+                return <HQPage />;
             case 'Visão Geral':
             default:
                 return <Dashboard
@@ -1049,7 +1055,7 @@ const AppContent: React.FC = () => {
                         />
                         <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                             <div className={activeView === 'Mapa da Fazenda' ? 'h-full' : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'}>
-                                {hasNoFarms && activeView !== 'Fazendas' ? <FirstFarmOnboarding /> : (
+                                {hasNoFarms && activeView !== 'Fazendas' && activeView !== 'EIXO HQ' ? <FirstFarmOnboarding /> : (
                                     <>
                                         {currentUser && activeView !== 'Mapa da Fazenda' && (
                                             <>
@@ -1078,6 +1084,16 @@ const AppContent: React.FC = () => {
                     </main>
                 </div>
             </div>
+            {isSuperAdmin && (
+                <button
+                    type="button"
+                    onClick={() => setActiveView('EIXO HQ')}
+                    className="fixed bottom-6 left-6 z-50 rounded-xl bg-[#2F2F2F] px-3 py-2 text-xs font-bold text-[#B6E23A] shadow-lg hover:bg-[#1a1a1a]"
+                    title="EIXO HQ — Painel do Fundador"
+                >
+                    HQ
+                </button>
+            )}
             <UserRegisterModal
                 isOpen={isRegisterModalOpen}
                 onClose={() => {

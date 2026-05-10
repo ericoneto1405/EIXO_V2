@@ -2013,6 +2013,13 @@ const requireAuth = async (req, res, next) => {
     }
 };
 
+const requireSuperAdmin = (req, res, next) => {
+    if (!req.user?.roles?.includes('SUPER_ADMIN')) {
+        return res.status(403).json({ message: 'Acesso negado.' });
+    }
+    return next();
+};
+
 // Initialize Google Generative AI
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 if (!GOOGLE_API_KEY) {
@@ -2738,7 +2745,7 @@ app.patch('/auth/me/onboarding', requireAuth, async (req, res) => {
     }
 });
 
-app.get('/users', async (req, res) => {
+app.get('/users', requireAuth, async (req, res) => {
     try {
         if (!canManageOrganizationUsers(req)) {
             return res.status(403).json({ message: 'Apenas administradores podem listar usuários.' });
@@ -2785,7 +2792,7 @@ app.get('/users', async (req, res) => {
     }
 });
 
-app.post('/users', async (req, res) => {
+app.post('/users', requireAuth, async (req, res) => {
     const { name, email, password, modules, profile, accessType, fieldProfile, defaultFarmId } = req.body || {};
     const normalizedName = typeof name === 'string' ? name.trim() : '';
     const requestedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
@@ -9772,6 +9779,198 @@ app.get('/api/news/cattle', requireAuth, async (req, res) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+
+app.get('/api/hq/clientes', requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+        const orgs = await prisma.organization.findMany({
+            include: {
+                memberships: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                name: true,
+                                email: true,
+                                createdAt: true,
+                            },
+                        },
+                    },
+                },
+                billingSubscriptions: { orderBy: { createdAt: 'desc' }, take: 1 },
+                farms: {
+                    include: { _count: { select: { animals: true } } },
+                },
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        const result = orgs.map((org) => {
+            const owner = org.memberships.find((membership) => membership.role === 'OWNER')?.user;
+            const totalAnimals = org.farms.reduce((sum, farm) => sum + farm._count.animals, 0);
+            const sub = org.billingSubscriptions[0];
+
+            return {
+                id: org.id,
+                name: org.name,
+                slug: org.slug,
+                owner: owner ? { name: owner.name, email: owner.email } : null,
+                plan: sub?.planCode ?? 'GRATIS',
+                billingStatus: sub?.status ?? null,
+                accessState: org.accessState,
+                totalAnimals,
+                totalFarms: org.farms.length,
+                createdAt: org.createdAt,
+            };
+        });
+
+        return res.json({ clientes: result });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar clientes HQ.' });
+    }
+});
+
+app.get('/api/hq/metricas', requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+        const [totalOrgs, totalUsers, subscriptions, animals] = await Promise.all([
+            prisma.organization.count(),
+            prisma.user.count(),
+            prisma.billingSubscription.findMany({ where: { status: 'ACTIVE' } }),
+            prisma.animal.count(),
+        ]);
+
+        const paidOrgIds = Array.from(new Set(
+            subscriptions
+                .filter((subscription) => subscription.planCode !== 'GRATIS')
+                .map((subscription) => subscription.organizationId),
+        ));
+        const freeSubs = Math.max(totalOrgs - paidOrgIds.length, 0);
+
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        const recentOrgs = await prisma.organization.findMany({
+            where: { createdAt: { gte: sixMonthsAgo } },
+            select: { createdAt: true },
+        });
+
+        return res.json({
+            totalOrgs,
+            totalUsers,
+            totalAnimals: animals,
+            paidClients: paidOrgIds.length,
+            freeClients: freeSubs,
+            conversionRate: totalOrgs > 0 ? ((paidOrgIds.length / totalOrgs) * 100).toFixed(1) : '0',
+            recentSignups: recentOrgs.length,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar métricas HQ.' });
+    }
+});
+
+app.get('/api/hq/pipeline', requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const paidOrgIds = (
+            await prisma.billingSubscription.findMany({
+                where: { status: 'ACTIVE', NOT: { planCode: 'GRATIS' } },
+                select: { organizationId: true },
+            })
+        ).map((subscription) => subscription.organizationId);
+
+        const leads = await prisma.organization.findMany({
+            where: {
+                createdAt: { lte: sevenDaysAgo },
+                id: { notIn: paidOrgIds },
+            },
+            include: {
+                memberships: {
+                    where: { role: 'OWNER' },
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                email: true,
+                                phone: true,
+                                createdAt: true,
+                            },
+                        },
+                    },
+                },
+                farms: { select: { id: true } },
+            },
+            orderBy: { createdAt: 'asc' },
+        });
+
+        const result = leads.map((org) => {
+            const owner = org.memberships[0]?.user;
+            const diasNoSistema = Math.floor((Date.now() - new Date(org.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+
+            return {
+                id: org.id,
+                name: org.name,
+                owner: owner ? { name: owner.name, email: owner.email, phone: owner.phone } : null,
+                diasNoSistema,
+                totalFarms: org.farms.length,
+                createdAt: org.createdAt,
+            };
+        });
+
+        return res.json({ pipeline: result });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar pipeline HQ.' });
+    }
+});
+
+app.get('/api/hq/suporte', requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+        let logs = await prisma.activityLog.findMany({
+            where: { action: 'chat_message' },
+            orderBy: { createdAt: 'desc' },
+            take: 100,
+            include: { user: { select: { name: true, email: true } } },
+        });
+
+        if (!logs.length) {
+            logs = await prisma.activityLog.findMany({
+                orderBy: { createdAt: 'desc' },
+                take: 100,
+                include: { user: { select: { name: true, email: true } } },
+            });
+        }
+
+        return res.json({ suporte: logs });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar suporte HQ.' });
+    }
+});
+
+app.get('/api/hq/cadastro', requireAuth, requireSuperAdmin, async (req, res) => {
+    try {
+        const users = await prisma.user.findMany({
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                phone: true,
+                document: true,
+                documentType: true,
+                createdAt: true,
+                roles: true,
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        return res.json({ cadastro: users });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar cadastro HQ.' });
+    }
+});
 
 const MAX_PORT_ATTEMPTS = Number(process.env.PORT_ATTEMPTS) || 10;
 const BASE_PORT = Number(PORT) || 3001;
