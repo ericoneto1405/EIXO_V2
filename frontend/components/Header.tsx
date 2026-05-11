@@ -412,7 +412,7 @@ const Header: React.FC<HeaderProps> = ({
                     </button>
 
                     {farmOpen && (
-                        <div className="absolute left-0 z-30 mt-2 w-72 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
+                        <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
                             <div className="border-b border-[var(--eixo-border)] px-4 py-3">
                                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Suas fazendas</p>
                             </div>
@@ -558,7 +558,7 @@ const Header: React.FC<HeaderProps> = ({
                         </button>
 
                         {userOpen && (
-                            <div className="absolute right-0 z-30 mt-2 w-56 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
+                            <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
                                 <div className="border-b border-[var(--eixo-border)] px-4 py-3">
                                     <p className="text-sm font-semibold text-[var(--eixo-text)]">{currentUser.name}</p>
                                     <p className="truncate text-xs text-[var(--eixo-text-muted)]">{currentUser.email}</p>
