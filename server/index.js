@@ -7576,6 +7576,92 @@ app.post('/animals/batch', async (req, res) => {
     }
 });
 
+// ── Ações em massa ────────────────────────────────────────────────────────────
+
+app.post('/animals/bulk-delete', async (req, res) => {
+    const { ids } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'Informe ao menos um animal.' });
+    }
+    try {
+        const filter = buildFarmRelationFilter(req);
+        // Verifica que todos pertencem ao tenant
+        const animals = await prisma.animal.findMany({
+            where: { id: { in: ids.map(String) }, farm: filter },
+            select: { id: true },
+        });
+        if (animals.length !== ids.length) {
+            return res.status(403).json({ message: 'Um ou mais animais não pertencem a esta conta.' });
+        }
+        await prisma.animal.deleteMany({ where: { id: { in: ids.map(String) } } });
+        return res.json({ deleted: ids.length });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao excluir animais.' });
+    }
+});
+
+app.post('/animals/bulk-move-lot', async (req, res) => {
+    const { ids, lotId } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'Informe ao menos um animal.' });
+    }
+    try {
+        const filter = buildFarmRelationFilter(req);
+        const animals = await prisma.animal.findMany({
+            where: { id: { in: ids.map(String) }, farm: filter },
+            select: { id: true, farmId: true },
+        });
+        if (animals.length !== ids.length) {
+            return res.status(403).json({ message: 'Um ou mais animais não pertencem a esta conta.' });
+        }
+        if (lotId) {
+            const farmId = animals[0].farmId;
+            const lot = await prisma.lot.findFirst({ where: { id: String(lotId), farmId } });
+            if (!lot) return res.status(404).json({ message: 'Lote não encontrado.' });
+        }
+        await prisma.animal.updateMany({
+            where: { id: { in: ids.map(String) } },
+            data: { lotId: lotId ? String(lotId) : null },
+        });
+        return res.json({ updated: ids.length });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao mover animais para lote.' });
+    }
+});
+
+app.post('/animals/bulk-move-pasto', async (req, res) => {
+    const { ids, pastoId } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0 || !pastoId) {
+        return res.status(400).json({ message: 'Informe ao menos um animal e o pasto.' });
+    }
+    try {
+        const filter = buildFarmRelationFilter(req);
+        const animals = await prisma.animal.findMany({
+            where: { id: { in: ids.map(String) }, farm: filter },
+            select: { id: true },
+        });
+        if (animals.length !== ids.length) {
+            return res.status(403).json({ message: 'Um ou mais animais não pertencem a esta conta.' });
+        }
+        const results = [];
+        for (const animal of animals) {
+            const { error, result } = await moveAnimalBetweenPaddocks({
+                animalId: animal.id,
+                paddockId: String(pastoId),
+                scopeFilter: filter,
+                isPo: false,
+            });
+            if (!error) results.push(result);
+        }
+        return res.json({ updated: results.length });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao mover animais para pasto.' });
+    }
+});
+
 app.get('/animals/:id/repro-kpis', async (req, res) => {
     const { id } = req.params;
     const { seasonId } = req.query || {};

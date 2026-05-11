@@ -425,6 +425,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [selectedAnimals, setSelectedAnimals] = useState<Set<number>>(new Set());
+    const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+    const [bulkMoveToLotOpen, setBulkMoveToLotOpen] = useState(false);
+    const [bulkMoveToPastoOpen, setBulkMoveToPastoOpen] = useState(false);
+    const [bulkTargetLotId, setBulkTargetLotId] = useState('');
+    const [bulkTargetPastoId, setBulkTargetPastoId] = useState('');
+    const [bulkLoading, setBulkLoading] = useState(false);
+    const [bulkError, setBulkError] = useState<string | null>(null);
     const [selectedAnimal, setSelectedAnimal] = useState<HerdAnimal | null>(null);
     const [selectedLot, setSelectedLot] = useState<HerdLot | null>(null);
     const [lotModalOpen, setLotModalOpen] = useState(false);
@@ -1156,6 +1163,76 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (selectedAnimals.size === 0) return;
+        setBulkLoading(true);
+        setBulkError(null);
+        try {
+            const res = await fetch(buildApiUrl('/animals/bulk-delete'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ ids: Array.from(selectedAnimals) }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data?.message || 'Erro ao excluir animais.');
+            setSelectedAnimals(new Set());
+            setBulkDeleteOpen(false);
+            await loadData();
+        } catch (err: any) {
+            setBulkError(err?.message || 'Erro ao excluir animais.');
+        } finally {
+            setBulkLoading(false);
+        }
+    };
+
+    const handleBulkMoveToLot = async () => {
+        setBulkLoading(true);
+        setBulkError(null);
+        try {
+            const res = await fetch(buildApiUrl('/animals/bulk-move-lot'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ ids: Array.from(selectedAnimals), lotId: bulkTargetLotId || null }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data?.message || 'Erro ao mover animais.');
+            setSelectedAnimals(new Set());
+            setBulkMoveToLotOpen(false);
+            setBulkTargetLotId('');
+            await loadData();
+        } catch (err: any) {
+            setBulkError(err?.message || 'Erro ao mover animais.');
+        } finally {
+            setBulkLoading(false);
+        }
+    };
+
+    const handleBulkMoveToPasto = async () => {
+        if (!bulkTargetPastoId) { setBulkError('Selecione um pasto.'); return; }
+        setBulkLoading(true);
+        setBulkError(null);
+        try {
+            const res = await fetch(buildApiUrl('/animals/bulk-move-pasto'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ ids: Array.from(selectedAnimals), pastoId: bulkTargetPastoId }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data?.message || 'Erro ao mover animais.');
+            setSelectedAnimals(new Set());
+            setBulkMoveToPastoOpen(false);
+            setBulkTargetPastoId('');
+            await loadData();
+        } catch (err: any) {
+            setBulkError(err?.message || 'Erro ao mover animais.');
+        } finally {
+            setBulkLoading(false);
+        }
+    };
+
     const handleSort = (column: SortColumn) => {
         if (sortColumn === column) {
             setSortDirection((direction) => (direction === 'asc' ? 'desc' : 'asc'));
@@ -1178,6 +1255,42 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
 
         return (
             <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
+                {/* Barra de ações em massa */}
+                {selectedAnimals.size > 0 && (
+                    <div className="flex flex-wrap items-center gap-3 border-b border-[var(--eixo-border)] bg-[#f0f9d4] px-4 py-3">
+                        <span className="text-sm font-semibold text-[#3a5c10]">
+                            {selectedAnimals.size} {selectedAnimals.size === 1 ? 'animal selecionado' : 'animais selecionados'}
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => { setBulkError(null); setBulkMoveToLotOpen(true); }}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                        >
+                            Mover para Lote
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setBulkError(null); setBulkMoveToPastoOpen(true); }}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                        >
+                            Mover para Pasto
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setBulkError(null); setBulkDeleteOpen(true); }}
+                            className="rounded-xl bg-[#fce8e8] px-3 py-1.5 text-xs font-semibold text-[#8c2020] hover:bg-[#f5d0d0]"
+                        >
+                            Excluir selecionados
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedAnimals(new Set())}
+                            className="ml-auto text-xs text-[var(--eixo-text-muted)] hover:underline"
+                        >
+                            Cancelar seleção
+                        </button>
+                    </div>
+                )}
                 <div className="overflow-x-auto">
                     <table className="w-full text-left text-sm text-[var(--eixo-text-muted)]">
                         <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
@@ -1915,6 +2028,103 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
             {activeTab === 'settings' && farmId && (
                 <HerdSettingsTab farmId={farmId} />
             )}
+            {/* Modal: Confirmar exclusão em massa */}
+            {bulkDeleteOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                    <div className="w-full max-w-sm rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
+                        <header className="border-b border-[var(--eixo-border)] p-5">
+                            <h3 className="text-lg font-bold text-[var(--eixo-text)]">Excluir animais</h3>
+                        </header>
+                        <div className="p-5">
+                            <p className="text-sm text-[var(--eixo-text)]">
+                                Tem certeza que deseja excluir <strong>{selectedAnimals.size}</strong> {selectedAnimals.size === 1 ? 'animal' : 'animais'}? Esta ação não pode ser desfeita.
+                            </p>
+                            {bulkError && <p className="mt-3 text-sm text-[#8c2020]">{bulkError}</p>}
+                        </div>
+                        <footer className="flex justify-end gap-3 border-t border-[var(--eixo-border)] px-5 py-4">
+                            <button type="button" onClick={() => setBulkDeleteOpen(false)} disabled={bulkLoading}
+                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                                Cancelar
+                            </button>
+                            <button type="button" onClick={handleBulkDelete} disabled={bulkLoading}
+                                className="rounded-xl bg-[#fce8e8] px-4 py-2 text-sm font-semibold text-[#8c2020] hover:bg-[#f5d0d0] disabled:opacity-50">
+                                {bulkLoading ? 'Excluindo...' : 'Excluir'}
+                            </button>
+                        </footer>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Mover para Lote */}
+            {bulkMoveToLotOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                    <div className="w-full max-w-sm rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
+                        <header className="border-b border-[var(--eixo-border)] p-5">
+                            <h3 className="text-lg font-bold text-[var(--eixo-text)]">Mover para Lote</h3>
+                        </header>
+                        <div className="p-5 space-y-3">
+                            <p className="text-sm text-[var(--eixo-text-muted)]">{selectedAnimals.size} {selectedAnimals.size === 1 ? 'animal selecionado' : 'animais selecionados'}</p>
+                            <select
+                                value={bulkTargetLotId}
+                                onChange={(e) => setBulkTargetLotId(e.target.value)}
+                                className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[#B6E23A]"
+                            >
+                                <option value="">Sem lote</option>
+                                {lots.map((l) => (
+                                    <option key={l.id} value={l.id}>{l.name}</option>
+                                ))}
+                            </select>
+                            {bulkError && <p className="text-sm text-[#8c2020]">{bulkError}</p>}
+                        </div>
+                        <footer className="flex justify-end gap-3 border-t border-[var(--eixo-border)] px-5 py-4">
+                            <button type="button" onClick={() => setBulkMoveToLotOpen(false)} disabled={bulkLoading}
+                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                                Cancelar
+                            </button>
+                            <button type="button" onClick={handleBulkMoveToLot} disabled={bulkLoading}
+                                className="rounded-xl bg-[#B6E23A] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#a3d130] disabled:opacity-50">
+                                {bulkLoading ? 'Movendo...' : 'Confirmar'}
+                            </button>
+                        </footer>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal: Mover para Pasto */}
+            {bulkMoveToPastoOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                    <div className="w-full max-w-sm rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
+                        <header className="border-b border-[var(--eixo-border)] p-5">
+                            <h3 className="text-lg font-bold text-[var(--eixo-text)]">Mover para Pasto</h3>
+                        </header>
+                        <div className="p-5 space-y-3">
+                            <p className="text-sm text-[var(--eixo-text-muted)]">{selectedAnimals.size} {selectedAnimals.size === 1 ? 'animal selecionado' : 'animais selecionados'}</p>
+                            <select
+                                value={bulkTargetPastoId}
+                                onChange={(e) => setBulkTargetPastoId(e.target.value)}
+                                className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[#B6E23A]"
+                            >
+                                <option value="">Selecione um pasto</option>
+                                {paddocks.map((p) => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                            </select>
+                            {bulkError && <p className="text-sm text-[#8c2020]">{bulkError}</p>}
+                        </div>
+                        <footer className="flex justify-end gap-3 border-t border-[var(--eixo-border)] px-5 py-4">
+                            <button type="button" onClick={() => setBulkMoveToPastoOpen(false)} disabled={bulkLoading}
+                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                                Cancelar
+                            </button>
+                            <button type="button" onClick={handleBulkMoveToPasto} disabled={bulkLoading}
+                                className="rounded-xl bg-[#B6E23A] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#a3d130] disabled:opacity-50">
+                                {bulkLoading ? 'Movendo...' : 'Confirmar'}
+                            </button>
+                        </footer>
+                    </div>
+                </div>
+            )}
+
             {animalFormOpen && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
