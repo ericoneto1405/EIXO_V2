@@ -50,7 +50,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     const [farmLimitReached, setFarmLimitReached] = useState(false);
     const [activeFarm, setActiveFarm] = useState<Farm | null>(initialFarm || null);
     const [currentStep, setCurrentStep] = useState<'farm' | 'divisions'>(initialFarm ? 'divisions' : 'farm');
-    const [showLocation, setShowLocation] = useState(!!(initialFarm?.lat || initialFarm?.lng));
+    const [showLocation, setShowLocation] = useState(!!initialFarm || !!(initialFarm?.lat || initialFarm?.lng));
     const [gpsLoading, setGpsLoading] = useState(false);
     const [paddockToDelete, setPaddockToDelete] = useState<DivisionInput | null>(null);
     const nameInputRef = useRef<HTMLInputElement | null>(null);
@@ -584,6 +584,22 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 <>
                 <div className="rounded-2xl bg-[#f0f9d4] p-5">
                 <div ref={divisionsRef}>
+                    {/* Banner GPS — visível apenas quando lat/lng ainda não foram preenchidos */}
+                    {!farmLat && !farmLng && (
+                        <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-[#fbbf24] bg-[#fffbeb] px-4 py-3">
+                            <div className="flex items-center gap-2">
+                                <span className="text-base">📍</span>
+                                <p className="text-xs font-semibold text-[#92400e]">GPS não cadastrado — a previsão do tempo usa as coordenadas da fazenda.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setCurrentStep('farm')}
+                                className="flex-shrink-0 rounded-lg border border-[#f59e0b] bg-white px-3 py-1.5 text-xs font-bold text-[#92400e] transition-colors hover:bg-[#fef3c7]"
+                            >
+                                Adicionar GPS
+                            </button>
+                        </div>
+                    )}
                     <div className="flex items-center justify-between gap-4">
                         <div>
                             <h3 className="text-lg font-medium text-[var(--eixo-text)]">Pastos</h3>
