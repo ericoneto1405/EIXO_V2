@@ -341,11 +341,14 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         // Área não precisa ser exata — o resumo é apenas informativo
 
         setIsSubmitting(true);
+        // Preserva coordenadas existentes se o usuário não editou os campos de GPS
+        const latToSend = farmLat.trim() || activeFarm?.lat?.toString() || '';
+        const lngToSend = farmLng.trim() || activeFarm?.lng?.toString() || '';
         const requestBody = JSON.stringify({
             name: farmName.trim(),
             city: `${farmCity.trim()}/${farmState.trim().toUpperCase()}`,
-            lat: farmLat.trim(),
-            lng: farmLng.trim(),
+            lat: latToSend,
+            lng: lngToSend,
             size: farmSizeFloat,
             notes: farmNotes.trim(),
             paddocks: payloadDivisions,

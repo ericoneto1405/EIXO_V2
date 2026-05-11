@@ -62,17 +62,35 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
     const [error, setError] = useState(false);
 
     const hasCoords = Boolean(lat && lng);
+    const hasCity = Boolean(city && city.trim());
 
     useEffect(() => {
-        if (!hasCoords) return;
+        if (!hasCoords && !hasCity) return;
         let active = true;
 
         const load = async () => {
             setLoading(true);
             setError(false);
             try {
+                let latitude = lat;
+                let longitude = lng;
+
+                // Fallback: geocodifica pela cidade se não tiver coordenadas
+                if (!hasCoords && hasCity) {
+                    const cityName = (city ?? '').split('/')[0].trim();
+                    const geoRes = await fetch(
+                        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&country_code=BR&count=1&language=pt`,
+                        { signal: AbortSignal.timeout(15000) }
+                    );
+                    const geoData = await geoRes.json();
+                    const result = geoData?.results?.[0];
+                    if (!result) throw new Error('Cidade não encontrada');
+                    latitude = result.latitude;
+                    longitude = result.longitude;
+                }
+
                 const wRes = await fetch(
-                    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
+                    `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
                     `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max` +
                     `&timezone=America%2FSao_Paulo&forecast_days=7`,
                     { signal: AbortSignal.timeout(15000) }
@@ -102,7 +120,7 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
 
         load();
         return () => { active = false; };
-    }, [lat, lng]);
+    }, [lat, lng, city]);
 
     // ── Sem coordenadas ───────────────────────────────────────────────────────
     if (!hasCoords) {
