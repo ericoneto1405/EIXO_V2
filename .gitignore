@@ -16,6 +16,8 @@ dist-ssr
 !.env.example
 !server/.env.example
 
+server/backups/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

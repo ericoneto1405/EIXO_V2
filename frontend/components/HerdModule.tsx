@@ -1181,62 +1181,62 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                     <table className="w-full text-left text-sm text-[var(--eixo-text-muted)]">
                         <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                             <tr>
-                                <th scope="col" className="px-4 py-3">
+                                <th scope="col" className="px-4 py-3 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('identificacao')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>ID</span>
                                         <span>{getSortIndicator('identificacao')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5">Registro</th>
-                                <th scope="col" className="px-4 py-2.5">
+                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">Registro</th>
+                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('raca')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>Raça</span>
                                         <span>{getSortIndicator('raca')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5">
+                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('sexo')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>Sexo</span>
                                         <span>{getSortIndicator('sexo')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5">
+                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('idade')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>Idade</span>
                                         <span>{getSortIndicator('idade')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5">
+                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('pasto')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>Pasto</span>
                                         <span>{getSortIndicator('pasto')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5">
+                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('lote')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>Lote</span>
                                         <span>{getSortIndicator('lote')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5">
+                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('categoria')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>Categoria</span>
                                         <span>{getSortIndicator('categoria')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5">
+                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('pesoAtual')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>Peso Atual</span>
                                         <span>{getSortIndicator('pesoAtual')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5">
+                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('gmd')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>GMD</span>
                                         <span>{getSortIndicator('gmd')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5">Nutrição</th>
+                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">Nutrição</th>
                                 <th scope="col" className="px-6 py-3 text-center">Ações</th>
                             </tr>
                         </thead>
@@ -1279,7 +1279,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                             setSelectedAnimal(animal);
                                         }}
                                     >
-                                        <th scope="row" className="whitespace-nowrap px-4 py-3 font-bold text-[var(--eixo-text)]">
+                                        <th scope="row" className="whitespace-nowrap border-r border-[var(--eixo-border)] px-4 py-3 font-bold text-[var(--eixo-text)]">
                                             <div>{animal.identificacao}</div>
                                             <div className="mt-1">
                                                 <span className="rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
@@ -1287,24 +1287,24 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                                 </span>
                                             </div>
                                         </th>
-                                        <td className="px-4 py-3">
+                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {animal.registro
                                                 ? <span className="inline-flex items-center rounded-full bg-[#f0f9d4] px-2.5 py-0.5 text-xs font-semibold text-[#3a5c10] border border-[#B6E23A]">{animal.registro}</span>
                                                 : <span className="text-[var(--eixo-text-muted)]">—</span>
                                             }
                                         </td>
-                                        <td className="px-4 py-3">{animal.raca}</td>
-                                        <td className="px-4 py-3">{animal.sexo}</td>
-                                        <td className="px-4 py-3">{calculateAge(animal.dataNascimento)}</td>
-                                        <td className="px-4 py-3">{animal.currentPaddockName || '—'}</td>
-                                        <td className="px-4 py-3">{lots.find((l) => l.id === animal.lotId)?.name || '—'}</td>
-                                        <td className="px-4 py-3">{animal.categoria || '—'}</td>
-                                        <td className="px-4 py-3">
+                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.raca}</td>
+                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.sexo}</td>
+                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{calculateAge(animal.dataNascimento)}</td>
+                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.currentPaddockName || '—'}</td>
+                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{lots.find((l) => l.id === animal.lotId)?.name || '—'}</td>
+                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.categoria || '—'}</td>
+                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {animal.pesoAtual !== null && animal.pesoAtual !== undefined
                                                 ? `${animal.pesoAtual} kg`
                                                 : '—'}
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="border-r border-[var(--eixo-border)] px-6 py-4">
                                             {(() => {
                                                 const g30 = animal.gmd30 ?? null;
                                                 const gLast = animal.gmdLast ?? animal.gmd ?? null;
@@ -1334,7 +1334,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                                 );
                                             })()}
                                         </td>
-                                        <td className="px-4 py-3">
+                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {animal.nutritionPlan?.nome || '—'}
                                         </td>
                                         <td className="px-6 py-4 text-center" onClick={(event) => event.stopPropagation()}>
