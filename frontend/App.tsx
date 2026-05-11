@@ -1040,7 +1040,7 @@ const AppContent: React.FC = () => {
                         allowedModules={currentAllowedModules}
                         lockedModules={blockedPlanLabels}
                     />
-                    <main className="flex min-h-screen flex-1 flex-col overflow-hidden px-4 pb-4 pt-4 lg:pl-2 lg:pr-6 lg:pb-6 lg:pt-6">
+                    <main className="flex min-h-screen flex-1 flex-col overflow-hidden px-4 pb-4 pt-4 lg:pl-[4px] lg:pr-6 lg:pb-6 lg:pt-6">
                         <Header
                             farms={farms}
                             selectedFarmId={selectedFarmId}
