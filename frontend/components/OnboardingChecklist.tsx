@@ -133,7 +133,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
             : { label: 'Cadastrar pastos', onClick: () => onNavigate('Fazendas') });
 
     return (
-        <div className="mb-6 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
+        <div className="mb-6 rounded-2xl border-2 border-[#B6E23A] bg-[var(--eixo-surface)] shadow-sm transition-all duration-200 hover:shadow-md">
             {/* Cabeçalho */}
             <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-4">
                 <div className="flex items-center gap-3">
@@ -224,7 +224,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
                     <button
                         type="button"
                         onClick={nextAction.onClick}
-                        className="rounded-xl border border-[var(--eixo-green)] px-3.5 py-2 text-sm font-semibold text-[var(--eixo-green)] transition-colors hover:bg-[var(--eixo-green-soft)]"
+                        className="rounded-xl border-2 border-[#5a8c00] bg-[#B6E23A] px-3.5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130]"
                     >
                         {nextAction.label}
                     </button>
