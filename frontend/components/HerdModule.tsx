@@ -1187,6 +1187,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                         <span>{getSortIndicator('identificacao')}</span>
                                     </button>
                                 </th>
+                                <th scope="col" className="px-4 py-2.5">Registro</th>
                                 <th scope="col" className="px-4 py-2.5">
                                     <button type="button" onClick={() => handleSort('raca')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>Raça</span>
@@ -1242,13 +1243,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={11} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
+                                    <td colSpan={12} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         Carregando animais...
                                     </td>
                                 </tr>
                             ) : sortedAnimals.length === 0 ? (
                                 <tr>
-                                    <td colSpan={11} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
+                                    <td colSpan={12} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         <div className="flex flex-col items-center gap-4">
                                             <div className="space-y-1">
                                                 <p className="text-base font-semibold text-[var(--eixo-text)]">
@@ -1285,10 +1286,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                                     {animal.tipoCadastro === 'PO' ? 'P.O.' : 'Comercial'}
                                                 </span>
                                             </div>
-                                            {animal.registro && (
-                                                <div className="text-xs text-[var(--eixo-text-muted)]">Registro: {animal.registro}</div>
-                                            )}
                                         </th>
+                                        <td className="px-4 py-3">
+                                            {animal.registro
+                                                ? <span className="inline-flex items-center rounded-full bg-[#f0f9d4] px-2.5 py-0.5 text-xs font-semibold text-[#3a5c10] border border-[#B6E23A]">{animal.registro}</span>
+                                                : <span className="text-[var(--eixo-text-muted)]">—</span>
+                                            }
+                                        </td>
                                         <td className="px-4 py-3">{animal.raca}</td>
                                         <td className="px-4 py-3">{animal.sexo}</td>
                                         <td className="px-4 py-3">{calculateAge(animal.dataNascimento)}</td>
