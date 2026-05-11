@@ -23,6 +23,70 @@ interface FarmRegistrationFormProps {
     onSaveAndReturn?: () => void;
 }
 
+// ─── Coordinate helpers ───────────────────────────────────────────────────────
+
+/** Converte DMS (graus°minutos'segundos"direção) para graus decimais */
+const dmsToDecimal = (s: string): number | null => {
+    const t = s.trim();
+    // DMS completo: 12°34'56.7"S  ou  12°34'56S
+    const mFull = t.match(/^(\d+(?:[.,]\d+)?)\s*°\s*(\d+(?:[.,]\d+)?)\s*['\u2019]\s*(\d+(?:[.,]\d+)?)\s*["\u201d\u2033]?\s*([NSEWnsew])?$/i);
+    if (mFull) {
+        const dec = parseFloat(mFull[1].replace(',', '.'))
+            + parseFloat(mFull[2].replace(',', '.')) / 60
+            + parseFloat(mFull[3].replace(',', '.')) / 3600;
+        const dir = mFull[4]?.toUpperCase() ?? '';
+        return isNaN(dec) ? null : (dir === 'S' || dir === 'W') ? -dec : dec;
+    }
+    // Graus + minutos decimais: 12°34.567'S
+    const mDM = t.match(/^(\d+(?:[.,]\d+)?)\s*°\s*(\d+(?:[.,]\d+)?)\s*['\u2019]\s*([NSEWnsew])?$/i);
+    if (mDM) {
+        const dec = parseFloat(mDM[1].replace(',', '.'))
+            + parseFloat(mDM[2].replace(',', '.')) / 60;
+        const dir = mDM[3]?.toUpperCase() ?? '';
+        return isNaN(dec) ? null : (dir === 'S' || dir === 'W') ? -dec : dec;
+    }
+    return null;
+};
+
+/** Converte qualquer string de coordenada para graus decimais */
+const parseCoordStr = (s: string): number | null => {
+    const n = parseFloat(s.trim().replace(',', '.'));
+    if (!isNaN(n)) return n;
+    return dmsToDecimal(s);
+};
+
+/**
+ * Detecta par lat,lng colado de uma só vez (ex: Google Maps "-12.345, -39.123").
+ * Retorna [latStr, lngStr] formatados ou null.
+ */
+const tryParsePair = (raw: string): [string, string] | null => {
+    const s = raw.trim();
+    const candidates: Array<[string, string]> = [];
+
+    // Separadores explícitos: | ; vírgula+espaço
+    for (const sep of [/\s*\|\s*/, /\s*;\s*/, /,\s+/]) {
+        const parts = s.split(sep);
+        if (parts.length === 2) candidates.push([parts[0], parts[1]]);
+    }
+    // Vírgula imediatamente seguida de sinal (ex: "-12.3456,-39.1234")
+    const cm = s.split(/,(?=[-+])/);
+    if (cm.length === 2) candidates.push([cm[0], cm[1]]);
+    // Dois tokens separados por espaço (ex: "-12.3456 -39.1234")
+    const sp = s.split(/\s+/);
+    if (sp.length === 2) candidates.push([sp[0], sp[1]]);
+
+    for (const [a, b] of candidates) {
+        const lat = parseCoordStr(a);
+        const lng = parseCoordStr(b);
+        if (lat !== null && lng !== null && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+            return [lat.toFixed(6), lng.toFixed(6)];
+        }
+    }
+    return null;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     onFarmCreated,
     onFarmUpdated,
@@ -137,7 +201,30 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         setDivisions(divisions.map((division) => division.id === id ? { ...division, lotacaoUaHa: value } : division));
     };
 
-    const normalizeCoordinateInput = (value: string) => value.replace(',', '.');
+    /** Trata colagem: se detectar par lat/lng, preenche os dois campos */
+    const handlePasteCoord = React.useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+        const pasted = e.clipboardData.getData('text');
+        const pair = tryParsePair(pasted);
+        if (pair) {
+            e.preventDefault();
+            setFarmLat(pair[0]);
+            setFarmLng(pair[1]);
+        }
+    }, []);
+
+    /** No blur: normaliza DMS ou detecta par e preenche ambos */
+    const normalizeAndSetCoord = React.useCallback((raw: string, field: 'lat' | 'lng') => {
+        const pair = tryParsePair(raw);
+        if (pair) {
+            setFarmLat(pair[0]);
+            setFarmLng(pair[1]);
+            return;
+        }
+        const n = parseCoordStr(raw);
+        const formatted = (n !== null && !isNaN(n)) ? n.toFixed(6) : raw;
+        if (field === 'lat') setFarmLat(formatted);
+        else setFarmLng(formatted);
+    }, []);
 
     const handleGetGPS = () => {
         if (!navigator.geolocation) return;
@@ -378,7 +465,9 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 onSaveAndReturn?.();
                 return;
             }
-            setSubmitSuccess('Pastos salvos com sucesso.');
+            // mode === 'complete': concluir cadastro → volta para a lista
+            setSubmitSuccess('Cadastro concluído!');
+            onSaveAndReturn?.();
         } catch (error) {
             console.error(error);
             try {
@@ -396,7 +485,8 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     onSaveAndReturn?.();
                     return;
                 }
-                setSubmitSuccess('Pastos salvos com sucesso.');
+                setSubmitSuccess('Cadastro concluído!');
+                onSaveAndReturn?.();
             } catch (retryError) {
                 console.error(retryError);
                 setSubmitError('Não foi possível salvar os pastos. Verifique sua conexão.');
@@ -543,15 +633,37 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                     </svg>
                                     {gpsLoading ? 'Capturando...' : 'Usar minha localização atual'}
                                 </button>
-                                <p className="text-xs text-[var(--eixo-text-muted)]">Use somente se estiver na fazenda agora. Ou preencha manualmente abaixo.</p>
+                                <p className="text-xs text-[var(--eixo-text-muted)]">
+                                    Use somente se estiver na fazenda agora. Ou cole as coordenadas do Google Maps nos campos abaixo — os dois são preenchidos automaticamente. Aceita também formato DMS (ex: <span className="font-mono">12°34'56"S</span>).
+                                </p>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label htmlFor="farmLat" className="block text-xs font-medium text-[var(--eixo-text)]">Latitude</label>
-                                        <input type="text" inputMode="decimal" id="farmLat" placeholder="-12.345678" value={farmLat} onChange={e => setFarmLat(e.target.value)} onBlur={e => setFarmLat(normalizeCoordinateInput(e.target.value.trim()))} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" />
+                                        <input
+                                            type="text"
+                                            inputMode="decimal"
+                                            id="farmLat"
+                                            placeholder="-12.345678"
+                                            value={farmLat}
+                                            onChange={e => setFarmLat(e.target.value)}
+                                            onBlur={e => normalizeAndSetCoord(e.target.value.trim(), 'lat')}
+                                            onPaste={handlePasteCoord}
+                                            className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                        />
                                     </div>
                                     <div>
                                         <label htmlFor="farmLng" className="block text-xs font-medium text-[var(--eixo-text)]">Longitude</label>
-                                        <input type="text" inputMode="decimal" id="farmLng" placeholder="-39.123456" value={farmLng} onChange={e => setFarmLng(e.target.value)} onBlur={e => setFarmLng(normalizeCoordinateInput(e.target.value.trim()))} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" />
+                                        <input
+                                            type="text"
+                                            inputMode="decimal"
+                                            id="farmLng"
+                                            placeholder="-39.123456"
+                                            value={farmLng}
+                                            onChange={e => setFarmLng(e.target.value)}
+                                            onBlur={e => normalizeAndSetCoord(e.target.value.trim(), 'lng')}
+                                            onPaste={handlePasteCoord}
+                                            className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                        />
                                     </div>
                                 </div>
                                 {farmLat && farmLng && (
