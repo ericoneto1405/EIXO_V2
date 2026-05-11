@@ -482,6 +482,7 @@ const serializeAnimal = (animal) => ({
     gmd: animal.gmd ?? null,
     gmdLast: animal.gmd ?? null,
     gmd30: animal.gmd30 ?? null,
+    dataUltimaPesagem: animal.pesagens?.[0]?.data?.toISOString?.() ?? null,
     farmId: animal.farmId,
     lotId: animal.lotId,
     currentPaddockId: animal.currentPaddockId ?? null,
@@ -5491,7 +5492,14 @@ app.get('/po/animals', async (req, res) => {
                 farmId: farm.id,
                 ...(lotId ? { lotId: String(lotId) } : {}),
             },
-            include: { currentPaddock: true },
+            include: {
+                currentPaddock: true,
+                pesagens: {
+                    orderBy: { data: 'desc' },
+                    take: 1,
+                    select: { data: true },
+                },
+            },
             orderBy: { createdAt: 'desc' },
         });
 
@@ -7166,7 +7174,10 @@ app.get('/animals', async (req, res) => {
                 farm: buildFarmRelationFilter(req),
                 ...(lotId ? { lotId: String(lotId) } : {}),
             },
-            include: { currentPaddock: true },
+            include: {
+                currentPaddock: true,
+                pesagens: { orderBy: { data: 'desc' }, take: 1, select: { data: true } },
+            },
             orderBy: { createdAt: 'desc' },
         });
 

@@ -86,6 +86,7 @@ export interface AnimalUI {
     sexo: string;
     dataNascimento?: string | null;
     pesoAtual: number | null;
+    dataUltimaPesagem?: string | null;
     gmd: number | null;
     gmdLast?: number | null;
     gmd30?: number | null;

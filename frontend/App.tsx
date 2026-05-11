@@ -258,6 +258,7 @@ const AppContent: React.FC = () => {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [farms, setFarms] = useState<Farm[]>([]);
     const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
+    const [paddocksRefreshNonce, setPaddocksRefreshNonce] = useState(0);
     const isSuperAdmin = React.useMemo(() => currentUser?.roles?.includes('SUPER_ADMIN') ?? false, [currentUser]);
     const canManageUsers = React.useMemo(() => {
         const normalizedRoles = (currentUser?.roles || []).map((role) => String(role || '').trim().toLowerCase());
@@ -519,6 +520,7 @@ const AppContent: React.FC = () => {
                 return [...current, farm];
             });
             setSelectedFarmId(farm.id);
+            setPaddocksRefreshNonce((current) => current + 1);
             setActiveView('Visão Geral');
         },
         [],
@@ -526,6 +528,7 @@ const AppContent: React.FC = () => {
 
     const handleFarmUpdated = React.useCallback((farm: Farm) => {
         setFarms((current) => current.map((item) => (item.id === farm.id ? farm : item)));
+        setPaddocksRefreshNonce((current) => current + 1);
         if (selectedFarmId === farm.id) {
             setSelectedFarmId(farm.id);
         }
@@ -949,6 +952,7 @@ const AppContent: React.FC = () => {
                     <HerdModule
                         farmId={selectedFarmId}
                         farmName={selectedFarm?.name}
+                        paddocksRefreshNonce={paddocksRefreshNonce}
                         isFreePlan={isFreePlan}
                         initialTabRequest={herdTabRequest}
                         onUpgradeRequest={() => setUpgradeModal('Plano pago')}
@@ -968,6 +972,7 @@ const AppContent: React.FC = () => {
                     <HerdModule
                         farmId={selectedFarmId}
                         farmName={selectedFarm?.name}
+                        paddocksRefreshNonce={paddocksRefreshNonce}
                         isFreePlan={isFreePlan}
                         initialTabRequest={herdTabRequest}
                         onUpgradeRequest={() => setUpgradeModal('Plano pago')}

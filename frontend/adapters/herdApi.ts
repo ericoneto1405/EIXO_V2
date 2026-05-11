@@ -118,6 +118,7 @@ const normalizeAnimal = (animal: any): HerdAnimal => {
         sexo: getSexoLabel(animal.sexo),
         dataNascimento: animal.dataNascimento,
         pesoAtual: typeof animal.pesoAtual === 'number' ? animal.pesoAtual : null,
+        dataUltimaPesagem: animal.dataUltimaPesagem || null,
         gmd: typeof animal.gmd === 'number' ? animal.gmd : null,
         gmdLast: typeof animal.gmdLast === 'number' ? animal.gmdLast : null,
         gmd30: typeof animal.gmd30 === 'number' ? animal.gmd30 : null,

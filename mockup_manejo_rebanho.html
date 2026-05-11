@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>EIXO — Mockup Manejo do Rebanho</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #EDEDED; font-family: 'Inter', sans-serif; font-size: 14px; color: #2F2F2F; }
+
+  .layout { display: flex; height: 100vh; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar { width: 210px; background: #2F2F2F; flex-shrink: 0; display: flex; flex-direction: column; padding: 16px 12px; gap: 2px; overflow-y: auto; }
+  .sidebar-logo { color: #fff; font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 22px; padding: 8px 8px 20px; letter-spacing: 1px; }
+  .sidebar-logo span { color: #B6E23A; }
+  .sidebar-section { font-size: 10px; color: #5E5E5E; padding: 10px 8px 4px; text-transform: uppercase; letter-spacing: 0.8px; font-weight: 600; }
+  .sidebar-item { padding: 9px 10px; border-radius: 10px; color: #EDEDED; font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; }
+  .sidebar-item:hover { background: rgba(255,255,255,0.08); }
+  .sidebar-item.active { background: #B6E23A; color: #1a1a1a; font-weight: 600; }
+  .sidebar-item .icon { font-size: 15px; width: 18px; text-align: center; }
+  .sidebar-item .lock { font-size: 10px; color: #5E5E5E; margin-left: auto; }
+
+  /* MAIN */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+  /* HEADER */
+  .header { background: white; padding: 10px 20px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #EDEDED; flex-shrink: 0; }
+  .farm-selector { display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 20px; background: #EDEDED; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .farm-dot { width: 8px; height: 8px; background: #B6E23A; border-radius: 50%; flex-shrink: 0; }
+  .header-spacer { flex: 1; }
+  .alerts-chip { display: flex; align-items: center; gap: 6px; background: #fff8e1; border: 1px solid #ffe082; border-radius: 20px; padding: 6px 14px; font-size: 12px; color: #7a5c00; cursor: pointer; white-space: nowrap; }
+  .alerts-count { background: #f59e0b; color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; flex-shrink: 0; }
+  .user-chip { display: flex; align-items: center; gap: 8px; padding: 7px 14px; border-radius: 20px; background: #EDEDED; cursor: pointer; font-size: 13px; font-weight: 500; }
+
+  /* CONTENT */
+  .content { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  /* ONBOARDING BANNER SLIM */
+  .onboarding-banner { background: white; border-radius: 16px; padding: 14px 18px; display: flex; align-items: center; gap: 16px; border-left: 4px solid #B6E23A; flex-shrink: 0; }
+  .ob-icon { width: 38px; height: 38px; background: #f0f9d4; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .ob-text { flex: 1; min-width: 0; }
+  .ob-title { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 13px; color: #2F2F2F; }
+  .ob-progress { display: flex; align-items: center; gap: 8px; margin-top: 5px; flex-wrap: wrap; }
+  .ob-step { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #5E5E5E; }
+  .ob-step .check { width: 18px; height: 18px; background: #B6E23A; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #1a1a1a; font-weight: 700; flex-shrink: 0; }
+  .ob-step .num { width: 18px; height: 18px; background: #EDEDED; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #5E5E5E; font-weight: 700; flex-shrink: 0; }
+  .ob-arrow { color: #EDEDED; font-size: 14px; }
+  .ob-cta { background: #B6E23A; color: #1a1a1a; border: none; border-radius: 12px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; white-space: nowrap; flex-shrink: 0; }
+  .ob-cta:hover { background: #a3d130; }
+  .ob-close { color: #5E5E5E; cursor: pointer; font-size: 20px; padding: 0 4px; flex-shrink: 0; line-height: 1; }
+  .ob-close:hover { color: #2F2F2F; }
+
+  /* PAGE HEADER */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .page-title-block h1 { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 24px; color: #2F2F2F; }
+  .page-title-block .subtitle { font-size: 13px; color: #5E5E5E; margin-top: 3px; }
+
+  /* ACTIONS */
+  .actions-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .btn-primary { background: #B6E23A; color: #1a1a1a; border: none; border-radius: 12px; padding: 10px 18px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: 'Inter', sans-serif; transition: background 0.15s; }
+  .btn-primary:hover { background: #a3d130; }
+  .btn-secondary { background: white; color: #2F2F2F; border: 1px solid #EDEDED; border-radius: 12px; padding: 9px 14px; font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: 'Inter', sans-serif; transition: background 0.15s; }
+  .btn-secondary:hover { background: #EDEDED; }
+  .btn-ghost { background: transparent; color: #5E5E5E; border: 1px dashed #ccc; border-radius: 12px; padding: 9px 14px; font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 5px; font-family: 'Inter', sans-serif; transition: background 0.15s; }
+  .btn-ghost:hover { background: #EDEDED; color: #2F2F2F; }
+  .actions-divider { width: 1px; height: 30px; background: #EDEDED; }
+
+  /* CARD */
+  .card { background: white; border-radius: 20px; overflow: hidden; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 6px; padding: 16px 16px 0; border-bottom: 1px solid #EDEDED; overflow-x: auto; }
+  .tab { padding: 9px 16px; border-radius: 10px 10px 0 0; font-size: 13px; font-weight: 500; cursor: pointer; color: #5E5E5E; border: none; background: transparent; font-family: 'Inter', sans-serif; white-space: nowrap; transition: background 0.15s; }
+  .tab.active { background: #B6E23A; color: #1a1a1a; font-weight: 700; }
+  .tab:hover:not(.active) { background: #EDEDED; color: #2F2F2F; }
+
+  /* FILTROS */
+  .filters-bar { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #EDEDED; }
+  .filters-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .search-box { flex: 1; min-width: 200px; display: flex; align-items: center; gap: 8px; background: #EDEDED; border-radius: 12px; padding: 9px 14px; }
+  .search-box input { background: transparent; border: none; outline: none; font-size: 13px; color: #2F2F2F; width: 100%; font-family: 'Inter', sans-serif; }
+  .search-box input::placeholder { color: #5E5E5E; }
+  .filter-select { background: #EDEDED; border: 1px solid transparent; border-radius: 12px; padding: 9px 32px 9px 12px; font-size: 12px; color: #2F2F2F; cursor: pointer; font-family: 'Inter', sans-serif; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%235E5E5E' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; transition: border-color 0.15s; }
+  .filter-select:focus { outline: none; border-color: #B6E23A; }
+  .filter-tag-quick { display: flex; align-items: center; gap: 5px; background: #f0f9d4; border: 1px solid #c5e875; border-radius: 20px; padding: 6px 12px; font-size: 11px; color: #3a5c10; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background 0.15s; }
+  .filter-tag-quick:hover { background: #e0f4a0; }
+  .filter-input { width: 80px; padding: 8px 10px; border-radius: 10px; border: 1px solid #EDEDED; font-size: 12px; font-family: 'Inter', sans-serif; background: #EDEDED; color: #2F2F2F; }
+  .filter-input:focus { outline: none; border-color: #B6E23A; }
+  .filter-label { font-size: 12px; color: #5E5E5E; font-weight: 600; white-space: nowrap; }
+  .btn-clear { background: none; border: none; color: #5E5E5E; font-size: 12px; cursor: pointer; padding: 6px 10px; border-radius: 8px; font-family: 'Inter', sans-serif; }
+  .btn-clear:hover { background: #EDEDED; color: #2F2F2F; }
+
+  /* STATS BAR */
+  .stats-bar { padding: 12px 16px; display: flex; gap: 0; background: #fafafa; border-bottom: 1px solid #EDEDED; overflow-x: auto; }
+  .stat { display: flex; flex-direction: column; gap: 2px; padding: 0 20px; }
+  .stat:first-child { padding-left: 0; }
+  .stat-label { font-size: 10px; color: #5E5E5E; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+  .stat-value { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 17px; color: #2F2F2F; }
+  .stat-value.green { color: #166534; }
+  .stat-value.warn { color: #b45309; }
+  .stats-divider { width: 1px; background: #EDEDED; flex-shrink: 0; }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 700; color: #5E5E5E; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #EDEDED; background: #fafafa; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid #EDEDED; transition: background 0.1s; }
+  tbody tr:hover { background: #fafafa; }
+  tbody td { padding: 12px 14px; font-size: 13px; color: #2F2F2F; vertical-align: middle; }
+  .td-id { font-weight: 700; font-family: 'Manrope', sans-serif; font-size: 14px; }
+  .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-m { background: #dbeafe; color: #1e40af; }
+  .badge-f { background: #fce7f3; color: #9d174d; }
+  .badge-cat { background: #f0f9d4; color: #3a5c10; }
+
+  /* GMD */
+  .gmd-cell { display: flex; align-items: center; gap: 8px; }
+  .gmd-bar { width: 44px; height: 7px; border-radius: 4px; background: #EDEDED; overflow: hidden; flex-shrink: 0; }
+  .gmd-fill { height: 100%; border-radius: 4px; }
+  .gmd-good { background: #86efac; }
+  .gmd-ok   { background: #fde68a; }
+  .gmd-bad  { background: #fca5a5; }
+  .gmd-text-good { color: #166534; font-weight: 700; font-size: 13px; }
+  .gmd-text-ok   { color: #92400e; font-weight: 700; font-size: 13px; }
+  .gmd-text-bad  { color: #991b1b; font-weight: 700; font-size: 13px; }
+
+  /* PESO */
+  .peso-cell { display: flex; flex-direction: column; gap: 1px; }
+  .peso-main { font-weight: 600; font-size: 13px; }
+  .peso-date { font-size: 10px; color: #5E5E5E; }
+  .peso-stale { color: #b45309 !important; }
+
+  /* QUICK ACTIONS */
+  .quick-actions { display: flex; gap: 5px; }
+  .qa-btn { background: #EDEDED; border: none; border-radius: 8px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; color: #5E5E5E; transition: background 0.15s; }
+  .qa-btn:hover { background: #e0e0e0; color: #2F2F2F; }
+  .qa-btn.green { background: #f0f9d4; color: #3a5c10; }
+  .qa-btn.green:hover { background: #B6E23A; color: #1a1a1a; }
+
+  /* LEGENDA */
+  .legend { padding: 14px 16px; background: #fafafa; border-top: 1px solid #EDEDED; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .legend-title { font-size: 11px; font-weight: 700; color: #5E5E5E; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #5E5E5E; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; }
+  .legend-spacer { flex: 1; }
+  .legend-note { font-size: 11px; color: #5E5E5E; }
+
+  /* ANOTAÇÕES */
+  .annotations-card { background: white; border-radius: 20px; padding: 20px; }
+  .ann-header { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 15px; color: #2F2F2F; margin-bottom: 14px; }
+  .ann-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .ann-group-title { font-size: 11px; font-weight: 700; color: #5E5E5E; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; }
+  .ann-item { display: flex; align-items: flex-start; gap: 9px; padding: 10px 12px; border-radius: 12px; margin-bottom: 6px; }
+  .ann-item.problem  { background: #fff0f0; }
+  .ann-item.solution { background: #f0f9d4; }
+  .ann-item.pecuaria { background: #eff6ff; }
+  .ann-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .ann-text { font-size: 12px; color: #2F2F2F; line-height: 1.55; }
+  .ann-text strong { font-weight: 700; }
+
+  input[type=checkbox] { accent-color: #B6E23A; width: 15px; height: 15px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">EI<span>X</span>O</div>
+    <div class="sidebar-section">Principal</div>
+    <div class="sidebar-item"><span class="icon">⊞</span> Visão Geral</div>
+    <div class="sidebar-item"><span class="icon">◎</span> Estrutura da Fazenda</div>
+    <div class="sidebar-item active"><span class="icon">◈</span> Manejo do Rebanho</div>
+    <div class="sidebar-item"><span class="icon">◉</span> Financeiro</div>
+    <div class="sidebar-section">Produção</div>
+    <div class="sidebar-item"><span class="icon">⊕</span> Nutrição</div>
+    <div class="sidebar-item"><span class="icon">♡</span> Eixo Acasalamento</div>
+    <div class="sidebar-item"><span class="icon">≡</span> Reprodução</div>
+    <div class="sidebar-item"><span class="icon">⚡</span> Confinamento e Contratos</div>
+    <div class="sidebar-section">Gestão</div>
+    <div class="sidebar-item"><span class="icon">↻</span> Gestão Comercial <span class="lock">🔒</span></div>
+    <div class="sidebar-item"><span class="icon">☰</span> Registro de Atividades</div>
+    <div class="sidebar-item"><span class="icon">📱</span> Ocorrências do Campo</div>
+    <div class="sidebar-item"><span class="icon">🧪</span> Botijão de Sêmen</div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="farm-selector"><div class="farm-dot"></div>Lagoa do Capim ▾</div>
+      <div class="header-spacer"></div>
+      <div class="alerts-chip">⚠️ <div class="alerts-count">2</div> Alertas de infraestrutura</div>
+      <div class="user-chip">SA &nbsp;Suporte ▾</div>
+    </div>
+
+    <!-- CONTENT -->
+    <div class="content">
+
+      <!-- ONBOARDING SLIM -->
+      <div class="onboarding-banner">
+        <div class="ob-icon">📋</div>
+        <div class="ob-text">
+          <div class="ob-title">Evolução do Manejo — 1 de 2 concluídos</div>
+          <div class="ob-progress">
+            <div class="ob-step"><div class="check">✓</div>&nbsp;Animais cadastrados</div>
+            <div class="ob-arrow">→</div>
+            <div class="ob-step"><div class="num">2</div>&nbsp;Registrar 1ª pesagem</div>
+          </div>
+        </div>
+        <button class="ob-cta">Registrar pesagem</button>
+        <span class="ob-close" title="Fechar">×</span>
+      </div>
+
+      <!-- PAGE HEADER + AÇÕES -->
+      <div class="page-header">
+        <div class="page-title-block">
+          <h1>Manejo do Rebanho</h1>
+          <div class="subtitle">Lagoa do Capim · 247 animais ativos</div>
+        </div>
+        <div class="actions-row">
+          <button class="btn-primary">＋ Adicionar animal</button>
+          <button class="btn-secondary">🐄 Registrar nascimento</button>
+          <button class="btn-secondary">📦 Entrada de lote</button>
+          <div class="actions-divider"></div>
+          <button class="btn-secondary">⬆ Importar planilha</button>
+          <button class="btn-ghost">⬇ Baixar modelo</button>
+        </div>
+      </div>
+
+      <!-- CARD PRINCIPAL -->
+      <div class="card">
+
+        <!-- TABS -->
+        <div class="tabs">
+          <button class="tab">Visão do Rebanho</button>
+          <button class="tab active">Animais</button>
+          <button class="tab">Pastos</button>
+          <button class="tab">Lotes</button>
+          <button class="tab">Pesagens</button>
+          <button class="tab">Configurações</button>
+        </div>
+
+        <!-- FILTROS -->
+        <div class="filters-bar">
+          <div class="filters-row">
+            <div class="search-box">
+              <span style="color:#5E5E5E;font-size:15px;">🔍</span>
+              <input type="text" placeholder="Buscar por brinco, raça ou registro...">
+            </div>
+            <select class="filter-select">
+              <option>Todas as categorias</option>
+              <option>Bezerro</option>
+              <option>Novilha</option>
+              <option>Vaca</option>
+              <option>Touro</option>
+              <option>Boi</option>
+            </select>
+            <select class="filter-select">
+              <option>Todos os sexos</option>
+              <option>Macho</option>
+              <option>Fêmea</option>
+            </select>
+            <select class="filter-select">
+              <option>Todos os pastos</option>
+              <option>Pasto 1</option>
+              <option>Pasto 2</option>
+              <option>Pasto 3</option>
+            </select>
+            <select class="filter-select">
+              <option>Todos os lotes</option>
+              <option>Lote A</option>
+              <option>Lote B</option>
+            </select>
+            <button class="btn-clear">Limpar filtros</button>
+          </div>
+          <div class="filters-row">
+            <span class="filter-label">GMD:</span>
+            <input class="filter-input" type="number" placeholder="Mín">
+            <input class="filter-input" type="number" placeholder="Máx">
+            <input class="filter-input" type="text" placeholder="Raça..." style="width:120px;">
+            <div style="flex:1;"></div>
+            <div class="filter-tag-quick">⚠️ Sem pesagem +30 dias</div>
+            <div class="filter-tag-quick">📉 GMD abaixo da meta</div>
+          </div>
+        </div>
+
+        <!-- STATS BAR -->
+        <div class="stats-bar">
+          <div class="stat">
+            <div class="stat-label">Total animais</div>
+            <div class="stat-value">247</div>
+          </div>
+          <div class="stats-divider"></div>
+          <div class="stat" style="padding-left:20px;">
+            <div class="stat-label">GMD médio</div>
+            <div class="stat-value green">0,72 kg/dia</div>
+          </div>
+          <div class="stats-divider"></div>
+          <div class="stat" style="padding-left:20px;">
+            <div class="stat-label">Sem pesagem &gt;30d</div>
+            <div class="stat-value warn">18 animais</div>
+          </div>
+          <div class="stats-divider"></div>
+          <div class="stat" style="padding-left:20px;">
+            <div class="stat-label">Peso médio atual</div>
+            <div class="stat-value">386 kg</div>
+          </div>
+          <div class="stats-divider"></div>
+          <div class="stat" style="padding-left:20px;">
+            <div class="stat-label">GMD bom (&gt;0,7)</div>
+            <div class="stat-value green">78%</div>
+          </div>
+          <div class="stats-divider"></div>
+          <div class="stat" style="padding-left:20px;">
+            <div class="stat-label">Abaixo da meta</div>
+            <div class="stat-value warn">22%</div>
+          </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:36px;"><input type="checkbox"></th>
+                <th>ID / Brinco</th>
+                <th>Raça</th>
+                <th>Categoria</th>
+                <th>Sexo</th>
+                <th>Idade</th>
+                <th>Pasto / Lote</th>
+                <th>Peso Atual <span style="font-weight:400;font-size:9px;color:#5E5E5E">▲ data pesagem</span></th>
+                <th>GMD</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td class="td-id">#1047</td>
+                <td>Nelore</td>
+                <td><span class="badge badge-cat">Boi</span></td>
+                <td><span class="badge badge-m">M</span></td>
+                <td>3a 2m</td>
+                <td>Pasto 3 / Lote A</td>
+                <td>
+                  <div class="peso-cell">
+                    <div class="peso-main">428 kg</div>
+                    <div class="peso-date">há 12 dias</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="gmd-cell">
+                    <div class="gmd-bar"><div class="gmd-fill gmd-good" style="width:90%"></div></div>
+                    <span class="gmd-text-good">0,82</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="quick-actions">
+                    <button class="qa-btn green" title="Registrar pesagem">⚖</button>
+                    <button class="qa-btn" title="Ver detalhes">👁</button>
+                    <button class="qa-btn" title="Mais ações">⋯</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td class="td-id">#1052</td>
+                <td>Nelore × AN</td>
+                <td><span class="badge badge-cat">Novilha</span></td>
+                <td><span class="badge badge-f">F</span></td>
+                <td>2a 1m</td>
+                <td>Pasto 1 / Lote B</td>
+                <td>
+                  <div class="peso-cell">
+                    <div class="peso-main">312 kg</div>
+                    <div class="peso-date">há 8 dias</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="gmd-cell">
+                    <div class="gmd-bar"><div class="gmd-fill gmd-ok" style="width:55%"></div></div>
+                    <span class="gmd-text-ok">0,51</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="quick-actions">
+                    <button class="qa-btn green" title="Registrar pesagem">⚖</button>
+                    <button class="qa-btn" title="Ver detalhes">👁</button>
+                    <button class="qa-btn" title="Mais ações">⋯</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td class="td-id">#0938</td>
+                <td>Angus</td>
+                <td><span class="badge badge-cat">Boi</span></td>
+                <td><span class="badge badge-m">M</span></td>
+                <td>3a 8m</td>
+                <td>Pasto 2 / Lote A</td>
+                <td>
+                  <div class="peso-cell">
+                    <div class="peso-main peso-stale">391 kg</div>
+                    <div class="peso-date peso-stale">⚠ há 47 dias</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="gmd-cell">
+                    <div class="gmd-bar"><div class="gmd-fill gmd-bad" style="width:28%"></div></div>
+                    <span class="gmd-text-bad">0,28</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="quick-actions">
+                    <button class="qa-btn green" title="Registrar pesagem">⚖</button>
+                    <button class="qa-btn" title="Ver detalhes">👁</button>
+                    <button class="qa-btn" title="Mais ações">⋯</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td class="td-id">#1103</td>
+                <td>Brahman</td>
+                <td><span class="badge badge-cat">Bezerro</span></td>
+                <td><span class="badge badge-m">M</span></td>
+                <td>8m</td>
+                <td>Pasto 1 / Lote C</td>
+                <td>
+                  <div class="peso-cell">
+                    <div class="peso-main">198 kg</div>
+                    <div class="peso-date">há 5 dias</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="gmd-cell">
+                    <div class="gmd-bar"><div class="gmd-fill gmd-good" style="width:75%"></div></div>
+                    <span class="gmd-text-good">0,73</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="quick-actions">
+                    <button class="qa-btn green" title="Registrar pesagem">⚖</button>
+                    <button class="qa-btn" title="Ver detalhes">👁</button>
+                    <button class="qa-btn" title="Mais ações">⋯</button>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td><input type="checkbox"></td>
+                <td class="td-id">#0871</td>
+                <td>Nelore</td>
+                <td><span class="badge badge-cat">Vaca</span></td>
+                <td><span class="badge badge-f">F</span></td>
+                <td>5a 4m</td>
+                <td>Pasto 4 / Lote D</td>
+                <td>
+                  <div class="peso-cell">
+                    <div class="peso-main peso-stale">449 kg</div>
+                    <div class="peso-date peso-stale">⚠ há 38 dias</div>
+                  </div>
+                </td>
+                <td>
+                  <div class="gmd-cell">
+                    <div class="gmd-bar"><div class="gmd-fill gmd-ok" style="width:45%"></div></div>
+                    <span class="gmd-text-ok">0,44</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="quick-actions">
+                    <button class="qa-btn green" title="Registrar pesagem">⚖</button>
+                    <button class="qa-btn" title="Ver detalhes">👁</button>
+                    <button class="qa-btn" title="Mais ações">⋯</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- LEGENDA -->
+        <div class="legend">
+          <span class="legend-title">GMD:</span>
+          <div class="legend-item"><div class="legend-dot" style="background:#86efac"></div>Bom (&gt;0,7 kg/dia)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#fde68a"></div>Regular (0,4–0,7)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#fca5a5"></div>Abaixo da meta (&lt;0,4)</div>
+          <div class="legend-spacer"></div>
+          <span class="legend-note">⚠ Peso em laranja = pesagem há mais de 30 dias</span>
+        </div>
+
+      </div><!-- /card -->
+
+      <!-- PAINEL DE ANÁLISE -->
+      <div class="annotations-card">
+        <div class="ann-header">🔍 O que foi melhorado neste redesign</div>
+        <div class="ann-grid">
+          <div>
+            <div class="ann-group-title">🎨 UI / UX</div>
+            <div class="ann-item problem">
+              <span class="ann-icon">❌</span>
+              <div class="ann-text"><strong>Título abaixo dos botões</strong> — confunde hierarquia. Agora o título vem primeiro, ações alinhadas à direita.</div>
+            </div>
+            <div class="ann-item problem">
+              <span class="ann-icon">❌</span>
+              <div class="ann-text"><strong>5 botões primários concorrentes</strong> — nenhum se destaca. Agora: 1 primário verde, 2 secundários, 2 terciários com hierarquia clara.</div>
+            </div>
+            <div class="ann-item problem">
+              <span class="ann-icon">❌</span>
+              <div class="ann-text"><strong>Card de onboarding enorme</strong> ocupava ~25% da tela. Agora é um banner slim fechável.</div>
+            </div>
+            <div class="ann-item problem">
+              <span class="ann-icon">❌</span>
+              <div class="ann-text"><strong>Chip "LAGOA DO CAPIM" duplicado</strong> na barra de ações — já existe no header. Removido.</div>
+            </div>
+            <div class="ann-item solution">
+              <span class="ann-icon">✅</span>
+              <div class="ann-text"><strong>Stats bar</strong> acima da tabela: GMD médio, alertas, total — contexto imediato antes de navegar pelos dados.</div>
+            </div>
+          </div>
+          <div>
+            <div class="ann-group-title">🐄 Pecuária de Corte</div>
+            <div class="ann-item pecuaria">
+              <span class="ann-icon">📊</span>
+              <div class="ann-text"><strong>GMD com barra colorida</strong> — de relance o produtor vê quais animais estão abaixo da meta. Sem precisar ler número por número.</div>
+            </div>
+            <div class="ann-item pecuaria">
+              <span class="ann-icon">📅</span>
+              <div class="ann-text"><strong>Peso + data da pesagem</strong> — peso sem data é dado incompleto. Alerta em laranja quando passou de 30 dias sem pesar.</div>
+            </div>
+            <div class="ann-item pecuaria">
+              <span class="ann-icon">⚖</span>
+              <div class="ann-text"><strong>Ação rápida de pesagem</strong> direto na linha — sem precisar abrir a ficha do animal. Agiliza o trabalho operacional.</div>
+            </div>
+            <div class="ann-item pecuaria">
+              <span class="ann-icon">🏷</span>
+              <div class="ann-text"><strong>Categoria como filtro principal</strong> — bezerro, novilha, vaca, touro, boi. O filtro mais usado na prática, mas que estava só na tabela.</div>
+            </div>
+            <div class="ann-item pecuaria">
+              <span class="ann-icon">🔎</span>
+              <div class="ann-text"><strong>Filtros rápidos</strong>: "Sem pesagem +30 dias" e "GMD abaixo da meta" — os dois alertas mais críticos para o produtor, com um clique.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div>
+</body>
+</html>
