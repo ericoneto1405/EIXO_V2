@@ -37,6 +37,7 @@ import TeamPermissions from './components/TeamPermissions';
 import UpgradeScreen from './components/UpgradeScreen';
 import HQPage from './components/HQPage';
 import ProfileModal from './components/ProfileModal';
+import OnboardingSpotlight from './components/OnboardingSpotlight';
 import { Alert, Farm, WebUserCreatePayload } from './types';
 import { createWebUser } from './adapters/usersApi';
 
@@ -408,33 +409,16 @@ const AppContent: React.FC = () => {
     );
 
     const FirstFarmOnboarding: React.FC = () => (
-        <div className="flex h-full flex-col items-center justify-center py-16 text-center">
-            <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-[var(--eixo-surface-soft)]">
-                <svg className="h-10 w-10 text-[var(--eixo-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                        d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                </svg>
-            </div>
-            <h2 className="font-brand text-2xl font-extrabold text-[var(--eixo-graphite)]">
-                Vamos cadastrar sua primeira fazenda
-            </h2>
-            <p className="mt-3 max-w-sm text-sm text-[var(--eixo-text-muted)]">
-                Esse é o primeiro passo para começar a usar o sistema com rebanho, financeiro e operação.
-            </p>
-            <button
-                type="button"
-                onClick={handleRegisterFarmView}
-                className="mt-8 flex h-11 items-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 font-brand font-bold text-[#1a1a1a] shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
-            >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Cadastrar fazenda
-            </button>
-            <p className="mt-4 text-xs text-[var(--eixo-text-soft)]">
-                Leva menos de 1 minuto
-            </p>
-        </div>
+        <OnboardingSpotlight
+            step={1}
+            totalSteps={3}
+            title="Cadastre sua primeira fazenda"
+            description="Esse é o primeiro passo para usar o sistema com rebanho, financeiro e operação."
+            actionLabel="Cadastrar fazenda"
+            onAction={handleRegisterFarmView}
+            hint="Leva menos de 1 minuto"
+            iconPath="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+        />
     );
 
     const AppOnlyAccessPanel: React.FC = () => (

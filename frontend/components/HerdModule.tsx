@@ -7,6 +7,7 @@ import LotDetailModal from './LotDetailModal';
 import LotePurchaseModal from './LotePurchaseModal';
 import WeighingsTab from './WeighingsTab';
 import HerdSettingsTab from './HerdSettingsTab';
+import OnboardingSpotlight from './OnboardingSpotlight';
 import {
     HerdAnimal,
     HerdLot,
@@ -1399,24 +1400,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             ) : sortedAnimals.length === 0 ? (
                                 <tr>
                                     <td colSpan={13} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
-                                        <div className="flex flex-col items-center gap-4">
-                                            <div className="space-y-1">
-                                                <p className="text-base font-semibold text-[var(--eixo-text)]">
-                                                    Nenhum animal encontrado
-                                                </p>
-                                                <p>Use os botões acima para adicionar animais.</p>
-                                            </div>
-                                            <div className="flex flex-wrap items-center justify-center gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={openAnimalForm}
-                                                    className="flex items-center rounded-xl bg-[var(--eixo-green)] px-4 py-2 font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
-                                                >
-                                                    <PlusIcon />
-                                                    <span className="ml-2">Adicionar animal</span>
-                                                </button>
-                                            </div>
-                                        </div>
+                                        <OnboardingSpotlight
+                                            step={3}
+                                            totalSteps={3}
+                                            title="Adicione os animais do seu rebanho"
+                                            description="Importe uma planilha ou cadastre manualmente para começar a acompanhar seu rebanho."
+                                            actionLabel="Adicionar animal"
+                                            onAction={openAnimalForm}
+                                            iconPath="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+                                        />
                                     </td>
                                 </tr>
                             ) : (

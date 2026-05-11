@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import FarmRegistrationForm from './FarmRegistrationForm';
+import OnboardingSpotlight from './OnboardingSpotlight';
 import { Farm } from '../types';
 import { buildApiUrl } from '../api';
 
@@ -347,32 +348,15 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
             {/* Estado vazio de pastos — prioriza a base operacional da fazenda */}
             {!showForm && firstFarmWithoutPaddocks && (
                 <div className="mt-4 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-4">
-                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[var(--eixo-green-soft)]">
-                                <svg className="h-4 w-4 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                                </svg>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-base font-semibold text-[var(--eixo-text)]">Sua fazenda ainda não tem pastos cadastrados.</p>
-                                <p className="mt-1 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
-                                    Cadastre os pastos para organizar lotação, manejo e pesagens.
-                                </p>
-                                <p className="mt-2 text-xs font-medium text-[var(--eixo-text-soft)]">
-                                    Fazenda atual: {firstFarmWithoutPaddocks.name}
-                                </p>
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={handleRegisterPaddock}
-                            className="inline-flex flex-shrink-0 items-center rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
-                        >
-                            Cadastrar pasto
-                        </button>
-                    </div>
+                    <OnboardingSpotlight
+                        step={2}
+                        totalSteps={3}
+                        title="Cadastre os pastos da fazenda"
+                        description={`Organize lotação, manejo e pesagens. Fazenda: ${firstFarmWithoutPaddocks.name}`}
+                        actionLabel="Cadastrar pasto"
+                        onAction={handleRegisterPaddock}
+                        iconPath="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                    />
                 </div>
             )}
         </div>
