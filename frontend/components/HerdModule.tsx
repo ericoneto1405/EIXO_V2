@@ -424,6 +424,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+    const [selectedAnimals, setSelectedAnimals] = useState<Set<number>>(new Set());
     const [selectedAnimal, setSelectedAnimal] = useState<HerdAnimal | null>(null);
     const [selectedLot, setSelectedLot] = useState<HerdLot | null>(null);
     const [lotModalOpen, setLotModalOpen] = useState(false);
@@ -1181,6 +1182,24 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                     <table className="w-full text-left text-sm text-[var(--eixo-text-muted)]">
                         <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                             <tr>
+                                <th scope="col" className="w-10 px-4 py-3 border-r border-[var(--eixo-border)]">
+                                    <input
+                                        type="checkbox"
+                                        className="h-4 w-4 rounded border-[var(--eixo-border)] accent-[#B6E23A] cursor-pointer"
+                                        checked={paginatedAnimals.length > 0 && paginatedAnimals.every(a => selectedAnimals.has(a.id))}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setSelectedAnimals(prev => new Set([...prev, ...paginatedAnimals.map(a => a.id)]));
+                                            } else {
+                                                setSelectedAnimals(prev => {
+                                                    const next = new Set(prev);
+                                                    paginatedAnimals.forEach(a => next.delete(a.id));
+                                                    return next;
+                                                });
+                                            }
+                                        }}
+                                    />
+                                </th>
                                 <th scope="col" className="px-4 py-3 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('identificacao')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
                                         <span>ID</span>
@@ -1243,13 +1262,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={12} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
+                                    <td colSpan={13} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         Carregando animais...
                                     </td>
                                 </tr>
                             ) : sortedAnimals.length === 0 ? (
                                 <tr>
-                                    <td colSpan={12} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
+                                    <td colSpan={13} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         <div className="flex flex-col items-center gap-4">
                                             <div className="space-y-1">
                                                 <p className="text-base font-semibold text-[var(--eixo-text)]">
@@ -1279,6 +1298,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({ farmId, farmName, mode, herdTyp
                                             setSelectedAnimal(animal);
                                         }}
                                     >
+                                        <td className="w-10 border-r border-[var(--eixo-border)] px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                            <input
+                                                type="checkbox"
+                                                className="h-4 w-4 rounded border-[var(--eixo-border)] accent-[#B6E23A] cursor-pointer"
+                                                checked={selectedAnimals.has(animal.id)}
+                                                onChange={(e) => {
+                                                    setSelectedAnimals(prev => {
+                                                        const next = new Set(prev);
+                                                        if (e.target.checked) next.add(animal.id);
+                                                        else next.delete(animal.id);
+                                                        return next;
+                                                    });
+                                                }}
+                                            />
+                                        </td>
                                         <th scope="row" className="whitespace-nowrap border-r border-[var(--eixo-border)] px-4 py-3 font-bold text-[var(--eixo-text)]">
                                             <div>{animal.identificacao}</div>
                                             <div className="mt-1">
