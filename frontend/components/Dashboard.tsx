@@ -53,6 +53,7 @@ interface DashboardProps {
     farmCity?: string | null;
     farmLat?: number | null;
     farmLng?: number | null;
+    onNavigateToFarms?: () => void;
 }
 
 interface CategoryCount {
@@ -115,7 +116,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, icon, loading, children }) => 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmLat, farmLng }) => {
+const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmLat, farmLng, onNavigateToFarms }) => {
     const [kpis, setKpis] = useState<KpiData>({
         totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null,
         gmdMedio: null, entradas: null, saidas: null, saldoMes: null, animaisSemPesagem: 0,
@@ -421,7 +422,7 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmL
 
             {/* Clima + Notícias */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <WeatherCard city={farmCity ?? null} lat={farmLat} lng={farmLng} />
+                <WeatherCard city={farmCity ?? null} lat={farmLat} lng={farmLng} onNavigateToFarms={onNavigateToFarms} />
                 <CattleNewsCard />
             </div>
         </div>

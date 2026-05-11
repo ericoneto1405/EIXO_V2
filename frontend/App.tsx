@@ -1015,6 +1015,7 @@ const AppContent: React.FC = () => {
                     farmCity={selectedFarm?.city ?? null}
                     farmLat={selectedFarm?.lat ?? null}
                     farmLng={selectedFarm?.lng ?? null}
+                    onNavigateToFarms={() => setActiveView('Fazendas')}
                 />;
         }
     };
