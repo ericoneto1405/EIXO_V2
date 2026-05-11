@@ -186,7 +186,7 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
     // O botão de fechar já resolve — não auto-oculta sem interação do usuário
 
     return (
-        <div className="mb-6 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
+        <div className="mb-6 rounded-2xl border-2 border-[#B6E23A] bg-[var(--eixo-surface)] shadow-sm transition-all duration-200 hover:shadow-md">
             {/* Cabeçalho */}
             <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-4">
                 <div>
