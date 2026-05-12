@@ -204,6 +204,8 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
     const [docType, setDocType] = useState<'CNPJ' | 'CPF'>('CNPJ');
     const [docValue, setDocValue] = useState('');
     const [docError, setDocError] = useState<string | null>(null);
+    const [documentAlreadyExists, setDocumentAlreadyExists] = useState(false);
+    const [isCheckingDocument, setIsCheckingDocument] = useState(false);
     const [cnpjResult, setCnpjResult] = useState<CnpjResult | null>(null);
     const [isCnpjLoading, setIsCnpjLoading] = useState(false);
     const [cpfValid, setCpfValid] = useState(false);
@@ -219,6 +221,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
     const [resendCooldown, setResendCooldown] = useState(0);
     const [phoneEditCount, setPhoneEditCount] = useState(0);
     const lastAutoFetchedCnpjRef = useRef<string | null>(null);
+    const lastDocumentCheckRef = useRef<string | null>(null);
 
     const docDigits = docValue.replace(/\D/g, '');
     const cnpjIsActive = cnpjResult?.descricao_situacao_cadastral === 'ATIVA';
@@ -235,6 +238,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
         && isPasswordValid
         && isPasswordConfirmationValid
         && docVerified
+        && !documentAlreadyExists
         && phoneVerified
         && termsAccepted;
 
@@ -244,6 +248,9 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
         setDocError(null);
         setCnpjResult(null);
         setCpfValid(false);
+        setDocumentAlreadyExists(false);
+        setIsCheckingDocument(false);
+        lastDocumentCheckRef.current = null;
         setPhone('');
         setOtpCode('');
         setOtpSent(false);
@@ -256,6 +263,9 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
         const masked = docType === 'CNPJ' ? maskCNPJ(raw) : maskCPF(raw);
         setDocValue(masked);
         setDocError(null);
+        setDocumentAlreadyExists(false);
+        setIsCheckingDocument(false);
+        lastDocumentCheckRef.current = null;
         setCnpjResult(null);
 
         if (docType === 'CPF') {
@@ -270,6 +280,40 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
             } else {
                 setCpfValid(false);
             }
+        }
+    };
+
+    const checkDocumentAvailability = async (digits: string, type: 'CNPJ' | 'CPF') => {
+        const key = `${type}:${digits}`;
+        if (lastDocumentCheckRef.current === key) return;
+        lastDocumentCheckRef.current = key;
+        setIsCheckingDocument(true);
+        try {
+            const response = await fetch(buildApiUrl('/auth/register/check-document'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ document: digits, documentType: type }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (response.status === 409) {
+                setDocumentAlreadyExists(true);
+                setDocError(payload?.message || `${type} já está cadastrado em outra conta.`);
+                setPhone('');
+                setOtpCode('');
+                setOtpSent(false);
+                setPhoneVerified(false);
+                setOtpError(null);
+                return;
+            }
+            if (!response.ok) {
+                setDocError(payload?.message || 'Não foi possível validar este documento agora.');
+                return;
+            }
+            setDocumentAlreadyExists(Boolean(payload?.exists));
+        } catch {
+            setDocError('Não foi possível validar este documento agora.');
+        } finally {
+            setIsCheckingDocument(false);
         }
     };
 
@@ -297,6 +341,18 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
 
         return () => window.clearTimeout(timeoutId);
     }, [docType, docDigits, isCnpjLoading]);
+
+    useEffect(() => {
+        if (docType !== 'CPF') return;
+        if (docDigits.length !== 11 || !validateCPF(docDigits)) return;
+        void checkDocumentAvailability(docDigits, 'CPF');
+    }, [docType, docDigits]);
+
+    useEffect(() => {
+        if (docType !== 'CNPJ') return;
+        if (docDigits.length !== 14 || !validateCNPJ(docDigits)) return;
+        void checkDocumentAvailability(docDigits, 'CNPJ');
+    }, [docType, docDigits]);
 
     const maskPhone = (value: string): string => {
         const n = value.replace(/\D/g, '').slice(0, 11);
@@ -423,6 +479,10 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
             return;
         }
         if (!canSubmit) {
+            if (documentAlreadyExists) {
+                setError(`${docType} já está cadastrado em outra conta.`);
+                return;
+            }
             if (!termsAccepted) {
                 setError('Você precisa aceitar os Termos de Uso e a Política de Privacidade para continuar.');
                 return;
@@ -578,8 +638,12 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                 <p className="mt-2 text-xs text-[var(--eixo-danger)]">{docError}</p>
                                             )}
 
+                                            {isCheckingDocument && (
+                                                <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">Validando se este {docType} já está cadastrado...</p>
+                                            )}
+
                                             {/* CPF válido → etapa de celular */}
-                                            {docType === 'CPF' && cpfValid && (
+                                            {docType === 'CPF' && cpfValid && !documentAlreadyExists && !isCheckingDocument && (
                                                 <div className="mt-3 space-y-3">
                                                     <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
                                                         <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -655,7 +719,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                             )}
 
                                             {/* Celular + OTP para CNPJ ativo */}
-                                            {docType === 'CNPJ' && cnpjIsActive && (
+                                            {docType === 'CNPJ' && cnpjIsActive && !documentAlreadyExists && !isCheckingDocument && (
                                                 <div className="mt-3">
                                                     <PhoneVerification
                                                         docType="CNPJ"

@@ -18,7 +18,7 @@ model User {
   activeOrganizationId           String?
   createdAt                      DateTime                       @default(now())
   cnpjData                       Json?
-  document                       String?
+  document                       String?                        @unique
   documentType                   String?
   phone                          String?                        @unique
   avatarUrl                      String?

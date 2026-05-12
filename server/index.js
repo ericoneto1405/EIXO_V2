@@ -2273,6 +2273,35 @@ app.post('/auth/verify-otp', async (req, res) => {
 });
 // ─────────────────────────────────────────────────────────────────────────────
 
+app.post('/auth/register/check-document', async (req, res) => {
+    const { document, documentType } = req.body || {};
+    const normalizedDocument = typeof document === 'string' ? document.replace(/\D/g, '') : '';
+    const normalizedDocumentType = documentType === 'CNPJ' || documentType === 'CPF' ? documentType : null;
+
+    if (!normalizedDocumentType || !normalizedDocument) {
+        return res.status(400).json({ message: 'Informe um CPF ou CNPJ válido.' });
+    }
+
+    if (normalizedDocumentType === 'CNPJ' && !validateCNPJ(normalizedDocument)) {
+        return res.status(400).json({ message: 'CNPJ inválido. Verifique os dígitos.' });
+    }
+
+    if (normalizedDocumentType === 'CPF' && !validateCPF(normalizedDocument)) {
+        return res.status(400).json({ message: 'CPF inválido. Verifique os dígitos.' });
+    }
+
+    try {
+        const docExists = await prisma.user.findFirst({ where: { document: normalizedDocument } });
+        if (docExists) {
+            return res.status(409).json({ message: `${normalizedDocumentType} já está cadastrado em outra conta.`, exists: true });
+        }
+        return res.json({ exists: false });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Não foi possível validar o documento agora.' });
+    }
+});
+
 // ─── Consulta pública de CNPJ (Receita Federal) ──────────────────────────────
 app.get('/public/cnpj/:cnpj', async (req, res) => {
     const cnpj = req.params.cnpj.replace(/\D/g, '');
@@ -2442,6 +2471,9 @@ app.post('/register', async (req, res) => {
 
         return res.status(201).json({ user: sanitizeUser(newUser) });
     } catch (error) {
+        if (error?.code === 'P2002' && Array.isArray(error?.meta?.target) && error.meta.target.includes('document')) {
+            return res.status(409).json({ message: `${documentType} já está cadastrado em outra conta.` });
+        }
         if (error?.code === 'P2002' && Array.isArray(error?.meta?.target) && error.meta.target.includes('phone')) {
             return res.status(400).json({ message: 'Este celular já está vinculado a outra conta. Use outro número ou recupere sua conta.' });
         }
