@@ -2,10 +2,13 @@
 
 ## Pendente de deploy
 
-1. Meu Perfil > Celular: aplicar regras de SMS do cadastro (bloquear número igual ao atual, cooldown de reenvio, edição controlada e bloqueio de 5 min após a 2ª correção).
-2. Meu Perfil: alinhar UI do modal ao padrão visual do sistema (paleta, bordas, campos, abas e mensagens).
-3. Header (menu do usuário): remover primeiro nome, avatar circular, hover padronizado e dropdown com acabamento visual alinhado ao sistema.
-6. Cadastro: permitir editar o celular após envio de código SMS.
-7. Cadastro: aplicar cooldown de reenvio e bloqueio de 5 minutos após a segunda correção de número.
-8. Backend/DB: blindar celular único por conta (`User.phone @unique` + migration `20260512235900_add_unique_user_phone` + tratamento de `P2002` no `/register`).
-9. Ambiente frontend: revisar `frontend/vite.config.ts` (proxy está apontando para `https://eixo.agr.br`; em desenvolvimento deve apontar para `http://localhost:3001`).
+### Módulo Fazendas e Pastos — Fase 1 (Quick Wins)
+
+| # | Tarefa | Arquivo | Status |
+|---|--------|---------|--------|
+| 1 | Corrigir nomes dos botões finais do form de pastos: "Salvar e fechar" / "Salvar e continuar editando". Removidas dicas redundantes abaixo dos botões. | `FarmRegistrationForm.tsx` · linhas 891–915 | ✅ Concluído |
+| 2 | Badge "Sem pastos" → estado de convite (amarelo), não de erro (vermelho) | `Farms.tsx` · linha 317–320 | ✅ Concluído |
+| 3 | Campos condicionais por tipo de área: ocultar Forrageira e Lotação para Aguada, APP e Plantio | `FarmRegistrationForm.tsx` · linha 783–827 | ⏳ Pendente |
+| 4 | Hint de referência no campo Lotação UA/ha | `FarmRegistrationForm.tsx` · linha 802–825 | ⏳ Pendente |
+| 5 | GPS visível por padrão no formulário (remover toggle colapsado) | `FarmRegistrationForm.tsx` · linha 603–674 | ⏳ Pendente |
+| 6 | Erros e sucessos como banners visuais no topo do form | `FarmRegistrationForm.tsx` · linhas 884–889 | ⏳ Pendente |

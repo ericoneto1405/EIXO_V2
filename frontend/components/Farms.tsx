@@ -314,8 +314,8 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                                         <td className="px-6 py-4">{farm.size}</td>
                                         <td className="px-6 py-4">
                                             {(farm.paddocks?.length ?? 0) === 0 ? (
-                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fff2ef] px-2.5 py-1 text-xs font-semibold text-[var(--eixo-danger)]">
-                                                    Sem pastos
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fffbeb] px-2.5 py-1 text-xs font-semibold text-[#92400e]">
+                                                    Adicionar pastos →
                                                 </span>
                                             ) : (
                                                 <button

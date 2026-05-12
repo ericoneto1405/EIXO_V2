@@ -890,28 +890,22 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
 
                 {currentStep === 'divisions' && activeFarm && (
                     <div className="flex justify-end gap-3">
-                        <div className="flex flex-col items-end gap-0.5">
-                            <button
-                                type="button"
-                                onClick={() => void saveDivisions('save-and-return')}
-                                disabled={isSaveDisabled}
-                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[#ece9e6] disabled:cursor-not-allowed disabled:bg-[#d6d3d1]"
-                            >
-                                {isSubmitting ? 'Salvando...' : 'Salvar progresso'}
-                            </button>
-                            <span className="text-[11px] text-[var(--eixo-text-muted)]">volta para a lista</span>
-                        </div>
-                        <div className="flex flex-col items-end gap-0.5">
-                            <button
-                                type="button"
-                                onClick={() => void saveDivisions('complete')}
-                                disabled={isSaveDisabled}
-                                className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors duration-200 hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
-                            >
-                                {isSubmitting ? 'Salvando...' : '✓ Concluir cadastro'}
-                            </button>
-                            <span className="text-[11px] text-[var(--eixo-text-muted)]">fica aqui para continuar editando</span>
-                        </div>
+                        <button
+                            type="button"
+                            onClick={() => void saveDivisions('save-and-return')}
+                            disabled={isSaveDisabled}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[#ece9e6] disabled:cursor-not-allowed disabled:bg-[#d6d3d1]"
+                        >
+                            {isSubmitting ? 'Salvando...' : 'Salvar e fechar'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => void saveDivisions('complete')}
+                            disabled={isSaveDisabled}
+                            className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors duration-200 hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
+                        >
+                            {isSubmitting ? 'Salvando...' : 'Salvar e continuar editando'}
+                        </button>
                     </div>
                 )}
             </form>
