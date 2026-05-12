@@ -134,7 +134,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               Entrar
             </button>
             <button type="button" onClick={onRegister} className={btnPrimary}>
-              Começar grátis
+              Cadastrar no Plano Essencial
             </button>
           </div>
         </div>
@@ -255,10 +255,10 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               </span>
             </p>
             <div className="mx-auto mt-5 grid max-w-xl grid-cols-1 gap-4 border-t border-[var(--eixo-border)]/80 pt-8 sm:grid-cols-3">
-              {[['Grátis', 'para sempre'], ['R$ 0', 'sem cartão'], ['2 min', 'para começar']].map(([value, label]) => (
+              {[['Plano EIXO ESSENCIAL', 'Gratuito para os 100 primeiros cadastros'], ['EIXO ESSENCIAL, tudo que você precisa por R$0,00', ''], ['2 min', 'para começar']].map(([value, label]) => (
                 <div key={label} className="flex min-h-[80px] flex-col items-center justify-center rounded-2xl border border-[var(--eixo-border)]/70 bg-[rgba(255,250,241,0.42)] px-3 py-4 text-center shadow-[0_10px_24px_rgba(47,58,45,0.06)] backdrop-blur-[1px]">
                   <p className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">{value}</p>
-                  <p className="mt-1.5 text-xs font-semibold leading-5 text-[var(--eixo-text)]/72">{label}</p>
+                  {label && <p className="mt-1.5 text-xs font-semibold leading-5 text-[var(--eixo-text)]/72">{label}</p>}
                 </div>
               ))}
             </div>
