@@ -70,6 +70,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [activeNav, setActiveNav] = React.useState<'gratis' | 'como' | 'faq'>('gratis');
 
   React.useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -85,6 +86,12 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
   const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
   const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]';
+  const navItems: Array<{ label: string; id?: 'gratis' | 'como' | 'faq'; action: () => void }> = [
+    { label: 'Plano Essencial', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
+    { label: 'Como funciona', id: 'como', action: () => { setActiveNav('como'); scrollTo('como'); } },
+    { label: 'Dúvidas', id: 'faq', action: () => { setActiveNav('faq'); scrollTo('faq'); } },
+    { label: 'Planos', action: () => { window.location.href = '/planos'; } },
+  ];
 
   return (
     <div className="min-h-screen bg-[var(--eixo-bg)] text-[var(--eixo-text)]">
@@ -98,14 +105,20 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               Tecnologia para Gestão Pecuária
             </div>
           </div>
-          <nav className="hidden items-center gap-3 lg:flex">
-            {[
-              { label: 'Plano Essencial', action: () => scrollTo('gratis') },
-              { label: 'Como funciona', action: () => scrollTo('como') },
-              { label: 'Dúvidas', action: () => scrollTo('faq') },
-              { label: 'Planos', action: () => { window.location.href = '/planos'; } },
-            ].map((item) => (
-              <button key={item.label} type="button" onClick={item.action} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-base font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)] hover:border-[var(--eixo-graphite)]/30">{item.label}</button>
+          <nav className="hidden items-center rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-1.5 lg:flex">
+            {navItems.map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                onClick={item.action}
+                className={`inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold transition-colors duration-200 ${
+                  item.id && item.id === activeNav
+                    ? 'border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
+                    : 'border border-transparent bg-[var(--eixo-surface)] text-[var(--eixo-text)] hover:border-[var(--eixo-border)] hover:bg-[var(--eixo-bg)]'
+                }`}
+              >
+                {item.label}
+              </button>
             ))}
           </nav>
           <div className="flex items-center gap-2">
@@ -208,7 +221,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--eixo-text-muted)] lg:text-xl">
-              Rebanho, financeiro e pesagens no mesmo lugar — sem caderno, sem cartão. Veja sua operação com clareza desde o primeiro dia.
+              Controle do rebanho, financeiro completo, manejo de pastos, e tudo no mesmo lugar — sem precisar cadastrar cartão. Veja sua operação com clareza desde o primeiro dia.
             </p>
 
             <p className="mt-3 text-xs text-[var(--eixo-text-muted)]/70">
