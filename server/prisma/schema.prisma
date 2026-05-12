@@ -20,7 +20,7 @@ model User {
   cnpjData                       Json?
   document                       String?
   documentType                   String?
-  phone                          String?
+  phone                          String?                        @unique
   avatarUrl                      String?
   termsAcceptedAt                DateTime?
   termsVersion                   String?

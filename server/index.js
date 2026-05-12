@@ -2442,6 +2442,9 @@ app.post('/register', async (req, res) => {
 
         return res.status(201).json({ user: sanitizeUser(newUser) });
     } catch (error) {
+        if (error?.code === 'P2002' && Array.isArray(error?.meta?.target) && error.meta.target.includes('phone')) {
+            return res.status(400).json({ message: 'Este celular já está vinculado a outra conta. Use outro número ou recupere sua conta.' });
+        }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao criar conta.' });
     }

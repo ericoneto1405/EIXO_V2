@@ -89,17 +89,20 @@ interface PhoneVerificationProps {
     isSendingOtp: boolean;
     isVerifyingOtp: boolean;
     otpError: string | null;
+    resendCooldown: number;
     onPhoneChange: (raw: string) => void;
     onSendOtp: () => void;
     onOtpCodeChange: (value: string) => void;
     onVerifyOtp: () => void;
     onResend: () => void;
+    onEditPhone: () => void;
 }
 
 const PhoneVerification: React.FC<PhoneVerificationProps> = ({
     docType, subtitle, phone, otpSent, otpCode, phoneVerified,
     isSendingOtp, isVerifyingOtp, otpError,
-    onPhoneChange, onSendOtp, onOtpCodeChange, onVerifyOtp, onResend,
+    resendCooldown,
+    onPhoneChange, onSendOtp, onOtpCodeChange, onVerifyOtp, onResend, onEditPhone,
 }) => {
     if (phoneVerified) {
         return (
@@ -133,10 +136,10 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
                 <button
                     type="button"
                     onClick={onSendOtp}
-                    disabled={phone.replace(/\D/g, '').length < 10 || isSendingOtp || otpSent}
+                    disabled={phone.replace(/\D/g, '').length < 10 || isSendingOtp || otpSent || resendCooldown > 0}
                     className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
                 >
-                    {isSendingOtp ? 'Enviando...' : otpSent ? 'Enviado ✓' : 'Enviar código'}
+                    {isSendingOtp ? 'Enviando...' : otpSent ? 'Enviado ✓' : resendCooldown > 0 ? `Aguarde ${resendCooldown}s` : 'Enviar código'}
                 </button>
             </div>
             {otpSent && (
@@ -163,9 +166,17 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
                     <button
                         type="button"
                         onClick={onResend}
-                        className="text-xs text-[var(--eixo-text-muted)] hover:underline"
+                        disabled={isSendingOtp || resendCooldown > 0}
+                        className="text-xs text-[var(--eixo-text-muted)] hover:underline disabled:cursor-not-allowed disabled:opacity-55 disabled:no-underline"
                     >
-                        Não recebi — reenviar
+                        {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Não recebi — reenviar'}
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onEditPhone}
+                        className="ml-3 text-xs text-[var(--eixo-text-muted)] hover:underline"
+                    >
+                        Editar número
                     </button>
                 </div>
             )}
@@ -176,6 +187,8 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
+    const RESEND_COOLDOWN_SECONDS = 45;
+    const EDIT_PHONE_COOLDOWN_SECONDS = 5 * 60;
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -203,6 +216,8 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
     const [otpError, setOtpError] = useState<string | null>(null);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
+    const [phoneEditCount, setPhoneEditCount] = useState(0);
     const lastAutoFetchedCnpjRef = useRef<string | null>(null);
 
     const docDigits = docValue.replace(/\D/g, '');
@@ -296,6 +311,25 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
         setPhoneVerified(false);
         setOtpCode('');
         setOtpError(null);
+        setResendCooldown(0);
+    };
+
+    useEffect(() => {
+        if (resendCooldown <= 0) return;
+        const id = window.setInterval(() => {
+            setResendCooldown((current) => Math.max(0, current - 1));
+        }, 1000);
+        return () => window.clearInterval(id);
+    }, [resendCooldown]);
+
+    const handleEditPhone = () => {
+        const nextEditCount = phoneEditCount + 1;
+        setOtpSent(false);
+        setPhoneVerified(false);
+        setOtpCode('');
+        setOtpError(null);
+        setPhoneEditCount(nextEditCount);
+        setResendCooldown(nextEditCount >= 2 ? EDIT_PHONE_COOLDOWN_SECONDS : 0);
     };
 
     const handleSendOtp = async () => {
@@ -311,6 +345,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
             if (!res.ok) { setOtpError(data?.message || 'Erro ao enviar SMS.'); return; }
             setOtpSent(true);
             setOtpCode('');
+            setResendCooldown(RESEND_COOLDOWN_SECONDS);
         } catch {
             setOtpError('Não foi possível enviar o SMS. Verifique sua conexão.');
         } finally {
@@ -335,6 +370,11 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
         } finally {
             setIsVerifyingOtp(false);
         }
+    };
+
+    const handleResendOtp = async () => {
+        if (isSendingOtp || resendCooldown > 0) return;
+        await handleSendOtp();
     };
 
     const handleConsultarCNPJ = async () => {
@@ -558,11 +598,13 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                         isSendingOtp={isSendingOtp}
                                                         isVerifyingOtp={isVerifyingOtp}
                                                         otpError={otpError}
+                                                        resendCooldown={resendCooldown}
                                                         onPhoneChange={handlePhoneInput}
                                                         onSendOtp={() => void handleSendOtp()}
                                                         onOtpCodeChange={setOtpCode}
                                                         onVerifyOtp={() => void handleVerifyOtp()}
-                                                        onResend={() => { setOtpSent(false); setOtpCode(''); setOtpError(null); }}
+                                                        onResend={() => void handleResendOtp()}
+                                                        onEditPhone={handleEditPhone}
                                                     />
                                                 </div>
                                             )}
@@ -625,11 +667,13 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                         isSendingOtp={isSendingOtp}
                                                         isVerifyingOtp={isVerifyingOtp}
                                                         otpError={otpError}
+                                                        resendCooldown={resendCooldown}
                                                         onPhoneChange={handlePhoneInput}
                                                         onSendOtp={() => void handleSendOtp()}
                                                         onOtpCodeChange={setOtpCode}
                                                         onVerifyOtp={() => void handleVerifyOtp()}
-                                                        onResend={() => { setOtpSent(false); setOtpCode(''); setOtpError(null); }}
+                                                        onResend={() => void handleResendOtp()}
+                                                        onEditPhone={handleEditPhone}
                                                     />
                                                 </div>
                                             )}
