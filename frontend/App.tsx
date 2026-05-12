@@ -38,6 +38,7 @@ import UpgradeScreen from './components/UpgradeScreen';
 import HQPage from './components/HQPage';
 import ProfileModal from './components/ProfileModal';
 import OnboardingSpotlight from './components/OnboardingSpotlight';
+import AlertsBar from './components/AlertsBar';
 import { Alert, Farm, WebUserCreatePayload } from './types';
 import { createWebUser } from './adapters/usersApi';
 
@@ -1037,7 +1038,8 @@ const AppContent: React.FC = () => {
                             currentUser={currentUser}
                             onLogout={handleLogout}
                             canRegisterUsers={canManageUsers}
-                            onAlertAction={handleHeaderAlertAction}
+                            farmLat={selectedFarm?.lat ?? null}
+                            farmLng={selectedFarm?.lng ?? null}
                             onOpenUserRegister={() => {
                                 if (isFreePlan) {
                                     setUpgradeModal('Múltiplos usuários');
@@ -1046,6 +1048,10 @@ const AppContent: React.FC = () => {
                                 setIsRegisterModalOpen(true);
                             }}
                             onOpenProfile={() => setIsProfileModalOpen(true)}
+                        />
+                        <AlertsBar
+                            selectedFarmId={selectedFarmId}
+                            onAlertAction={handleHeaderAlertAction}
                         />
                         <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                             <div className={activeView === 'Mapa da Fazenda' ? 'h-full' : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'}>
