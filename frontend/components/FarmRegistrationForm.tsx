@@ -543,7 +543,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     </div>
                     <span className={`text-sm font-semibold ${currentStep === 'farm' ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-muted)]'}`}>Dados da fazenda</span>
                     {currentStep === 'divisions' && (
-                        <button type="button" onClick={() => setCurrentStep('farm')} className="text-xs text-[var(--eixo-green)] hover:underline">
+                        <button type="button" onClick={() => setCurrentStep('farm')} className="rounded-md border border-[#B6E23A] bg-[#f0f9d4] px-2 py-0.5 text-xs font-semibold text-[#3a5c10] transition-colors hover:bg-[#e6f5b8]">
                             editar
                         </button>
                     )}
