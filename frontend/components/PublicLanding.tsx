@@ -37,10 +37,6 @@ const STEPS = [
 
 const FAQS = [
   {
-    q: 'É realmente de graça?',
-    a: 'Sim. O plano gratuito não tem prazo para acabar, não precisa de cartão e não tem limite de animais. Você paga só se quiser recursos avançados, como mais fazendas ou relatórios de exportação.',
-  },
-  {
     q: 'Funciona no celular?',
     a: 'Sim. O EIXO foi pensado para funcionar em qualquer dispositivo — celular, tablet ou computador. Ideal para quem está no campo.',
   },
@@ -58,7 +54,7 @@ const FAQS = [
   },
   {
     q: 'Quando faz sentido pagar?',
-    a: 'Quando você quiser mais fazendas, mais usuários ou exportação de relatórios em Excel e PDF. Você decide na hora certa.',
+    a: 'Quando você entender que precisa cadastrar suas outras fazendas, mais usuários na operação, módulos avançados para melhor tomada de decisões. Você decide a hora certa de alavancar seus LUCROS!',
   },
   {
     q: 'Serve para gado comercial e P.O.?',

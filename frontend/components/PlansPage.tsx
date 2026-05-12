@@ -22,10 +22,10 @@ interface Plan {
 const PLANS: Plan[] = [
     {
         id: 'gratis',
-        name: 'Plano Grátis',
-        price: 'R$ 0',
-        priceNote: 'para sempre',
-        description: 'O plano mais completo do mercado para quem quer parar de usar caderno. Comece hoje.',
+        name: 'EIXO Essencial',
+        price: 'R$0,00/mês',
+        priceNote: '',
+        description: 'O plano gratuito mais completo do mercado, para quem entendeu que planilhas e cadernos já não conseguem gerir sua fazenda/empresa.',
         cta: 'Já está usando ✓',
         ctaVariant: 'outline',
         features: [
