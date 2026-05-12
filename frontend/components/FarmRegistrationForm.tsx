@@ -114,7 +114,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     const [farmLimitReached, setFarmLimitReached] = useState(false);
     const [activeFarm, setActiveFarm] = useState<Farm | null>(initialFarm || null);
     const [currentStep, setCurrentStep] = useState<'farm' | 'divisions'>(initialFarm ? 'divisions' : 'farm');
-    const [showLocation, setShowLocation] = useState(!!initialFarm || !!(initialFarm?.lat || initialFarm?.lng));
+    const [showLocation, setShowLocation] = useState(true);
     const [gpsLoading, setGpsLoading] = useState(false);
     const [paddockToDelete, setPaddockToDelete] = useState<DivisionInput | null>(null);
     const nameInputRef = useRef<HTMLInputElement | null>(null);
@@ -780,6 +780,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                             </select>
                                         </div>
                                     </div>
+                                    {!['aguada / reservatório', 'área de preservação', 'área de plantio'].includes(division.divisionType) && (
                                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                         <div>
                                             <label htmlFor={`division-forrageira-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">Forrageira</label>
@@ -800,7 +801,10 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                             </select>
                                         </div>
                                         <div>
-                                            <label htmlFor={`division-lotacao-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">Lotação (UA/ha)</label>
+                                            <label htmlFor={`division-lotacao-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">
+                                                Lotação (UA/ha)
+                                                <span className="ml-1.5 text-xs font-normal text-[var(--eixo-text-muted)]">Ref: Brachiaria/Cerrado — 0,5 (seca) a 1,5 (águas)</span>
+                                            </label>
                                             <input
                                                 type="number"
                                                 id={`division-lotacao-${division.id}`}
@@ -825,6 +829,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                             })()}
                                         </div>
                                     </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -882,10 +887,16 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 )}
 
                 {submitError && (
-                    <p className="text-sm text-[var(--eixo-danger)]">{submitError}</p>
+                    <div className="flex items-start gap-3 rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3">
+                        <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--eixo-danger)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <p className="text-sm font-semibold text-[var(--eixo-danger)]">{submitError}</p>
+                    </div>
                 )}
                 {submitSuccess && (
-                    <p className="text-sm text-[var(--eixo-success)]">{submitSuccess}</p>
+                    <div className="flex items-start gap-3 rounded-2xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-4 py-3">
+                        <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        <p className="text-sm font-semibold text-[var(--eixo-success)]">{submitSuccess}</p>
+                    </div>
                 )}
 
                 {currentStep === 'divisions' && activeFarm && (
