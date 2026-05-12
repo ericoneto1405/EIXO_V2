@@ -102,7 +102,8 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
                     method: 'PATCH',
                     credentials: 'include',
                 }).catch(() => { /* silencioso */ });
-                setVisible(false);
+                // Mostra mensagem de conclusão por 2,5s antes de fechar
+                setTimeout(() => setVisible(false), 2500);
             }
         };
 
@@ -145,9 +146,16 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
                     </div>
                     <div>
                         {allDone ? (
-                            <p className="text-sm font-semibold text-[var(--eixo-text)]">
-                                Tudo pronto! Bem-vindo ao EIXO. 🎉
-                            </p>
+                            <div className="flex items-center gap-2">
+                                <svg className="h-5 w-5 flex-shrink-0 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.5 12.75l4 4 7-7M9 12.75l2 2 4-4" />
+                                </svg>
+                                <p className="text-sm font-semibold text-[var(--eixo-text)]">
+                                    {isHerdContext
+                                        ? 'Base do manejo do rebanho configurada, volte aqui sempre que precisar registrar pesagens e acompanhar o desempenho.'
+                                        : 'Estrutura da fazenda configurada, volte aqui sempre que precisar adicionar pastos ou atualizar os dados da propriedade.'}
+                                </p>
+                            </div>
                         ) : (
                             <>
                                 <p className="text-sm font-semibold text-[var(--eixo-text)]">
