@@ -2,9 +2,8 @@
 
 ## Pendente de deploy
 
-1. Landing (Header): alterar botão “Começar grátis” para “Cadastrar no Plano Essencial”.
-2. Landing (card): alterar “Grátis para sempre” para “Plano EIXO ESSENCIAL” e “Gratuito para os 100 primeiros cadastros”.
-3. Landing (card): alterar “R$ 0 / sem cartão” para “EIXO ESSENCIAL, tudo que você precisa por R$0,00”.
-4. Landing (FAQ): remover a pergunta “É realmente de graça?”.
-5. Landing (FAQ): atualizar resposta de “Quando faz sentido pagar?” para o novo texto sobre expansão e módulos avançados.
-6. Página Planos: alterar “Plano Grátis” para “EIXO Essencial”, “R$ 0 para sempre” para “R$0,00/mês” e atualizar a descrição do plano.
+1. Página Planos: atualizar descrição para “...planilhas e cadernos já não dão conta de gerir sua fazenda.”
+2. Página /planos: trocar “Já está usando ✓” por CTA “Comece agora!” e abrir a tela de cadastro.
+3. Página Planos: alterar o título para “Comece gratuitamente no Plano Essencial. Evolua quando precisar avançar!”.
+4. Página Planos: alterar subtítulo para “O plano mais completo do mercado para quem quer sair das planilhas e cadernos...”.
+5. Página Planos: retirar “por fazenda / mês” dos cards Eixo Gestão e Eixo Decisão.

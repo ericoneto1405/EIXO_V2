@@ -25,8 +25,8 @@ const PLANS: Plan[] = [
         name: 'EIXO Essencial',
         price: 'R$0,00/mês',
         priceNote: '',
-        description: 'O plano gratuito mais completo do mercado, para quem entendeu que planilhas e cadernos já não conseguem gerir sua fazenda/empresa.',
-        cta: 'Já está usando ✓',
+        description: 'O plano gratuito mais completo do mercado, para quem entendeu que planilhas e cadernos já não dão conta de gerir sua fazenda.',
+        cta: 'Comece agora!',
         ctaVariant: 'outline',
         features: [
             { text: 'Animais ilimitados', included: true },
@@ -47,7 +47,7 @@ const PLANS: Plan[] = [
         name: 'Eixo Gestão',
         badge: 'Mais popular',
         price: 'Em breve',
-        priceNote: 'por fazenda / mês',
+        priceNote: '',
         description: 'Inclui Dashboard completo, Nutrição avançada e exportação de dados.',
         cta: 'Quero saber mais',
         ctaVariant: 'primary',
@@ -69,7 +69,7 @@ const PLANS: Plan[] = [
         id: 'decisao',
         name: 'Eixo Decisão',
         price: 'Em breve',
-        priceNote: 'por fazenda / mês',
+        priceNote: '',
         description: 'Operação profissional, P.O. e exportação sem limites.',
         cta: 'Quero saber mais',
         ctaVariant: 'dark',
@@ -121,7 +121,10 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
     };
 
     const handleCta = (plan: Plan) => {
-        if (plan.id === 'gratis') return;
+        if (plan.id === 'gratis') {
+            window.location.href = '/?register=1';
+            return;
+        }
         window.open('mailto:contato@eixo.ag?subject=Interesse no ' + plan.name, '_blank');
     };
 
@@ -154,10 +157,10 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
                     ACESSO ANTECIPADO
                 </div>
                 <h1 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] md:text-4xl">
-                    Comece grátis. Evolua quando precisar.
+                    Comece gratuitamente no Plano Essencial. Evolua quando precisar avançar!
                 </h1>
                 <p className="mt-3 text-base text-[var(--eixo-text-muted)] max-w-md mx-auto">
-                    O plano mais poderoso do mercado para quem quer sair do caderno. Teste o Acasalamento Inteligente no plano pago.
+                    O plano mais completo do mercado para quem quer sair das planilhas e cadernos, e elevar o nível de Gestão da sua Fazenda.
                 </p>
             </div>
 
@@ -201,13 +204,12 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
                             {/* CTA */}
                             <button
                                 onClick={() => handleCta(plan)}
-                                disabled={plan.id === 'gratis'}
-                                className={`mb-6 w-full rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-default ${
+                                className={`mb-6 w-full rounded-xl py-2.5 text-sm font-semibold transition-colors ${
                                     plan.ctaVariant === 'primary'
                                         ? 'bg-[var(--eixo-green)] text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]'
                                         : plan.ctaVariant === 'dark'
                                         ? 'bg-[var(--eixo-text)] text-white hover:bg-[var(--eixo-graphite)]'
-                                        : 'border border-[var(--eixo-border)] text-[var(--eixo-text-muted)]'
+                                        : 'border border-[var(--eixo-border)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]'
                                 }`}
                             >
                                 {plan.cta}

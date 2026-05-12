@@ -347,6 +347,12 @@ const AppContent: React.FC = () => {
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
+        const shouldOpenRegister = params.get('register') === '1';
+        if (shouldOpenRegister && !isAuthenticated) {
+            setAuthScreen('register');
+            window.history.replaceState({}, '', window.location.pathname);
+            return;
+        }
         const token = params.get('reset');
         if (token && !isAuthenticated) {
             setResetToken(token);
