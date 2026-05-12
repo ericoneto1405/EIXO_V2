@@ -100,7 +100,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
           </div>
           <nav className="hidden items-center gap-3 lg:flex">
             {[
-              { label: 'Plano Grátis', action: () => scrollTo('gratis') },
+              { label: 'Plano Essencial', action: () => scrollTo('gratis') },
               { label: 'Como funciona', action: () => scrollTo('como') },
               { label: 'Dúvidas', action: () => scrollTo('faq') },
               { label: 'Planos', action: () => { window.location.href = '/planos'; } },
@@ -135,7 +135,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               }}
               className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
             >
-              Plano Grátis
+              Plano Essencial
             </button>
             <button
               type="button"
@@ -199,7 +199,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               <svg className="h-3 w-3 text-[var(--eixo-graphite)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Plano Grátis · Apenas os 100 primeiros
+              Plano Essencial · Apenas os 100 primeiros
             </div>
 
             <h1 className="font-brand text-balance text-3xl font-extrabold leading-[1.15] text-[var(--eixo-text)] sm:text-4xl lg:text-6xl">
@@ -212,7 +212,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </p>
 
             <p className="mt-3 text-xs text-[var(--eixo-text-muted)]/70">
-              * Sem custo no Plano Grátis. Planos pagos disponíveis para recursos avançados.
+              Sem custo* no Plano Essencial. Planos pagos disponíveis para recursos avançados.
             </p>
 
             <div className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-graphite)]">
@@ -224,7 +224,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
             <div className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8 text-base`}>
-                Cadastrar minha fazenda grátis
+                Cadastrar minha fazenda gratuitamente
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button type="button" onClick={() => scrollTo('como')} className={`${btnSecondary} h-12 px-8 text-base`}>
@@ -286,7 +286,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 </div>
                 <div className="flex flex-col items-center gap-2 sm:items-end">
                   <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8`}>
-                    Cadastrar minha fazenda grátis
+                    Cadastrar minha fazenda gratuitamente
                     <ArrowRight className="h-4 w-4" />
                   </button>
                   <button type="button" onClick={() => scrollTo('como')} className="text-sm font-medium text-[var(--eixo-text-muted)] underline underline-offset-2 transition-colors hover:text-[var(--eixo-text)]">
@@ -463,7 +463,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
             <div className="mt-14 text-center">
               <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8`}>
-                Cadastrar minha fazenda grátis
+                Cadastrar minha fazenda gratuitamente
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -508,7 +508,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <button type="button" onClick={onRegister} className="inline-flex items-center gap-2 rounded-xl bg-[var(--eixo-green)] px-8 py-4 text-base font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]">
-                Cadastrar minha fazenda grátis
+                Cadastrar minha fazenda gratuitamente
                 <ArrowRight className="h-5 w-5" />
               </button>
               <button type="button" onClick={() => { window.location.href = '/planos'; }} className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-8 py-4 text-base font-semibold text-white/70 transition-colors hover:border-white/40 hover:text-white">
