@@ -67,7 +67,13 @@ const getDayLabel = (offsetDays: number) => {
     return DIAS_PT[d.getDay()];
 };
 
-const formatMm = (mm: number) => mm < 0.5 ? 'Seco' : `${Math.round(mm)}mm`;
+const formatMm = (mm: number) => `${Math.round(mm)}mm`;
+const getRainLevelStyle = (mm: number) => {
+    if (mm < 1) return 'bg-[#fffaf1] text-[#8a7a63] border-[#e7dcc8]';
+    if (mm < 8) return 'bg-[#e7f7ec] text-[#2f6b3f] border-[#bfe7cc]';
+    if (mm < 20) return 'bg-[#dcf0ff] text-[#275f88] border-[#b8ddf7]';
+    return 'bg-[#d7ecff] text-[#1d4f74] border-[#93c7ec]';
+};
 
 // ---- RainWidget ----
 interface RainWidgetProps {
@@ -82,11 +88,11 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng }) => {
         let active = true;
         const load = async () => {
             try {
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=precipitation_sum&forecast_days=3&timezone=auto`;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=precipitation_sum&forecast_days=7&timezone=auto`;
                 const res = await fetch(url);
                 const data = await res.json();
                 if (active && Array.isArray(data?.daily?.precipitation_sum)) {
-                    setRain(data.daily.precipitation_sum);
+                    setRain(data.daily.precipitation_sum.slice(0, 7));
                 }
             } catch {
                 // silently fail
@@ -99,21 +105,25 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng }) => {
     if (!rain) return null;
 
     return (
-        <div className="flex items-center gap-2.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-[#EDEDED] text-[var(--eixo-text-muted)]">
-                <RainIcon />
-            </span>
-            <div className="min-w-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)]">
-                    Previsão de chuva
+        <div className="min-w-0 rounded-2xl border border-[#b9dfc8] bg-[linear-gradient(135deg,#f8fbf4_0%,#eef8f1_50%,#e5f4ec_100%)] px-3 py-2.5">
+            <div className="mb-2 flex items-center gap-2">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--eixo-green-soft)] text-[var(--eixo-green)]">
+                    <RainIcon />
+                </span>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4e6a57]">
+                    Previsão de chuva · 7 dias
                 </p>
-                <p className="whitespace-nowrap text-sm font-semibold text-[var(--eixo-text)]">
-                    {getDayLabel(0)} {formatMm(rain[0])}
-                    <span className="mx-1.5 text-[var(--eixo-text-muted)]">·</span>
-                    {getDayLabel(1)} {formatMm(rain[1])}
-                    <span className="mx-1.5 text-[var(--eixo-text-muted)]">·</span>
-                    {getDayLabel(2)} {formatMm(rain[2])}
-                </p>
+            </div>
+            <div className="flex max-w-[520px] items-center gap-1.5 overflow-x-auto pb-0.5">
+                {rain.map((mm, index) => (
+                    <div
+                        key={`${index}-${mm}`}
+                        className={`flex min-w-[64px] flex-col rounded-xl border px-2 py-1.5 text-center ${getRainLevelStyle(mm)}`}
+                    >
+                        <span className="text-[10px] font-semibold leading-none">{getDayLabel(index)}</span>
+                        <span className="mt-1 text-xs font-bold leading-none">{formatMm(mm)}</span>
+                    </div>
+                ))}
             </div>
         </div>
     );
