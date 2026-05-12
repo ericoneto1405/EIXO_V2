@@ -396,7 +396,6 @@ const navSectionsWithSubItems: NavSection[] = navSections.map((section) => ({
                   subItems: [
                       { label: 'Fazendas e Pastos', value: 'Fazendas', allowedLabels: ['Fazendas'] },
                       { label: 'Mapa da Fazenda', value: 'Mapa da Fazenda', badge: 'Em breve', status: 'coming_soon' as const },
-                      { label: 'Estruturas da Fazenda', value: 'Estruturas da Fazenda', badge: 'Em breve', status: 'coming_soon' as const },
                       { label: 'Usuários e Permissões', value: 'Usuários e Permissões', allowedLabels: ['Fazendas'] },
                   ],
               }

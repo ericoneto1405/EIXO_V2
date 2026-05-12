@@ -1787,27 +1787,40 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 <th scope="col" className="px-4 py-2.5">Pasto</th>
                                 <th scope="col" className="px-4 py-2.5">Área (ha)</th>
                                 <th scope="col" className="px-4 py-2.5">Capacidade</th>
+                                <th scope="col" className="px-4 py-2.5">Animais</th>
                                 <th scope="col" className="px-4 py-2.5">Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             {paddocks.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
+                                    <td colSpan={5} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         Nenhum pasto cadastrado em Fazendas e Pastos.
                                     </td>
                                 </tr>
                             ) : (
-                                paddocks.map((paddock) => (
+                                paddocks.map((paddock) => {
+                                    const animalCount = animals.filter(a => a.currentPaddockId === paddock.id).length;
+                                    return (
                                     <tr key={paddock.id} className="border-b border-[var(--eixo-border)] last:border-0">
                                         <td className="px-4 py-3 font-medium text-[var(--eixo-text)]">{paddock.name}</td>
                                         <td className="px-4 py-3">{paddock.areaHa ?? '—'}</td>
                                         <td className="px-4 py-3">{paddock.capacity ?? '—'}</td>
                                         <td className="px-4 py-3">
+                                            {animalCount > 0 ? (
+                                                <span className="inline-flex items-center rounded-full bg-[var(--eixo-green-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--eixo-graphite)]">
+                                                    {animalCount}
+                                                </span>
+                                            ) : (
+                                                <span className="text-[var(--eixo-text-muted)]">—</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
                                             {paddock.active === false ? 'Inativo' : 'Ativo'}
                                         </td>
                                     </tr>
-                                ))
+                                    );
+                                })
                             )}
                         </tbody>
                     </table>
@@ -2176,10 +2189,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     onClick={closeAnimalForm}
                 >
                     <div
-                        className="w-full max-w-lg rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
+                        className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <header className="flex items-center justify-between border-b border-[var(--eixo-border)] p-5">
+                        <header className="flex flex-shrink-0 items-center justify-between border-b border-[var(--eixo-border)] p-5">
                             <h3 className="text-lg font-bold text-[var(--eixo-text)]">Adicionar animal</h3>
                             <button
                                 type="button"
@@ -2190,7 +2203,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 ✕
                             </button>
                         </header>
-                        <form onSubmit={handleCreateAnimal} className="space-y-4 p-6">
+                        <form onSubmit={handleCreateAnimal} className="space-y-4 overflow-y-auto p-6">
                             <div>
                                 <label className="block text-sm font-medium text-[var(--eixo-text)]">Tipo de cadastro</label>
                                 <select

@@ -26,6 +26,9 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
     const [showUpgradePopover, setShowUpgradePopover] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [expandedFarmId, setExpandedFarmId] = useState<string | null>(null);
+    const togglePaddocks = (farmId: string) =>
+        setExpandedFarmId(prev => prev === farmId ? null : farmId);
     const formRef = useRef<HTMLDivElement | null>(null);
     const upgradePopoverRef = useRef<HTMLDivElement | null>(null);
     const firstFarmWithoutPaddocks = farms.find((farm) => (farm.paddocks?.length ?? 0) === 0) ?? null;
@@ -284,7 +287,8 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                             </thead>
                             <tbody>
                                 {farms.map((farm) => (
-                                    <tr key={farm.id} className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] transition-colors duration-150 hover:bg-[var(--eixo-surface-soft)]">
+                                    <React.Fragment key={farm.id}>
+                                    <tr className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] transition-colors duration-150 hover:bg-[var(--eixo-surface-soft)]">
                                         <th scope="row" className="whitespace-nowrap px-6 py-4 font-bold text-[var(--eixo-text)]">
                                             <div className="flex items-center gap-2">
                                                 {farm.name}
@@ -314,9 +318,16 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                                                     Sem pastos
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--eixo-graphite)]">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => togglePaddocks(farm.id)}
+                                                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--eixo-graphite)] transition-colors hover:bg-[#d4eda0]"
+                                                >
                                                     {farm.paddocks!.length} {farm.paddocks!.length === 1 ? 'pasto' : 'pastos'}
-                                                </span>
+                                                    <svg className={`h-3 w-3 transition-transform duration-200 ${expandedFarmId === farm.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </button>
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
@@ -338,6 +349,33 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                                             </div>
                                         </td>
                                     </tr>
+                                    {expandedFarmId === farm.id && farm.paddocks && farm.paddocks.length > 0 && (
+                                        <tr className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)]">
+                                            <td colSpan={5} className="px-8 py-3">
+                                                <table className="w-full text-xs">
+                                                    <thead>
+                                                        <tr className="text-[10px] font-bold uppercase tracking-wider text-[var(--eixo-text-muted)]">
+                                                            <th className="pb-2 pr-8 text-left">Nome</th>
+                                                            <th className="pb-2 pr-8 text-left">Área (ha)</th>
+                                                            <th className="pb-2 pr-8 text-left">Tipo</th>
+                                                            <th className="pb-2 text-left">Forrageira</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-[var(--eixo-border)]">
+                                                        {farm.paddocks.map(p => (
+                                                            <tr key={p.id}>
+                                                                <td className="py-1.5 pr-8 font-semibold text-[var(--eixo-text)]">{p.name}</td>
+                                                                <td className="py-1.5 pr-8 text-[var(--eixo-text-muted)]">{p.areaHa ?? '—'}</td>
+                                                                <td className="py-1.5 pr-8 text-[var(--eixo-text-muted)]">{p.divisionType ?? '—'}</td>
+                                                                <td className="py-1.5 text-[var(--eixo-text-muted)]">{p.forrageira ?? '—'}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </td>
+                                        </tr>
+                                    )}
+                                    </React.Fragment>
                                 ))}
                             </tbody>
                         </table>

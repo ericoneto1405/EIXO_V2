@@ -93,7 +93,6 @@ type HerdNavigationTab = 'overview' | 'lots' | 'animals' | 'weighings' | 'settin
 
 const SUB_VIEW_PARENT: Record<string, string> = {
     'Mapa da Fazenda': 'Fazendas',
-    'Estruturas da Fazenda': 'Fazendas',
     'Usuários e Permissões': 'Fazendas',
     'Ocorrências do EIXO Campo': 'Operações',
 };
