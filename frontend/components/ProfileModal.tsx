@@ -31,6 +31,8 @@ const formatPhone = (digits: string) => {
 };
 
 const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated }) => {
+    const RESEND_COOLDOWN_SECONDS = 45;
+    const EDIT_PHONE_COOLDOWN_SECONDS = 5 * 60;
     const [activeTab, setActiveTab] = useState<Tab>('dados');
 
     // ── Dados pessoais ──
@@ -73,11 +75,41 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
     const [phoneLoading, setPhoneLoading] = useState(false);
     const [phoneError, setPhoneError] = useState<string | null>(null);
     const [phoneSuccess, setPhoneSuccess] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
+    const [phoneEditCount, setPhoneEditCount] = useState(0);
 
     const phoneDigits = phone.replace(/\D/g, '');
+    const currentPhoneDigits = (user.phone || '').replace(/\D/g, '');
+
+    React.useEffect(() => {
+        if (resendCooldown <= 0) return;
+        const id = window.setInterval(() => {
+            setResendCooldown((current) => Math.max(0, current - 1));
+        }, 1000);
+        return () => window.clearInterval(id);
+    }, [resendCooldown]);
+
+    const handleEditPhone = () => {
+        const nextEditCount = phoneEditCount + 1;
+        setOtpSent(false);
+        setOtpVerified(false);
+        setOtpCode('');
+        setPhoneError(null);
+        setPhoneSuccess(false);
+        setPhoneEditCount(nextEditCount);
+        setResendCooldown(nextEditCount >= 2 ? EDIT_PHONE_COOLDOWN_SECONDS : 0);
+    };
 
     const handleSendOtp = async () => {
         setPhoneError(null);
+        if (phoneDigits === currentPhoneDigits) {
+            setPhoneError('O novo celular deve ser diferente do celular atual.');
+            return;
+        }
+        if (resendCooldown > 0) {
+            setPhoneError(`Aguarde ${resendCooldown}s para reenviar o código.`);
+            return;
+        }
         setPhoneLoading(true);
         try {
             const res = await fetch(buildApiUrl('/auth/send-otp'), {
@@ -92,6 +124,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                 return;
             }
             setOtpSent(true);
+            setResendCooldown(RESEND_COOLDOWN_SECONDS);
         } catch {
             setPhoneError('Não foi possível enviar o SMS.');
         } finally {
@@ -120,6 +153,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
         } finally {
             setPhoneLoading(false);
         }
+    };
+
+    const handleResendOtp = async () => {
+        if (phoneLoading || resendCooldown > 0) return;
+        await handleSendOtp();
     };
 
     const handleSavePhone = async () => {
@@ -245,25 +283,25 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
     ];
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" onClick={onClose}>
             <div
-                className="w-full max-w-lg rounded-2xl border border-[#EDEDED] bg-white shadow-2xl"
+                className="w-full max-w-lg rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-[#EDEDED] px-6 py-4">
-                    <h2 className="font-[Manrope] text-lg font-bold text-[#2F2F2F]">Meu Perfil</h2>
+                <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
+                    <h2 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Meu Perfil</h2>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl text-[#5E5E5E] hover:bg-[#EDEDED]"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
                     >
                         <CloseIcon />
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 border-b border-[#EDEDED] px-6 pt-4">
+                <div className="flex gap-2 border-b border-[var(--eixo-border)] px-6 pt-4">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
@@ -271,8 +309,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                             onClick={() => setActiveTab(tab.id)}
                             className={`mb-[-1px] rounded-t-xl px-4 py-2 text-sm font-semibold transition-colors ${
                                 activeTab === tab.id
-                                    ? 'border-b-2 border-[#B6E23A] text-[#2F2F2F]'
-                                    : 'text-[#5E5E5E] hover:text-[#2F2F2F]'
+                                    ? 'border-b-2 border-[var(--eixo-green)] text-[var(--eixo-text)]'
+                                    : 'text-[var(--eixo-text-muted)] hover:text-[var(--eixo-text)]'
                             }`}
                         >
                             {tab.label}
@@ -287,25 +325,25 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                     {activeTab === 'dados' && (
                         <div className="space-y-4">
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#5E5E5E]">Nome</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Nome</label>
                                 <input
                                     type="text"
                                     value={name}
                                     onChange={e => { setName(e.target.value); setDadosSuccess(false); }}
-                                    className="w-full rounded-xl border border-[#EDEDED] bg-white px-4 py-2.5 text-sm text-[#2F2F2F] outline-none focus:border-[#B6E23A] focus:ring-2 focus:ring-[#B6E23A]/30"
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#5E5E5E]">E-mail</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">E-mail</label>
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={e => { setEmail(e.target.value); setDadosSuccess(false); }}
-                                    className="w-full rounded-xl border border-[#EDEDED] bg-white px-4 py-2.5 text-sm text-[#2F2F2F] outline-none focus:border-[#B6E23A] focus:ring-2 focus:ring-[#B6E23A]/30"
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
                                 />
                             </div>
-                            {dadosError && <p className="text-sm text-red-600">{dadosError}</p>}
-                            {dadosSuccess && <p className="text-sm text-green-700">Dados atualizados com sucesso.</p>}
+                            {dadosError && <p className="text-sm text-[var(--eixo-danger)]">{dadosError}</p>}
+                            {dadosSuccess && <p className="text-sm text-[var(--eixo-success)]">Dados atualizados com sucesso.</p>}
                             <button
                                 type="button"
                                 onClick={handleSaveDados}
@@ -321,36 +359,36 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                     {activeTab === 'celular' && (
                         <div className="space-y-4">
                             {user.phone && !phoneSuccess && (
-                                <p className="text-sm text-[#5E5E5E]">
-                                    Celular atual: <span className="font-semibold text-[#2F2F2F]">{formatPhone(user.phone)}</span>
+                                <p className="text-sm text-[var(--eixo-text-muted)]">
+                                    Celular atual: <span className="font-semibold text-[var(--eixo-text)]">{formatPhone(user.phone)}</span>
                                 </p>
                             )}
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#5E5E5E]">Novo celular</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Novo celular</label>
                                 <div className="flex gap-2">
                                     <input
                                         type="tel"
                                         value={phone}
-                                        onChange={e => { setPhone(e.target.value); setOtpSent(false); setOtpVerified(false); setPhoneSuccess(false); setPhoneError(null); }}
+                                        onChange={e => { setPhone(e.target.value); setPhoneSuccess(false); setPhoneError(null); }}
                                         placeholder="(00) 00000-0000"
-                                        disabled={otpVerified}
-                                        className="flex-1 rounded-xl border border-[#EDEDED] bg-white px-4 py-2.5 text-sm text-[#2F2F2F] outline-none focus:border-[#B6E23A] focus:ring-2 focus:ring-[#B6E23A]/30 disabled:bg-[#EDEDED]"
+                                        disabled={otpVerified || otpSent}
+                                        className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:bg-[var(--eixo-surface-soft)]/70"
                                     />
                                     {!otpVerified && (
                                         <button
                                             type="button"
                                             onClick={handleSendOtp}
-                                            disabled={phoneLoading || phoneDigits.length < 10}
-                                            className="rounded-xl border border-[#EDEDED] px-4 py-2.5 text-sm font-semibold text-[#2F2F2F] hover:bg-[#EDEDED] disabled:opacity-50"
+                                            disabled={phoneLoading || phoneDigits.length < 10 || phoneDigits === currentPhoneDigits || otpSent || resendCooldown > 0}
+                                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50"
                                         >
-                                            {otpSent ? 'Reenviar' : 'Enviar SMS'}
+                                            {otpSent ? 'Enviado ✓' : resendCooldown > 0 ? `Aguarde ${resendCooldown}s` : 'Enviar SMS'}
                                         </button>
                                     )}
                                 </div>
                             </div>
                             {otpSent && !otpVerified && (
                                 <div>
-                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#5E5E5E]">Código SMS</label>
+                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Código SMS</label>
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
@@ -358,24 +396,41 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                                             onChange={e => setOtpCode(e.target.value)}
                                             placeholder="000000"
                                             maxLength={6}
-                                            className="flex-1 rounded-xl border border-[#EDEDED] bg-white px-4 py-2.5 text-sm text-[#2F2F2F] outline-none focus:border-[#B6E23A] focus:ring-2 focus:ring-[#B6E23A]/30"
+                                            className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
                                         />
                                         <button
                                             type="button"
                                             onClick={handleVerifyOtp}
                                             disabled={phoneLoading || otpCode.length < 4}
-                                            className="rounded-xl bg-[#2F2F2F] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1a1a1a] disabled:opacity-50"
+                                            className="rounded-xl bg-[var(--eixo-text)] px-4 py-2.5 text-sm font-semibold text-[var(--eixo-surface)] transition-colors hover:bg-[var(--eixo-graphite)] disabled:opacity-50"
                                         >
                                             Verificar
+                                        </button>
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleResendOtp()}
+                                            disabled={phoneLoading || resendCooldown > 0}
+                                            className="text-xs text-[var(--eixo-text-muted)] hover:underline disabled:cursor-not-allowed disabled:opacity-55 disabled:no-underline"
+                                        >
+                                            {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Não recebi — reenviar'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleEditPhone}
+                                            className="text-xs text-[var(--eixo-text-muted)] hover:underline"
+                                        >
+                                            Editar número
                                         </button>
                                     </div>
                                 </div>
                             )}
                             {otpVerified && !phoneSuccess && (
-                                <p className="text-sm font-medium text-green-700">✓ Número verificado. Clique em salvar.</p>
+                                <p className="text-sm font-medium text-[var(--eixo-success)]">✓ Número verificado. Clique em salvar.</p>
                             )}
-                            {phoneError && <p className="text-sm text-red-600">{phoneError}</p>}
-                            {phoneSuccess && <p className="text-sm text-green-700">Celular atualizado com sucesso.</p>}
+                            {phoneError && <p className="text-sm text-[var(--eixo-danger)]">{phoneError}</p>}
+                            {phoneSuccess && <p className="text-sm text-[var(--eixo-success)]">Celular atualizado com sucesso.</p>}
                             {otpVerified && !phoneSuccess && (
                                 <button
                                     type="button"
@@ -393,34 +448,34 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                     {activeTab === 'senha' && (
                         <div className="space-y-4">
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#5E5E5E]">Senha atual</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Senha atual</label>
                                 <input
                                     type="password"
                                     value={currentPassword}
                                     onChange={e => { setCurrentPassword(e.target.value); setSenhaSuccess(false); }}
-                                    className="w-full rounded-xl border border-[#EDEDED] bg-white px-4 py-2.5 text-sm text-[#2F2F2F] outline-none focus:border-[#B6E23A] focus:ring-2 focus:ring-[#B6E23A]/30"
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#5E5E5E]">Nova senha</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Nova senha</label>
                                 <input
                                     type="password"
                                     value={newPassword}
                                     onChange={e => { setNewPassword(e.target.value); setSenhaSuccess(false); }}
-                                    className="w-full rounded-xl border border-[#EDEDED] bg-white px-4 py-2.5 text-sm text-[#2F2F2F] outline-none focus:border-[#B6E23A] focus:ring-2 focus:ring-[#B6E23A]/30"
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#5E5E5E]">Confirmar nova senha</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Confirmar nova senha</label>
                                 <input
                                     type="password"
                                     value={confirmPassword}
                                     onChange={e => { setConfirmPassword(e.target.value); setSenhaSuccess(false); }}
-                                    className="w-full rounded-xl border border-[#EDEDED] bg-white px-4 py-2.5 text-sm text-[#2F2F2F] outline-none focus:border-[#B6E23A] focus:ring-2 focus:ring-[#B6E23A]/30"
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
                                 />
                             </div>
-                            {senhaError && <p className="text-sm text-red-600">{senhaError}</p>}
-                            {senhaSuccess && <p className="text-sm text-green-700">Senha atualizada com sucesso.</p>}
+                            {senhaError && <p className="text-sm text-[var(--eixo-danger)]">{senhaError}</p>}
+                            {senhaSuccess && <p className="text-sm text-[var(--eixo-success)]">Senha atualizada com sucesso.</p>}
                             <button
                                 type="button"
                                 onClick={handleSaveSenha}
@@ -435,7 +490,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                     {/* ── Foto ── */}
                     {activeTab === 'foto' && (
                         <div className="flex flex-col items-center gap-6">
-                            <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-[#EDEDED] bg-[#2F2F2F] text-2xl font-bold text-white">
+                            <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--eixo-border)] bg-[var(--eixo-text)] text-2xl font-bold text-[var(--eixo-surface)]">
                                 {avatarPreview ? (
                                     <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
                                 ) : (
@@ -458,10 +513,10 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                                 >
                                     {fotoLoading ? 'Enviando...' : 'Escolher foto'}
                                 </button>
-                                <p className="mt-2 text-xs text-[#5E5E5E]">JPEG, PNG ou WebP — máximo 5 MB</p>
+                                <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">JPEG, PNG ou WebP — máximo 5 MB</p>
                             </div>
-                            {fotoError && <p className="text-sm text-red-600">{fotoError}</p>}
-                            {fotoSuccess && <p className="text-sm text-green-700">Foto atualizada com sucesso.</p>}
+                            {fotoError && <p className="text-sm text-[var(--eixo-danger)]">{fotoError}</p>}
+                            {fotoSuccess && <p className="text-sm text-[var(--eixo-success)]">Foto atualizada com sucesso.</p>}
                         </div>
                     )}
                 </div>

@@ -56,8 +56,6 @@ const RainIcon: React.FC = () => (
 const getInitials = (name: string) =>
     name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() || '').join('');
 
-const getFirstName = (name: string) => String(name || '').trim().split(/\s+/)[0] || '';
-
 const DIAS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const getDayLabel = (offsetDays: number) => {
     if (offsetDays === 0) return 'Hoje';
@@ -284,24 +282,19 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="relative shrink-0" ref={userRef}>
                         <button
                             onClick={() => setUserOpen((v) => !v)}
-                            className="flex max-w-[138px] items-center gap-2.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 transition-colors hover:bg-[#EDEDED]"
+                            className="flex items-center gap-2.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 transition-colors hover:bg-[var(--eixo-surface-soft)]"
                         >
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--eixo-text)] text-xs font-bold text-[#f5f0e8]">
+                            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--eixo-text)] text-xs font-bold text-[#f5f0e8]">
                                 {currentUser.avatarUrl
                                     ? <img src={currentUser.avatarUrl} alt={currentUser.name} className="h-full w-full object-cover" />
                                     : getInitials(currentUser.name)
                                 }
                             </div>
-                            <div className="hidden min-w-0 flex-1 text-left sm:block">
-                                <p className="max-w-[62px] truncate text-sm font-semibold leading-tight text-[var(--eixo-text)]">
-                                    {getFirstName(currentUser.name)}
-                                </p>
-                            </div>
                             <ChevronDownIcon isOpen={userOpen} />
                         </button>
 
                         {userOpen && (
-                            <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
+                            <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
                                 <div className="border-b border-[var(--eixo-border)] px-4 py-3">
                                     <p className="text-sm font-semibold text-[var(--eixo-text)]">{currentUser.name}</p>
                                     <p className="truncate text-xs text-[var(--eixo-text-muted)]">{currentUser.email}</p>
