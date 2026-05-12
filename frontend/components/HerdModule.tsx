@@ -1,7 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import ExcelJS from 'exceljs';
-import * as XLSX from 'xlsx';
-import Papa from 'papaparse';
 import HerdAnimalModal from './AnimalDetailModal';
 import LotDetailModal from './LotDetailModal';
 import LotePurchaseModal from './LotePurchaseModal';
@@ -175,6 +172,10 @@ const FIELD_PLAN: Record<string, 'free' | 'paid2'> = {
 // Campos P.O. que indicam planilha de Puro de Origem
 const PO_IMPORT_FIELDS = ['tatuagem', 'mae', 'pai', 'sisbov'];
 
+const loadExcelJs = () => import('exceljs');
+const loadXlsx = () => import('xlsx');
+const loadPapa = () => import('papaparse');
+
 const FIELD_LABELS: Record<string, string> = {
     brinco: 'Identificação / Brinco',
     nome: 'Nome',
@@ -202,6 +203,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 const downloadWorkbook = async (fileName: string, sheetName: string, rows: Array<Array<string | number>>) => {
+    const { default: ExcelJS } = await loadExcelJs();
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(sheetName);
     rows.forEach((row) => worksheet.addRow(row));
@@ -245,6 +247,7 @@ const normalizeImportedMatrix = (matrix: string[][]): Record<string, string>[] =
 
 const parseImportedFile = async (file: File): Promise<Record<string, string>[]> => {
     if (file.name.toLowerCase().endsWith('.csv')) {
+        const { default: Papa } = await loadPapa();
         const csvText = await file.text();
         const parsed = Papa.parse<string[]>(csvText, {
             skipEmptyLines: true,
@@ -256,6 +259,7 @@ const parseImportedFile = async (file: File): Promise<Record<string, string>[]> 
     }
 
     const buffer = await file.arrayBuffer();
+    const XLSX = await loadXlsx();
     const workbook = XLSX.read(buffer, { type: 'array' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];

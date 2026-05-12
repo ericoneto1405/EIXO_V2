@@ -1,27 +1,21 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { Suspense, useState, useRef, useEffect } from 'react';
 import AssistantChat from './components/AssistantChat';
 import ActivityModule from './components/ActivityModule';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { buildApiUrl } from './api';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
-import HerdModule from './components/HerdModule';
 import Operations from './components/Operations';
 import FieldOccurrences from './components/FieldOccurrences';
 import ConfinementContracts from './components/ConfinementContracts';
 import Settings from './components/Settings';
-import FinanceModule from './components/FinanceModule';
 import Header from './components/Header';
 import Farms from './components/Farms';
-import FarmMap from './components/FarmMap';
 import Suppliers from './components/Suppliers';
 import Medicines from './components/Medicines';
 import Feeds from './components/Feeds';
 import Supplements from './components/Supplements';
-import GeneticsReproducao from './components/GeneticsReproducao';
-import EixoAcasalamento from './components/EixoAcasalamento';
 import SemenTankModule from './components/SemenTankModule';
-import NutritionModule from './components/NutritionModule';
 import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
@@ -35,12 +29,19 @@ import ModuleProgressCard from './components/ModuleProgressCard';
 import UserRegisterModal from './components/UserRegisterModal';
 import TeamPermissions from './components/TeamPermissions';
 import UpgradeScreen from './components/UpgradeScreen';
-import HQPage from './components/HQPage';
 import ProfileModal from './components/ProfileModal';
 import OnboardingSpotlight from './components/OnboardingSpotlight';
 import AlertsBar from './components/AlertsBar';
 import { Alert, Farm, WebUserCreatePayload } from './types';
 import { createWebUser } from './adapters/usersApi';
+
+const HerdModule = React.lazy(() => import('./components/HerdModule'));
+const FinanceModule = React.lazy(() => import('./components/FinanceModule'));
+const FarmMap = React.lazy(() => import('./components/FarmMap'));
+const GeneticsReproducao = React.lazy(() => import('./components/GeneticsReproducao'));
+const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'));
+const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
+const HQPage = React.lazy(() => import('./components/HQPage'));
 
 interface User {
     id: string;
@@ -1076,7 +1077,15 @@ const AppContent: React.FC = () => {
                                                 )}
                                             </>
                                         )}
-                                        {renderContent()}
+                                        <Suspense
+                                            fallback={
+                                                <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--eixo-text-muted)]">
+                                                    Carregando módulo...
+                                                </div>
+                                            }
+                                        >
+                                            {renderContent()}
+                                        </Suspense>
                                     </>
                                 )}
                             </div>
