@@ -1178,7 +1178,7 @@ const AppContent: React.FC = () => {
                 <div ref={supportRef} className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
                     {/* Painel de chat */}
                     {isSupportOpen && (
-                        <div className="w-[360px] h-[560px]">
+                        <div className="h-[min(560px,calc(100vh-140px))] w-[360px] max-w-[calc(100vw-32px)]">
                             <AssistantChat
                                 onClose={() => setIsSupportOpen(false)}
                                 farmId={selectedFarmId}
@@ -1197,7 +1197,7 @@ const AppContent: React.FC = () => {
                             style={{ minWidth: '88px' }}
                         >
                             {/* Logo eixo */}
-                            <img src="/logo_eixo_official.svg" alt="EIXO" className="h-4 w-auto" />
+                            <img src="/logo_eixo_negative.svg" alt="EIXO" className="h-4 w-auto" />
                             <span className="mt-1 border-t border-white/10 pt-1 text-[10px] font-bold uppercase leading-none tracking-[0.1em] text-[var(--eixo-green-soft)]">
                                 suporte
                             </span>

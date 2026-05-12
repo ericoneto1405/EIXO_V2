@@ -271,13 +271,13 @@ const Header: React.FC<HeaderProps> = ({
                     )}
                 </div>
 
-                {/* Spacer */}
-                <div className="flex-1" />
-
                 {/* Widget de previsão de chuva — só aparece quando a fazenda tem coordenadas */}
                 {farmLat != null && farmLng != null && (
                     <RainWidget lat={farmLat} lng={farmLng} />
                 )}
+
+                {/* Spacer */}
+                <div className="flex-1" />
 
                 {/* Lado direito — usuário */}
                 {currentUser && (

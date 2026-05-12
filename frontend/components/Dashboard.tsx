@@ -334,33 +334,6 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmL
                     )}
                 </KpiCard>
 
-                {/* 5. Fluxo de Caixa */}
-                <KpiCard title="Fluxo de Caixa" icon={<MoneyIcon />} loading={loading}>
-                    {kpis.saldoMes !== null ? (
-                        <>
-                            <p className={`text-2xl font-extrabold ${kpis.saldoMes >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
-                                {fmtMoney(kpis.saldoMes)}
-                            </p>
-                            <div className="mt-2 space-y-1">
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="text-[var(--eixo-text-muted)]">↑ Entradas</span>
-                                    <span className="font-semibold text-[var(--eixo-success)]">{fmtMoney(kpis.entradas ?? 0)}</span>
-                                </div>
-                                <div className="flex items-center justify-between text-xs">
-                                    <span className="text-[var(--eixo-text-muted)]">↓ Saídas</span>
-                                    <span className="font-semibold text-[var(--eixo-danger)]">{fmtMoney(kpis.saidas ?? 0)}</span>
-                                </div>
-                            </div>
-                            <p className="mt-1.5 text-[10px] text-[var(--eixo-text-soft)] capitalize">{mesLabel}</p>
-                        </>
-                    ) : (
-                        <>
-                            <p className="text-2xl font-extrabold text-[var(--eixo-text-soft)]">—</p>
-                            <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Acesse o Financeiro para lançamentos</p>
-                        </>
-                    )}
-                </KpiCard>
-
             </div>
 
             {/* Raio-X da Fazenda */}
