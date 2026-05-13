@@ -2,20 +2,30 @@
 
 ## Pendente de deploy
 
-### Fazendas e Pastos · Auditoria Fase 1 (Bugs + Correções de Pecuária)
+### Fazendas e Pastos · Auditoria Fase 2 (Features)
+
+| # | Tarefa | Arquivo |
+|---|--------|---------|
+| 1 | Campo "Período de descanso" condicional para sistema rotacionado | `FarmRegistrationForm.tsx` |
+| 2 | Barra visual segmentada de distribuição de áreas no card da fazenda | `Farms.tsx` |
+
+> ⚠️ `diasDescanso` é enviado no payload mas o backend ainda não persiste (sem migration Prisma). Frontend não quebra.
+
+---
+
+## Histórico
+
+### 2026-05-12 — Fazendas e Pastos · Auditoria Fase 1 (Bugs + Correções de Pecuária)
+Deploy: `fix: bugs e correções de pecuária — form não fecha ao salvar, sistemaPastejo ao editar, badge clicável, currais em NON_GRAZING e step com contagem`
 
 | # | Tarefa | Arquivo |
 |---|--------|---------|
 | 1 | "Salvar e continuar editando" não fecha mais o form | `FarmRegistrationForm.tsx` |
 | 2 | `sistemaPastejo` carrega corretamente ao editar fazenda existente | `FarmRegistrationForm.tsx` |
 | 3 | Badge "Adicionar pastos →" agora é clicável (abre form de pastos) | `Farms.tsx` |
-| 4 | Curral de manejo e curral de engorda entram em NON_GRAZING (sem forrageira/lotação/UA) | `FarmRegistrationForm.tsx` |
+| 4 | Curral de manejo e curral de engorda entram em NON_GRAZING | `FarmRegistrationForm.tsx` |
 | 5 | Opção "Confinamento" removida do select Sistema de pastejo | `FarmRegistrationForm.tsx` |
 | 6 | Step 2 exibe contagem de pastos: "Pastos (3)" | `FarmRegistrationForm.tsx` |
-
----
-
-## Histórico
 
 ### 2026-05-12 — Fix tela branca (build)
 Deploy: `fix: corrige tela branca — remove manualChunks de react e recharts`

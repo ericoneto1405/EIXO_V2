@@ -13,6 +13,7 @@ interface DivisionInput {
     forrageira: string;
     sistemaPastejo: string;
     lotacaoUaHa: string;
+    diasDescanso: string;
 }
 
 interface FarmRegistrationFormProps {
@@ -177,6 +178,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 forrageira: division.forrageira || '',
                 sistemaPastejo: '',
                 lotacaoUaHa: division.lotacaoUaHa?.toString?.() || '1',
+                diasDescanso: (division as any).diasDescanso?.toString() || '',
             })),
         );
         setCurrentStep('divisions');
@@ -194,6 +196,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 forrageira: '',
                 sistemaPastejo: '',
                 lotacaoUaHa: '1',
+                diasDescanso: '',
             },
         ]);
     };
@@ -220,6 +223,10 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
 
     const handleDivisionSistemaPastejo = (id: string, value: string) => {
         setDivisions(divisions.map((d) => d.id === id ? { ...d, sistemaPastejo: value } : d));
+    };
+
+    const handleDivisionDiasDescanso = (id: string, value: string) => {
+        setDivisions(divisions.map((d) => d.id === id ? { ...d, diasDescanso: value } : d));
     };
 
     const handleDivisionLotacao = (id: string, value: string) => {
@@ -310,6 +317,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 forrageira: division.forrageira || '',
                 sistemaPastejo: '',
                 lotacaoUaHa: division.lotacaoUaHa?.toString?.() || '1',
+                diasDescanso: (division as any).diasDescanso?.toString() || '',
             })),
         );
     };
@@ -378,6 +386,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     forrageira: '',
                     sistemaPastejo: '',
                     lotacaoUaHa: '1',
+                    diasDescanso: '',
                 }]);
             }
             setSubmitSuccess(activeFarm ? 'Dados da fazenda atualizados. Continue nos pastos.' : 'Fazenda salva. Agora cadastre os pastos.');
@@ -439,15 +448,16 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             return;
         }
 
-        const payloadDivisions: Paddock[] = divisions.map((division) => ({
+        const payloadDivisions = (divisions.map((division) => ({
             id: division.id,
             name: division.name.trim(),
             areaHa: parseFloat(division.areaHa) || 0,
             divisionType: division.divisionType,
             forrageira: division.forrageira || null,
             sistemaPastejo: division.sistemaPastejo || null,
+            diasDescanso: division.diasDescanso ? parseInt(division.diasDescanso) : null,
             lotacaoUaHa: parseFloat(division.lotacaoUaHa) || null,
-        }));
+        })) as any[]);
 
         const hasInvalidDivision = payloadDivisions.some(
             (division) =>
@@ -864,6 +874,25 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                                     <option value="semi-intensivo">Semi-intensivo</option>
                                                 </select>
                                             </div>
+                                            {division.sistemaPastejo === 'rotacionado' && (
+                                                <div>
+                                                    <label htmlFor={`division-descanso-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">
+                                                        Período de descanso
+                                                        <span className="ml-1.5 text-xs font-normal text-[var(--eixo-text-muted)]">dias entre pastejos</span>
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        id={`division-descanso-${division.id}`}
+                                                        value={division.diasDescanso}
+                                                        onChange={(e) => handleDivisionDiasDescanso(division.id, e.target.value)}
+                                                        min="1"
+                                                        step="1"
+                                                        placeholder="Ex: 35"
+                                                        className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                                    />
+                                                    <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Ref: Brachiaria — 30 a 40 dias (águas) · 60 a 90 dias (seca)</p>
+                                                </div>
+                                            )}
                                         </div>
                                         <div>
                                             <label htmlFor={`division-lotacao-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">

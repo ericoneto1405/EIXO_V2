@@ -95,20 +95,29 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
             setSteps(next);
             setLoading(false);
 
-            if (next.farm && next.paddocks && next.animals && next.weighings) {
+            // Conclusão por contexto — fecha quando os 2 passos do contexto atual estão prontos
+            const isHerdCtx = contextView === 'Rebanho Comercial';
+            const contextDone = isHerdCtx
+                ? (next.animals && next.weighings)
+                : (next.farm && next.paddocks);
+
+            if (contextDone) {
                 setAllDone(true);
-                // Salva conclusão no backend (persistência entre dispositivos)
+                // Mostra mensagem de conclusão por 2,5s antes de fechar
+                setTimeout(() => setVisible(false), 2500);
+            }
+
+            // Persistência global no backend só quando os 4 passos estiverem completos
+            if (next.farm && next.paddocks && next.animals && next.weighings) {
                 fetch(buildApiUrl('/auth/me/onboarding'), {
                     method: 'PATCH',
                     credentials: 'include',
                 }).catch(() => { /* silencioso */ });
-                // Mostra mensagem de conclusão por 2,5s antes de fechar
-                setTimeout(() => setVisible(false), 2500);
             }
         };
 
         check();
-    }, [userId, farmId, farms, visible, onboardingCompletedAt]);
+    }, [userId, farmId, farms, visible, onboardingCompletedAt, contextView]);
 
     if (!visible || !!onboardingCompletedAt) return null;
 

@@ -309,6 +309,25 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                             return sum;
                         }, 0);
                         const areaCoverage = farm.size > 0 ? (totalPaddockArea / farm.size) * 100 : 0;
+                        const GRAZING_TYPES = ['pasto', 'piquete de maternidade'];
+                        const INFRA_TYPES = ['curral de manejo', 'curral de engorda'];
+                        const NON_PRODUCTIVE_TYPES = ['aguada / reservatório', 'área de preservação', 'área de plantio'];
+
+                        const areaGrazing = paddocks
+                            .filter(p => GRAZING_TYPES.includes(p.divisionType ?? ''))
+                            .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
+                        const areaInfra = paddocks
+                            .filter(p => INFRA_TYPES.includes(p.divisionType ?? ''))
+                            .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
+                        const areaNonProd = paddocks
+                            .filter(p => NON_PRODUCTIVE_TYPES.includes(p.divisionType ?? ''))
+                            .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
+                        const areaUncovered = Math.max(0, (farm.size ?? 0) - totalPaddockArea);
+                        const farmSizeForCalc = (farm.size ?? 0) > 0 ? farm.size : 1;
+                        const pctGrazing = (areaGrazing / farmSizeForCalc) * 100;
+                        const pctInfra = (areaInfra / farmSizeForCalc) * 100;
+                        const pctNonProd = (areaNonProd / farmSizeForCalc) * 100;
+                        const pctUncovered = (areaUncovered / farmSizeForCalc) * 100;
                         const animalsCount = typeof (farm as Farm & { animalsCount?: number }).animalsCount === 'number'
                             ? (farm as Farm & { animalsCount?: number }).animalsCount
                             : null;
@@ -378,6 +397,60 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                                         <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(areaCoverage)}%</p>
                                     </div>
                                 </div>
+
+                                {farm.size > 0 && totalPaddockArea > 0 && (
+                                    <div className="mt-3 space-y-1">
+                                        <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-[#EDEDED]">
+                                            {pctGrazing > 0 && (
+                                                <div
+                                                    className="h-full bg-[#B6E23A] transition-all duration-300"
+                                                    style={{ width: `${pctGrazing}%` }}
+                                                    title={`Pastagem: ${formatNumber(areaGrazing)} ha`}
+                                                />
+                                            )}
+                                            {pctNonProd > 0 && (
+                                                <div
+                                                    className="h-full bg-[#d1cdc8] transition-all duration-300"
+                                                    style={{ width: `${pctNonProd}%` }}
+                                                    title={`Não produtiva: ${formatNumber(areaNonProd)} ha`}
+                                                />
+                                            )}
+                                            {pctInfra > 0 && (
+                                                <div
+                                                    className="h-full bg-[#fdba74] transition-all duration-300"
+                                                    style={{ width: `${pctInfra}%` }}
+                                                    title={`Instalações: ${formatNumber(areaInfra)} ha`}
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                                            {areaGrazing > 0 && (
+                                                <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
+                                                    <span className="inline-block h-2 w-2 rounded-sm bg-[#B6E23A]" />
+                                                    Pastagem {formatNumber(areaGrazing)} ha
+                                                </span>
+                                            )}
+                                            {areaNonProd > 0 && (
+                                                <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
+                                                    <span className="inline-block h-2 w-2 rounded-sm bg-[#d1cdc8]" />
+                                                    APP/Aguada {formatNumber(areaNonProd)} ha
+                                                </span>
+                                            )}
+                                            {areaInfra > 0 && (
+                                                <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
+                                                    <span className="inline-block h-2 w-2 rounded-sm bg-[#fdba74]" />
+                                                    Instalações {formatNumber(areaInfra)} ha
+                                                </span>
+                                            )}
+                                            {areaUncovered > 0.01 && (
+                                                <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
+                                                    <span className="inline-block h-2 w-2 rounded-sm border border-dashed border-[#d1cdc8]" />
+                                                    Não cadastrado {formatNumber(areaUncovered)} ha
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="mt-4 flex flex-wrap items-center gap-2">
                                     {paddocksCount === 0 ? (
