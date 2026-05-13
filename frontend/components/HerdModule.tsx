@@ -470,7 +470,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [importMapping, setImportMapping] = useState<Record<string, string>>({});
     const [importWeightUnit, setImportWeightUnit] = useState<'kg' | 'arroba'>('kg');
     const [importProgress, setImportProgress] = useState<null | {
-        total: number; success: number; errors: string[]; failedRows: Record<string, string>[];
+        total: number; success: number; errors: string[]; failedRows: Record<string, string>[]; weighingIssues: string[];
     }>(null);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1022,10 +1022,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         if (!farmId) return;
         setIsImporting(true);
         const errors: string[] = [];
+        const weighingIssues: string[] = [];
         const failedRows: Record<string, string>[] = [];
         let success = 0;
         const total = importRows.length;
-        setImportProgress({ total, success: 0, errors: [], failedRows: [] });
+        setImportProgress({ total, success: 0, errors: [], failedRows: [], weighingIssues: [] });
 
         const normalizeSexo = (raw: string): 'Macho' | 'Fêmea' => {
             const v = raw.toLowerCase().trim();
@@ -1044,6 +1045,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
         const brincoCol = Object.entries(importMapping)
             .find(([, v]) => v === 'brinco')?.[0];
+        const mappingEntries = Object.entries(importMapping);
         const brincosSeen = new Set<string>();
         const duplicatesInFile = new Set<string>();
         if (brincoCol) {
@@ -1059,9 +1061,59 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         for (let i = 0; i < importRows.length; i++) {
             const row = importRows[i];
             const get = (field: string) => {
-                const col = Object.entries(importMapping)
-                    .find(([, v]) => v === field)?.[0];
+                const col = mappingEntries.find(([, v]) => v === field)?.[0];
                 return col ? (row[col] || '').trim() : '';
+            };
+            const parsePesoImportado = (raw: string): number | null => {
+                const pesoNum = parseFloat(raw.replace(',', '.'));
+                if (Number.isNaN(pesoNum) || pesoNum <= 0) return null;
+                return importWeightUnit === 'arroba'
+                    ? Math.round(pesoNum * 15)
+                    : pesoNum;
+            };
+            const collectMultipleWeighings = () => {
+                const grouped = new Map<string, { dateRaw?: string; weightRaw?: string }>();
+                for (const header of importHeaders) {
+                    const headerNorm = header
+                        .toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .trim();
+                    const dateMatch = headerNorm.match(/^data\s*pesagem\s*(\d+)$/);
+                    const weightMatch = headerNorm.match(/^peso\s*pesagem\s*(\d+)$/);
+                    if (dateMatch) {
+                        const key = dateMatch[1];
+                        const prev = grouped.get(key) ?? {};
+                        prev.dateRaw = (row[header] || '').trim();
+                        grouped.set(key, prev);
+                    } else if (weightMatch) {
+                        const key = weightMatch[1];
+                        const prev = grouped.get(key) ?? {};
+                        prev.weightRaw = (row[header] || '').trim();
+                        grouped.set(key, prev);
+                    }
+                }
+
+                const weighings: Array<{ data: string; peso: number }> = [];
+                const localErrors: string[] = [];
+                for (const key of Array.from(grouped.keys()).sort((a, b) => Number(a) - Number(b))) {
+                    const entry = grouped.get(key)!;
+                    const hasDate = Boolean(entry.dateRaw);
+                    const hasWeight = Boolean(entry.weightRaw);
+                    if (!hasDate && !hasWeight) continue;
+                    if (!hasDate || !hasWeight) {
+                        localErrors.push(`Linha ${i + 2} (${brinco}): Pesagem ${key} incompleta (data/peso).`);
+                        continue;
+                    }
+                    const dataNorm = normalizeDate(entry.dateRaw || '');
+                    const pesoNorm = parsePesoImportado(entry.weightRaw || '');
+                    if (!dataNorm || !pesoNorm) {
+                        localErrors.push(`Linha ${i + 2} (${brinco}): Pesagem ${key} inválida (data/peso).`);
+                        continue;
+                    }
+                    weighings.push({ data: dataNorm, peso: pesoNorm });
+                }
+                return { weighings, localErrors };
             };
 
             const brinco = get('brinco');
@@ -1082,12 +1134,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             let pesoAtual: number | undefined;
             const pesoRaw = get('pesoAtual');
             if (pesoRaw) {
-                const pesoNum = parseFloat(pesoRaw.replace(',', '.'));
-                if (!isNaN(pesoNum) && pesoNum > 0) {
-                    pesoAtual = importWeightUnit === 'arroba'
-                        ? Math.round(pesoNum * 15)
-                        : pesoNum;
-                }
+                const parsedPeso = parsePesoImportado(pesoRaw);
+                if (parsedPeso) pesoAtual = parsedPeso;
             }
 
             let valorCompra: number | undefined;
@@ -1121,20 +1169,38 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 // Registrar pesagem real se dataPesagem e pesoAtual estiverem presentes
                 const dataPesagemRaw = get('dataPesagem');
                 const dataPesagemNorm = normalizeDate(dataPesagemRaw);
-                if (dataPesagemNorm && pesoAtual && createdAnimal?.id) {
+                const pesagensImportacao: Array<{ data: string; peso: number }> = [];
+                if (dataPesagemNorm && pesoAtual) {
+                    pesagensImportacao.push({ data: dataPesagemNorm, peso: pesoAtual });
+                }
+
+                const { weighings: pesagensMultiplas, localErrors } = collectMultipleWeighings();
+                if (localErrors.length > 0) {
+                    weighingIssues.push(...localErrors);
+                }
+                for (const pesagem of pesagensMultiplas) {
+                    const exists = pesagensImportacao.some((p) =>
+                        p.data === pesagem.data && p.peso === pesagem.peso,
+                    );
+                    if (!exists) pesagensImportacao.push(pesagem);
+                }
+
+                if (createdAnimal?.id) {
                     try {
-                        await fetch(buildApiUrl(`/animals/${createdAnimal.id}/pesagens`), {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            credentials: 'include',
-                            body: JSON.stringify({ data: dataPesagemNorm, peso: pesoAtual }),
-                        });
+                        for (const pesagem of pesagensImportacao) {
+                            await fetch(buildApiUrl(`/animals/${createdAnimal.id}/pesagens`), {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                credentials: 'include',
+                                body: JSON.stringify({ data: pesagem.data, peso: pesagem.peso }),
+                            });
+                        }
                     } catch {
-                        // Pesagem falhou mas animal foi criado — não bloquear
+                        weighingIssues.push(`Linha ${i + 2} (${brinco}): animal criado, mas houve falha ao registrar pesagens.`);
                     }
                 }
                 success++;
-                setImportProgress({ total, success, errors: [...errors], failedRows: [] });
+                setImportProgress({ total, success, errors: [...errors], failedRows: [], weighingIssues: [...weighingIssues] });
             } catch (err: any) {
                 const msg = err?.message || '';
                 if (msg.toLowerCase().includes('unique') ||
@@ -1147,12 +1213,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     errors.push(`Linha ${i + 2} (${brinco}): ${msg || 'erro ao importar'}`);
                 }
                 failedRows.push(row);
-                setImportProgress({ total, success, errors: [...errors], failedRows: [] });
+                setImportProgress({ total, success, errors: [...errors], failedRows: [], weighingIssues: [...weighingIssues] });
             }
         }
 
         setIsImporting(false);
-        setImportProgress({ total, success, errors: [...errors], failedRows: [...failedRows] });
+        setImportProgress({ total, success, errors: [...errors], failedRows: [...failedRows], weighingIssues: [...weighingIssues] });
         await loadData();
     };
 
@@ -3049,6 +3115,29 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                     )}
                                                 </div>
                                             )}
+                                            {importProgress.weighingIssues.length > 0 && (
+                                                <div className="rounded-xl border border-[#f3dfb0] bg-[#fff8e8] p-4">
+                                                    <div className="mb-3 flex items-center gap-2">
+                                                        <span className="text-lg">ℹ️</span>
+                                                        <div>
+                                                            <p className="font-bold text-[#9a6b06]">
+                                                                {importProgress.weighingIssues.length} {importProgress.weighingIssues.length === 1 ? 'pendência de pesagem' : 'pendências de pesagem'}
+                                                            </p>
+                                                            <p className="text-xs text-[#9a6b06]">
+                                                                Os animais foram criados. Apenas algumas pesagens não foram registradas.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="max-h-32 space-y-1.5 overflow-y-auto">
+                                                        {importProgress.weighingIssues.map((err, i) => (
+                                                            <div key={i} className="flex gap-2 rounded-lg bg-white/70 px-3 py-2 text-xs text-[#9a6b06]">
+                                                                <span className="flex-shrink-0 font-bold">{i + 1}.</span>
+                                                                <span>{err}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </>
                                     )}
                                 </div>
@@ -3096,7 +3185,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         onClick={() => setImportModalOpen(false)}
                                         className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
                                     >
-                                        {importProgress.errors.length > 0 ? 'Fechar' : 'Concluir'}
+                                        {importProgress.errors.length > 0 || importProgress.weighingIssues.length > 0 ? 'Fechar' : 'Concluir'}
                                     </button>
                                 </>
                             )}
