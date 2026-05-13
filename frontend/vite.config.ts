@@ -20,9 +20,6 @@ export default defineConfig(() => {
         rollupOptions: {
           output: {
             manualChunks(id) {
-              if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) return 'react-core';
-              if (id.includes('node_modules/react-router') || id.includes('node_modules/history')) return 'router';
-              if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-')) return 'charts';
               if (id.includes('node_modules/exceljs')) return 'exceljs';
               if (id.includes('node_modules/xlsx')) return 'xlsx';
               if (id.includes('node_modules/papaparse')) return 'papaparse';
