@@ -24,7 +24,13 @@ interface FarmRegistrationFormProps {
     onSaveAndReturn?: () => void;
 }
 
-const NON_GRAZING_DIVISION_TYPES = ['aguada / reservatório', 'área de preservação', 'área de plantio'];
+const NON_GRAZING_DIVISION_TYPES = [
+    'aguada / reservatório',
+    'área de preservação',
+    'área de plantio',
+    'curral de manejo',
+    'curral de engorda',
+];
 
 // ─── Coordinate helpers ───────────────────────────────────────────────────────
 
@@ -496,9 +502,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 onSaveAndReturn?.();
                 return;
             }
-            // mode === 'complete': concluir cadastro → volta para a lista
-            setSubmitSuccess('Cadastro concluído!');
-            onSaveAndReturn?.();
+            setSubmitSuccess('Pastos salvos. Continue editando ou feche quando terminar.');
         } catch (error) {
             console.error(error);
             try {
@@ -516,8 +520,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     onSaveAndReturn?.();
                     return;
                 }
-                setSubmitSuccess('Cadastro concluído!');
-                onSaveAndReturn?.();
+                setSubmitSuccess('Pastos salvos. Continue editando ou feche quando terminar.');
             } catch (retryError) {
                 console.error(retryError);
                 setSubmitError('Não foi possível salvar os pastos. Verifique sua conexão.');
@@ -584,7 +587,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 <div className="h-px flex-1 bg-[var(--eixo-surface-soft)]" />
                 <div className="flex items-center gap-2">
                     <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'divisions' ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-soft)]'}`}>2</div>
-                    <span className={`text-sm font-semibold ${currentStep === 'divisions' ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-soft)]'}`}>Pastos</span>
+                    <span className={`text-sm font-semibold ${currentStep === 'divisions' ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-soft)]'}`}>{divisions.length > 0 ? `Pastos (${divisions.length})` : 'Pastos'}</span>
                 </div>
             </div>
 
@@ -859,7 +862,6 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                                     <option value="extensivo">Extensivo</option>
                                                     <option value="rotacionado">Rotacionado</option>
                                                     <option value="semi-intensivo">Semi-intensivo</option>
-                                                    <option value="confinamento">Confinamento</option>
                                                 </select>
                                             </div>
                                         </div>

@@ -381,9 +381,13 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
 
                                 <div className="mt-4 flex flex-wrap items-center gap-2">
                                     {paddocksCount === 0 ? (
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fffbeb] px-2.5 py-1 text-xs font-semibold text-[#92400e]">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleEdit(farm)}
+                                            className="inline-flex items-center gap-1.5 rounded-full bg-[#fffbeb] px-2.5 py-1 text-xs font-semibold text-[#92400e] transition-colors hover:bg-[#fef3c7]"
+                                        >
                                             Adicionar pastos →
-                                        </span>
+                                        </button>
                                     ) : (
                                         <button
                                             type="button"
