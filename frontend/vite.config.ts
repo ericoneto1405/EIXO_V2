@@ -23,12 +23,6 @@ export default defineConfig(() => {
             manualChunks(id) {
               if (id.includes('node_modules/exceljs')) return 'exceljs';
               if (id.includes('node_modules/xlsx')) return 'xlsx';
-              if (id.includes('node_modules/papaparse')) return 'papaparse';
-              if (id.includes('node_modules/jszip')) return 'jszip';
-              if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-')) return 'charts';
-              if (id.includes('node_modules/leaflet') || id.includes('node_modules/react-leaflet') || id.includes('node_modules/@geoman-io')) return 'map-leaflet';
-              if (id.includes('node_modules/@react-google-maps/api') || id.includes('node_modules/togeojson')) return 'map-vendor';
-              if (id.includes('node_modules')) return 'vendor';
             },
           },
         },
