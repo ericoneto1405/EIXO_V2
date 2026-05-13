@@ -450,6 +450,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [bulkTargetPastoId, setBulkTargetPastoId] = useState('');
     const [bulkLoading, setBulkLoading] = useState(false);
     const [bulkError, setBulkError] = useState<string | null>(null);
+    const [bulkWeighOpen, setBulkWeighOpen] = useState(false);
+    const [bulkWeighDate, setBulkWeighDate] = useState('');
+    const [bulkWeighPeso, setBulkWeighPeso] = useState('');
+    const [bulkWeighLoading, setBulkWeighLoading] = useState(false);
+    const [bulkWeighResult, setBulkWeighResult] = useState<{ success: number; errors: string[] } | null>(null);
     const [selectedAnimal, setSelectedAnimal] = useState<HerdAnimal | null>(null);
     const [selectedLot, setSelectedLot] = useState<HerdLot | null>(null);
     const [lotModalOpen, setLotModalOpen] = useState(false);
@@ -730,6 +735,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
     const nutritionOptions = useMemo(() => {
         return [...new Set(animals.map((animal) => animal.nutritionPlan?.nome).filter(Boolean) as string[])].sort((a, b) =>
+            a.localeCompare(b, 'pt-BR'),
+        );
+    }, [animals]);
+
+    const racaOptions = useMemo(() => {
+        return [...new Set(animals.map((a) => a.raca).filter(Boolean) as string[])].sort((a, b) =>
             a.localeCompare(b, 'pt-BR'),
         );
     }, [animals]);
@@ -1283,6 +1294,66 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         }
     };
 
+    const handleBulkWeigh = async () => {
+        const peso = parseFloat(bulkWeighPeso.replace(',', '.'));
+        if (!bulkWeighDate || isNaN(peso) || peso <= 0) {
+            setBulkError('Informe data e peso válidos.');
+            return;
+        }
+        setBulkWeighLoading(true);
+        setBulkError(null);
+        const ids = Array.from(selectedAnimals);
+        let success = 0;
+        const errors: string[] = [];
+        for (const id of ids) {
+            try {
+                const res = await fetch(buildApiUrl(`/animals/${id}/pesagens`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ data: bulkWeighDate, peso }),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data?.message || 'Erro ao registrar pesagem.');
+                success++;
+            } catch (err: any) {
+                const animal = animals.find((a) => a.id === id);
+                errors.push(`${animal?.identificacao || id}: ${err?.message || 'erro'}`);
+            }
+        }
+        setBulkWeighLoading(false);
+        setBulkWeighResult({ success, errors });
+        if (success > 0) await loadData();
+    };
+
+    const handleExportAnimals = async () => {
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const fileName = `rebanho_${(farmName || 'fazenda').replace(/\s+/g, '_')}_${dateStr}.xlsx`;
+        const headers = ['ID / Brinco', 'Raça', 'Sexo', 'Categoria', 'Pasto', 'Lote', 'Peso (kg)', 'Peso (@)', 'GMD (kg/dia)', 'Última pesagem'];
+        const rows: Array<Array<string | number>> = [headers];
+        for (const a of sortedAnimals) {
+            const lotName = lots.find((l) => l.id === a.lotId)?.name || '';
+            const arroba = a.pesoAtual != null ? Number((a.pesoAtual / 15).toFixed(1)) : '';
+            const gmd = a.gmd30 ?? a.gmd ?? '';
+            const ultimaPesagem = a.dataUltimaPesagem
+                ? new Date(a.dataUltimaPesagem).toLocaleDateString('pt-BR')
+                : '';
+            rows.push([
+                a.identificacao || '',
+                a.raca || '',
+                a.sexo || '',
+                a.categoria || '',
+                a.currentPaddockName || '',
+                lotName,
+                a.pesoAtual ?? '',
+                arroba,
+                typeof gmd === 'number' ? Number(gmd.toFixed(3)) : '',
+                ultimaPesagem,
+            ]);
+        }
+        await downloadWorkbook(fileName, 'Rebanho', rows);
+    };
+
     const handleSort = (column: SortColumn) => {
         if (sortColumn === column) {
             setSortDirection((direction) => (direction === 'asc' ? 'desc' : 'asc'));
@@ -1324,6 +1395,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
                         >
                             Mover para Pasto
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setBulkError(null); setBulkWeighResult(null); setBulkWeighDate(''); setBulkWeighPeso(''); setBulkWeighOpen(true); }}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                        >
+                            Registrar pesagem
                         </button>
                         <button
                             type="button"
@@ -2086,7 +2164,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             ))}
                         </select>
                     </div>
-                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
                         <input
                             type="number"
                             value={filterGmdMin}
@@ -2101,13 +2179,16 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             placeholder="GMD máx"
                             className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
                         />
-                        <input
-                            type="text"
+                        <select
                             value={filterRaca}
                             onChange={(event) => setFilterRaca(event.target.value)}
-                            placeholder="Filtrar por raça..."
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        />
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
+                        >
+                            <option value="">Todas as raças</option>
+                            {racaOptions.map((r) => (
+                                <option key={r} value={r}>{r}</option>
+                            ))}
+                        </select>
                         <button
                             type="button"
                             onClick={() => {
@@ -2126,6 +2207,18 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                         >
                             Limpar filtros
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleExportAnimals}
+                            disabled={sortedAnimals.length === 0}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Exportar ({sortedAnimals.length})
                         </button>
                     </div>
                 </div>
@@ -2240,6 +2333,80 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 {bulkLoading ? 'Movendo...' : 'Confirmar'}
                             </button>
                         </footer>
+                    </div>
+                </div>
+            )}
+
+            {bulkWeighOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-sm rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
+                        <div className="border-b border-[var(--eixo-border)] px-6 py-4">
+                            <h3 className="text-base font-bold text-[var(--eixo-text)]">
+                                Registrar pesagem — {selectedAnimals.size} {selectedAnimals.size === 1 ? 'animal' : 'animais'}
+                            </h3>
+                        </div>
+                        <div className="space-y-4 px-6 py-4">
+                            {bulkWeighResult ? (
+                                <>
+                                    <div className="rounded-xl border border-[#c8ddc4] bg-[var(--eixo-green-soft)] p-4">
+                                        <p className="font-bold text-[var(--eixo-text)]">
+                                            {bulkWeighResult.success} {bulkWeighResult.success === 1 ? 'pesagem registrada' : 'pesagens registradas'}
+                                        </p>
+                                    </div>
+                                    {bulkWeighResult.errors.length > 0 && (
+                                        <div className="max-h-32 overflow-y-auto rounded-xl border border-[#efc2ba] bg-[#fff2ef] p-3 space-y-1">
+                                            {bulkWeighResult.errors.map((e, i) => (
+                                                <p key={i} className="text-xs text-[var(--eixo-danger)]">{e}</p>
+                                            ))}
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Data da pesagem</label>
+                                        <input
+                                            type="date"
+                                            value={bulkWeighDate}
+                                            onChange={(e) => setBulkWeighDate(e.target.value)}
+                                            max={new Date().toISOString().slice(0, 10)}
+                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Peso (kg)</label>
+                                        <input
+                                            type="number"
+                                            value={bulkWeighPeso}
+                                            onChange={(e) => setBulkWeighPeso(e.target.value)}
+                                            placeholder="ex: 420"
+                                            min="1"
+                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
+                                        />
+                                    </div>
+                                    {bulkError && <p className="text-xs text-[var(--eixo-danger)]">{bulkError}</p>}
+                                </>
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-3 border-t border-[var(--eixo-border)] px-6 py-4">
+                            <button
+                                type="button"
+                                onClick={() => { setBulkWeighOpen(false); setBulkWeighResult(null); if (bulkWeighResult?.success) setSelectedAnimals(new Set()); }}
+                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                            >
+                                {bulkWeighResult ? 'Fechar' : 'Cancelar'}
+                            </button>
+                            {!bulkWeighResult && (
+                                <button
+                                    type="button"
+                                    onClick={handleBulkWeigh}
+                                    disabled={bulkWeighLoading || !bulkWeighDate || !bulkWeighPeso}
+                                    className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-bold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                    {bulkWeighLoading ? 'Registrando...' : 'Confirmar'}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
