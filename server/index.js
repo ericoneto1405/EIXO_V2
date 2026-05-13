@@ -7291,8 +7291,10 @@ app.post('/animals', async (req, res) => {
         return res.status(400).json({ message: 'Data de nascimento inválida.' });
     }
 
-    const parsedPesoAtual = parseNumber(pesoAtual);
-    if (parsedPesoAtual === null || parsedPesoAtual <= 0) {
+    const parsedPesoAtual = (pesoAtual !== undefined && pesoAtual !== null && pesoAtual !== '')
+        ? parseNumber(pesoAtual)
+        : null;
+    if (parsedPesoAtual !== null && parsedPesoAtual <= 0) {
         return res.status(400).json({ message: 'Peso atual inválido.' });
     }
 

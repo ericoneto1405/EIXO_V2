@@ -470,7 +470,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [importMapping, setImportMapping] = useState<Record<string, string>>({});
     const [importWeightUnit, setImportWeightUnit] = useState<'kg' | 'arroba'>('kg');
     const [importProgress, setImportProgress] = useState<null | {
-        total: number; success: number; errors: string[];
+        total: number; success: number; errors: string[]; failedRows: Record<string, string>[];
     }>(null);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -1022,9 +1022,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         if (!farmId) return;
         setIsImporting(true);
         const errors: string[] = [];
+        const failedRows: Record<string, string>[] = [];
         let success = 0;
         const total = importRows.length;
-        setImportProgress({ total, success: 0, errors: [] });
+        setImportProgress({ total, success: 0, errors: [], failedRows: [] });
 
         const normalizeSexo = (raw: string): 'Macho' | 'Fêmea' => {
             const v = raw.toLowerCase().trim();
@@ -1066,10 +1067,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             const brinco = get('brinco');
             if (!brinco) {
                 errors.push(`Linha ${i + 2}: identificação não encontrada — linha ignorada.`);
+                failedRows.push(row);
                 continue;
             }
             if (duplicatesInFile.has(brinco)) {
                 errors.push(`Linha ${i + 2} (${brinco}): brinco duplicado na planilha.`);
+                failedRows.push(row);
                 continue;
             }
 
@@ -1131,7 +1134,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     }
                 }
                 success++;
-                setImportProgress({ total, success, errors: [...errors] });
+                setImportProgress({ total, success, errors: [...errors], failedRows: [] });
             } catch (err: any) {
                 const msg = err?.message || '';
                 if (msg.toLowerCase().includes('unique') ||
@@ -1143,11 +1146,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 } else {
                     errors.push(`Linha ${i + 2} (${brinco}): ${msg || 'erro ao importar'}`);
                 }
-                setImportProgress({ total, success, errors: [...errors] });
+                failedRows.push(row);
+                setImportProgress({ total, success, errors: [...errors], failedRows: [] });
             }
         }
 
         setIsImporting(false);
+        setImportProgress({ total, success, errors: [...errors], failedRows: [...failedRows] });
         await loadData();
     };
 
@@ -3024,6 +3029,24 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             </div>
                                                         ))}
                                                     </div>
+                                                    {importProgress.failedRows && importProgress.failedRows.length > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                const rows = importProgress!.failedRows!;
+                                                                const headers = importHeaders;
+                                                                const data = [headers, ...rows.map(r => headers.map(h => r[h] ?? ''))];
+                                                                await downloadWorkbook('animais_com_erro.xlsx', 'Erros', data);
+                                                            }}
+                                                            className="mt-2 flex items-center gap-2 text-xs font-semibold text-[var(--eixo-danger)] hover:underline"
+                                                        >
+                                                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                            </svg>
+                                                            Baixar {importProgress.failedRows.length} linha{importProgress.failedRows.length > 1 ? 's' : ''} com erro (.xlsx)
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                         </>
@@ -3054,11 +3077,28 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 </>
                             )}
                             {importProgress && !isImporting && (
-                                <button type="button"
-                                    onClick={() => setImportModalOpen(false)}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]">
-                                    {importProgress.errors.length > 0 ? 'Fechar' : 'Concluir'}
-                                </button>
+                                <>
+                                    {importProgress.errors.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setImportModalOpen(false);
+                                                setImportProgress(null);
+                                                setTimeout(() => fileInputRef.current?.click(), 100);
+                                            }}
+                                            className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                        >
+                                            Reimportar arquivo
+                                        </button>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={() => setImportModalOpen(false)}
+                                        className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
+                                    >
+                                        {importProgress.errors.length > 0 ? 'Fechar' : 'Concluir'}
+                                    </button>
+                                </>
                             )}
                         </div>
                     </div>
