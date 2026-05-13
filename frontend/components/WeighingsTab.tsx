@@ -1347,7 +1347,9 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                                                         <td className="px-3 py-2 text-right text-[var(--eixo-text-muted)]">{fmtKg(item.previousWeightKg)}</td>
                                                         <td className="px-3 py-2 text-right font-semibold text-[var(--eixo-text)]">{fmtKg(item.weightKg)}</td>
                                                         <td className="px-3 py-2 text-right text-[var(--eixo-text-muted)]">{item.gainKg == null ? '—' : `${item.gainKg >= 0 ? '+' : ''}${item.gainKg.toFixed(1)} kg`}</td>
-                                                        <td className="px-3 py-2 text-right text-[var(--eixo-text-muted)]">{fmtGmd(item.gmd)}</td>
+                                                        <td className={`px-3 py-2 text-right ${item.gmd != null && item.gmd < 0 ? 'font-bold text-[var(--eixo-danger)]' : 'text-[var(--eixo-text-muted)]'}`}>
+                                                            {fmtGmd(item.gmd)}
+                                                        </td>
                                                         <td className="px-3 py-2">
                                                             <div className="flex items-center justify-center gap-2">
                                                                 <button

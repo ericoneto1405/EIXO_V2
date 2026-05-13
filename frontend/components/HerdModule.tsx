@@ -202,6 +202,70 @@ const FIELD_LABELS: Record<string, string> = {
     abcz: 'Registro ABCZ 🔒',
 };
 
+const VALID_CATEGORIES = [
+    'Bezerro',
+    'Bezerra',
+    'Novilho',
+    'Novilha',
+    'Garrote',
+    'Garrota',
+    'Boi',
+    'Vaca',
+    'Vaca de cria',
+    'Vaca seca',
+    'Vaca de descarte',
+    'Touro',
+];
+
+const normalizeCategoryKey = (value: string) =>
+    String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const CATEGORY_NORMALIZATION_MAP: Record<string, string> = {
+    bezerro: 'Bezerro',
+    bezerra: 'Bezerra',
+    'bezerro desmamado': 'Bezerro',
+    'bezerra desmamada': 'Bezerra',
+    novilho: 'Novilho',
+    novilha: 'Novilha',
+    'novilho recria': 'Novilho',
+    'novilha recria': 'Novilha',
+    garrote: 'Garrote',
+    garrota: 'Garrota',
+    'garrote recria': 'Garrote',
+    'garrota recria': 'Garrota',
+    boi: 'Boi',
+    'boi gordo': 'Boi',
+    'boi magro': 'Boi',
+    'boi terminacao': 'Boi',
+    'boi de engorda': 'Boi',
+    vaca: 'Vaca',
+    'vaca de cria': 'Vaca de cria',
+    matriz: 'Vaca de cria',
+    'vaca prenhe': 'Vaca de cria',
+    'vaca vazia': 'Vaca',
+    'vaca seca': 'Vaca seca',
+    'vaca descarte': 'Vaca de descarte',
+    'vaca de descarte': 'Vaca de descarte',
+    touro: 'Touro',
+    reprodutor: 'Touro',
+};
+
+const normalizeImportedCategory = (raw: string) => {
+    const cleaned = String(raw || '').trim();
+    if (!cleaned) return '';
+    const key = normalizeCategoryKey(cleaned);
+    if (CATEGORY_NORMALIZATION_MAP[key]) return CATEGORY_NORMALIZATION_MAP[key];
+    if (VALID_CATEGORIES.some((cat) => normalizeCategoryKey(cat) === key)) {
+        return VALID_CATEGORIES.find((cat) => normalizeCategoryKey(cat) === key) || cleaned;
+    }
+    return '';
+};
+
 const downloadWorkbook = async (fileName: string, sheetName: string, rows: Array<Array<string | number>>) => {
     const { default: ExcelJS } = await loadExcelJs();
     const workbook = new ExcelJS.Workbook();
@@ -277,7 +341,7 @@ const FIELD_KEYWORDS: Record<string, string[]> = {
         'identificador', 'brinco_animal', 'bringo', 'brinku', 'brco', 'brinq',
         'brn', 'idnt', 'identif', 'indentificacao', 'indentificação',
         'idenficacao', 'num.animal', 'id animal', 'n animal', 'nº animal',
-        'id brinq', 'brinqu', 'id brinco',
+        'id brinq', 'brinqu', 'id brinco', 'id',
     ],
     nome: [
         'nome', 'name', 'apelido', 'alcunha', 'denominacao', 'denominação',
@@ -469,6 +533,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [importHeaders, setImportHeaders] = useState<string[]>([]);
     const [importMapping, setImportMapping] = useState<Record<string, string>>({});
     const [importWeightUnit, setImportWeightUnit] = useState<'kg' | 'arroba'>('kg');
+    const [categoryConfirmOpen, setCategoryConfirmOpen] = useState(false);
     const [importProgress, setImportProgress] = useState<null | {
         total: number; success: number; errors: string[]; failedRows: Record<string, string>[]; weighingIssues: string[];
     }>(null);
@@ -1154,7 +1219,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     sexo: normalizeSexo(get('sexo')),
                     dataNascimento: dataNasc || undefined,
                     pesoAtual,
-                    categoria: get('categoria') || undefined,
+                    categoria: normalizeImportedCategory(get('categoria')) || undefined,
                     observacoes: get('observacoes') || undefined,
                     dataEntrada: dataEntrada || undefined,
                     valorCompra: valorCompra || undefined,
@@ -1220,6 +1285,36 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setIsImporting(false);
         setImportProgress({ total, success, errors: [...errors], failedRows: [...failedRows], weighingIssues: [...weighingIssues] });
         await loadData();
+    };
+
+    const categoryNormalizationPreview = useMemo(() => {
+        const categoryCol = Object.entries(importMapping).find(([, v]) => v === 'categoria')?.[0];
+        if (!categoryCol) return [];
+        const uniq = new Map<string, { original: string; normalized: string; changed: boolean; unknown: boolean }>();
+        for (const row of importRows) {
+            const original = (row[categoryCol] || '').trim();
+            if (!original) continue;
+            const normalized = normalizeImportedCategory(original);
+            const key = `${normalizeCategoryKey(original)}=>${normalizeCategoryKey(normalized)}`;
+            if (!uniq.has(key)) {
+                uniq.set(key, {
+                    original,
+                    normalized,
+                    changed: normalizeCategoryKey(original) !== normalizeCategoryKey(normalized),
+                    unknown: !normalized,
+                });
+            }
+        }
+        return Array.from(uniq.values()).slice(0, 10);
+    }, [importMapping, importRows]);
+
+    const handleImportStart = () => {
+        const hasCategoriaMap = Object.values(importMapping).includes('categoria');
+        if (hasCategoriaMap && categoryNormalizationPreview.length > 0) {
+            setCategoryConfirmOpen(true);
+            return;
+        }
+        void handleImportConfirm();
     };
 
     const handleCreateAnimal = async (event: React.FormEvent) => {
@@ -1637,9 +1732,27 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             {animal.currentPaddockName
                                                 ? animal.currentPaddockName
                                                 : (
-                                                    <span className="inline-flex items-center rounded-full bg-[#fce8e8] px-2 py-0.5 text-[10px] font-semibold text-[#8c2020]">
-                                                        Sem pasto
-                                                    </span>
+                                                    <div className="flex flex-col items-start gap-1.5">
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-[#fce8e8] px-2 py-0.5 text-[10px] font-semibold text-[#8c2020]">
+                                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M10.29 3.86l-8.08 14A2 2 0 003.93 21h16.14a2 2 0 001.72-3.14l-8.08-14a2 2 0 00-3.42 0z" />
+                                                            </svg>
+                                                            Sem pasto
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedAnimals(new Set([animal.id]));
+                                                                setBulkError(null);
+                                                                setBulkTargetPastoId('');
+                                                                setBulkMoveToPastoOpen(true);
+                                                            }}
+                                                            className="inline-flex items-center rounded-lg border border-[#d7cab3] bg-[#fffaf1] px-2.5 py-1 text-[11px] font-semibold text-[#6d6558] hover:bg-[#f3ebdc]"
+                                                        >
+                                                            Associar pasto
+                                                        </button>
+                                                    </div>
                                                 )
                                             }
                                         </td>
@@ -2314,7 +2427,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             {/* Modal: Confirmar exclusão em massa */}
             {bulkDeleteOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
-                    <div className="w-full max-w-sm rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
+                    <div className="w-full max-w-lg rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
                         <header className="border-b border-[var(--eixo-border)] p-5">
                             <h3 className="text-lg font-bold text-[var(--eixo-text)]">Excluir animais</h3>
                         </header>
@@ -2341,7 +2454,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             {/* Modal: Mover para Lote */}
             {bulkMoveToLotOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
-                    <div className="w-full max-w-sm rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
+                    <div className="w-full max-w-lg rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
                         <header className="border-b border-[var(--eixo-border)] p-5">
                             <h3 className="text-lg font-bold text-[var(--eixo-text)]">Mover para Lote</h3>
                         </header>
@@ -2376,7 +2489,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             {/* Modal: Mover para Pasto */}
             {bulkMoveToPastoOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
-                    <div className="w-full max-w-sm rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
+                    <div className="w-full max-w-lg rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
                         <header className="border-b border-[var(--eixo-border)] p-5">
                             <h3 className="text-lg font-bold text-[var(--eixo-text)]">Mover para Pasto</h3>
                         </header>
@@ -2410,7 +2523,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
             {bulkWeighOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-sm rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
+                    <div className="w-full max-w-xl rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
                         <div className="border-b border-[var(--eixo-border)] px-6 py-4">
                             <h3 className="text-base font-bold text-[var(--eixo-text)]">
                                 Registrar pesagem — {selectedAnimals.size} {selectedAnimals.size === 1 ? 'animal' : 'animais'}
@@ -2490,7 +2603,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     onClick={closeAnimalForm}
                 >
                     <div
-                        className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
+                        className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
                         onClick={(event) => event.stopPropagation()}
                     >
                         <header className="flex flex-shrink-0 items-center justify-between border-b border-[var(--eixo-border)] p-5">
@@ -2720,7 +2833,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     onClick={closeLotForm}
                 >
                     <div
-                        className="w-full max-w-lg rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
+                        className="w-full max-w-2xl rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
                         onClick={(event) => event.stopPropagation()}
                     >
                         <header className="flex items-center justify-between border-b border-[var(--eixo-border)] p-5">
@@ -2818,7 +2931,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
             {importModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
+                    <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
 
                         <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
                             <div>
@@ -2922,7 +3035,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                 const isPO = mapped ? PO_IMPORT_FIELDS.includes(mapped) : false;
                                                 return (
                                                 <div key={h} className={`flex items-center gap-3 rounded-lg px-2 py-1 transition-colors ${isUnmapped ? 'bg-[var(--eixo-green-soft)]' : isPO ? 'bg-[#f0f9d4]' : ''}`}>
-                                                    <span className="w-44 truncate text-sm text-[var(--eixo-text-muted)]" title={h}>
+                                                    <span className="max-w-[260px] text-sm leading-tight text-[var(--eixo-text-muted)] break-words" title={h}>
                                                         "{h}"
                                                     </span>
                                                     <span className="text-[var(--eixo-text-muted)]">→</span>
@@ -3048,12 +3161,30 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 <div className="space-y-3">
                                     {/* Progresso durante importação */}
                                     {isImporting && (
-                                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 text-center">
-                                            <p className="text-sm text-[var(--eixo-text-muted)]">Importando...</p>
-                                            <p className="mt-1 text-3xl font-bold text-[var(--eixo-text)]">
-                                                {importProgress.success} / {importProgress.total}
-                                            </p>
-                                            <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">animais processados</p>
+                                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
+                                            {(() => {
+                                                const total = importProgress.total || 0;
+                                                const success = importProgress.success || 0;
+                                                const percent = total > 0 ? Math.min(100, Math.round((success / total) * 100)) : 0;
+                                                const statusLabel = percent >= 95 ? 'Finalizando...' : 'Importando animais...';
+                                                return (
+                                                    <>
+                                                        <div className="mb-2 flex items-center justify-between">
+                                                            <p className="text-sm font-semibold text-[var(--eixo-text)]">{statusLabel}</p>
+                                                            <p className="text-sm font-bold text-[var(--eixo-text)]">{percent}%</p>
+                                                        </div>
+                                                        <div className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--eixo-surface-soft)]">
+                                                            <div
+                                                                className="h-full bg-[var(--eixo-green)] transition-all duration-300"
+                                                                style={{ width: `${percent}%` }}
+                                                            />
+                                                        </div>
+                                                        <p className="mt-2 text-center text-sm text-[var(--eixo-text-muted)]">
+                                                            {success} / {total} animais processados
+                                                        </p>
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     )}
 
@@ -3157,7 +3288,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             <p className="text-xs text-[var(--eixo-graphite)]">Mapeie o Brinco/ID para continuar</p>
                                         )}
                                         <button type="button"
-                                            onClick={handleImportConfirm}
+                                            onClick={handleImportStart}
                                             disabled={!Object.values(importMapping).includes('brinco')}
                                             className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-40">
                                             Importar {importRows.length} animais
@@ -3189,6 +3320,75 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </button>
                                 </>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {categoryConfirmOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-xl rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
+                        <div className="border-b border-[var(--eixo-border)] px-6 py-4">
+                            <h3 className="text-base font-bold text-[var(--eixo-text)]">Confirmar categorias da importação</h3>
+                            <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">
+                                Revise como as categorias serão lidas antes de importar.
+                            </p>
+                        </div>
+                        <div className="space-y-3 px-6 py-4">
+                            {categoryNormalizationPreview.length === 0 ? (
+                                <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma categoria detectada para revisar.</p>
+                            ) : (
+                                <div className="max-h-64 overflow-y-auto rounded-xl border border-[var(--eixo-border)]">
+                                    <table className="w-full text-xs">
+                                        <thead className="bg-[var(--eixo-surface-soft)]">
+                                            <tr>
+                                                <th className="px-3 py-2 text-left font-semibold text-[var(--eixo-text-muted)]">Categoria na planilha</th>
+                                                <th className="px-3 py-2 text-left font-semibold text-[var(--eixo-text-muted)]">Categoria usada</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {categoryNormalizationPreview.map((item, idx) => (
+                                                <tr key={`${item.original}-${item.normalized}-${idx}`} className="border-t border-[var(--eixo-border)]">
+                                                    <td className="px-3 py-2 text-[var(--eixo-text)]">{item.original}</td>
+                                                    <td className={`px-3 py-2 ${
+                                                        item.unknown
+                                                            ? 'font-semibold text-[var(--eixo-danger)]'
+                                                            : item.changed
+                                                            ? 'font-semibold text-[var(--eixo-success)]'
+                                                            : 'text-[var(--eixo-text)]'
+                                                    }`}>
+                                                        {item.normalized || 'Sem categoria'}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            {categoryNormalizationPreview.some((item) => item.unknown) && (
+                                <p className="text-xs font-medium text-[var(--eixo-danger)]">
+                                    Categorias não reconhecidas serão importadas como “Sem categoria”.
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-3 border-t border-[var(--eixo-border)] px-6 py-4">
+                            <button
+                                type="button"
+                                onClick={() => setCategoryConfirmOpen(false)}
+                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                            >
+                                Voltar e revisar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setCategoryConfirmOpen(false);
+                                    void handleImportConfirm();
+                                }}
+                                className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
+                            >
+                                Confirmar e importar
+                            </button>
                         </div>
                     </div>
                 </div>

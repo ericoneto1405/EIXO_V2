@@ -9,10 +9,12 @@ import {
     createPaddockMove,
     createSanitaryRecord,
     createWeighing,
+    deleteWeighing,
     listHerdEvents,
     listPaddockMoves,
     listSanitaryRecords,
     listWeighings,
+    updateWeighing,
 } from '../adapters/herdApi';
 import { getCurrentNutrition } from '../adapters/nutritionApi';
 import { buildApiUrl } from '../api';
@@ -91,6 +93,13 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const [weighingDate, setWeighingDate] = useState('');
     const [weighingPeso, setWeighingPeso] = useState('');
     const [isSavingWeighing, setIsSavingWeighing] = useState(false);
+    const [editingWeighingId, setEditingWeighingId] = useState<string | null>(null);
+    const [editingWeighingDate, setEditingWeighingDate] = useState('');
+    const [editingWeighingPeso, setEditingWeighingPeso] = useState('');
+    const [isUpdatingWeighing, setIsUpdatingWeighing] = useState(false);
+    const [deletingWeighingId, setDeletingWeighingId] = useState<string | null>(null);
+    const [deleteWeighingPassword, setDeleteWeighingPassword] = useState('');
+    const [isDeletingWeighing, setIsDeletingWeighing] = useState(false);
 
     // Nutrição
     const [nutritionPlanName, setNutritionPlanName] = useState<string | null>(null);
@@ -322,6 +331,77 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         }
     };
 
+    const handleStartEditWeighing = (item: WeighingHistory) => {
+        setWeighingError(null);
+        setDeletingWeighingId(null);
+        setDeleteWeighingPassword('');
+        setEditingWeighingId(item.id);
+        setEditingWeighingDate(item.data ? item.data.slice(0, 10) : '');
+        setEditingWeighingPeso(String(item.peso ?? ''));
+    };
+
+    const handleCancelEditWeighing = () => {
+        setEditingWeighingId(null);
+        setEditingWeighingDate('');
+        setEditingWeighingPeso('');
+    };
+
+    const handleSaveEditWeighing = async () => {
+        if (!animalId || !editingWeighingId) return;
+        const farmId = (animal as any)?.farmId;
+        if (!farmId) {
+            setWeighingError('Fazenda do animal não identificada.');
+            return;
+        }
+        const peso = Number(editingWeighingPeso);
+        if (!editingWeighingDate || !peso || peso <= 0) {
+            setWeighingError('Informe data e peso válidos para editar a pesagem.');
+            return;
+        }
+        setIsUpdatingWeighing(true);
+        setWeighingError(null);
+        try {
+            await updateWeighing(farmId, editingWeighingId, {
+                animalId,
+                data: editingWeighingDate,
+                peso,
+            });
+            handleCancelEditWeighing();
+            await loadWeighings();
+            onAnimalUpdated?.();
+        } catch (error: any) {
+            setWeighingError(error?.message || 'Não foi possível editar a pesagem.');
+        } finally {
+            setIsUpdatingWeighing(false);
+        }
+    };
+
+    const handleDeleteWeighing = async (weighingId: string) => {
+        if (!animalId) return;
+        const farmId = (animal as any)?.farmId;
+        if (!farmId) {
+            setWeighingError('Fazenda do animal não identificada.');
+            return;
+        }
+        if (!deleteWeighingPassword.trim()) {
+            setWeighingError('Informe a senha mestra para excluir a pesagem.');
+            return;
+        }
+        setIsDeletingWeighing(true);
+        setWeighingError(null);
+        try {
+            await deleteWeighing(farmId, weighingId, deleteWeighingPassword.trim());
+            setDeletingWeighingId(null);
+            setDeleteWeighingPassword('');
+            await loadWeighings();
+            onAnimalUpdated?.();
+        } catch (error: any) {
+            setWeighingError(error?.message || 'Não foi possível excluir a pesagem.');
+        } finally {
+            setIsDeletingWeighing(false);
+        }
+    };
+
     const handleAddPaddockMove = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!animalId) return;
@@ -471,7 +551,6 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         typeof (animal as any)?.gmd30 === 'number' ? (animal as any).gmd30 :
         typeof (animal as any)?.gmdLast === 'number' ? (animal as any).gmdLast :
         typeof (animal as any)?.gmd === 'number' ? (animal as any).gmd : null;
-    const gmdDelta = gmdAtual !== null && nutritionPlanMeta !== null ? gmdAtual - nutritionPlanMeta : null;
 
     const inputClass = 'mt-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none';
     const labelClass = 'text-xs font-medium text-[var(--eixo-text-muted)]';
@@ -490,7 +569,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             role="dialog"
         >
             <div
-                className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
+                className="w-full max-w-5xl max-h-[90vh] flex flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
                 style={{ animation: 'scale-in 0.18s ease-out forwards' }}
             >
@@ -541,11 +620,6 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                     {nutritionPlanPhase && <div className="text-xs text-[var(--eixo-text-muted)]">Fase: {nutritionPlanPhase}</div>}
                                     {nutritionPlanMeta !== null && <div className="text-xs text-[var(--eixo-text-muted)]">Meta GMD: {nutritionPlanMeta.toFixed(2)} kg/dia</div>}
                                     {gmdAtual !== null && <div className="text-xs text-[var(--eixo-text-muted)]">GMD 30 dias: {gmdAtual.toFixed(2)} kg/dia</div>}
-                                    {gmdDelta !== null && (
-                                        <div className={`text-xs font-medium ${gmdDelta >= 0 ? 'text-[#3d6b38]' : 'text-[var(--eixo-danger)]'}`}>
-                                            Delta: {gmdDelta >= 0 ? '+' : ''}{gmdDelta.toFixed(2)} kg/dia
-                                        </div>
-                                    )}
                                 </div>
                             ) : (
                                 <span>Sem plano ativo.</span>
@@ -686,15 +760,112 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                                 <tr className="bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] text-xs uppercase">
                                                     <th className="px-4 py-3 rounded-tl-xl">Data</th>
                                                     <th className="px-4 py-3">Peso</th>
-                                                    <th className="px-4 py-3 rounded-tr-xl">GMD</th>
+                                                    <th className="px-4 py-3">GMD</th>
+                                                    <th className="px-4 py-3 rounded-tr-xl">Ações</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {weighingHistory.map((item) => (
                                                     <tr key={item.id} className="border-b border-[var(--eixo-border)]">
-                                                        <td className="px-4 py-3 text-[var(--eixo-text)]">{new Date(item.data).toLocaleDateString('pt-BR')}</td>
-                                                        <td className="px-4 py-3 text-[var(--eixo-text)]">{item.peso} kg</td>
-                                                        <td className="px-4 py-3 font-medium text-[#3d6b38]">{item.gmd.toFixed(2)} kg</td>
+                                                        <td className="px-4 py-3 text-[var(--eixo-text)]">
+                                                            {editingWeighingId === item.id ? (
+                                                                <input
+                                                                    type="date"
+                                                                    value={editingWeighingDate}
+                                                                    onChange={(e) => setEditingWeighingDate(e.target.value)}
+                                                                    className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1 text-xs text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                                                />
+                                                            ) : (
+                                                                new Date(item.data).toLocaleDateString('pt-BR')
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-[var(--eixo-text)]">
+                                                            {editingWeighingId === item.id ? (
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    value={editingWeighingPeso}
+                                                                    onChange={(e) => setEditingWeighingPeso(e.target.value)}
+                                                                    className="w-24 rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1 text-xs text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                                                />
+                                                            ) : (
+                                                                `${item.peso} kg`
+                                                            )}
+                                                        </td>
+                                                        <td className={`px-4 py-3 font-medium ${item.gmd < 0 ? 'font-bold text-[var(--eixo-danger)]' : 'text-[#3d6b38]'}`}>
+                                                            {item.gmd.toFixed(2)} kg
+                                                        </td>
+                                                        <td className="px-4 py-3 text-[var(--eixo-text)]">
+                                                            {editingWeighingId === item.id ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={handleSaveEditWeighing}
+                                                                        disabled={isUpdatingWeighing}
+                                                                        className="rounded-lg bg-[var(--eixo-green)] px-2.5 py-1 text-xs font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-60"
+                                                                    >
+                                                                        {isUpdatingWeighing ? 'Salvando...' : 'Salvar'}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={handleCancelEditWeighing}
+                                                                        className="rounded-lg border border-[var(--eixo-border)] px-2.5 py-1 text-xs text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                                    >
+                                                                        Cancelar
+                                                                    </button>
+                                                                </div>
+                                                            ) : deletingWeighingId === item.id ? (
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <input
+                                                                        type="password"
+                                                                        value={deleteWeighingPassword}
+                                                                        onChange={(e) => setDeleteWeighingPassword(e.target.value)}
+                                                                        placeholder="Senha mestra"
+                                                                        className="w-28 rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1 text-xs text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleDeleteWeighing(item.id)}
+                                                                        disabled={isDeletingWeighing}
+                                                                        className="rounded-lg bg-[#fbede8] px-2.5 py-1 text-xs font-semibold text-[#8c4d39] hover:bg-[#f6dfd8] disabled:cursor-not-allowed disabled:opacity-60"
+                                                                    >
+                                                                        {isDeletingWeighing ? 'Excluindo...' : 'Confirmar'}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setDeletingWeighingId(null);
+                                                                            setDeleteWeighingPassword('');
+                                                                        }}
+                                                                        className="rounded-lg border border-[var(--eixo-border)] px-2.5 py-1 text-xs text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                                    >
+                                                                        Cancelar
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleStartEditWeighing(item)}
+                                                                        className="rounded-lg border border-[var(--eixo-border)] px-2.5 py-1 text-xs text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                                    >
+                                                                        Editar
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setEditingWeighingId(null);
+                                                                            setDeletingWeighingId(item.id);
+                                                                            setDeleteWeighingPassword('');
+                                                                            setWeighingError(null);
+                                                                        }}
+                                                                        className="rounded-lg bg-[#fbede8] px-2.5 py-1 text-xs font-semibold text-[#8c4d39] hover:bg-[#f6dfd8]"
+                                                                    >
+                                                                        Excluir
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
