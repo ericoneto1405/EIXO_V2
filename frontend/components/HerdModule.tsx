@@ -1086,7 +1086,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             }
 
             try {
-                await createAnimal(farmId, resolvedMode, {
+                const createdAnimal = await createAnimal(farmId, resolvedMode, {
                     brinco,
                     raca: get('raca') || 'Não informada',
                     sexo: normalizeSexo(get('sexo')),
@@ -1103,6 +1103,22 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     maeNome: get('mae') || undefined,
                     paiNome: get('pai') || undefined,
                 });
+
+                // Registrar pesagem real se dataPesagem e pesoAtual estiverem presentes
+                const dataPesagemRaw = get('dataPesagem');
+                const dataPesagemNorm = normalizeDate(dataPesagemRaw);
+                if (dataPesagemNorm && pesoAtual && createdAnimal?.id) {
+                    try {
+                        await fetch(buildApiUrl(`/animals/${createdAnimal.id}/pesagens`), {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ data: dataPesagemNorm, peso: pesoAtual }),
+                        });
+                    } catch {
+                        // Pesagem falhou mas animal foi criado — não bloquear
+                    }
+                }
                 success++;
                 setImportProgress({ total, success, errors: [...errors] });
             } catch (err: any) {
@@ -2571,11 +2587,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 <h3 className="text-lg font-bold text-[var(--eixo-text)]">
                                     Importar planilha
                                 </h3>
-                                <p className="text-sm text-[var(--eixo-text-muted)]">
-                                    {importRows.length} animais encontrados ·{' '}
-                                    {importHeaders.length} colunas detectadas ·{' '}
-                                    {Object.values(importMapping).filter(Boolean).length} mapeadas automaticamente
-                                </p>
+                                {(() => {
+                                    const mappedCount = Object.values(importMapping).filter(Boolean).length;
+                                    const unmappedCount = importHeaders.length - mappedCount;
+                                    return (
+                                        <p className="text-sm text-[var(--eixo-text-muted)]">
+                                            {importRows.length} animais ·{' '}
+                                            {mappedCount} de {importHeaders.length} colunas mapeadas
+                                            {unmappedCount > 0 && (
+                                                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                                                    {unmappedCount} coluna{unmappedCount > 1 ? 's' : ''} serão ignoradas
+                                                </span>
+                                            )}
+                                        </p>
+                                    );
+                                })()}
                             </div>
                             {!isImporting && !importProgress && (
                                 <button type="button"
@@ -2725,18 +2751,58 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         </div>
                                     </div>
 
-                                    <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3">
-                                        <p className="mb-1 text-xs font-semibold text-[var(--eixo-text)]">
-                                            Prévia — primeiros 3 animais detectados:
-                                        </p>
-                                        <p className="text-xs text-[var(--eixo-text-muted)]">
-                                            {importRows.slice(0, 3).map((r, i) => {
-                                                const idCol = Object.entries(importMapping)
-                                                    .find(([, v]) => v === 'brinco')?.[0];
-                                                return idCol ? r[idCol] : `linha ${i + 1}`;
-                                            }).filter(Boolean).join(' · ') || '—'}
-                                        </p>
-                                    </div>
+                                    {(() => {
+                                        // Montar lista de campos mapeados para exibir (máx. 5 mais relevantes)
+                                        const PREVIEW_FIELDS: Array<{ field: string; label: string }> = [
+                                            { field: 'brinco', label: 'ID' },
+                                            { field: 'raca', label: 'Raça' },
+                                            { field: 'sexo', label: 'Sexo' },
+                                            { field: 'pesoAtual', label: 'Peso' },
+                                            { field: 'categoria', label: 'Categoria' },
+                                        ];
+                                        const visibleFields = PREVIEW_FIELDS.filter(
+                                            ({ field }) => Object.values(importMapping).includes(field),
+                                        );
+                                        const getCol = (field: string) =>
+                                            Object.entries(importMapping).find(([, v]) => v === field)?.[0];
+                                        const previewRows = importRows.slice(0, 3);
+                                        if (!visibleFields.length || !previewRows.length) return null;
+                                        return (
+                                            <div className="overflow-hidden rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+                                                <p className="border-b border-[var(--eixo-border)] px-3 py-2 text-xs font-semibold text-[var(--eixo-text)]">
+                                                    Prévia — primeiros {previewRows.length} animais
+                                                </p>
+                                                <div className="overflow-x-auto">
+                                                    <table className="w-full text-xs">
+                                                        <thead className="bg-[var(--eixo-surface-soft)]">
+                                                            <tr>
+                                                                {visibleFields.map(({ field, label }) => (
+                                                                    <th key={field} className="px-3 py-2 text-left font-semibold text-[var(--eixo-text-muted)]">
+                                                                        {label}
+                                                                    </th>
+                                                                ))}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {previewRows.map((row, i) => (
+                                                                <tr key={i} className="border-t border-[var(--eixo-border)]">
+                                                                    {visibleFields.map(({ field }) => {
+                                                                        const col = getCol(field);
+                                                                        const val = col ? (row[col] || '').trim() : '';
+                                                                        return (
+                                                                            <td key={field} className="px-3 py-2 text-[var(--eixo-text)]">
+                                                                                {val || <span className="text-[var(--eixo-text-muted)]">—</span>}
+                                                                            </td>
+                                                                        );
+                                                                    })}
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
                                 </>
                             )}
 
