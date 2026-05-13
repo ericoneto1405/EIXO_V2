@@ -2,10 +2,6 @@
 
 ## Pendente de deploy
 
-- [ ] Rebanho: incluir ações de editar e excluir pesagens na ficha do animal (coluna após GMD), com atualização imediata do histórico.
-- [ ] Pesagens: destacar GMD negativo em vermelho e negrito (sem exibir delta), na ficha do animal e na tela de sessões.
-- [ ] Importação: adicionar confirmação de categorias no fluxo e normalizar entradas; categorias não reconhecidas devem entrar como “Sem categoria”, sem bloquear criação do animal.
-- [ ] Importação: corrigir auto-mapeamento para aceitar coluna "ID" como Brinco.
-- [ ] Rebanho: quando animal estiver sem pasto, mostrar SVG de alerta na tabela e CTA "Associar pasto" para abrir vínculo imediato.
-- [ ] Importação: reforçar feedback de progresso com barra visual, percentual e status curto (importando/finalizando).
-- [ ] Ergonomia de modais: ampliar largura dos modais principais do rebanho/importação e reduzir truncamento de colunas longas no mapeamento.
+- [ ] EIXO Suporte: implementar conversas ao vivo com polling, painel HQ por conversa, botão de SUPER ADMIN para assumir/liberar conversa e resposta manual no chat.
+- [ ] EIXO Suporte: enviar `farmId` no chat e registrar contexto da fazenda nos logs de suporte (`requestMeta`), com fallback para chat genérico quando `farmId` for `null`.
+- [ ] EIXO Suporte: aplicar rate limit no endpoint de chat (30/min por usuário + burst 8/10s), com resposta 429 e `Retry-After`.

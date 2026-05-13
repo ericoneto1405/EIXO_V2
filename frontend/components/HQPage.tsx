@@ -36,12 +36,20 @@ interface HQPipelineItem {
 }
 
 interface HQSuporteItem {
+    conversationId: string;
+    user: { id?: string | null; name: string | null; email: string | null } | null;
+    lastMessage: string;
+    lastAction: string;
+    lastAt: string;
+    totalMessages: number;
+}
+
+interface HQSuporteMessage {
     id: string;
-    action?: string | null;
-    description?: string | null;
-    requestMeta?: unknown;
+    action: string;
+    text: string;
     createdAt: string;
-    user: { name: string | null; email: string | null };
+    user: { id: string; name: string | null; email: string | null } | null;
 }
 
 interface HQCadastroItem {
@@ -75,19 +83,8 @@ const formatDate = (value: string | Date | null | undefined) => {
 };
 
 const getSuporteContent = (item: HQSuporteItem) => {
-    if (item.description?.trim()) {
-        return item.description;
-    }
-    if (item.action?.trim()) {
-        return item.action;
-    }
-    if (item.requestMeta && typeof item.requestMeta === 'object') {
-        const requestMeta = item.requestMeta as Record<string, unknown>;
-        const value = requestMeta.message ?? requestMeta.content ?? requestMeta.prompt ?? requestMeta.text;
-        if (typeof value === 'string' && value.trim()) {
-            return value;
-        }
-    }
+    if (item.lastMessage?.trim()) return item.lastMessage;
+    if (item.lastAction?.trim()) return item.lastAction;
     return 'Sem conteúdo disponível.';
 };
 
@@ -97,6 +94,11 @@ const HQPage: React.FC = () => {
     const [metricas, setMetricas] = React.useState<HQMetricas | null>(null);
     const [pipeline, setPipeline] = React.useState<HQPipelineItem[]>([]);
     const [suporte, setSuporte] = React.useState<HQSuporteItem[]>([]);
+    const [selectedConversationId, setSelectedConversationId] = React.useState<string | null>(null);
+    const [supportMessages, setSupportMessages] = React.useState<HQSuporteMessage[]>([]);
+    const [supportAssumed, setSupportAssumed] = React.useState(false);
+    const [supportReply, setSupportReply] = React.useState('');
+    const [supportActionLoading, setSupportActionLoading] = React.useState(false);
     const [cadastro, setCadastro] = React.useState<HQCadastroItem[]>([]);
     const [search, setSearch] = React.useState('');
     const [loadingByTab, setLoadingByTab] = React.useState<Record<TabKey, boolean>>({
@@ -184,6 +186,29 @@ const HQPage: React.FC = () => {
     React.useEffect(() => {
         loadTab(activeTab);
     }, [activeTab, loadTab]);
+
+    const loadSupportConversation = React.useCallback(async (conversationId: string) => {
+        try {
+            const response = await fetch(buildApiUrl(`/api/hq/suporte/${conversationId}/messages`), { credentials: 'include' });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload?.message || 'Erro ao carregar conversa.');
+            setSupportMessages(Array.isArray(payload?.messages) ? payload.messages : []);
+            setSupportAssumed(Boolean(payload?.assumedByAdmin));
+        } catch {
+            setSupportMessages([]);
+        }
+    }, []);
+
+    React.useEffect(() => {
+        if (activeTab !== 'suporte') return;
+        const interval = window.setInterval(() => {
+            void loadTab('suporte', true);
+            if (selectedConversationId) {
+                void loadSupportConversation(selectedConversationId);
+            }
+        }, 4000);
+        return () => window.clearInterval(interval);
+    }, [activeTab, loadTab, selectedConversationId, loadSupportConversation]);
 
     const filteredCadastro = React.useMemo(() => {
         const term = search.trim().toLowerCase();
@@ -304,28 +329,139 @@ const HQPage: React.FC = () => {
         }
 
         return (
-            <div className="overflow-x-auto rounded-2xl border border-[#D7D7D7] bg-white">
-                <table className="min-w-full text-sm text-[#2F2F2F]">
-                    <thead className="bg-[#F6F6F6] text-left text-xs font-bold uppercase tracking-wide text-[#5E5E5E]">
-                        <tr>
-                            <th className="px-4 py-3">Usuário</th>
-                            <th className="px-4 py-3">Descrição/conteúdo</th>
-                            <th className="px-4 py-3">Data</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {suporte.map((item) => (
-                            <tr key={item.id} className="border-t border-[#ECECEC]">
-                                <td className="px-4 py-3">
-                                    <p>{item.user?.name || '-'}</p>
-                                    <p className="text-xs text-[#5E5E5E]">{item.user?.email || '-'}</p>
-                                </td>
-                                <td className="px-4 py-3">{getSuporteContent(item)}</td>
-                                <td className="px-4 py-3">{formatDate(item.createdAt)}</td>
+            <div className="grid gap-4 lg:grid-cols-[420px_1fr]">
+                <div className="overflow-x-auto rounded-2xl border border-[#D7D7D7] bg-white">
+                    <table className="min-w-full text-sm text-[#2F2F2F]">
+                        <thead className="bg-[#F6F6F6] text-left text-xs font-bold uppercase tracking-wide text-[#5E5E5E]">
+                            <tr>
+                                <th className="px-4 py-3">Usuário</th>
+                                <th className="px-4 py-3">Última mensagem</th>
+                                <th className="px-4 py-3">Data</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {suporte.map((item) => (
+                                <tr
+                                    key={item.conversationId}
+                                    className={`cursor-pointer border-t border-[#ECECEC] ${selectedConversationId === item.conversationId ? 'bg-[#f5f8ef]' : ''}`}
+                                    onClick={() => {
+                                        setSelectedConversationId(item.conversationId);
+                                        void loadSupportConversation(item.conversationId);
+                                    }}
+                                >
+                                    <td className="px-4 py-3">
+                                        <p>{item.user?.name || '-'}</p>
+                                        <p className="text-xs text-[#5E5E5E]">{item.user?.email || '-'}</p>
+                                    </td>
+                                    <td className="px-4 py-3">{getSuporteContent(item)}</td>
+                                    <td className="px-4 py-3">{formatDate(item.lastAt)}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div className="rounded-2xl border border-[#D7D7D7] bg-white p-4">
+                    {!selectedConversationId ? (
+                        <p className="text-sm text-[#5E5E5E]">Selecione uma conversa para acompanhar ao vivo.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                                <p className="text-sm font-semibold text-[#2F2F2F]">Conversa: {selectedConversationId}</p>
+                                <div className="flex items-center gap-2">
+                                    {!supportAssumed ? (
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                setSupportActionLoading(true);
+                                                try {
+                                                    await fetch(buildApiUrl(`/api/hq/suporte/${selectedConversationId}/assume`), {
+                                                        method: 'POST',
+                                                        credentials: 'include',
+                                                    });
+                                                    await loadSupportConversation(selectedConversationId);
+                                                } finally {
+                                                    setSupportActionLoading(false);
+                                                }
+                                            }}
+                                            disabled={supportActionLoading}
+                                            className="rounded-xl bg-[#B6E23A] px-3 py-1.5 text-xs font-bold text-[#1a1a1a] hover:bg-[#a6d233] disabled:opacity-60"
+                                        >
+                                            Assumir conversa
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                setSupportActionLoading(true);
+                                                try {
+                                                    await fetch(buildApiUrl(`/api/hq/suporte/${selectedConversationId}/release`), {
+                                                        method: 'POST',
+                                                        credentials: 'include',
+                                                    });
+                                                    await loadSupportConversation(selectedConversationId);
+                                                } finally {
+                                                    setSupportActionLoading(false);
+                                                }
+                                            }}
+                                            disabled={supportActionLoading}
+                                            className="rounded-xl border border-[#D7D7D7] px-3 py-1.5 text-xs font-bold text-[#2F2F2F] hover:bg-[#f2f2f2] disabled:opacity-60"
+                                        >
+                                            Liberar para IA
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="max-h-[420px] space-y-2 overflow-y-auto rounded-xl border border-[#EAEAEA] bg-[#fafafa] p-3">
+                                {supportMessages.map((item) => (
+                                    <div key={item.id} className="rounded-lg border border-[#ececec] bg-white px-3 py-2">
+                                        <p className="text-[11px] font-semibold text-[#5E5E5E]">
+                                            {item.action} · {item.user?.name || 'Sistema'}
+                                        </p>
+                                        <p className="mt-1 text-sm text-[#2F2F2F]">{item.text}</p>
+                                    </div>
+                                ))}
+                                {!supportMessages.length && (
+                                    <p className="text-sm text-[#5E5E5E]">Sem mensagens nessa conversa.</p>
+                                )}
+                            </div>
+
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={supportReply}
+                                    onChange={(event) => setSupportReply(event.target.value)}
+                                    placeholder="Responder como SUPER ADMIN..."
+                                    className="w-full rounded-xl border border-[#D7D7D7] bg-white px-3 py-2 text-sm outline-none focus:border-[#B6E23A]"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        if (!supportReply.trim()) return;
+                                        setSupportActionLoading(true);
+                                        try {
+                                            await fetch(buildApiUrl(`/api/hq/suporte/${selectedConversationId}/reply`), {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                credentials: 'include',
+                                                body: JSON.stringify({ message: supportReply.trim() }),
+                                            });
+                                            setSupportReply('');
+                                            await loadSupportConversation(selectedConversationId);
+                                        } finally {
+                                            setSupportActionLoading(false);
+                                        }
+                                    }}
+                                    disabled={supportActionLoading || !supportReply.trim()}
+                                    className="rounded-xl bg-[#2F2F2F] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1f1f1f] disabled:opacity-60"
+                                >
+                                    Enviar
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         );
     };

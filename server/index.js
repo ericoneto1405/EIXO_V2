@@ -53,6 +53,10 @@ const OTP_SEND_MAX_PER_PHONE = Number(process.env.OTP_SEND_MAX_PER_PHONE) || 3;
 const OTP_VERIFY_WINDOW_MS = Number(process.env.OTP_VERIFY_WINDOW_MS) || 10 * 60 * 1000;
 const OTP_VERIFY_MAX_PER_IP = Number(process.env.OTP_VERIFY_MAX_PER_IP) || 10;
 const OTP_VERIFY_MAX_PER_PHONE = Number(process.env.OTP_VERIFY_MAX_PER_PHONE) || 5;
+const CHAT_RATE_WINDOW_MS = Number(process.env.CHAT_RATE_WINDOW_MS) || 60 * 1000;
+const CHAT_RATE_MAX_PER_USER = Number(process.env.CHAT_RATE_MAX_PER_USER) || 30;
+const CHAT_BURST_WINDOW_MS = Number(process.env.CHAT_BURST_WINDOW_MS) || 10 * 1000;
+const CHAT_BURST_MAX_PER_USER = Number(process.env.CHAT_BURST_MAX_PER_USER) || 8;
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:5173';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@eixo.ag';
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -71,6 +75,8 @@ const twilioClient = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN
 const verifiedPhones    = new Map();
 const otpSendAttempts   = new Map();
 const otpVerifyAttempts = new Map();
+const chatRateAttempts = new Map();
+const chatBurstAttempts = new Map();
 const PHONE_VERIFY_TTL_MS = 30 * 60 * 1000;
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1857,6 +1863,14 @@ const clearWindowAttempt = (store, key) => {
     store.delete(key);
 };
 
+const getWindowRetryAfterSeconds = (store, key, windowMs) => {
+    const entry = store.get(key);
+    if (!entry) return 1;
+    const elapsed = Date.now() - entry.firstAttemptAt;
+    const remainingMs = Math.max(1000, windowMs - elapsed);
+    return Math.ceil(remainingMs / 1000);
+};
+
 const recordActivityLog = async (req, { statusCode = null, requestMeta = null } = {}) => {
     if (!req?.user?.id) {
         return;
@@ -2170,17 +2184,189 @@ const model = genAI ? genAI.getGenerativeModel({
     systemInstruction: EIXO_SUPORTE_SYSTEM_PROMPT,
 }) : null;
 
-app.post('/api/chat/send-message', requireAuth, async (req, res) => {
-    if (!model) {
-        return res.status(503).json({ message: 'Assistente de IA não disponível. Chave de API ausente.' });
+const SUPPORT_ENTITY = 'SupportChat';
+const SUPPORT_ACTION_USER = 'chat_message_user';
+const SUPPORT_ACTION_AI = 'chat_message_ai';
+const SUPPORT_ACTION_ADMIN = 'chat_message_admin';
+const SUPPORT_ACTION_ASSUME = 'chat_assumed';
+const SUPPORT_ACTION_RELEASE = 'chat_released';
+const SUPPORT_ALERT_TO_EMAIL = process.env.SUPPORT_ALERT_TO_EMAIL || process.env.RESEND_FROM_EMAIL || '';
+const SUPPORT_ALERT_COOLDOWN_MS = Number(process.env.SUPPORT_ALERT_COOLDOWN_MS) || 15 * 60 * 1000;
+const supportAlertCooldownStore = new Map();
+
+const createSupportLog = async (req, {
+    conversationId,
+    action,
+    message = null,
+    userIdOverride = null,
+    requestMeta = null,
+}) => {
+    try {
+        await prisma.activityLog.create({
+            data: {
+                id: crypto.randomUUID(),
+                userId: userIdOverride || req.user.id,
+                organizationId: req.saas?.organizationId || null,
+                method: req.method,
+                path: req.originalUrl || req.path || '',
+                action,
+                entity: SUPPORT_ENTITY,
+                entityId: conversationId,
+                description: message,
+                requestMeta: requestMeta || undefined,
+                statusCode: 200,
+                ip: req.ip || null,
+                userAgent: req.get('user-agent') || null,
+            },
+        });
+    } catch (error) {
+        console.error('Erro ao registrar log de suporte:', error);
+    }
+};
+
+const getSupportConversationState = async (conversationId) => {
+    const latestControl = await prisma.activityLog.findFirst({
+        where: {
+            entity: SUPPORT_ENTITY,
+            entityId: conversationId,
+            action: { in: [SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE] },
+        },
+        orderBy: { createdAt: 'desc' },
+    });
+
+    if (!latestControl || latestControl.action === SUPPORT_ACTION_RELEASE) {
+        return { assumed: false, assumedByUserId: null };
     }
 
-    const { message, history } = req.body || {};
+    const requestMeta = latestControl.requestMeta && typeof latestControl.requestMeta === 'object'
+        ? latestControl.requestMeta
+        : {};
+    return {
+        assumed: true,
+        assumedByUserId: requestMeta?.adminUserId || latestControl.userId || null,
+    };
+};
+
+const shouldTriggerSupportNoAnswerFallback = (text) => {
+    const normalized = String(text || '').trim().toLowerCase();
+    if (!normalized) return true;
+    if (normalized.length < 20) return true;
+    const weakPatterns = [
+        'não sei',
+        'nao sei',
+        'não tenho certeza',
+        'nao tenho certeza',
+        'não consigo responder',
+        'nao consigo responder',
+        'não posso responder',
+        'nao posso responder',
+    ];
+    return weakPatterns.some((pattern) => normalized.includes(pattern));
+};
+
+const sendSupportAlertEmail = async (req, {
+    conversationId,
+    farmId = null,
+    reason,
+    userMessage,
+}) => {
+    if (!resend || !SUPPORT_ALERT_TO_EMAIL) return;
+    const cooldownKey = `${conversationId}:${reason}`;
+    const lastSentAt = supportAlertCooldownStore.get(cooldownKey) || 0;
+    if (Date.now() - lastSentAt < SUPPORT_ALERT_COOLDOWN_MS) return;
+
+    try {
+        const subject = `[EIXO] Alerta de suporte (${reason})`;
+        const safeMessage = escapeHtml(String(userMessage || '').slice(0, 2000));
+        const userEmail = escapeHtml(String(req.user?.email || 'não informado'));
+        const orgId = escapeHtml(String(req.saas?.organizationId || 'não informado'));
+        const farmLabel = farmId ? escapeHtml(String(farmId)) : 'chat genérico';
+        const body = `
+            <div style="font-family: Arial, sans-serif; color: #1f2937;">
+                <h2 style="margin: 0 0 12px;">Alerta automático do EIXO Suporte</h2>
+                <p><strong>Motivo:</strong> ${escapeHtml(reason)}</p>
+                <p><strong>Conversa:</strong> ${escapeHtml(conversationId)}</p>
+                <p><strong>Usuário:</strong> ${userEmail}</p>
+                <p><strong>Organização:</strong> ${orgId}</p>
+                <p><strong>Fazenda:</strong> ${farmLabel}</p>
+                <p><strong>Mensagem do usuário:</strong></p>
+                <blockquote style="margin: 0; padding: 10px; border-left: 3px solid #d1d5db; background: #f9fafb;">
+                    ${safeMessage}
+                </blockquote>
+            </div>
+        `;
+        await resend.emails.send({
+            from: RESEND_FROM_EMAIL,
+            to: SUPPORT_ALERT_TO_EMAIL,
+            subject,
+            html: body,
+        });
+        supportAlertCooldownStore.set(cooldownKey, Date.now());
+    } catch (error) {
+        console.error('Erro ao enviar alerta de suporte por e-mail:', error);
+    }
+};
+
+app.post('/api/chat/send-message', requireAuth, async (req, res) => {
+    const { message, history, conversationId, farmId } = req.body || {};
     if (!message) {
         return res.status(400).json({ message: 'Mensagem vazia.' });
     }
+    const chatRateKey = `user:${req.user.id}`;
+    if (isWindowRateLimited(chatRateAttempts, chatRateKey, CHAT_RATE_MAX_PER_USER, CHAT_RATE_WINDOW_MS)) {
+        const retryAfter = getWindowRetryAfterSeconds(chatRateAttempts, chatRateKey, CHAT_RATE_WINDOW_MS);
+        return res
+            .status(429)
+            .set('Retry-After', String(retryAfter))
+            .json({ message: 'Você enviou muitas mensagens. Aguarde alguns segundos e tente novamente.' });
+    }
+    if (isWindowRateLimited(chatBurstAttempts, chatRateKey, CHAT_BURST_MAX_PER_USER, CHAT_BURST_WINDOW_MS)) {
+        const retryAfter = getWindowRetryAfterSeconds(chatBurstAttempts, chatRateKey, CHAT_BURST_WINDOW_MS);
+        return res
+            .status(429)
+            .set('Retry-After', String(retryAfter))
+            .json({ message: 'Muitas mensagens em pouco tempo. Aguarde alguns segundos e tente novamente.' });
+    }
+    registerWindowAttempt(chatRateAttempts, chatRateKey, CHAT_RATE_WINDOW_MS);
+    registerWindowAttempt(chatBurstAttempts, chatRateKey, CHAT_BURST_WINDOW_MS);
+
+    const conversationKey = String(conversationId || '').trim() || crypto.randomUUID();
+    const normalizedFarmId = typeof farmId === 'string' && farmId.trim() ? farmId.trim() : null;
+
+    await createSupportLog(req, {
+        conversationId: conversationKey,
+        action: SUPPORT_ACTION_USER,
+        message: String(message).slice(0, 2000),
+        requestMeta: { role: 'user', farmId: normalizedFarmId },
+    });
+
+    if (!model) {
+        const fallbackText = 'Suporte automático indisponível no momento. Nosso time foi avisado e responderá por aqui.';
+        await createSupportLog(req, {
+            conversationId: conversationKey,
+            action: SUPPORT_ACTION_AI,
+            message: fallbackText,
+            requestMeta: { role: 'ai', farmId: normalizedFarmId, fallbackReason: 'ai_unavailable' },
+        });
+        await sendSupportAlertEmail(req, {
+            conversationId: conversationKey,
+            farmId: normalizedFarmId,
+            reason: 'ai_unavailable',
+            userMessage: String(message),
+        });
+        return res.json({ response: fallbackText, conversationId: conversationKey, assumedByAdmin: false });
+    }
 
     try {
+        const state = await getSupportConversationState(conversationKey);
+        if (state.assumed) {
+            return res.json({
+                response: 'Seu atendimento foi assumido por um especialista do suporte. Aguarde a resposta aqui no chat.',
+                conversationId: conversationKey,
+                assumedByAdmin: true,
+            });
+        }
+
         const chat = model.startChat({
             history: history || [],
         });
@@ -2188,11 +2374,88 @@ app.post('/api/chat/send-message', requireAuth, async (req, res) => {
         const result = await chat.sendMessage(message);
         const response = await result.response;
         const text = response.text();
+        if (shouldTriggerSupportNoAnswerFallback(text)) {
+            const fallbackText = 'Não consegui responder essa dúvida com segurança agora. Nosso time foi avisado e continuará seu atendimento por aqui.';
+            await createSupportLog(req, {
+                conversationId: conversationKey,
+                action: SUPPORT_ACTION_AI,
+                message: fallbackText,
+                requestMeta: { role: 'ai', farmId: normalizedFarmId, fallbackReason: 'low_confidence' },
+            });
+            await sendSupportAlertEmail(req, {
+                conversationId: conversationKey,
+                farmId: normalizedFarmId,
+                reason: 'low_confidence',
+                userMessage: String(message),
+            });
+            return res.json({ response: fallbackText, conversationId: conversationKey, assumedByAdmin: false });
+        }
 
-        return res.json({ response: text });
+        await createSupportLog(req, {
+            conversationId: conversationKey,
+            action: SUPPORT_ACTION_AI,
+            message: String(text).slice(0, 2000),
+            requestMeta: { role: 'ai', farmId: normalizedFarmId },
+        });
+
+        return res.json({ response: text, conversationId: conversationKey, assumedByAdmin: false });
     } catch (error) {
         console.error('Erro ao comunicar com a API do Gemini:', error);
-        return res.status(500).json({ message: 'Erro ao processar sua solicitação com o assistente de IA.' });
+        const fallbackText = 'Suporte automático indisponível no momento. Nosso time foi avisado e responderá por aqui.';
+        await createSupportLog(req, {
+            conversationId: conversationKey,
+            action: SUPPORT_ACTION_AI,
+            message: fallbackText,
+            requestMeta: { role: 'ai', farmId: normalizedFarmId, fallbackReason: 'ai_error' },
+        });
+        await sendSupportAlertEmail(req, {
+            conversationId: conversationKey,
+            farmId: normalizedFarmId,
+            reason: 'ai_error',
+            userMessage: String(message),
+        });
+        return res.json({ response: fallbackText, conversationId: conversationKey, assumedByAdmin: false });
+    }
+});
+
+app.get('/api/chat/conversations/:conversationId/messages', requireAuth, async (req, res) => {
+    const { conversationId } = req.params;
+    if (!conversationId) {
+        return res.status(400).json({ message: 'Conversa inválida.' });
+    }
+    try {
+        const [messages, state] = await Promise.all([
+            prisma.activityLog.findMany({
+                where: {
+                    entity: SUPPORT_ENTITY,
+                    entityId: conversationId,
+                    action: { in: [SUPPORT_ACTION_USER, SUPPORT_ACTION_AI, SUPPORT_ACTION_ADMIN] },
+                    userId: req.user.id,
+                },
+                orderBy: { createdAt: 'asc' },
+                select: {
+                    id: true,
+                    action: true,
+                    description: true,
+                    createdAt: true,
+                },
+            }),
+            getSupportConversationState(conversationId),
+        ]);
+
+        return res.json({
+            conversationId,
+            assumedByAdmin: state.assumed,
+            messages: messages.map((item) => ({
+                id: item.id,
+                role: item.action === SUPPORT_ACTION_USER ? 'user' : 'model',
+                text: item.description || '',
+                createdAt: item.createdAt,
+            })),
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar conversa.' });
     }
 });
 
@@ -10205,25 +10468,137 @@ app.get('/api/hq/pipeline', requireAuth, requireSuperAdmin, async (req, res) => 
 
 app.get('/api/hq/suporte', requireAuth, requireSuperAdmin, async (req, res) => {
     try {
-        let logs = await prisma.activityLog.findMany({
-            where: { action: 'chat_message' },
+        const logs = await prisma.activityLog.findMany({
+            where: {
+                entity: SUPPORT_ENTITY,
+                action: { in: [SUPPORT_ACTION_USER, SUPPORT_ACTION_AI, SUPPORT_ACTION_ADMIN] },
+            },
             orderBy: { createdAt: 'desc' },
-            take: 100,
-            include: { user: { select: { name: true, email: true } } },
+            take: 500,
+            include: { user: { select: { id: true, name: true, email: true } } },
         });
 
-        if (!logs.length) {
-            logs = await prisma.activityLog.findMany({
-                orderBy: { createdAt: 'desc' },
-                take: 100,
-                include: { user: { select: { name: true, email: true } } },
-            });
+        const grouped = new Map();
+        for (const log of logs) {
+            const key = log.entityId || `sem-id-${log.id}`;
+            if (!grouped.has(key)) {
+                grouped.set(key, {
+                    conversationId: key,
+                    user: log.user ? { id: log.user.id, name: log.user.name, email: log.user.email } : null,
+                    lastMessage: log.description || '',
+                    lastAction: log.action || '',
+                    lastAt: log.createdAt,
+                    totalMessages: 0,
+                });
+            }
+            const row = grouped.get(key);
+            row.totalMessages += 1;
         }
 
-        return res.json({ suporte: logs });
+        const conversations = Array.from(grouped.values()).sort(
+            (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime(),
+        );
+
+        return res.json({ suporte: conversations });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao carregar suporte HQ.' });
+    }
+});
+
+app.get('/api/hq/suporte/:conversationId/messages', requireAuth, requireSuperAdmin, async (req, res) => {
+    const { conversationId } = req.params;
+    try {
+        const [messages, state] = await Promise.all([
+            prisma.activityLog.findMany({
+                where: {
+                    entity: SUPPORT_ENTITY,
+                    entityId: conversationId,
+                    action: { in: [SUPPORT_ACTION_USER, SUPPORT_ACTION_AI, SUPPORT_ACTION_ADMIN] },
+                },
+                orderBy: { createdAt: 'asc' },
+                include: { user: { select: { id: true, name: true, email: true } } },
+            }),
+            getSupportConversationState(conversationId),
+        ]);
+
+        return res.json({
+            conversationId,
+            assumedByAdmin: state.assumed,
+            assumedByUserId: state.assumedByUserId,
+            messages: messages.map((item) => ({
+                id: item.id,
+                action: item.action,
+                text: item.description || '',
+                createdAt: item.createdAt,
+                user: item.user ? { id: item.user.id, name: item.user.name, email: item.user.email } : null,
+            })),
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar mensagens da conversa.' });
+    }
+});
+
+app.post('/api/hq/suporte/:conversationId/assume', requireAuth, requireSuperAdmin, async (req, res) => {
+    const { conversationId } = req.params;
+    try {
+        await createSupportLog(req, {
+            conversationId,
+            action: SUPPORT_ACTION_ASSUME,
+            message: 'Conversa assumida por SUPER ADMIN.',
+            requestMeta: {
+                adminUserId: req.user.id,
+                adminName: req.user.name || null,
+            },
+        });
+        return res.json({ ok: true });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao assumir conversa.' });
+    }
+});
+
+app.post('/api/hq/suporte/:conversationId/release', requireAuth, requireSuperAdmin, async (req, res) => {
+    const { conversationId } = req.params;
+    try {
+        await createSupportLog(req, {
+            conversationId,
+            action: SUPPORT_ACTION_RELEASE,
+            message: 'Conversa devolvida para atendimento automático.',
+            requestMeta: {
+                adminUserId: req.user.id,
+                adminName: req.user.name || null,
+            },
+        });
+        return res.json({ ok: true });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao liberar conversa.' });
+    }
+});
+
+app.post('/api/hq/suporte/:conversationId/reply', requireAuth, requireSuperAdmin, async (req, res) => {
+    const { conversationId } = req.params;
+    const { message } = req.body || {};
+    if (!message || !String(message).trim()) {
+        return res.status(400).json({ message: 'Mensagem vazia.' });
+    }
+    try {
+        await createSupportLog(req, {
+            conversationId,
+            action: SUPPORT_ACTION_ADMIN,
+            message: String(message).trim().slice(0, 2000),
+            requestMeta: {
+                adminUserId: req.user.id,
+                adminName: req.user.name || null,
+                role: 'super_admin',
+            },
+        });
+        return res.json({ ok: true });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao responder conversa.' });
     }
 });
 

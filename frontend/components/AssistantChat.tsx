@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { buildApiUrl } from '../api';
 
 interface ChatMessage {
+    id?: string;
     role: 'user' | 'model';
     text: string;
 }
@@ -30,10 +31,11 @@ const SendIcon: React.FC = () => (
     </svg>
 );
 
-const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
+const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [conversationId, setConversationId] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -45,12 +47,55 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
         inputRef.current?.focus();
     }, []);
 
+    useEffect(() => {
+        const storageKey = `eixo_support_conversation_${farmId || 'global'}`;
+        const stored = window.localStorage.getItem(storageKey);
+        if (stored) {
+            setConversationId(stored);
+            return;
+        }
+        const created = crypto.randomUUID();
+        window.localStorage.setItem(storageKey, created);
+        setConversationId(created);
+    }, [farmId]);
+
+    const loadConversationMessages = async (targetConversationId: string) => {
+        if (!targetConversationId) return;
+        try {
+            const response = await fetch(buildApiUrl(`/api/chat/conversations/${targetConversationId}/messages`), {
+                credentials: 'include',
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) return;
+            const fetched = Array.isArray(data?.messages) ? data.messages : [];
+            setMessages(
+                fetched.map((msg: any) => ({
+                    id: msg.id,
+                    role: msg.role === 'user' ? 'user' : 'model',
+                    text: msg.text || '',
+                })),
+            );
+        } catch {
+            // silencioso
+        }
+    };
+
+    useEffect(() => {
+        if (!conversationId) return;
+        void loadConversationMessages(conversationId);
+        const interval = window.setInterval(() => {
+            void loadConversationMessages(conversationId);
+        }, 4000);
+        return () => window.clearInterval(interval);
+    }, [conversationId]);
+
     const sendMessage = async (text?: string) => {
         const msgText = (text ?? inputMessage).trim();
-        if (!msgText || isLoading) return;
+        if (!msgText || isLoading || !conversationId) return;
 
-        const userMessage: ChatMessage = { role: 'user', text: msgText };
-        setMessages(prev => [...prev, userMessage]);
+        const optimisticId = `local-${Date.now()}`;
+        const userMessage: ChatMessage = { id: optimisticId, role: 'user', text: msgText };
+        setMessages((prev) => [...prev, userMessage]);
         setInputMessage('');
         setIsLoading(true);
 
@@ -64,7 +109,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ message: msgText, history }),
+                body: JSON.stringify({ message: msgText, history, conversationId, farmId }),
             });
 
             if (!response.ok) {
@@ -73,7 +118,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose }) => {
             }
 
             const data = await response.json();
-            setMessages(prev => [...prev, { role: 'model', text: data.response }]);
+            if (data?.conversationId && data.conversationId !== conversationId) {
+                setConversationId(data.conversationId);
+            }
+            await loadConversationMessages(data?.conversationId || conversationId);
         } catch (error: any) {
             setMessages(prev => [...prev, {
                 role: 'model',
