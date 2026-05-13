@@ -434,6 +434,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [filterCategoria, setFilterCategoria] = useState('');
     const [filterSexo, setFilterSexo] = useState('');
     const [filterIdentificacao, setFilterIdentificacao] = useState<'todas' | 'com' | 'sem'>('todas');
+    const [filterPesagem, setFilterPesagem] = useState<'todas' | 'sem' | 'desatualizada'>('todas');
     const [filterPaddock, setFilterPaddock] = useState('');
     const [filterGmdMin, setFilterGmdMin] = useState('');
     const [filterGmdMax, setFilterGmdMax] = useState('');
@@ -616,6 +617,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setFilterCategoria('');
         setFilterSexo('');
         setFilterIdentificacao('todas');
+        setFilterPesagem('todas');
         setFilterPaddock('');
         setFilterGmdMin('');
         setFilterGmdMax('');
@@ -636,7 +638,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, lotFilter, filterRaca, filterCategoria, filterSexo, filterIdentificacao, filterPaddock, filterGmdMin, filterGmdMax, filterNutrition, activeTab]);
+    }, [searchTerm, lotFilter, filterRaca, filterCategoria, filterSexo, filterIdentificacao, filterPesagem, filterPaddock, filterGmdMin, filterGmdMax, filterNutrition, activeTab]);
 
     const filteredAnimals = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
@@ -670,6 +672,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 if (filterIdentificacao === 'com' && !hasIdentification) {
                     return false;
                 }
+            }
+
+            if (filterPesagem === 'sem') {
+                if (animal.pesoAtual != null && animal.pesoAtual > 0) return false;
+            }
+            if (filterPesagem === 'desatualizada') {
+                if (!animal.dataUltimaPesagem) return false;
+                const dias = Math.floor((Date.now() - new Date(animal.dataUltimaPesagem).getTime()) / 86400000);
+                if (dias <= 30) return false;
             }
 
             if (selectedPaddockName && animal.currentPaddockName !== selectedPaddockName) {
@@ -706,6 +717,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         filterGmdMax,
         filterGmdMin,
         filterIdentificacao,
+        filterPesagem,
         filterNutrition,
         filterPaddock,
         filterCategoria,
@@ -1456,7 +1468,16 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.raca}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.sexo}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{calculateAge(animal.dataNascimento)}</td>
-                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.currentPaddockName || '—'}</td>
+                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">
+                                            {animal.currentPaddockName
+                                                ? animal.currentPaddockName
+                                                : (
+                                                    <span className="inline-flex items-center rounded-full bg-[#fce8e8] px-2 py-0.5 text-[10px] font-semibold text-[#8c2020]">
+                                                        Sem pasto
+                                                    </span>
+                                                )
+                                            }
+                                        </td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{lots.find((l) => l.id === animal.lotId)?.name || '—'}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.categoria || '—'}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
@@ -1470,6 +1491,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                         <span className={`font-semibold ${stale ? 'text-amber-600' : 'text-[var(--eixo-text)]'}`}>
                                                             {animal.pesoAtual != null ? `${animal.pesoAtual} kg` : '—'}
                                                         </span>
+                                                        {animal.pesoAtual != null && (
+                                                            <span className="text-[10px] text-[var(--eixo-text-muted)]">
+                                                                {(animal.pesoAtual / 15).toFixed(1)} @
+                                                            </span>
+                                                        )}
                                                         {animal.dataUltimaPesagem && diasDesdePesagem !== null && (
                                                             <span className={`text-[10px] ${stale ? 'text-amber-500' : 'text-[var(--eixo-text-muted)]'}`}>
                                                                 {stale ? '⚠ ' : ''}{diasDesdePesagem}d atrás
@@ -1966,7 +1992,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] py-2 pl-9 pr-3 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
                         <select
                             value={filterCategoria}
                             onChange={(event) => setFilterCategoria(event.target.value)}
@@ -1974,10 +2000,17 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         >
                             <option value="">Todas as categorias</option>
                             <option value="Bezerro">Bezerro</option>
+                            <option value="Bezerra">Bezerra</option>
+                            <option value="Novilho">Novilho</option>
                             <option value="Novilha">Novilha</option>
-                            <option value="Vaca">Vaca</option>
-                            <option value="Touro">Touro</option>
+                            <option value="Garrote">Garrote</option>
+                            <option value="Garrota">Garrota</option>
                             <option value="Boi">Boi</option>
+                            <option value="Vaca">Vaca</option>
+                            <option value="Vaca de cria">Vaca de cria</option>
+                            <option value="Vaca seca">Vaca seca</option>
+                            <option value="Vaca de descarte">Vaca de descarte</option>
+                            <option value="Touro">Touro</option>
                         </select>
                         <select
                             value={filterSexo}
@@ -1996,6 +2029,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             <option value="todas">Todas as identificações</option>
                             <option value="com">Com identificação</option>
                             <option value="sem">Sem identificação</option>
+                        </select>
+                        <select
+                            value={filterPesagem}
+                            onChange={(event) => setFilterPesagem(event.target.value as 'todas' | 'sem' | 'desatualizada')}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
+                        >
+                            <option value="todas">Todas as pesagens</option>
+                            <option value="sem">Sem pesagem</option>
+                            <option value="desatualizada">Pesagem desatualizada (+30d)</option>
                         </select>
                         <select
                             value={filterPaddock}
@@ -2059,6 +2101,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 setFilterCategoria('');
                                 setFilterSexo('');
                                 setFilterIdentificacao('todas');
+                                setFilterPesagem('todas');
                                 setFilterPaddock('');
                                 setFilterGmdMin('');
                                 setFilterGmdMax('');
@@ -2363,12 +2406,25 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[var(--eixo-text)]">Categoria</label>
-                                <input
-                                    type="text"
+                                <select
                                     value={animalForm.categoria}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, categoria: event.target.value }))}
                                     className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                />
+                                >
+                                    <option value="">Selecionar...</option>
+                                    <option value="Bezerro">Bezerro</option>
+                                    <option value="Bezerra">Bezerra</option>
+                                    <option value="Novilho">Novilho</option>
+                                    <option value="Novilha">Novilha</option>
+                                    <option value="Garrote">Garrote</option>
+                                    <option value="Garrota">Garrota</option>
+                                    <option value="Boi">Boi</option>
+                                    <option value="Vaca">Vaca</option>
+                                    <option value="Vaca de cria">Vaca de cria</option>
+                                    <option value="Vaca seca">Vaca seca</option>
+                                    <option value="Vaca de descarte">Vaca de descarte</option>
+                                    <option value="Touro">Touro</option>
+                                </select>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[var(--eixo-text)]">Observações</label>
