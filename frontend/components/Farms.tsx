@@ -32,6 +32,10 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
     const formRef = useRef<HTMLDivElement | null>(null);
     const upgradePopoverRef = useRef<HTMLDivElement | null>(null);
     const firstFarmWithoutPaddocks = farms.find((farm) => (farm.paddocks?.length ?? 0) === 0) ?? null;
+    const formatNumber = (value: number) =>
+        Number.isFinite(value)
+            ? value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+            : '0,0';
 
     useEffect(() => {
         const freeLimitHit = isFreePlan && farms.length >= 1;
@@ -273,113 +277,123 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
             )}
 
             {!showForm && farms.length > 0 && (
-                <div className="overflow-hidden rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left text-[var(--eixo-text-muted)]">
-                            <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
-                                <tr>
-                                    <th scope="col" className="px-6 py-3">Nome da Fazenda</th>
-                                    <th scope="col" className="px-6 py-3">Localização</th>
-                                    <th scope="col" className="px-6 py-3">Tamanho (ha)</th>
-                                    <th scope="col" className="px-6 py-3">Pastos</th>
-                                    <th scope="col" className="px-6 py-3 text-center">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {farms.map((farm) => (
-                                    <React.Fragment key={farm.id}>
-                                    <tr className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] transition-colors duration-150 hover:bg-[var(--eixo-surface-soft)]">
-                                        <th scope="row" className="whitespace-nowrap px-6 py-4 font-bold text-[var(--eixo-text)]">
-                                            <div className="flex items-center gap-2">
-                                                {farm.name}
-                                                {farm.lat && farm.lng ? (
-                                                    <a
-                                                        href={`https://maps.google.com/?q=${farm.lat},${farm.lng}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        title="Ver no mapa"
-                                                        className="text-[var(--eixo-success)] transition-opacity hover:opacity-70"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                                                    </a>
-                                                ) : (
-                                                    <span title="Localização não cadastrada" className="text-[#c4b8a5]">
-                                                        <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </th>
-                                        <td className="px-6 py-4">{farm.city || '—'}</td>
-                                        <td className="px-6 py-4">{farm.size}</td>
-                                        <td className="px-6 py-4">
-                                            {(farm.paddocks?.length ?? 0) === 0 ? (
-                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fffbeb] px-2.5 py-1 text-xs font-semibold text-[#92400e]">
-                                                    Adicionar pastos →
-                                                </span>
+                <div className="grid gap-4">
+                    {farms.map((farm) => {
+                        const paddocks = farm.paddocks ?? [];
+                        const paddocksCount = paddocks.length;
+                        const totalPaddockArea = paddocks.reduce((sum, paddock) => sum + (paddock.areaHa ?? 0), 0);
+                        const totalCapacityUa = paddocks.reduce((sum, paddock) => {
+                            if (typeof paddock.capacity === 'number') return sum + paddock.capacity;
+                            if (typeof paddock.areaHa === 'number' && typeof paddock.lotacaoUaHa === 'number') {
+                                return sum + (paddock.areaHa * paddock.lotacaoUaHa);
+                            }
+                            return sum;
+                        }, 0);
+                        const areaCoverage = farm.size > 0 ? (totalPaddockArea / farm.size) * 100 : 0;
+                        const animalsCount = typeof (farm as Farm & { animalsCount?: number }).animalsCount === 'number'
+                            ? (farm as Farm & { animalsCount?: number }).animalsCount
+                            : null;
+
+                        return (
+                            <div key={farm.id} className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h2 className="text-lg font-bold text-[var(--eixo-text)]">{farm.name}</h2>
+                                            {farm.lat && farm.lng ? (
+                                                <a
+                                                    href={`https://maps.google.com/?q=${farm.lat},${farm.lng}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    title="Ver no mapa"
+                                                    className="text-[var(--eixo-success)] transition-opacity hover:opacity-70"
+                                                >
+                                                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                                </a>
                                             ) : (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => togglePaddocks(farm.id)}
-                                                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--eixo-graphite)] transition-colors hover:bg-[#d4eda0]"
-                                                >
-                                                    {farm.paddocks!.length} {farm.paddocks!.length === 1 ? 'pasto' : 'pastos'}
-                                                    <svg className={`h-3 w-3 transition-transform duration-200 ${expandedFarmId === farm.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                                                    </svg>
-                                                </button>
+                                                <span title="Localização não cadastrada" className="text-[#c4b8a5]">
+                                                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                                </span>
                                             )}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-center gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleEdit(farm)}
-                                                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
-                                                >
-                                                    Editar
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleDeleteRequest(farm)}
-                                                    className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f7ddd7]"
-                                                >
-                                                    Excluir
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {expandedFarmId === farm.id && farm.paddocks && farm.paddocks.length > 0 && (
-                                        <tr className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)]">
-                                            <td colSpan={5} className="px-8 py-3">
-                                                <table className="w-full text-xs">
-                                                    <thead>
-                                                        <tr className="text-[10px] font-bold uppercase tracking-wider text-[var(--eixo-text-muted)]">
-                                                            <th className="pb-2 pr-8 text-left">Nome</th>
-                                                            <th className="pb-2 pr-8 text-left">Área (ha)</th>
-                                                            <th className="pb-2 pr-8 text-left">Tipo</th>
-                                                            <th className="pb-2 text-left">Forrageira</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody className="divide-y divide-[var(--eixo-border)]">
-                                                        {farm.paddocks.map(p => (
-                                                            <tr key={p.id}>
-                                                                <td className="py-1.5 pr-8 font-semibold text-[var(--eixo-text)]">{p.name}</td>
-                                                                <td className="py-1.5 pr-8 text-[var(--eixo-text-muted)]">{p.areaHa ?? '—'}</td>
-                                                                <td className="py-1.5 pr-8 text-[var(--eixo-text-muted)]">{p.divisionType ?? '—'}</td>
-                                                                <td className="py-1.5 text-[var(--eixo-text-muted)]">{p.forrageira ?? '—'}</td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </td>
-                                        </tr>
+                                        </div>
+                                        <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{farm.city || 'Localização não informada'}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleEdit(farm)}
+                                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
+                                        >
+                                            Editar
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteRequest(farm)}
+                                            className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f7ddd7]"
+                                        >
+                                            Excluir
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Tamanho total</p>
+                                        <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(farm.size)} ha</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Capacidade total</p>
+                                        <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(totalCapacityUa)} UA</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Animais atuais</p>
+                                        <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{animalsCount ?? '—'}</p>
+                                    </div>
+                                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Área distribuída</p>
+                                        <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(areaCoverage)}%</p>
+                                    </div>
+                                </div>
+
+                                <div className="mt-4 flex flex-wrap items-center gap-2">
+                                    {paddocksCount === 0 ? (
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#fffbeb] px-2.5 py-1 text-xs font-semibold text-[#92400e]">
+                                            Adicionar pastos →
+                                        </span>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => togglePaddocks(farm.id)}
+                                            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--eixo-graphite)] transition-colors hover:bg-[#d4eda0]"
+                                        >
+                                            {paddocksCount} {paddocksCount === 1 ? 'pasto' : 'pastos'}
+                                            <svg className={`h-3 w-3 transition-transform duration-200 ${expandedFarmId === farm.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </button>
                                     )}
-                                    </React.Fragment>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                                </div>
+
+                                {expandedFarmId === farm.id && paddocksCount > 0 && (
+                                    <div className="mt-4 space-y-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
+                                        {paddocks.map((paddock) => (
+                                            <div key={paddock.id} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2">
+                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{paddock.name}</p>
+                                                    <p className="text-xs text-[var(--eixo-text-muted)]">
+                                                        {typeof paddock.areaHa === 'number' ? `${formatNumber(paddock.areaHa)} ha` : 'Área não informada'}
+                                                    </p>
+                                                </div>
+                                                <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                                                    {paddock.divisionType || 'Tipo não informado'} · {paddock.forrageira || 'Forrageira não informada'}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
             )}
 

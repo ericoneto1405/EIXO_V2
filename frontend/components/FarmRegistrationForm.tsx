@@ -23,6 +23,8 @@ interface FarmRegistrationFormProps {
     onSaveAndReturn?: () => void;
 }
 
+const NON_GRAZING_DIVISION_TYPES = ['aguada / reservatório', 'área de preservação', 'área de plantio'];
+
 // ─── Coordinate helpers ───────────────────────────────────────────────────────
 
 /** Converte DMS (graus°minutos'segundos"direção) para graus decimais */
@@ -122,6 +124,16 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
 
     const totalDivisionSize = useMemo(() => {
         return divisions.reduce((sum, division) => sum + (parseFloat(division.areaHa) || 0), 0);
+    }, [divisions]);
+
+    const totalCapacityUa = useMemo(() => {
+        return divisions.reduce((sum, division) => {
+            if (NON_GRAZING_DIVISION_TYPES.includes(division.divisionType)) return sum;
+            const area = parseFloat(division.areaHa) || 0;
+            const lotacao = parseFloat(division.lotacaoUaHa) || 0;
+            if (area <= 0 || lotacao <= 0) return sum;
+            return sum + (area * lotacao);
+        }, 0);
     }, [divisions]);
 
     const farmSizeFloat = parseFloat(farmSize) || 0;
@@ -541,7 +553,9 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     <div className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${currentStep === 'farm' ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>
                         {currentStep === 'divisions' ? '✓' : '1'}
                     </div>
-                    <span className={`text-sm font-semibold ${currentStep === 'farm' ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-muted)]'}`}>Dados da fazenda</span>
+                    <span className={`text-sm font-semibold ${currentStep === 'farm' ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text-muted)]'}`}>
+                        {currentStep === 'divisions' ? (farmName.trim() || 'Dados da fazenda') : 'Dados da fazenda'}
+                    </span>
                     {currentStep === 'divisions' && (
                         <button type="button" onClick={() => setCurrentStep('farm')} className="rounded-md border border-[#B6E23A] bg-[#f0f9d4] px-2 py-0.5 text-xs font-semibold text-[#3a5c10] transition-colors hover:bg-[#e6f5b8]">
                             editar
@@ -780,7 +794,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                             </select>
                                         </div>
                                     </div>
-                                    {!['aguada / reservatório', 'área de preservação', 'área de plantio'].includes(division.divisionType) && (
+                                    {!NON_GRAZING_DIVISION_TYPES.includes(division.divisionType) && (
                                     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                                         <div>
                                             <label htmlFor={`division-forrageira-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">Forrageira</label>
@@ -791,12 +805,25 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                                 className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                                             >
                                                 <option value="">Selecione</option>
-                                                <option value="brachiaria">Brachiaria</option>
-                                                <option value="mombaca">Mombaça</option>
-                                                <option value="tifton">Tifton</option>
-                                                <option value="andropogon">Andropogon</option>
-                                                <option value="panicum">Panicum</option>
-                                                <option value="capim-buffel">Capim-buffel</option>
+                                                <optgroup label="Brachiaria">
+                                                    <option value="brachiaria-marandu">B. Marandu</option>
+                                                    <option value="brachiaria-decumbens">B. Decumbens</option>
+                                                    <option value="brachiaria-xaraes">B. Xaraés</option>
+                                                    <option value="brachiaria-piata">B. Piatã</option>
+                                                </optgroup>
+                                                <optgroup label="Panicum">
+                                                    <option value="panicum-massai">Massai</option>
+                                                    <option value="panicum-tanzania">Tanzânia</option>
+                                                    <option value="panicum-mombaca">Mombaça</option>
+                                                </optgroup>
+                                                <optgroup label="Outras forrageiras">
+                                                    <option value="capim-elefante">Capim-elefante</option>
+                                                    <option value="coastcross">Coastcross</option>
+                                                    <option value="sorgo-forrageiro">Sorgo forrageiro</option>
+                                                    <option value="tifton">Tifton</option>
+                                                    <option value="andropogon">Andropogon</option>
+                                                    <option value="capim-buffel">Capim-buffel</option>
+                                                </optgroup>
                                                 <option value="outros">Outros</option>
                                             </select>
                                         </div>
@@ -896,6 +923,16 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     <div className="flex items-start gap-3 rounded-2xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-4 py-3">
                         <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
                         <p className="text-sm font-semibold text-[var(--eixo-success)]">{submitSuccess}</p>
+                    </div>
+                )}
+
+                {currentStep === 'divisions' && (
+                    <div className="rounded-2xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] p-4">
+                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--eixo-graphite)]">Capacidade total estimada</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[var(--eixo-text)]">{totalCapacityUa.toFixed(1)} UA</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                            Soma de área útil × lotação dos pastos produtivos.
+                        </p>
                     </div>
                 )}
 
