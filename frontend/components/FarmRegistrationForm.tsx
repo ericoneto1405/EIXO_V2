@@ -11,6 +11,7 @@ interface DivisionInput {
     areaHa: string;
     divisionType: string;
     forrageira: string;
+    sistemaPastejo: string;
     lotacaoUaHa: string;
 }
 
@@ -168,6 +169,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 areaHa: division.areaHa?.toString?.() || '',
                 divisionType: division.divisionType || 'pasto',
                 forrageira: division.forrageira || '',
+                sistemaPastejo: '',
                 lotacaoUaHa: division.lotacaoUaHa?.toString?.() || '1',
             })),
         );
@@ -184,6 +186,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 areaHa: '',
                 divisionType: 'pasto',
                 forrageira: '',
+                sistemaPastejo: '',
                 lotacaoUaHa: '1',
             },
         ]);
@@ -207,6 +210,10 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
 
     const handleDivisionForrageira = (id: string, value: string) => {
         setDivisions(divisions.map((division) => division.id === id ? { ...division, forrageira: value } : division));
+    };
+
+    const handleDivisionSistemaPastejo = (id: string, value: string) => {
+        setDivisions(divisions.map((d) => d.id === id ? { ...d, sistemaPastejo: value } : d));
     };
 
     const handleDivisionLotacao = (id: string, value: string) => {
@@ -294,6 +301,9 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 name: division.name || `Pasto ${index + 1}`,
                 areaHa: division.areaHa?.toString?.() || '',
                 divisionType: division.divisionType || 'pasto',
+                forrageira: division.forrageira || '',
+                sistemaPastejo: '',
+                lotacaoUaHa: division.lotacaoUaHa?.toString?.() || '1',
             })),
         );
     };
@@ -354,7 +364,15 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             setCurrentStep('divisions');
             // Auto-create first paddock if none exist yet
             if (!activeFarm && divisions.length === 0) {
-                setDivisions([{ id: `div-${++divisionIdCounter}`, name: '', areaHa: '', divisionType: 'pasto' }]);
+                setDivisions([{
+                    id: `div-${++divisionIdCounter}`,
+                    name: '',
+                    areaHa: '',
+                    divisionType: 'pasto',
+                    forrageira: '',
+                    sistemaPastejo: '',
+                    lotacaoUaHa: '1',
+                }]);
             }
             setSubmitSuccess(activeFarm ? 'Dados da fazenda atualizados. Continue nos pastos.' : 'Fazenda salva. Agora cadastre os pastos.');
             if (payload?.farm) {
@@ -421,6 +439,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             areaHa: parseFloat(division.areaHa) || 0,
             divisionType: division.divisionType,
             forrageira: division.forrageira || null,
+            sistemaPastejo: division.sistemaPastejo || null,
             lotacaoUaHa: parseFloat(division.lotacaoUaHa) || null,
         }));
 
@@ -826,6 +845,23 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                                 </optgroup>
                                                 <option value="outros">Outros</option>
                                             </select>
+                                        </div>
+                                        <div className="grid grid-cols-1 gap-3">
+                                            <div>
+                                                <label htmlFor={`division-sistema-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">Sistema de pastejo</label>
+                                                <select
+                                                    id={`division-sistema-${division.id}`}
+                                                    value={division.sistemaPastejo}
+                                                    onChange={(e) => handleDivisionSistemaPastejo(division.id, e.target.value)}
+                                                    className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                                >
+                                                    <option value="">Selecione</option>
+                                                    <option value="extensivo">Extensivo</option>
+                                                    <option value="rotacionado">Rotacionado</option>
+                                                    <option value="semi-intensivo">Semi-intensivo</option>
+                                                    <option value="confinamento">Confinamento</option>
+                                                </select>
+                                            </div>
                                         </div>
                                         <div>
                                             <label htmlFor={`division-lotacao-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">

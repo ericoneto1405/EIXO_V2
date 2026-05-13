@@ -27,6 +27,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
     const [expandedFarmId, setExpandedFarmId] = useState<string | null>(null);
+    const [hoveredFarmId, setHoveredFarmId] = useState<string | null>(null);
     const togglePaddocks = (farmId: string) =>
         setExpandedFarmId(prev => prev === farmId ? null : farmId);
     const formRef = useRef<HTMLDivElement | null>(null);
@@ -276,6 +277,24 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                 </div>
             )}
 
+            {!showForm && farms.length === 0 && !(isFreePlan && farms.length >= 1) && (
+                <div className="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-16 text-center">
+                    <svg className="mb-4 h-10 w-10 text-[var(--eixo-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    <p className="text-base font-bold text-[var(--eixo-text)]">Nenhuma fazenda cadastrada</p>
+                    <p className="mt-2 max-w-xs text-sm text-[var(--eixo-text-muted)]">Cadastre sua fazenda para organizar pastos, rebanho e operação no mesmo lugar.</p>
+                    <button
+                        type="button"
+                        onClick={handleToggleForm}
+                        className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[var(--eixo-green)] px-6 py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
+                    >
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                        Cadastrar minha primeira fazenda
+                    </button>
+                </div>
+            )}
+
             {!showForm && farms.length > 0 && (
                 <div className="grid gap-4">
                     {farms.map((farm) => {
@@ -295,7 +314,12 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                             : null;
 
                         return (
-                            <div key={farm.id} className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+                            <div
+                                key={farm.id}
+                                className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5"
+                                onMouseEnter={() => setHoveredFarmId(farm.id)}
+                                onMouseLeave={() => setHoveredFarmId(null)}
+                            >
                                 <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div>
                                         <div className="flex items-center gap-2">
@@ -318,7 +342,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                                         </div>
                                         <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{farm.city || 'Localização não informada'}</p>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className={`flex items-center gap-2 transition-opacity duration-150 ${hoveredFarmId === farm.id ? 'sm:opacity-100' : 'sm:opacity-0'}`}>
                                         <button
                                             type="button"
                                             onClick={() => handleEdit(farm)}
