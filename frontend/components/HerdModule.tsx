@@ -21,6 +21,19 @@ import type { Paddock } from '../types';
 
 type TabKey = 'overview' | 'animals' | 'pastures' | 'lots' | 'weighings' | 'settings';
 type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'sem_categoria' | 'gmd_baixo';
+type ImportCorrectionRow = {
+    id: string;
+    selected: boolean;
+    deferred?: boolean;
+    values: {
+        brinco: string;
+        sexo: string;
+        raca: string;
+        dataNascimento: string;
+        registro: string;
+    };
+    fieldErrors: Partial<Record<'brinco' | 'sexo' | 'raca' | 'dataNascimento' | 'registro', string>>;
+};
 
 const LOT_OBJECTIVE_OPTIONS = [
     'Cria',
@@ -547,6 +560,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [importProgress, setImportProgress] = useState<null | {
         total: number; success: number; errors: string[]; failedRows: Record<string, string>[]; weighingIssues: string[];
     }>(null);
+    const [importCorrectionOpen, setImportCorrectionOpen] = useState(false);
+    const [importCorrectionRows, setImportCorrectionRows] = useState<ImportCorrectionRow[]>([]);
+    const [importCorrectionLoading, setImportCorrectionLoading] = useState(false);
+    const [bulkCorrectionField, setBulkCorrectionField] = useState<'sexo' | 'raca'>('sexo');
+    const [bulkCorrectionValue, setBulkCorrectionValue] = useState('');
+    const [deferredCorrectionCount, setDeferredCorrectionCount] = useState(0);
+    const [importSessionSuccessCount, setImportSessionSuccessCount] = useState(0);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -1568,6 +1588,210 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         }
 
         return true;
+    };
+
+    const validateCorrectionRows = (rows: ImportCorrectionRow[]) => {
+        const normalizeDate = (raw: string): string | null => {
+            if (!raw) return null;
+            const dmY = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+            if (dmY) return `${dmY[3]}-${dmY[2].padStart(2, '0')}-${dmY[1].padStart(2, '0')}`;
+            const Ymd = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+            if (Ymd) return `${Ymd[1]}-${Ymd[2].padStart(2, '0')}-${Ymd[3].padStart(2, '0')}`;
+            return null;
+        };
+        const parseBirthDateOrAge = (raw: string): string | null => {
+            const dateValue = normalizeDate(raw);
+            if (dateValue) return dateValue;
+            const ageValue = Number(raw.replace(',', '.'));
+            if (!Number.isFinite(ageValue) || ageValue <= 0 || ageValue > 40) return null;
+            return 'ok';
+        };
+        const normalized = rows.map((row) => {
+            const fieldErrors: ImportCorrectionRow['fieldErrors'] = {};
+            if (!row.values.brinco.trim()) fieldErrors.brinco = 'Brinco obrigatório';
+            if (!row.values.sexo.trim()) fieldErrors.sexo = 'Sexo obrigatório';
+            if (!row.values.raca.trim()) fieldErrors.raca = 'Raça obrigatória';
+            if (!row.values.dataNascimento.trim()) {
+                fieldErrors.dataNascimento = 'Data/idade obrigatória';
+            } else if (!parseBirthDateOrAge(row.values.dataNascimento.trim())) {
+                fieldErrors.dataNascimento = 'Data/idade inválida';
+            }
+            const isPoRow = resolvedMode === 'PO' || Boolean(row.values.registro.trim());
+            if (isPoRow && !row.values.registro.trim()) {
+                fieldErrors.registro = 'Registro obrigatório para P.O.';
+            }
+            return { ...row, fieldErrors };
+        });
+        setImportCorrectionRows(normalized);
+        return normalized;
+    };
+
+    const openInlineCorrection = () => {
+        if (!importProgress?.failedRows?.length) return;
+        const mappingEntries = Object.entries(importMapping);
+        const getValue = (row: Record<string, string>, field: string) => {
+            const col = mappingEntries.find(([, v]) => v === field)?.[0];
+            return col ? (row[col] || '').trim() : '';
+        };
+        const rows = importProgress.failedRows.map((row, idx) => ({
+            id: `${idx}-${Date.now()}`,
+            selected: false,
+            deferred: false,
+            values: {
+                brinco: getValue(row, 'brinco'),
+                sexo: getValue(row, 'sexo'),
+                raca: getValue(row, 'raca'),
+                dataNascimento: getValue(row, 'dataNascimento'),
+                registro: getValue(row, 'registro'),
+            },
+            fieldErrors: {},
+        }));
+        setDeferredCorrectionCount(0);
+        setImportSessionSuccessCount(0);
+        setImportCorrectionRows(rows);
+        setImportCorrectionOpen(true);
+    };
+
+    const markSelectedForReviewLater = () => {
+        let changed = 0;
+        setImportCorrectionRows((prev) => prev.map((row) => {
+            if (!row.selected || row.deferred) return row;
+            changed += 1;
+            return { ...row, deferred: true, selected: false };
+        }));
+        if (changed > 0) {
+            setDeferredCorrectionCount((prev) => prev + changed);
+        }
+    };
+
+    const applyBulkCorrectionValue = () => {
+        const value = bulkCorrectionValue.trim();
+        if (!value) return;
+        setImportCorrectionRows((prev) => prev.map((row) => {
+            if (!row.selected) return row;
+            return {
+                ...row,
+                values: {
+                    ...row.values,
+                    [bulkCorrectionField]: value,
+                },
+            };
+        }));
+    };
+
+    const parseImportDateOrAge = (raw: string): string | null => {
+        if (!raw) return null;
+        const dmY = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+        if (dmY) return `${dmY[3]}-${dmY[2].padStart(2, '0')}-${dmY[1].padStart(2, '0')}`;
+        const Ymd = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+        if (Ymd) return `${Ymd[1]}-${Ymd[2].padStart(2, '0')}-${Ymd[3].padStart(2, '0')}`;
+        const ageValue = Number(raw.replace(',', '.'));
+        if (!Number.isFinite(ageValue) || ageValue <= 0 || ageValue > 40) return null;
+        const today = new Date();
+        const birth = new Date(today);
+        birth.setFullYear(today.getFullYear() - Math.floor(ageValue));
+        return birth.toISOString().slice(0, 10);
+    };
+
+    const handleImportCorrectedRows = async () => {
+        if (!farmId || !importProgress) return;
+        const normalized = validateCorrectionRows(importCorrectionRows);
+        const readyRows = normalized
+            .map((row, idx) => ({ row, idx }))
+            .filter(({ row }) => !row.deferred && Object.keys(row.fieldErrors).length === 0);
+
+        if (readyRows.length === 0) return;
+
+        setImportCorrectionLoading(true);
+        try {
+            const toItem = ({ row, idx }: { row: ImportCorrectionRow; idx: number }) => ({
+                sourceIndex: idx,
+                rowLabel: `Correção ${idx + 1}`,
+                brinco: row.values.brinco.trim(),
+                nome: row.values.brinco.trim(),
+                sexo: row.values.sexo.trim(),
+                raca: row.values.raca.trim(),
+                dataNascimento: parseImportDateOrAge(row.values.dataNascimento.trim()) || undefined,
+                registro: row.values.registro.trim() || undefined,
+            });
+
+            const readyItems = readyRows.map(toItem);
+            const poItems = readyItems.filter((item) => resolvedMode === 'PO' || Boolean(item.registro));
+            const commercialItems = readyItems.filter((item) => !poItems.includes(item));
+
+            let importedNow = 0;
+            const serverErrors: Array<{ sourceIndex: number; message: string }> = [];
+            const applyResults = (
+                batchItems: typeof readyItems,
+                response: Awaited<ReturnType<typeof importAnimalsBatch>>,
+            ) => {
+                importedNow += response.success || 0;
+                for (const result of response.results || []) {
+                    if (!result.success) {
+                        serverErrors.push({
+                            sourceIndex: batchItems[result.index]?.sourceIndex ?? 0,
+                            message: result.message || 'Erro ao importar linha corrigida.',
+                        });
+                    }
+                }
+            };
+
+            if (commercialItems.length > 0) {
+                const resp = await importAnimalsBatch(farmId, 'COMMERCIAL', commercialItems);
+                applyResults(commercialItems, resp);
+            }
+            if (poItems.length > 0) {
+                const resp = await importAnimalsBatch(farmId, 'PO', poItems);
+                applyResults(poItems, resp);
+            }
+
+            const serverErrorByIndex = new Map(serverErrors.map((item) => [item.sourceIndex, item.message]));
+            const remainingRows = normalized
+                .map((row, idx) => ({ row, idx }))
+                .filter(({ row, idx }) => row.deferred || Object.keys(row.fieldErrors).length > 0 || serverErrorByIndex.has(idx))
+                .map(({ row, idx }) => ({
+                    ...row,
+                    selected: false,
+                    deferred: row.deferred || false,
+                    fieldErrors: Object.keys(row.fieldErrors).length > 0
+                        ? row.fieldErrors
+                        : { brinco: serverErrorByIndex.get(idx) || 'Erro ao importar linha corrigida.' },
+                }));
+
+            const nextErrors: string[] = [];
+            normalized.forEach((row, idx) => {
+                if (row.deferred) return;
+                if (serverErrorByIndex.has(idx)) {
+                    nextErrors.push(serverErrorByIndex.get(idx)!);
+                    return;
+                }
+                const entries = Object.entries(row.fieldErrors);
+                if (entries.length > 0) {
+                    nextErrors.push(`Correção ${idx + 1} (${row.values.brinco || 'sem brinco'}): ${entries.map(([, msg]) => msg).join(' · ')}`);
+                }
+            });
+
+            setImportCorrectionRows(remainingRows);
+            setImportSessionSuccessCount((prev) => prev + importedNow);
+            setImportProgress({
+                ...importProgress,
+                success: importProgress.success + importedNow,
+                errors: nextErrors,
+                failedRows: remainingRows.map((row) => ({
+                    brinco: row.values.brinco,
+                    sexo: row.values.sexo,
+                    raca: row.values.raca,
+                    dataNascimento: row.values.dataNascimento,
+                    registro: row.values.registro,
+                })),
+            });
+            if (remainingRows.length === 0) {
+                setImportCorrectionOpen(false);
+            }
+            await loadData();
+        } finally {
+            setImportCorrectionLoading(false);
+        }
     };
 
     const handleImportStart = () => {
@@ -3543,7 +3767,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                 {importProgress.errors.length} {importProgress.errors.length === 1 ? 'linha não foi importada' : 'linhas não foram importadas'}
                                                             </p>
                                                             <p className="text-xs text-[var(--eixo-danger)]">
-                                                                Corrija os itens abaixo na planilha e reimporte o arquivo.
+                                                                Corrija os itens abaixo aqui no sistema e continue a importação.
                                                             </p>
                                                         </div>
                                                     </div>
@@ -3555,23 +3779,154 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             </div>
                                                         ))}
                                                     </div>
-                                                    {importProgress.failedRows && importProgress.failedRows.length > 0 && (
+                                                    {importProgress.failedRows.length > 0 && !importCorrectionOpen && (
                                                         <button
                                                             type="button"
-                                                            onClick={async () => {
-                                                                const rows = importProgress!.failedRows!;
-                                                                const headers = importHeaders;
-                                                                const data = [headers, ...rows.map(r => headers.map(h => r[h] ?? ''))];
-                                                                await downloadWorkbook('animais_com_erro.xlsx', 'Erros', data);
-                                                            }}
-                                                            className="mt-2 flex items-center gap-2 text-xs font-semibold text-[var(--eixo-danger)] hover:underline"
+                                                            onClick={openInlineCorrection}
+                                                            className="mt-3 rounded-xl border border-[#efc2ba] bg-white px-3 py-2 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[#fff7f5]"
                                                         >
-                                                            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                                            </svg>
-                                                            Baixar {importProgress.failedRows.length} linha{importProgress.failedRows.length > 1 ? 's' : ''} com erro (.xlsx)
+                                                            Corrigir erros agora
                                                         </button>
+                                                    )}
+                                                    {importCorrectionOpen && (
+                                                        <div className="mt-3 space-y-2 rounded-xl border border-[#efc2ba] bg-white p-3">
+                                                            <p className="text-xs font-semibold text-[var(--eixo-danger)]">
+                                                                Corrija os campos e revalide sem sair do sistema.
+                                                            </p>
+                                                            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setImportCorrectionRows((prev) => prev.map((row) => ({ ...row, selected: true })))}
+                                                                    className="rounded-lg border border-[var(--eixo-border)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]"
+                                                                >
+                                                                    Selecionar todas
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setImportCorrectionRows((prev) => prev.map((row) => ({ ...row, selected: false })))}
+                                                                    className="rounded-lg border border-[var(--eixo-border)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]"
+                                                                >
+                                                                    Limpar seleção
+                                                                </button>
+                                                                <select
+                                                                    value={bulkCorrectionField}
+                                                                    onChange={(event) => setBulkCorrectionField(event.target.value as 'sexo' | 'raca')}
+                                                                    className="rounded-lg border border-[var(--eixo-border)] bg-white px-2 py-1 text-[11px] text-[var(--eixo-text)]"
+                                                                >
+                                                                    <option value="sexo">Sexo</option>
+                                                                    <option value="raca">Raça</option>
+                                                                </select>
+                                                                <input
+                                                                    value={bulkCorrectionValue}
+                                                                    onChange={(event) => setBulkCorrectionValue(event.target.value)}
+                                                                    placeholder="Valor para aplicar"
+                                                                    className="rounded-lg border border-[var(--eixo-border)] bg-white px-2 py-1 text-[11px] text-[var(--eixo-text)]"
+                                                                />
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={applyBulkCorrectionValue}
+                                                                    className="rounded-lg bg-[var(--eixo-green)] px-2.5 py-1 text-[11px] font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
+                                                                >
+                                                                    Aplicar selecionadas
+                                                                </button>
+                                                            </div>
+                                                            <div className="max-h-56 overflow-auto rounded-lg border border-[var(--eixo-border)]">
+                                                                <table className="w-full text-xs">
+                                                                    <thead className="bg-[var(--eixo-surface-soft)]">
+                                                                        <tr>
+                                                                            <th className="px-2 py-2 text-left">Sel.</th>
+                                                                            <th className="px-2 py-2 text-left">Brinco</th>
+                                                                            <th className="px-2 py-2 text-left">Sexo</th>
+                                                                            <th className="px-2 py-2 text-left">Raça</th>
+                                                                            <th className="px-2 py-2 text-left">Data/Idade</th>
+                                                                            <th className="px-2 py-2 text-left">Registro</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                        {importCorrectionRows.map((row) => (
+                                                                            <tr key={row.id} className="border-t border-[var(--eixo-border)]">
+                                                                                <td className="px-2 py-2">
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={row.selected}
+                                                                                        onChange={(event) => setImportCorrectionRows((prev) => prev.map((item) => item.id === row.id ? { ...item, selected: event.target.checked } : item))}
+                                                                                    />
+                                                                                </td>
+                                                                                <td className="px-2 py-2">
+                                                                                    <input
+                                                                                        value={row.values.brinco}
+                                                                                        onChange={(event) => setImportCorrectionRows((prev) => prev.map((item) => item.id === row.id ? { ...item, values: { ...item.values, brinco: event.target.value } } : item))}
+                                                                                        className={`w-full rounded-lg border px-2 py-1 ${row.fieldErrors.brinco ? 'border-[#ef4444]' : 'border-[var(--eixo-border)]'}`}
+                                                                                    />
+                                                                                </td>
+                                                                                <td className="px-2 py-2">
+                                                                                    <input
+                                                                                        value={row.values.sexo}
+                                                                                        onChange={(event) => setImportCorrectionRows((prev) => prev.map((item) => item.id === row.id ? { ...item, values: { ...item.values, sexo: event.target.value } } : item))}
+                                                                                        className={`w-full rounded-lg border px-2 py-1 ${row.fieldErrors.sexo ? 'border-[#ef4444]' : 'border-[var(--eixo-border)]'}`}
+                                                                                    />
+                                                                                </td>
+                                                                                <td className="px-2 py-2">
+                                                                                    <input
+                                                                                        value={row.values.raca}
+                                                                                        onChange={(event) => setImportCorrectionRows((prev) => prev.map((item) => item.id === row.id ? { ...item, values: { ...item.values, raca: event.target.value } } : item))}
+                                                                                        className={`w-full rounded-lg border px-2 py-1 ${row.fieldErrors.raca ? 'border-[#ef4444]' : 'border-[var(--eixo-border)]'}`}
+                                                                                    />
+                                                                                </td>
+                                                                                <td className="px-2 py-2">
+                                                                                    <input
+                                                                                        value={row.values.dataNascimento}
+                                                                                        onChange={(event) => setImportCorrectionRows((prev) => prev.map((item) => item.id === row.id ? { ...item, values: { ...item.values, dataNascimento: event.target.value } } : item))}
+                                                                                        className={`w-full rounded-lg border px-2 py-1 ${row.fieldErrors.dataNascimento ? 'border-[#ef4444]' : 'border-[var(--eixo-border)]'}`}
+                                                                                    />
+                                                                                </td>
+                                                                                <td className="px-2 py-2">
+                                                                                    <input
+                                                                                        value={row.values.registro}
+                                                                                        onChange={(event) => setImportCorrectionRows((prev) => prev.map((item) => item.id === row.id ? { ...item, values: { ...item.values, registro: event.target.value } } : item))}
+                                                                                        className={`w-full rounded-lg border px-2 py-1 ${row.fieldErrors.registro ? 'border-[#ef4444]' : 'border-[var(--eixo-border)]'}`}
+                                                                                    />
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                            <div className="flex items-center justify-between">
+                                                                <p className="text-xs text-[var(--eixo-text-muted)]">
+                                                                    {importCorrectionRows.filter((row) => Object.keys(row.fieldErrors).length === 0 && !row.deferred).length} de {importCorrectionRows.filter((row) => !row.deferred).length} linhas prontas
+                                                                </p>
+                                                                <div className="flex items-center gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => validateCorrectionRows(importCorrectionRows)}
+                                                                        className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                                    >
+                                                                        Revalidar correções
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={handleImportCorrectedRows}
+                                                                        disabled={importCorrectionLoading}
+                                                                        className="rounded-xl bg-[var(--eixo-green)] px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-40"
+                                                                    >
+                                                                        {importCorrectionLoading ? 'Importando...' : 'Importar corrigidas'}
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={markSelectedForReviewLater}
+                                                                        className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]"
+                                                                    >
+                                                                        Revisar depois
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            {deferredCorrectionCount > 0 && (
+                                                                <p className="text-xs text-[var(--eixo-text-muted)]">
+                                                                    {deferredCorrectionCount} {deferredCorrectionCount === 1 ? 'linha marcada' : 'linhas marcadas'} para revisar depois.
+                                                                </p>
+                                                            )}
+                                                        </div>
                                                     )}
                                                 </div>
                                             )}
@@ -3595,6 +3950,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                 <span>{err}</span>
                                                             </div>
                                                         ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {importSessionSuccessCount > 0 && (
+                                                <div className="rounded-xl border border-[#c8ddc4] bg-[var(--eixo-green-soft)] p-4">
+                                                    <p className="text-sm font-bold text-[var(--eixo-text)]">Resumo da sessão de correção</p>
+                                                    <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                                        <div className="rounded-lg border border-[#d7cab3] bg-white px-3 py-2">
+                                                            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Importadas agora</p>
+                                                            <p className="text-base font-bold text-[var(--eixo-text)]">{importSessionSuccessCount}</p>
+                                                        </div>
+                                                        <div className="rounded-lg border border-[#d7cab3] bg-white px-3 py-2">
+                                                            <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Pendentes para revisar depois</p>
+                                                            <p className="text-base font-bold text-[var(--eixo-text)]">{deferredCorrectionCount}</p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
@@ -3671,9 +4041,17 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     <button
                                         type="button"
                                         onClick={() => setImportModalOpen(false)}
-                                        className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
+                                        className={`rounded-xl px-6 py-2 text-sm font-semibold text-[#1a1a1a] ${
+                                            deferredCorrectionCount > 0
+                                                ? 'bg-amber-300 hover:bg-amber-400'
+                                                : 'bg-[var(--eixo-green)] hover:bg-[var(--eixo-green-dark)]'
+                                        }`}
                                     >
-                                        {importProgress.errors.length > 0 || importProgress.weighingIssues.length > 0 ? 'Fechar' : 'Concluir'}
+                                        {deferredCorrectionCount > 0
+                                            ? `Concluir com ${deferredCorrectionCount} pendente${deferredCorrectionCount > 1 ? 's' : ''}`
+                                            : importProgress.errors.length > 0 || importProgress.weighingIssues.length > 0
+                                                ? 'Fechar'
+                                                : 'Concluir'}
                                     </button>
                                 </>
                             )}
