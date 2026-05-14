@@ -4050,7 +4050,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         {deferredCorrectionCount > 0
                                             ? `Concluir com ${deferredCorrectionCount} pendente${deferredCorrectionCount > 1 ? 's' : ''}`
                                             : importProgress.errors.length > 0 || importProgress.weighingIssues.length > 0
-                                                ? 'Fechar'
+                                                ? 'Concluir com pendências'
                                                 : 'Concluir'}
                                     </button>
                                 </>

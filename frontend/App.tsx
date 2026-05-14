@@ -238,15 +238,11 @@ const AppContent: React.FC = () => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-    // App autenticado é desktop-only — força viewport fixo para evitar layout mobile
+    // Mantém viewport responsivo para evitar quebra visual em telas desktop amplas.
     useEffect(() => {
         const viewport = document.querySelector('meta[name="viewport"]');
         if (!viewport) return;
-        if (isAuthenticated) {
-            viewport.setAttribute('content', 'width=1280');
-        } else {
-            viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
-        }
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
     }, [isAuthenticated]);
     const [authScreen, setAuthScreen] = useState<'landing' | 'login' | 'register' | 'forgot-password' | 'reset-password' | 'accept-invite' | 'recover-email'>('landing');
     const [resetToken, setResetToken] = useState<string | null>(null);
@@ -1183,10 +1179,10 @@ const AppContent: React.FC = () => {
 
             {/* ── Eixo Suporte — botão flutuante + painel ── */}
             {isAuthenticated && (
-                <div ref={supportRef} className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+                <div ref={supportRef} className="fixed bottom-6 right-6 top-6 z-50 flex flex-col items-end justify-end gap-3">
                     {/* Painel de chat */}
                     {isSupportOpen && (
-                        <div className="h-[min(560px,calc(100vh-140px))] w-[360px] max-w-[calc(100vw-32px)]">
+                        <div className="h-[560px] max-h-[calc(100dvh-140px)] w-[360px] max-w-[calc(100vw-32px)]">
                             <AssistantChat
                                 onClose={() => setIsSupportOpen(false)}
                                 farmId={selectedFarmId}
