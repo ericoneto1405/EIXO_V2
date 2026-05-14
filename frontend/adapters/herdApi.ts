@@ -8,6 +8,8 @@ export type HerdLot = LotUI;
 export type HerdWeighing = WeighingUI;
 export type HerdWeighingSession = WeighingSessionUI;
 
+const getAnimalsBasePath = (herdType: HerdType) => (herdType === 'PO' ? '/po/animals' : '/animals');
+
 // ---- Tipos novos ----
 
 export type HerdEventType = 'NASCIMENTO' | 'COMPRA' | 'VENDA' | 'MORTE';
@@ -133,8 +135,7 @@ const normalizeAnimal = (animal: any): HerdAnimal => {
 };
 
 export const listAnimals = async (farmId: string, herdType: HerdType): Promise<HerdAnimal[]> => {
-    void herdType;
-    const endpoint = `/animals?farmId=${farmId}`;
+    const endpoint = `${getAnimalsBasePath(herdType)}?farmId=${farmId}`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -148,8 +149,7 @@ export const createAnimal = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<HerdAnimal> => {
-    void herdType;
-    const endpoint = '/animals';
+    const endpoint = getAnimalsBasePath(herdType);
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -161,6 +161,71 @@ export const createAnimal = async (
         throw new Error(data?.message || 'Erro ao salvar animal.');
     }
     return normalizeAnimal(data.animal);
+};
+
+export interface ImportBatchWeighingInput {
+    data: string;
+    peso: number;
+}
+
+export interface ImportBatchAnimalInput {
+    sourceIndex?: number;
+    rowLabel: string;
+    brinco?: string;
+    nome?: string;
+    raca?: string;
+    sexo?: string;
+    dataNascimento?: string;
+    pesoAtual?: number;
+    categoria?: string;
+    observacoes?: string;
+    dataEntrada?: string;
+    valorCompra?: number;
+    tipoCadastro?: string;
+    tatuagem?: string;
+    sisbov?: string;
+    maeNome?: string;
+    paiNome?: string;
+    lotId?: string;
+    paddockId?: string;
+    paddockStartAt?: string;
+    weighings?: ImportBatchWeighingInput[];
+}
+
+export interface ImportBatchRowResult {
+    index: number;
+    success: boolean;
+    animalId?: string;
+    brinco?: string;
+    nome?: string;
+    message?: string;
+    warnings?: string[];
+}
+
+export interface ImportBatchResponse {
+    total: number;
+    success: number;
+    failures: number;
+    results: ImportBatchRowResult[];
+}
+
+export const importAnimalsBatch = async (
+    farmId: string,
+    herdType: HerdType,
+    items: ImportBatchAnimalInput[],
+): Promise<ImportBatchResponse> => {
+    const endpoint = `${getAnimalsBasePath(herdType)}/import-batch`;
+    const response = await fetch(buildApiUrl(endpoint), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ farmId, items }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao importar em lote.');
+    }
+    return data as ImportBatchResponse;
 };
 
 export const listLots = async (farmId: string, herdType: HerdType): Promise<HerdLot[]> => {
@@ -195,8 +260,7 @@ export const createLot = async (
 };
 
 export const listWeighings = async (animalId: string, herdType: HerdType): Promise<HerdWeighing[]> => {
-    void herdType;
-    const endpoint = `/animals/${animalId}/pesagens`;
+    const endpoint = `${getAnimalsBasePath(herdType)}/${animalId}/pesagens`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -210,8 +274,7 @@ export const createWeighing = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<HerdWeighing> => {
-    void herdType;
-    const endpoint = `/animals/${animalId}/pesagens`;
+    const endpoint = `${getAnimalsBasePath(herdType)}/${animalId}/pesagens`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -357,8 +420,7 @@ export const deleteWeighing = async (
 };
 
 export const listPaddockMoves = async (animalId: string, herdType: HerdType): Promise<PaddockMove[]> => {
-    void herdType;
-    const endpoint = `/animals/${animalId}/paddock-moves`;
+    const endpoint = `${getAnimalsBasePath(herdType)}/${animalId}/paddock-moves`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -372,8 +434,7 @@ export const createPaddockMove = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<PaddockMove> => {
-    void herdType;
-    const endpoint = `/animals/${animalId}/paddock-moves`;
+    const endpoint = `${getAnimalsBasePath(herdType)}/${animalId}/paddock-moves`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -390,8 +451,7 @@ export const createPaddockMove = async (
 // ---- Funções novas: Eventos de Inventário ----
 
 export const listHerdEvents = async (animalId: string, herdType: HerdType): Promise<HerdEvent[]> => {
-    void herdType;
-    const endpoint = `/animals/${animalId}/eventos`;
+    const endpoint = `${getAnimalsBasePath(herdType)}/${animalId}/eventos`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -405,8 +465,7 @@ export const createHerdEvent = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<HerdEvent> => {
-    void herdType;
-    const endpoint = `/animals/${animalId}/eventos`;
+    const endpoint = `${getAnimalsBasePath(herdType)}/${animalId}/eventos`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -423,8 +482,7 @@ export const createHerdEvent = async (
 // ---- Funções novas: Manejo Sanitário ----
 
 export const listSanitaryRecords = async (animalId: string, herdType: HerdType): Promise<SanitaryRecord[]> => {
-    void herdType;
-    const endpoint = `/animals/${animalId}/sanitario`;
+    const endpoint = `${getAnimalsBasePath(herdType)}/${animalId}/sanitario`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -438,8 +496,7 @@ export const createSanitaryRecord = async (
     herdType: HerdType,
     payload: Record<string, any>,
 ): Promise<SanitaryRecord> => {
-    void herdType;
-    const endpoint = `/animals/${animalId}/sanitario`;
+    const endpoint = `${getAnimalsBasePath(herdType)}/${animalId}/sanitario`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -496,8 +553,7 @@ export const updateAnimalLot = async (
     herdType: HerdType,
     lotId: string | null,
 ): Promise<void> => {
-    void herdType;
-    const endpoint = `/animals/${animalId}`;
+    const endpoint = `${getAnimalsBasePath(herdType)}/${animalId}`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },

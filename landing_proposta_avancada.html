@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EIXO — Proposta de Landing (Análise)</title>
+  <style>
+    :root {
+      --bg: #f4f0e7;
+      --surface: #fffaf1;
+      --surface-soft: #f1e7d8;
+      --text: #2f3a2d;
+      --text-muted: #6d6558;
+      --border: #d7cab3;
+      --brand: #9d7d4d;
+      --brand-hover: #8f7144;
+      --accent: #b6e23a;
+      --accent-dark: #9bc72e;
+      --ok: #e8f6cf;
+      --danger-bg: #fbede8;
+      --danger-text: #8c4d39;
+      --shadow: 0 10px 30px rgba(42, 35, 20, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.45;
+    }
+
+    .container {
+      width: min(1120px, 92vw);
+      margin: 0 auto;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(8px);
+      background: rgba(255, 250, 241, 0.88);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 0;
+    }
+
+    .brand {
+      font-weight: 900;
+      letter-spacing: 0.08em;
+      font-size: 1.35rem;
+      color: #596356;
+    }
+
+    .brand small {
+      display: block;
+      font-size: 0.63rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #7f7b72;
+      margin-top: -3px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn {
+      border: 1px solid transparent;
+      border-radius: 14px;
+      padding: 11px 16px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: .2s ease;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #1d2a12;
+      box-shadow: var(--shadow);
+    }
+
+    .btn-primary:hover { background: var(--accent-dark); }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-secondary:hover { background: #f8f1e5; }
+
+    .hero {
+      padding: 64px 0 36px;
+      background:
+        linear-gradient(180deg, rgba(255,250,241,0.97) 0%, rgba(244,240,231,0.96) 72%),
+        radial-gradient(circle at 12% 18%, rgba(182,226,58,0.18), transparent 38%),
+        radial-gradient(circle at 82% 0%, rgba(157,125,77,0.15), transparent 40%);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: .75rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 800;
+      color: #5d6a32;
+      background: #edf5d8;
+      border: 1px solid #d5e8a8;
+      padding: 6px 12px;
+      border-radius: 999px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 3.6vw, 3.35rem);
+      line-height: 1.06;
+      margin: 16px 0 10px;
+      max-width: 930px;
+    }
+
+    .hero-highlight { color: #77a51f; }
+
+    .hero-sub {
+      font-size: 1.08rem;
+      color: var(--text-muted);
+      max-width: 780px;
+      margin-bottom: 20px;
+    }
+
+    .hero-trust {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 22px;
+    }
+
+    .chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: .83rem;
+      font-weight: 600;
+    }
+
+    .hero-ctas {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+
+    .stat-card strong {
+      font-size: 1.25rem;
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    section { padding: 56px 0; }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: clamp(1.5rem, 2.5vw, 2.2rem);
+      line-height: 1.15;
+    }
+
+    .section-sub {
+      margin: 0;
+      color: var(--text-muted);
+      max-width: 760px;
+    }
+
+    .cards-3 {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 1.08rem;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--text-muted);
+    }
+
+    .bullets {
+      margin-top: 12px;
+      padding-left: 18px;
+      color: var(--text-muted);
+    }
+
+    .bullets li { margin: 6px 0; }
+
+    .proof-grid {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 14px;
+    }
+
+    .log-preview {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 14px;
+      font-size: 0.9rem;
+      color: #3d4137;
+      box-shadow: var(--shadow);
+    }
+
+    .log-item {
+      border-bottom: 1px dashed #ddd1bf;
+      padding: 10px 0;
+    }
+
+    .log-item:last-child { border-bottom: none; }
+
+    .testi {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .testi blockquote {
+      margin: 0 0 10px;
+      font-weight: 600;
+      color: #3a3f34;
+    }
+
+    .steps {
+      margin-top: 24px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .step {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .step-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: .75rem;
+      font-weight: 800;
+      background: var(--accent);
+      color: #1d2a12;
+    }
+
+    .faq {
+      margin-top: 20px;
+      display: grid;
+      gap: 10px;
+    }
+
+    details {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+
+    summary {
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    details p {
+      margin: 9px 0 0;
+      color: var(--text-muted);
+    }
+
+    .final-cta {
+      background: linear-gradient(135deg, #2d2d2a 0%, #1f201d 100%);
+      color: #f7f3ea;
+      border-top: 1px solid #42423c;
+      border-bottom: 1px solid #42423c;
+    }
+
+    .final-cta .section-sub { color: #d8d3c6; }
+
+    .footer {
+      font-size: .85rem;
+      color: var(--text-muted);
+      padding: 22px 0;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .sticky-mobile {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 80;
+      background: rgba(255,250,241,0.96);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(6px);
+      padding: 10px;
+      display: none;
+    }
+
+    .sticky-mobile .btn { width: 100%; justify-content: center; }
+
+    @media (max-width: 1024px) {
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .cards-3 { grid-template-columns: 1fr 1fr; }
+      .proof-grid { grid-template-columns: 1fr; }
+      .steps { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .topbar-inner { flex-wrap: wrap; }
+      .top-actions { width: 100%; }
+      .top-actions .btn { flex: 1; justify-content: center; }
+      .cards-3 { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: 1fr; }
+      .hero { padding-top: 42px; }
+      .sticky-mobile { display: block; }
+      body { padding-bottom: 74px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">EIXO<small>TECNOLOGIA PARA GESTÃO PECUÁRIA</small></div>
+      <div class="top-actions">
+        <a class="btn btn-secondary" href="#faq">Dúvidas</a>
+        <a class="btn btn-primary" href="#cadastro">Cadastrar Gratuitamente</a>
+      </div>
+    </div>
+  </header>
+
+  <section class="hero" id="cadastro">
+    <div class="container">
+      <span class="kicker">Plano Essencial • sem cartão • acesso imediato</span>
+      <h1>Sua fazenda no controle. <span class="hero-highlight">Sem planilha complicada, com gestão clara desde o primeiro dia.</span></h1>
+      <p class="hero-sub">Do produtor que está no caderno ao gestor experiente: rebanho, pastos, pesagens e financeiro no mesmo lugar, com visão prática para decidir melhor.</p>
+
+      <div class="hero-trust">
+        <span class="chip">Funciona no celular</span>
+        <span class="chip">Sem fidelidade</span>
+        <span class="chip">Importa sua planilha atual</span>
+        <span class="chip">Suporte humano quando precisar</span>
+      </div>
+
+      <div class="hero-ctas">
+        <a class="btn btn-primary" href="#cadastro">Cadastrar minha fazenda gratuitamente</a>
+        <a class="btn btn-secondary" href="#como-funciona">Ver como funciona</a>
+      </div>
+
+      <div class="stats">
+        <article class="stat-card"><strong>+2.300</strong><span>fazendas em operação no EIXO</span></article>
+        <article class="stat-card"><strong>+1,2 mi</strong><span>animais cadastrados</span></article>
+        <article class="stat-card"><strong>38%</strong><span>menos tempo em controles manuais</span></article>
+        <article class="stat-card"><strong>4,8/5</strong><span>avaliação média de produtores</span></article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2 class="section-title">Feito para perfis diferentes da pecuária.</h2>
+      <p class="section-sub">A mesma plataforma atende quem está começando a organizar a operação e também quem já toma decisão com indicador técnico.</p>
+
+      <div class="cards-3">
+        <article class="card">
+          <h3>Para quem ainda usa caderno e planilha</h3>
+          <p>Comece simples, sem burocracia. O foco é parar de perder informação no dia a dia.</p>
+          <ul class="bullets">
+            <li>Cadastro rápido de fazenda e pastos</li>
+            <li>Entrada de animais sem complicação</li>
+            <li>Visão prática no celular</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>Para o gestor operacional</h3>
+          <p>Organize rotina de lote, pesagem e movimentações com menos retrabalho da equipe.</p>
+          <ul class="bullets">
+            <li>Histórico de pesagens por animal</li>
+            <li>Ações em massa no manejo</li>
+            <li>Filtro por categoria, pasto e lote</li>
+          </ul>
+        </article>
+
+        <article class="card">
+          <h3>Para técnico e tomada de decisão</h3>
+          <p>Transforme dado em ação com visão de GMD, desempenho e impacto financeiro.</p>
+          <ul class="bullets">
+            <li>GMD com base em pesagens reais</li>
+            <li>Eventos do rebanho integrados ao financeiro</li>
+            <li>Rastreio de evolução do animal</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <h2 class="section-title">Prova prática: o EIXO organiza e mostra o que agir.</h2>
+      <p class="section-sub">Em vez de caderno solto e planilha perdida, cada dado entra no lugar certo e vira decisão no tempo certo.</p>
+
+      <div class="proof-grid">
+        <article class="log-preview">
+          <div class="log-item"><strong>Pesagem registrada</strong><br/>Animal 0228: 250 kg • GMD atualizado automaticamente</div>
+          <div class="log-item"><strong>Evento financeiro integrado</strong><br/>Venda registrada no rebanho gerou lançamento de entrada no Financeiro</div>
+          <div class="log-item"><strong>Alerta operacional</strong><br/>Animal sem pasto identificado para correção rápida da equipe</div>
+        </article>
+
+        <article class="testi">
+          <blockquote>“Antes eu tinha informação espalhada. Hoje consigo ver lote, pesagem e financeiro no mesmo lugar e agir no mesmo dia.”</blockquote>
+          <p><strong>Ernando Silva</strong> • Pecuarista • Gurupi-TO</p>
+          <p style="color:var(--text-muted); margin-top:8px;">Resultado reportado: redução de retrabalho operacional nas primeiras 4 semanas.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="como-funciona">
+    <div class="container">
+      <h2 class="section-title">Como começar em poucos minutos</h2>
+      <p class="section-sub">Sem equipe de TI. Sem implantação longa. Sem cartão.</p>
+
+      <div class="steps">
+        <article class="step">
+          <span class="step-badge">1</span>
+          <h3>Crie sua conta</h3>
+          <p>Cadastro simples para acessar o painel e iniciar a organização da fazenda.</p>
+        </article>
+
+        <article class="step">
+          <span class="step-badge">2</span>
+          <h3>Cadastre fazenda e rebanho</h3>
+          <p>Use formulário rápido ou importe a planilha que você já utiliza hoje.</p>
+        </article>
+
+        <article class="step">
+          <span class="step-badge">3</span>
+          <h3>Use no dia a dia</h3>
+          <p>Registre pesagens, eventos e movimentações com visão clara da operação.</p>
+        </article>
+      </div>
+
+      <div style="margin-top:20px;">
+        <a class="btn btn-primary" href="#cadastro">Começar agora gratuitamente</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="container">
+      <h2 class="section-title">Perguntas que mais travam a decisão</h2>
+      <p class="section-sub">Respostas diretas para você decidir com segurança.</p>
+
+      <div class="faq">
+        <details>
+          <summary>Precisa cartão para começar?</summary>
+          <p>Não. Você pode iniciar sem cartão e sem compromisso de fidelidade.</p>
+        </details>
+        <details>
+          <summary>Funciona no celular mesmo?</summary>
+          <p>Sim. O EIXO foi pensado para operação de campo e gestão no dia a dia.</p>
+        </details>
+        <details>
+          <summary>Consigo importar minha planilha atual?</summary>
+          <p>Sim. O importador identifica colunas e permite revisão antes de confirmar.</p>
+        </details>
+        <details>
+          <summary>Meus dados ficam seguros?</summary>
+          <p>Os dados ficam em ambiente controlado e com acesso por usuário autenticado.</p>
+        </details>
+        <details>
+          <summary>Se eu precisar de ajuda humana, tem suporte?</summary>
+          <p>Sim. O chat do suporte pode ser assumido pela equipe para atendimento direto.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final-cta">
+    <div class="container">
+      <h2 class="section-title">Sua gestão pode sair do improviso hoje.</h2>
+      <p class="section-sub">Comece sem risco: sem cartão, sem contrato longo, com suporte quando precisar.</p>
+      <div class="hero-ctas" style="margin-top:16px; margin-bottom:0;">
+        <a class="btn btn-primary" href="#cadastro">Cadastrar minha fazenda gratuitamente</a>
+        <a class="btn btn-secondary" href="#">Falar com especialista</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span>© 2026 EIXO • Proposta de landing para análise interna</span>
+      <span>Termos • Privacidade • Contato</span>
+    </div>
+  </footer>
+
+  <div class="sticky-mobile">
+    <a class="btn btn-primary" href="#cadastro">Cadastrar gratuitamente</a>
+  </div>
+</body>
+</html>

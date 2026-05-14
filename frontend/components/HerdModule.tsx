@@ -11,6 +11,8 @@ import {
     HerdType,
     createAnimal,
     createLot,
+    createWeighing,
+    importAnimalsBatch,
     listAnimals,
     listLots,
 } from '../adapters/herdApi';
@@ -18,6 +20,7 @@ import { buildApiUrl } from '../api';
 import type { Paddock } from '../types';
 
 type TabKey = 'overview' | 'animals' | 'pastures' | 'lots' | 'weighings' | 'settings';
+type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'sem_categoria' | 'gmd_baixo';
 
 const LOT_OBJECTIVE_OPTIONS = [
     'Cria',
@@ -150,6 +153,7 @@ const FIELD_PLAN: Record<string, 'free' | 'paid2'> = {
     raca: 'free',
     sexo: 'free',
     dataNascimento: 'free',
+    registro: 'free',
     pesoAtual: 'free',
     lote: 'free',
     pasto: 'free',
@@ -183,6 +187,7 @@ const FIELD_LABELS: Record<string, string> = {
     raca: 'Raça',
     sexo: 'Sexo',
     dataNascimento: 'Data de Nascimento',
+    registro: 'Registro',
     pesoAtual: 'Peso Atual',
     dataPesagem: 'Data da Pesagem',
     lote: 'Lote',
@@ -371,6 +376,10 @@ const FIELD_KEYWORDS: Record<string, string[]> = {
         'nascto', 'nscto', 'nac', 'nasct', 'dt.nasc.', 'd/nasc', 'aniversario',
         'aniversário', 'dt_nasc.', 'nassimento',
     ],
+    registro: [
+        'registro', 'reg', 'registro animal', 'registro po', 'registro p.o', 'n registro',
+        'numero registro', 'nro registro', 'registro genealogico', 'rgd', 'rgn',
+    ],
     pesoAtual: [
         'peso', 'peso atual', 'peso vivo', 'kg', 'weight', 'pv', 'p.v',
         'peso_atual', 'peso vivo atual', 'wt', 'arroba', 'arrobas', 'arrb',
@@ -485,8 +494,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     weighingOnlyMode = false,
 }) => {
     void mode;
-    void herdType;
-    const resolvedMode: HerdType = 'COMMERCIAL';
+    const resolvedMode: HerdType = herdType ?? 'COMMERCIAL';
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
     const [animals, setAnimals] = useState<HerdAnimal[]>([]);
     const [lots, setLots] = useState<HerdLot[]>([]);
@@ -503,6 +511,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [filterGmdMin, setFilterGmdMin] = useState('');
     const [filterGmdMax, setFilterGmdMax] = useState('');
     const [filterNutrition, setFilterNutrition] = useState('');
+    const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [healthQuickFilter, setHealthQuickFilter] = useState<HealthQuickFilter>('none');
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -579,6 +589,37 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     });
     const [paddocks, setPaddocks] = useState<Paddock[]>([]);
     const [farmBreeds, setFarmBreeds] = useState<string[]>([]);
+    const isPoMode = resolvedMode === 'PO';
+    const advancedFiltersStorageKey = useMemo(
+        () => `eixo:herd:advanced-filters:${farmId || 'no-farm'}:${resolvedMode}`,
+        [farmId, resolvedMode],
+    );
+
+    const normalizeCategoryKey = (value?: string | null) =>
+        String(value || '')
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .trim()
+            .toLowerCase();
+
+    const getGmdTargetByCategory = (category?: string | null) => {
+        const key = normalizeCategoryKey(category);
+        const byCategory: Record<string, number> = {
+            bezerro: 0.6,
+            bezerra: 0.6,
+            novilho: 0.55,
+            novilha: 0.55,
+            garrote: 0.7,
+            garrota: 0.6,
+            boi: 0.7,
+            vaca: 0.4,
+            'vaca de cria': 0.4,
+            'vaca seca': 0.35,
+            'vaca de descarte': 0.35,
+            touro: 0.6,
+        };
+        return byCategory[key] ?? 0.6;
+    };
 
     const isPo = false;
 
@@ -695,6 +736,17 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     }, [farmId, resolvedMode]);
 
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const saved = window.localStorage.getItem(advancedFiltersStorageKey);
+        setShowAdvancedFilters(saved === '1');
+    }, [advancedFiltersStorageKey]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        window.localStorage.setItem(advancedFiltersStorageKey, showAdvancedFilters ? '1' : '0');
+    }, [advancedFiltersStorageKey, showAdvancedFilters]);
+
+    useEffect(() => {
         if (lotFilter && !lots.some((lot) => lot.id === lotFilter)) {
             setLotFilter('');
         }
@@ -719,6 +771,31 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             : null;
 
         return animals.filter((animal) => {
+            const lastWeighingAgeDays = animal.dataUltimaPesagem
+                ? Math.floor((Date.now() - new Date(animal.dataUltimaPesagem).getTime()) / 86400000)
+                : null;
+            const hasCategory = Boolean(String(animal.categoria || '').trim());
+            const hasPaddock = Boolean(animal.currentPaddockId || animal.currentPaddockName);
+            const currentGmd = typeof animal.gmd30 === 'number'
+                ? animal.gmd30
+                : typeof animal.gmd === 'number'
+                    ? animal.gmd
+                    : null;
+
+            if (healthQuickFilter === 'sem_pasto' && hasPaddock) {
+                return false;
+            }
+            if (healthQuickFilter === 'pesagem_atrasada') {
+                if (lastWeighingAgeDays === null || lastWeighingAgeDays <= 30) return false;
+            }
+            if (healthQuickFilter === 'sem_categoria' && hasCategory) {
+                return false;
+            }
+            if (healthQuickFilter === 'gmd_baixo') {
+                if (currentGmd === null) return false;
+                if (currentGmd >= getGmdTargetByCategory(animal.categoria)) return false;
+            }
+
             if (lotFilter && animal.lotId !== lotFilter) {
                 return false;
             }
@@ -786,6 +863,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         animals,
         filterGmdMax,
         filterGmdMin,
+        healthQuickFilter,
         filterIdentificacao,
         filterPesagem,
         filterNutrition,
@@ -809,6 +887,79 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             a.localeCompare(b, 'pt-BR'),
         );
     }, [animals]);
+
+    const healthOverview = useMemo(() => {
+        let withoutPaddock = 0;
+        let withoutWeighing = 0;
+        let withoutCategory = 0;
+        let staleWeighing = 0;
+        let belowTargetGmd = 0;
+
+        for (const animal of animals) {
+            const hasPaddock = Boolean(animal.currentPaddockId || animal.currentPaddockName);
+            if (!hasPaddock) withoutPaddock++;
+
+            const hasCategory = Boolean(String(animal.categoria || '').trim());
+            if (!hasCategory) withoutCategory++;
+
+            if (animal.dataUltimaPesagem) {
+                const days = Math.floor((Date.now() - new Date(animal.dataUltimaPesagem).getTime()) / 86400000);
+                if (days > 30) staleWeighing++;
+            } else {
+                withoutWeighing++;
+            }
+
+            const currentGmd = typeof animal.gmd30 === 'number'
+                ? animal.gmd30
+                : typeof animal.gmd === 'number'
+                    ? animal.gmd
+                    : null;
+            if (currentGmd !== null && currentGmd < getGmdTargetByCategory(animal.categoria)) {
+                belowTargetGmd++;
+            }
+        }
+
+        return { withoutPaddock, withoutWeighing, staleWeighing, withoutCategory, belowTargetGmd };
+    }, [animals]);
+
+    const clearAllFilters = () => {
+        setSearchTerm('');
+        setLotFilter('');
+        setFilterRaca('');
+        setFilterCategoria('');
+        setFilterSexo('');
+        setFilterIdentificacao('todas');
+        setFilterPesagem('todas');
+        setFilterPaddock('');
+        setFilterGmdMin('');
+        setFilterGmdMax('');
+        setFilterNutrition('');
+        setHealthQuickFilter('none');
+    };
+
+    const applyHealthQuickFilter = (quickFilter: HealthQuickFilter) => {
+        clearAllFilters();
+        setHealthQuickFilter(quickFilter);
+    };
+
+    const handleImportNextActionAssignPaddock = () => {
+        setImportModalOpen(false);
+        setActiveTab('animals');
+        applyHealthQuickFilter('sem_pasto');
+    };
+
+    const handleImportNextActionWeigh = () => {
+        const animalsWithoutWeighing = animals.filter((animal) => animal.pesoAtual == null || animal.pesoAtual <= 0);
+        if (animalsWithoutWeighing.length === 0) return;
+        setImportModalOpen(false);
+        setActiveTab('animals');
+        setSelectedAnimals(new Set(animalsWithoutWeighing.map((animal) => animal.id as any)));
+        setBulkError(null);
+        setBulkWeighResult(null);
+        setBulkWeighDate('');
+        setBulkWeighPeso('');
+        setBulkWeighOpen(true);
+    };
 
     const sortedAnimals = useMemo(() => {
         const items = [...filteredAnimals];
@@ -1089,7 +1240,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         const errors: string[] = [];
         const weighingIssues: string[] = [];
         const failedRows: Record<string, string>[] = [];
-        let success = 0;
         const total = importRows.length;
         setImportProgress({ total, success: 0, errors: [], failedRows: [], weighingIssues: [] });
 
@@ -1107,36 +1257,29 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             if (Ymd) return `${Ymd[1]}-${Ymd[2].padStart(2, '0')}-${Ymd[3].padStart(2, '0')}`;
             return null;
         };
+        const parseBirthDateOrAge = (raw: string): string | null => {
+            const dateValue = normalizeDate(raw);
+            if (dateValue) return dateValue;
+            const ageValue = Number(raw.replace(',', '.'));
+            if (!Number.isFinite(ageValue) || ageValue <= 0 || ageValue > 40) return null;
+            const today = new Date();
+            const birth = new Date(today);
+            birth.setFullYear(today.getFullYear() - Math.floor(ageValue));
+            return birth.toISOString().slice(0, 10);
+        };
 
-        const brincoCol = Object.entries(importMapping)
-            .find(([, v]) => v === 'brinco')?.[0];
         const mappingEntries = Object.entries(importMapping);
-        const brincosSeen = new Set<string>();
-        const duplicatesInFile = new Set<string>();
-        if (brincoCol) {
-            for (const row of importRows) {
-                const b = (row[brincoCol] || '').trim();
-                if (b) {
-                    if (brincosSeen.has(b)) duplicatesInFile.add(b);
-                    brincosSeen.add(b);
-                }
-            }
-        }
-
-        for (let i = 0; i < importRows.length; i++) {
-            const row = importRows[i];
-            const get = (field: string) => {
-                const col = mappingEntries.find(([, v]) => v === field)?.[0];
-                return col ? (row[col] || '').trim() : '';
-            };
+        try {
             const parsePesoImportado = (raw: string): number | null => {
                 const pesoNum = parseFloat(raw.replace(',', '.'));
                 if (Number.isNaN(pesoNum) || pesoNum <= 0) return null;
-                return importWeightUnit === 'arroba'
-                    ? Math.round(pesoNum * 15)
-                    : pesoNum;
+                return importWeightUnit === 'arroba' ? Math.round(pesoNum * 15) : pesoNum;
             };
-            const collectMultipleWeighings = () => {
+            const getValue = (row: Record<string, string>, field: string) => {
+                const col = mappingEntries.find(([, v]) => v === field)?.[0];
+                return col ? (row[col] || '').trim() : '';
+            };
+            const collectMultipleWeighings = (row: Record<string, string>, rowIndex: number, brincoRef: string) => {
                 const grouped = new Map<string, { dateRaw?: string; weightRaw?: string }>();
                 for (const header of importHeaders) {
                     const headerNorm = header
@@ -1158,7 +1301,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         grouped.set(key, prev);
                     }
                 }
-
                 const weighings: Array<{ data: string; peso: number }> = [];
                 const localErrors: string[] = [];
                 for (const key of Array.from(grouped.keys()).sort((a, b) => Number(a) - Number(b))) {
@@ -1167,13 +1309,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     const hasWeight = Boolean(entry.weightRaw);
                     if (!hasDate && !hasWeight) continue;
                     if (!hasDate || !hasWeight) {
-                        localErrors.push(`Linha ${i + 2} (${brinco}): Pesagem ${key} incompleta (data/peso).`);
+                        localErrors.push(`Linha ${rowIndex + 2} (${brincoRef}): Pesagem ${key} incompleta (data/peso).`);
                         continue;
                     }
                     const dataNorm = normalizeDate(entry.dateRaw || '');
                     const pesoNorm = parsePesoImportado(entry.weightRaw || '');
                     if (!dataNorm || !pesoNorm) {
-                        localErrors.push(`Linha ${i + 2} (${brinco}): Pesagem ${key} inválida (data/peso).`);
+                        localErrors.push(`Linha ${rowIndex + 2} (${brincoRef}): Pesagem ${key} inválida (data/peso).`);
                         continue;
                     }
                     weighings.push({ data: dataNorm, peso: pesoNorm });
@@ -1181,110 +1323,105 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 return { weighings, localErrors };
             };
 
-            const brinco = get('brinco');
-            if (!brinco) {
-                errors.push(`Linha ${i + 2}: identificação não encontrada — linha ignorada.`);
-                failedRows.push(row);
-                continue;
-            }
-            if (duplicatesInFile.has(brinco)) {
-                errors.push(`Linha ${i + 2} (${brinco}): brinco duplicado na planilha.`);
-                failedRows.push(row);
-                continue;
-            }
-
-            const dataNasc = normalizeDate(get('dataNascimento'));
-            const dataEntrada = normalizeDate(get('dataEntrada'));
-
-            let pesoAtual: number | undefined;
-            const pesoRaw = get('pesoAtual');
-            if (pesoRaw) {
-                const parsedPeso = parsePesoImportado(pesoRaw);
-                if (parsedPeso) pesoAtual = parsedPeso;
-            }
-
-            let valorCompra: number | undefined;
-            const valorRaw = get('valorCompra');
-            if (valorRaw) {
-                const valorNum = parseFloat(
-                    valorRaw.replace(/[R$\s]/g, '').replace(',', '.'),
-                );
-                if (!isNaN(valorNum) && valorNum > 0) valorCompra = valorNum;
-            }
-
-            try {
-                const createdAnimal = await createAnimal(farmId, resolvedMode, {
-                    brinco,
-                    raca: get('raca') || 'Não informada',
-                    sexo: normalizeSexo(get('sexo')),
-                    dataNascimento: dataNasc || undefined,
-                    pesoAtual,
-                    categoria: normalizeImportedCategory(get('categoria')) || undefined,
-                    observacoes: get('observacoes') || undefined,
-                    dataEntrada: dataEntrada || undefined,
-                    valorCompra: valorCompra || undefined,
-                    tipoCadastro: get('tipoCadastro') || undefined,
-                    // Campos P.O. — liberados para todos os planos
-                    tatuagem: get('tatuagem') || undefined,
-                    sisbov: get('sisbov') || undefined,
-                    maeNome: get('mae') || undefined,
-                    paiNome: get('pai') || undefined,
-                });
-
-                // Registrar pesagem real se dataPesagem e pesoAtual estiverem presentes
-                const dataPesagemRaw = get('dataPesagem');
-                const dataPesagemNorm = normalizeDate(dataPesagemRaw);
+            const items = importRows.map((row, i) => {
+                const brinco = getValue(row, 'brinco');
+                const dataNasc = parseBirthDateOrAge(getValue(row, 'dataNascimento'));
+                const dataEntrada = normalizeDate(getValue(row, 'dataEntrada'));
+                const pesoRaw = getValue(row, 'pesoAtual');
+                const pesoAtual = pesoRaw ? parsePesoImportado(pesoRaw) : null;
+                const valorRaw = getValue(row, 'valorCompra');
+                const valorNum = valorRaw
+                    ? parseFloat(valorRaw.replace(/[R$\s]/g, '').replace(',', '.'))
+                    : NaN;
+                const valorCompra = !isNaN(valorNum) && valorNum > 0 ? valorNum : null;
                 const pesagensImportacao: Array<{ data: string; peso: number }> = [];
+                const dataPesagemRaw = getValue(row, 'dataPesagem');
+                const dataPesagemNorm = normalizeDate(dataPesagemRaw);
                 if (dataPesagemNorm && pesoAtual) {
                     pesagensImportacao.push({ data: dataPesagemNorm, peso: pesoAtual });
                 }
-
-                const { weighings: pesagensMultiplas, localErrors } = collectMultipleWeighings();
+                const { weighings: pesagensMultiplas, localErrors } = collectMultipleWeighings(row, i, brinco || 'sem-id');
                 if (localErrors.length > 0) {
                     weighingIssues.push(...localErrors);
                 }
                 for (const pesagem of pesagensMultiplas) {
-                    const exists = pesagensImportacao.some((p) =>
-                        p.data === pesagem.data && p.peso === pesagem.peso,
-                    );
+                    const exists = pesagensImportacao.some((p) => p.data === pesagem.data && p.peso === pesagem.peso);
                     if (!exists) pesagensImportacao.push(pesagem);
                 }
+                return {
+                    sourceIndex: i,
+                    rowLabel: `Linha ${i + 2}`,
+                    brinco,
+                    nome: brinco,
+                    raca: getValue(row, 'raca') || 'Não informada',
+                    sexo: normalizeSexo(getValue(row, 'sexo')),
+                    dataNascimento: dataNasc || undefined,
+                    registro: getValue(row, 'registro') || undefined,
+                    pesoAtual: pesoAtual || undefined,
+                    categoria: normalizeImportedCategory(getValue(row, 'categoria')) || undefined,
+                    observacoes: getValue(row, 'observacoes') || undefined,
+                    dataEntrada: dataEntrada || undefined,
+                    valorCompra: valorCompra || undefined,
+                    tipoCadastro: getValue(row, 'tipoCadastro') || undefined,
+                    tatuagem: getValue(row, 'tatuagem') || undefined,
+                    sisbov: getValue(row, 'sisbov') || undefined,
+                    maeNome: getValue(row, 'mae') || undefined,
+                    paiNome: getValue(row, 'pai') || undefined,
+                    lotId: getValue(row, 'lotId') || undefined,
+                    paddockId: getValue(row, 'paddockId') || undefined,
+                    weighings: pesagensImportacao,
+                };
+            });
 
-                if (createdAnimal?.id) {
-                    try {
-                        for (const pesagem of pesagensImportacao) {
-                            await fetch(buildApiUrl(`/animals/${createdAnimal.id}/pesagens`), {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                credentials: 'include',
-                                body: JSON.stringify({ data: pesagem.data, peso: pesagem.peso }),
-                            });
-                        }
-                    } catch {
-                        weighingIssues.push(`Linha ${i + 2} (${brinco}): animal criado, mas houve falha ao registrar pesagens.`);
+            const poItems = items.filter((item) => {
+                const hasPoSignals = Boolean(
+                    item.registro?.trim()
+                    || item.tatuagem?.trim()
+                    || item.maeNome?.trim()
+                    || item.paiNome?.trim()
+                    || item.sisbov?.trim(),
+                );
+                return resolvedMode === 'PO' || hasPoSignals;
+            });
+            const commercialItems = items.filter((item) => !poItems.includes(item));
+
+            let successTotal = 0;
+            const applyResults = (batchItems: typeof items, response: Awaited<ReturnType<typeof importAnimalsBatch>>) => {
+                successTotal += response.success || 0;
+                for (const result of response.results || []) {
+                    const sourceIndex = batchItems[result.index]?.sourceIndex ?? result.index;
+                    if (!result.success) {
+                        errors.push(result.message || `Linha ${sourceIndex + 2}: erro ao importar`);
+                        if (importRows[sourceIndex]) failedRows.push(importRows[sourceIndex]);
+                    } else if (Array.isArray(result.warnings) && result.warnings.length > 0) {
+                        weighingIssues.push(...result.warnings);
                     }
                 }
-                success++;
-                setImportProgress({ total, success, errors: [...errors], failedRows: [], weighingIssues: [...weighingIssues] });
-            } catch (err: any) {
-                const msg = err?.message || '';
-                if (msg.toLowerCase().includes('unique') ||
-                    msg.toLowerCase().includes('duplicado') ||
-                    msg.toLowerCase().includes('já existe')) {
-                    errors.push(
-                        `Linha ${i + 2} (${brinco}): brinco já cadastrado no sistema.`,
-                    );
-                } else {
-                    errors.push(`Linha ${i + 2} (${brinco}): ${msg || 'erro ao importar'}`);
-                }
-                failedRows.push(row);
-                setImportProgress({ total, success, errors: [...errors], failedRows: [], weighingIssues: [...weighingIssues] });
-            }
-        }
+            };
 
-        setIsImporting(false);
-        setImportProgress({ total, success, errors: [...errors], failedRows: [...failedRows], weighingIssues: [...weighingIssues] });
-        await loadData();
+            if (commercialItems.length > 0) {
+                const responseCommercial = await importAnimalsBatch(farmId, 'COMMERCIAL', commercialItems);
+                applyResults(commercialItems, responseCommercial);
+            }
+            if (poItems.length > 0) {
+                const responsePo = await importAnimalsBatch(farmId, 'PO', poItems);
+                applyResults(poItems, responsePo);
+            }
+
+            setImportProgress({
+                total,
+                success: successTotal,
+                errors: [...errors],
+                failedRows: [...failedRows],
+                weighingIssues: [...weighingIssues],
+            });
+            await loadData();
+        } catch (error: any) {
+            errors.push(error?.message || 'Erro ao importar em lote.');
+            setImportProgress({ total, success: 0, errors: [...errors], failedRows: [...importRows], weighingIssues: [...weighingIssues] });
+        } finally {
+            setIsImporting(false);
+        }
     };
 
     const categoryNormalizationPreview = useMemo(() => {
@@ -1308,7 +1445,136 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         return Array.from(uniq.values()).slice(0, 10);
     }, [importMapping, importRows]);
 
+    const validateImportBeforeSubmit = () => {
+        const errors: string[] = [];
+        const failedRows: Record<string, string>[] = [];
+        const mappingEntries = Object.entries(importMapping);
+        const getValue = (row: Record<string, string>, field: string) => {
+            const col = mappingEntries.find(([, v]) => v === field)?.[0];
+            return col ? (row[col] || '').trim() : '';
+        };
+        const normalizeDate = (raw: string): string | null => {
+            if (!raw) return null;
+            const dmY = raw.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+            if (dmY) return `${dmY[3]}-${dmY[2].padStart(2, '0')}-${dmY[1].padStart(2, '0')}`;
+            const Ymd = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+            if (Ymd) return `${Ymd[1]}-${Ymd[2].padStart(2, '0')}-${Ymd[3].padStart(2, '0')}`;
+            return null;
+        };
+        const parseBirthDateOrAge = (raw: string): string | null => {
+            const dateValue = normalizeDate(raw);
+            if (dateValue) return dateValue;
+            const ageValue = Number(raw.replace(',', '.'));
+            if (!Number.isFinite(ageValue) || ageValue <= 0 || ageValue > 40) return null;
+            const today = new Date();
+            const birth = new Date(today);
+            birth.setFullYear(today.getFullYear() - Math.floor(ageValue));
+            return birth.toISOString().slice(0, 10);
+        };
+
+        const seenBrinco = new Set<string>();
+        const duplicatedBrinco = new Set<string>();
+        for (const row of importRows) {
+            const brinco = getValue(row, 'brinco');
+            if (!brinco) continue;
+            if (seenBrinco.has(brinco)) duplicatedBrinco.add(brinco);
+            seenBrinco.add(brinco);
+        }
+
+        for (let i = 0; i < importRows.length; i++) {
+            const row = importRows[i];
+            const brinco = getValue(row, 'brinco');
+            if (!brinco) {
+                errors.push(`Linha ${i + 2}: identificação (brinco) não encontrada.`);
+                failedRows.push(row);
+                continue;
+            }
+            if (duplicatedBrinco.has(brinco)) {
+                errors.push(`Linha ${i + 2} (${brinco}): brinco duplicado na planilha.`);
+                failedRows.push(row);
+                continue;
+            }
+
+            const sexo = getValue(row, 'sexo');
+            if (!sexo) {
+                errors.push(`Linha ${i + 2} (${brinco}): sexo é obrigatório.`);
+                failedRows.push(row);
+                continue;
+            }
+
+            const raca = getValue(row, 'raca');
+            if (!raca) {
+                errors.push(`Linha ${i + 2} (${brinco}): raça é obrigatória.`);
+                failedRows.push(row);
+                continue;
+            }
+
+            const dataNascimentoOuIdade = getValue(row, 'dataNascimento');
+            if (!dataNascimentoOuIdade) {
+                errors.push(`Linha ${i + 2} (${brinco}): informe data de nascimento ou idade.`);
+                failedRows.push(row);
+                continue;
+            }
+            if (!parseBirthDateOrAge(dataNascimentoOuIdade)) {
+                errors.push(`Linha ${i + 2} (${brinco}): data de nascimento/idade inválida.`);
+                failedRows.push(row);
+                continue;
+            }
+
+            const isPoImport = resolvedMode === 'PO'
+                || Boolean(
+                    getValue(row, 'registro')
+                    || getValue(row, 'tatuagem')
+                    || getValue(row, 'mae')
+                    || getValue(row, 'pai')
+                    || getValue(row, 'sisbov'),
+                );
+            if (isPoImport) {
+                const registro = getValue(row, 'registro');
+                if (!registro) {
+                    errors.push(`Linha ${i + 2} (${brinco}): registro é obrigatório para P.O.`);
+                    failedRows.push(row);
+                    continue;
+                }
+            }
+
+            const dataNascimento = getValue(row, 'dataNascimento');
+            if (dataNascimento && !parseBirthDateOrAge(dataNascimento)) {
+                errors.push(`Linha ${i + 2} (${brinco}): data de nascimento inválida.`);
+                failedRows.push(row);
+                continue;
+            }
+
+            const pesoRaw = getValue(row, 'pesoAtual');
+            if (pesoRaw) {
+                const parsedPeso = parseFloat(pesoRaw.replace(',', '.'));
+                if (Number.isNaN(parsedPeso) || parsedPeso <= 0) {
+                    errors.push(`Linha ${i + 2} (${brinco}): peso atual inválido.`);
+                    failedRows.push(row);
+                    continue;
+                }
+            }
+        }
+
+        if (errors.length > 0) {
+            setImportProgress({
+                total: importRows.length,
+                success: 0,
+                errors,
+                failedRows,
+                weighingIssues: [],
+            });
+            return false;
+        }
+
+        return true;
+    };
+
     const handleImportStart = () => {
+        setImportProgress(null);
+        if (!validateImportBeforeSubmit()) {
+            return;
+        }
         const hasCategoriaMap = Object.values(importMapping).includes('categoria');
         if (hasCategoriaMap && categoryNormalizationPreview.length > 0) {
             setCategoryConfirmOpen(true);
@@ -1395,6 +1661,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkLoading(true);
         setBulkError(null);
         try {
+            if (isPoMode) {
+                throw new Error('Exclusão em massa ainda não disponível para Plantel P.O.');
+            }
             const res = await fetch(buildApiUrl('/animals/bulk-delete'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1417,6 +1686,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkLoading(true);
         setBulkError(null);
         try {
+            if (isPoMode) {
+                throw new Error('Mover lote em massa ainda não disponível para Plantel P.O.');
+            }
             const res = await fetch(buildApiUrl('/animals/bulk-move-lot'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1441,6 +1713,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkLoading(true);
         setBulkError(null);
         try {
+            if (isPoMode) {
+                throw new Error('Mover pasto em massa ainda não disponível para Plantel P.O.');
+            }
             const res = await fetch(buildApiUrl('/animals/bulk-move-pasto'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1473,14 +1748,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         const errors: string[] = [];
         for (const id of ids) {
             try {
-                const res = await fetch(buildApiUrl(`/animals/${id}/pesagens`), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ data: bulkWeighDate, peso }),
+                await createWeighing(String(id), resolvedMode, {
+                    data: bulkWeighDate,
+                    peso,
                 });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(data?.message || 'Erro ao registrar pesagem.');
                 success++;
             } catch (err: any) {
                 const animal = animals.find((a) => a.id === id);
@@ -2252,6 +2523,63 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             </div>
 
             {activeTab === 'animals' && (
+                <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <button
+                        type="button"
+                        onClick={() => applyHealthQuickFilter('sem_pasto')}
+                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
+                            healthQuickFilter === 'sem_pasto'
+                                ? 'border-[#e5b9b0] bg-[#fff2ef]'
+                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
+                        }`}
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Sem pasto</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#8c2020]">{healthOverview.withoutPaddock}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Ver animais sem alocação</p>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => applyHealthQuickFilter('pesagem_atrasada')}
+                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
+                            healthQuickFilter === 'pesagem_atrasada'
+                                ? 'border-[#ecd59b] bg-[#fff9e8]'
+                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
+                        }`}
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Pesagem &gt; 30 dias</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#9a7a19]">{healthOverview.staleWeighing}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Priorizar atualização</p>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => applyHealthQuickFilter('sem_categoria')}
+                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
+                            healthQuickFilter === 'sem_categoria'
+                                ? 'border-[#d8c39c] bg-[#f9f2e5]'
+                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
+                        }`}
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Sem categoria</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#7a5e2b]">{healthOverview.withoutCategory}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Organizar classificação</p>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => applyHealthQuickFilter('gmd_baixo')}
+                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
+                            healthQuickFilter === 'gmd_baixo'
+                                ? 'border-[#f0c4b8] bg-[#fff2ef]'
+                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
+                        }`}
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">GMD abaixo da meta</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#8c2020]">{healthOverview.belowTargetGmd}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Verificar manejo/nutrição</p>
+                    </button>
+                </div>
+            )}
+
+            {activeTab === 'animals' && (
                 <div className="mb-6 space-y-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
                     <div className="relative">
                         <svg
@@ -2337,57 +2665,57 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 <option key={lot.id} value={lot.id}>{lot.name}</option>
                             ))}
                         </select>
-                        <select
-                            value={filterNutrition}
-                            onChange={(event) => setFilterNutrition(event.target.value)}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        >
-                            <option value="">Todas as nutrições</option>
-                            {nutritionOptions.map((nutritionName) => (
-                                <option key={nutritionName} value={nutritionName}>{nutritionName}</option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-                        <input
-                            type="number"
-                            value={filterGmdMin}
-                            onChange={(event) => setFilterGmdMin(event.target.value)}
-                            placeholder="GMD mín"
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        />
-                        <input
-                            type="number"
-                            value={filterGmdMax}
-                            onChange={(event) => setFilterGmdMax(event.target.value)}
-                            placeholder="GMD máx"
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        />
-                        <select
-                            value={filterRaca}
-                            onChange={(event) => setFilterRaca(event.target.value)}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        >
-                            <option value="">Todas as raças</option>
-                            {racaOptions.map((r) => (
-                                <option key={r} value={r}>{r}</option>
-                            ))}
-                        </select>
                         <button
                             type="button"
-                            onClick={() => {
-                                setSearchTerm('');
-                                setLotFilter('');
-                                setFilterRaca('');
-                                setFilterCategoria('');
-                                setFilterSexo('');
-                                setFilterIdentificacao('todas');
-                                setFilterPesagem('todas');
-                                setFilterPaddock('');
-                                setFilterGmdMin('');
-                                setFilterGmdMax('');
-                                setFilterNutrition('');
-                            }}
+                            onClick={() => setShowAdvancedFilters((prev) => !prev)}
+                            className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                        >
+                            {showAdvancedFilters ? 'Esconder filtros avançados' : 'Mostrar filtros avançados'}
+                        </button>
+                    </div>
+                    {showAdvancedFilters && (
+                        <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+                            <input
+                                type="number"
+                                value={filterGmdMin}
+                                onChange={(event) => setFilterGmdMin(event.target.value)}
+                                placeholder="GMD mín"
+                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
+                            />
+                            <input
+                                type="number"
+                                value={filterGmdMax}
+                                onChange={(event) => setFilterGmdMax(event.target.value)}
+                                placeholder="GMD máx"
+                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
+                            />
+                            <select
+                                value={filterRaca}
+                                onChange={(event) => setFilterRaca(event.target.value)}
+                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
+                            >
+                                <option value="">Todas as raças</option>
+                                {racaOptions.map((r) => (
+                                    <option key={r} value={r}>{r}</option>
+                                ))}
+                            </select>
+                            <select
+                                value={filterNutrition}
+                                onChange={(event) => setFilterNutrition(event.target.value)}
+                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
+                            >
+                                <option value="">Todas as nutrições</option>
+                                {nutritionOptions.map((nutritionName) => (
+                                    <option key={nutritionName} value={nutritionName}>{nutritionName}</option>
+                                ))}
+                            </select>
+                            <div />
+                        </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+                        <button
+                            type="button"
+                            onClick={clearAllFilters}
                             className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                         >
                             Limpar filtros
@@ -3065,6 +3393,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             <option value="raca">{FIELD_LABELS.raca}</option>
                                                             <option value="sexo">{FIELD_LABELS.sexo}</option>
                                                             <option value="dataNascimento">{FIELD_LABELS.dataNascimento}</option>
+                                                            <option value="registro">{FIELD_LABELS.registro}</option>
                                                             <option value="pesoAtual">{FIELD_LABELS.pesoAtual}</option>
                                                             <option value="dataPesagem">{FIELD_LABELS.dataPesagem}</option>
                                                             <option value="lote">{FIELD_LABELS.lote}</option>
@@ -3269,6 +3598,34 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                     </div>
                                                 </div>
                                             )}
+                                            {(healthOverview.withoutPaddock > 0 || healthOverview.withoutWeighing > 0) && (
+                                                <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
+                                                    <p className="text-sm font-bold text-[var(--eixo-text)]">Próxima melhor ação</p>
+                                                    <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                                                        Finalize a base para o manejo diário com as correções abaixo.
+                                                    </p>
+                                                    <div className="mt-3 flex flex-wrap gap-2">
+                                                        {healthOverview.withoutPaddock > 0 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleImportNextActionAssignPaddock}
+                                                                className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]"
+                                                            >
+                                                                Associar {healthOverview.withoutPaddock} {healthOverview.withoutPaddock === 1 ? 'animal sem pasto' : 'animais sem pasto'}
+                                                            </button>
+                                                        )}
+                                                        {healthOverview.withoutWeighing > 0 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleImportNextActionWeigh}
+                                                                className="rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
+                                                            >
+                                                                Registrar pesagem de {healthOverview.withoutWeighing} {healthOverview.withoutWeighing === 1 ? 'animal' : 'animais'}
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </>
                                     )}
                                 </div>
@@ -3439,6 +3796,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             setNascimentoError(null);
                             setNascimentoSaving(true);
                             try {
+                                if (isPoMode) {
+                                    throw new Error('Registro de nascimento está disponível apenas no Rebanho Comercial.');
+                                }
                                 const res = await fetch(`/animals/nascimento`, {
                                     method: 'POST',
                                     headers: { 'Content-Type': 'application/json' },

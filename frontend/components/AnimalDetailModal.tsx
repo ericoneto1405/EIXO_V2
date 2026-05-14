@@ -84,6 +84,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     onAnimalUpdated,
 }) => {
     const resolvedMode: HerdType = mode ?? herdType ?? 'COMMERCIAL';
+    const animalBasePath = resolvedMode === 'PO' ? '/po/animals' : '/animals';
     const [activeTab, setActiveTab] = useState<ModalTab>('weighing');
 
     // Pesagens
@@ -493,7 +494,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         }
         setIsSavingEdit(true);
         try {
-            const res = await fetch(buildApiUrl(`/animals/${animalId}`), {
+            const res = await fetch(buildApiUrl(`${animalBasePath}/${animalId}`), {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',

@@ -943,6 +943,7 @@ const AppContent: React.FC = () => {
                     <HerdModule
                         farmId={selectedFarmId}
                         farmName={selectedFarm?.name}
+                        herdType="COMMERCIAL"
                         paddocksRefreshNonce={paddocksRefreshNonce}
                         isFreePlan={isFreePlan}
                         initialTabRequest={herdTabRequest}
@@ -963,6 +964,7 @@ const AppContent: React.FC = () => {
                     <HerdModule
                         farmId={selectedFarmId}
                         farmName={selectedFarm?.name}
+                        herdType="PO"
                         paddocksRefreshNonce={paddocksRefreshNonce}
                         isFreePlan={isFreePlan}
                         initialTabRequest={herdTabRequest}
