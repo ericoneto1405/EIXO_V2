@@ -1193,8 +1193,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         event.target.value = '';
 
         const ext = file.name.toLowerCase();
-        if (!ext.endsWith('.xlsx') && !ext.endsWith('.csv')) {
-            setUploadError('Envie um arquivo .xlsx ou .csv.');
+        if (!ext.endsWith('.xlsx')) {
+            setUploadError('Envie um arquivo .xlsx.');
             return;
         }
         if (file.size > MAX_IMPORT_FILE_BYTES) {
@@ -1525,18 +1525,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             const raca = getValue(row, 'raca');
             if (!raca) {
                 errors.push(`Linha ${i + 2} (${brinco}): raça é obrigatória.`);
-                failedRows.push(row);
-                continue;
-            }
-
-            const dataNascimentoOuIdade = getValue(row, 'dataNascimento');
-            if (!dataNascimentoOuIdade) {
-                errors.push(`Linha ${i + 2} (${brinco}): informe data de nascimento ou idade.`);
-                failedRows.push(row);
-                continue;
-            }
-            if (!parseBirthDateOrAge(dataNascimentoOuIdade)) {
-                errors.push(`Linha ${i + 2} (${brinco}): data de nascimento/idade inválida.`);
                 failedRows.push(row);
                 continue;
             }
@@ -3495,7 +3483,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
                             <div>
                                 <h3 className="text-lg font-bold text-[var(--eixo-text)]">
-                                    Importar planilha
+                                    Importar Rebanho
                                 </h3>
                                 {(() => {
                                     const mappedCount = Object.values(importMapping).filter(Boolean).length;
@@ -3526,194 +3514,76 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
                             {!importProgress && (
                                 <>
-                                    <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
-                                        <p className="mb-2 text-sm font-semibold text-[var(--eixo-text)]">
-                                            Unidade de peso
-                                        </p>
-                                        <div className="flex gap-3">
-                                            {(['kg', 'arroba'] as const).map((u) => (
-                                                <button key={u} type="button"
-                                                    onClick={() => setImportWeightUnit(u)}
-                                                    className={`rounded-xl border px-4 py-2 text-sm font-semibold transition-colors ${
-                                                        importWeightUnit === u
-                                                            ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)] text-[#1a1a1a]'
-                                                            : 'border-[var(--eixo-border)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'
-                                                    }`}>
-                                                    {u === 'kg' ? 'Quilos (kg)' : 'Arrobas (@) × 15'}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        {importWeightUnit === 'arroba' && (
-                                            <p className="mt-2 text-xs text-[var(--eixo-text)]">
-                                                ⚠️ Detectamos valores que podem ser arrobas. Cada arroba será convertida para 15 kg.
+                                    <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+                                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
+                                            <p className="text-[28px] font-extrabold leading-tight text-[var(--eixo-text)]">Importar Rebanho</p>
+                                            <p className="mt-4 text-sm text-[var(--eixo-text-muted)]">
+                                                Primeiramente selecione o arquivo <span className="font-semibold">xlsx</span> em seu computador.
                                             </p>
-                                        )}
-                                    </div>
-
-                                    {/* Banner P.O. — aparece quando a planilha tem dados de genética */}
-                                    {PO_IMPORT_FIELDS.some(f => Object.values(importMapping).includes(f)) && (
-                                        <div className="rounded-xl border-2 border-[#B6E23A] bg-[#f0f9d4] p-4">
-                                            <div className="flex items-start gap-3">
-                                                <span className="text-2xl">🧬</span>
-                                                <div>
-                                                    <p className="text-sm font-bold text-[#2F2F2F]">
-                                                        Planilha com dados de P.O. detectada
-                                                    </p>
-                                                    <p className="mt-0.5 text-xs text-[#5E5E5E]">
-                                                        O EIXO identificou campos de genealogia — tatuagem, mãe, pai ou SISBOV. Esses dados serão importados e vinculados ao plantel.
-                                                    </p>
-                                                </div>
-                                            </div>
+                                            <p className="mt-4 text-sm text-[var(--eixo-text-muted)]">
+                                                Em seguida, selecione a coluna desejada ao lado e nos diga em qual categoria ela se encaixa.
+                                            </p>
+                                            <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">Valores que podem ser importados:</p>
+                                            <ul className="mt-2 list-disc pl-5 text-sm text-[var(--eixo-text-muted)]">
+                                                <li>ID</li>
+                                                <li>SEXO</li>
+                                                <li>RAÇA</li>
+                                                <li>PESO</li>
+                                            </ul>
                                         </div>
-                                    )}
 
-                                    <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
-                                        <p className="mb-1 text-sm font-semibold text-[var(--eixo-text)]">
-                                            Mapeamento de colunas
-                                        </p>
-                                        <p className="mb-3 text-xs text-[var(--eixo-text-muted)]">
-                                            Confirme os campos detectados automaticamente e ajuste os que ficaram em branco.
-                                        </p>
-
-                                        {/* Aviso quando brinco não está mapeado */}
-                                        {!Object.values(importMapping).includes('brinco') && (
-                                            <div className="mb-3 flex items-start gap-2 rounded-xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-2.5">
-                                                <span className="mt-0.5 flex-shrink-0 text-[var(--eixo-green)]">⚠️</span>
-                                                <p className="text-xs text-[var(--eixo-graphite)]">
-                                                    <span className="font-semibold">Campo obrigatório não identificado:</span> selecione qual coluna da planilha contém o <span className="font-semibold">Brinco / ID</span> do animal para continuar.
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        <div className="space-y-2">
-                                            {importHeaders.map((h) => {
-                                                const mapped = importMapping[h] || '';
-                                                const plan = mapped ? FIELD_PLAN[mapped] : null;
-                                                const isLocked = plan === 'paid2';
-                                                const isUnmapped = !mapped;
-                                                const isPO = mapped ? PO_IMPORT_FIELDS.includes(mapped) : false;
-                                                return (
-                                                <div key={h} className={`flex items-center gap-3 rounded-lg px-2 py-1 transition-colors ${isUnmapped ? 'bg-[var(--eixo-green-soft)]' : isPO ? 'bg-[#f0f9d4]' : ''}`}>
-                                                    <span className="max-w-[260px] text-sm leading-tight text-[var(--eixo-text-muted)] break-words" title={h}>
-                                                        "{h}"
-                                                    </span>
-                                                    <span className="text-[var(--eixo-text-muted)]">→</span>
-                                                    <select
-                                                        value={mapped}
-                                                        onChange={(e) => setImportMapping(
-                                                            (prev) => ({
-                                                                ...prev,
-                                                                [h]: e.target.value,
-                                                            }),
-                                                        )}
-                                                        className={`flex-1 rounded-xl border px-3 py-1.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none ${
-                                                            isUnmapped
-                                                                ? 'border-[#d9ead0] bg-[var(--eixo-green-soft)]'
-                                                                : isPO
-                                                                ? 'border-[#B6E23A] bg-[#f0f9d4]'
-                                                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)]'
-                                                        }`}
-                                                    >
-                                                        <option value="">
-                                                            Excluir campo
-                                                        </option>
-                                                        <optgroup label="Campos básicos">
-                                                            <option value="brinco">{FIELD_LABELS.brinco}</option>
-                                                            <option value="tipoCadastro">{FIELD_LABELS.tipoCadastro}</option>
-                                                            <option value="nome">{FIELD_LABELS.nome}</option>
-                                                            <option value="raca">{FIELD_LABELS.raca}</option>
-                                                            <option value="sexo">{FIELD_LABELS.sexo}</option>
-                                                            <option value="dataNascimento">{FIELD_LABELS.dataNascimento}</option>
-                                                            <option value="registro">{FIELD_LABELS.registro}</option>
-                                                            <option value="pesoAtual">{FIELD_LABELS.pesoAtual}</option>
-                                                            <option value="dataPesagem">{FIELD_LABELS.dataPesagem}</option>
-                                                            <option value="lote">{FIELD_LABELS.lote}</option>
-                                                            <option value="pasto">{FIELD_LABELS.pasto}</option>
-                                                            <option value="categoria">{FIELD_LABELS.categoria}</option>
-                                                            <option value="observacoes">{FIELD_LABELS.observacoes}</option>
-                                                            <option value="dataEntrada">{FIELD_LABELS.dataEntrada}</option>
-                                                            <option value="valorCompra">{FIELD_LABELS.valorCompra}</option>
-                                                        </optgroup>
-                                                        <optgroup label="🧬 Genealogia / P.O.">
-                                                            <option value="tatuagem">{FIELD_LABELS.tatuagem}</option>
-                                                            <option value="mae">{FIELD_LABELS.mae}</option>
-                                                            <option value="pai">{FIELD_LABELS.pai}</option>
-                                                            <option value="sisbov">{FIELD_LABELS.sisbov}</option>
-                                                        </optgroup>
-                                                        <optgroup label="── Eixo Decisão — faça upgrade para importar ──">
-                                                            <option value="" disabled>{FIELD_LABELS.eid}</option>
-                                                            <option value="" disabled>{FIELD_LABELS.ncf}</option>
-                                                            <option value="" disabled>{FIELD_LABELS.rgd}</option>
-                                                            <option value="" disabled>{FIELD_LABELS.rgn}</option>
-                                                            <option value="" disabled>{FIELD_LABELS.abcz}</option>
-                                                        </optgroup>
-                                                    </select>
-                                                    {mapped && !isLocked && (
-                                                        <span className={`text-sm font-bold ${isPO ? 'text-[#3a5c10]' : 'text-[var(--eixo-success)]'}`}>
-                                                            {isPO ? '🧬' : '✓'}
-                                                        </span>
-                                                    )}
-                                                    {mapped && isLocked && (
-                                                        <span className="text-[var(--eixo-text)] text-sm">🔒</span>
-                                                    )}
+                                        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
+                                            {!Object.values(importMapping).includes('brinco') && (
+                                                <div className="mb-3 rounded-lg border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-2 text-xs text-[var(--eixo-graphite)]">
+                                                    Selecione a coluna que representa o <span className="font-semibold">ID</span> para continuar.
                                                 </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-
-                                    {(() => {
-                                        // Montar lista de campos mapeados para exibir (máx. 5 mais relevantes)
-                                        const PREVIEW_FIELDS: Array<{ field: string; label: string }> = [
-                                            { field: 'brinco', label: 'ID' },
-                                            { field: 'raca', label: 'Raça' },
-                                            { field: 'sexo', label: 'Sexo' },
-                                            { field: 'pesoAtual', label: 'Peso' },
-                                            { field: 'categoria', label: 'Categoria' },
-                                        ];
-                                        const visibleFields = PREVIEW_FIELDS.filter(
-                                            ({ field }) => Object.values(importMapping).includes(field),
-                                        );
-                                        const getCol = (field: string) =>
-                                            Object.entries(importMapping).find(([, v]) => v === field)?.[0];
-                                        const previewRows = importRows.slice(0, 3);
-                                        if (!visibleFields.length || !previewRows.length) return null;
-                                        return (
-                                            <div className="overflow-hidden rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
-                                                <p className="border-b border-[var(--eixo-border)] px-3 py-2 text-xs font-semibold text-[var(--eixo-text)]">
-                                                    Prévia — primeiros {previewRows.length} animais
-                                                </p>
-                                                <div className="overflow-x-auto">
-                                                    <table className="w-full text-xs">
-                                                        <thead className="bg-[var(--eixo-surface-soft)]">
-                                                            <tr>
-                                                                {visibleFields.map(({ field, label }) => (
-                                                                    <th key={field} className="px-3 py-2 text-left font-semibold text-[var(--eixo-text-muted)]">
-                                                                        {label}
-                                                                    </th>
+                                            )}
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full min-w-[640px] text-sm">
+                                                    <thead>
+                                                        <tr>
+                                                            {importHeaders.map((h) => (
+                                                                <th key={`map-${h}`} className="border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-2 py-2">
+                                                                    <select
+                                                                        value={importMapping[h] || ''}
+                                                                        onChange={(e) => setImportMapping((prev) => ({ ...prev, [h]: e.target.value }))}
+                                                                        className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                                                    >
+                                                                        <option value="">Excluir campo</option>
+                                                                        <option value="brinco">ID</option>
+                                                                        <option value="sexo">SEXO</option>
+                                                                        <option value="raca">RAÇA</option>
+                                                                        <option value="pesoAtual">PESO</option>
+                                                                    </select>
+                                                                </th>
+                                                            ))}
+                                                        </tr>
+                                                        <tr>
+                                                            {importHeaders.map((h) => (
+                                                                <th key={`head-${h}`} className="border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-2 text-left text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                                                    {h}
+                                                                </th>
+                                                            ))}
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {importRows.slice(0, 20).map((row, rowIndex) => (
+                                                            <tr key={`row-${rowIndex}`}>
+                                                                {importHeaders.map((h) => (
+                                                                    <td key={`cell-${rowIndex}-${h}`} className="border border-[var(--eixo-border)] px-2 py-2 text-xs text-[var(--eixo-text)]">
+                                                                        {(row[h] || '').trim() || '—'}
+                                                                    </td>
                                                                 ))}
                                                             </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            {previewRows.map((row, i) => (
-                                                                <tr key={i} className="border-t border-[var(--eixo-border)]">
-                                                                    {visibleFields.map(({ field }) => {
-                                                                        const col = getCol(field);
-                                                                        const val = col ? (row[col] || '').trim() : '';
-                                                                        return (
-                                                                            <td key={field} className="px-3 py-2 text-[var(--eixo-text)]">
-                                                                                {val || <span className="text-[var(--eixo-text-muted)]">—</span>}
-                                                                            </td>
-                                                                        );
-                                                                    })}
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                        );
-                                    })()}
+                                            <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">
+                                                Apenas as 20 primeiras linhas são exibidas no preview.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </>
                             )}
 
