@@ -3588,7 +3588,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             )}
 
                             {importProgress && (
-                                <div className="space-y-3">
+                                <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+                                    <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
+                                        <p className="text-[28px] font-extrabold leading-tight text-[var(--eixo-text)]">Importar Rebanho</p>
+                                        <p className="mt-4 text-sm text-[var(--eixo-text-muted)]">
+                                            Continue a revisão das linhas nesta mesma tela.
+                                        </p>
+                                        <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">Campos esperados:</p>
+                                        <ul className="mt-2 list-disc pl-5 text-sm text-[var(--eixo-text-muted)]">
+                                            <li>ID</li>
+                                            <li>SEXO</li>
+                                            <li>RAÇA</li>
+                                            <li>PESO (opcional)</li>
+                                        </ul>
+                                    </div>
+                                    <div className="space-y-3">
                                     {/* Progresso durante importação */}
                                     {isImporting && (
                                         <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
@@ -3885,6 +3899,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             )}
                                         </>
                                     )}
+                                    </div>
                                 </div>
                             )}
                         </div>
