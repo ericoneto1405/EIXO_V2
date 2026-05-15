@@ -1617,7 +1617,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         const mappingEntries = Object.entries(importMapping);
         const getValue = (row: Record<string, string>, field: string) => {
             const col = mappingEntries.find(([, v]) => v === field)?.[0];
-            return col ? (row[col] || '').trim() : '';
+            const mappedValue = col ? row[col] : undefined;
+            const directValue = row[field];
+            return String(mappedValue ?? directValue ?? '').trim();
         };
         const rows = importProgress.failedRows.map((row, idx) => ({
             id: `${idx}-${Date.now()}`,
@@ -3666,7 +3668,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                 {importProgress.errors.length} {importProgress.errors.length === 1 ? 'linha não foi importada' : 'linhas não foram importadas'}
                                                             </p>
                                                             <p className="text-xs text-[var(--eixo-danger)]">
-                                                                Corrija os itens abaixo aqui no sistema e continue a importação.
+                                                                Corrija os itens abaixo aqui no sistema e continue sem sair deste modal.
                                                             </p>
                                                         </div>
                                                     </div>
