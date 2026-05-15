@@ -203,12 +203,14 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
           <div className="relative mx-auto max-w-5xl px-4 text-left lg:px-8">
 
-            <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--eixo-green)]" />
-              <svg className="h-3 w-3 text-[var(--eixo-graphite)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Plano Base · Apenas os 100 primeiros
+            <div className="mb-6 flex justify-center">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--eixo-green)]" />
+                <svg className="h-3 w-3 text-[var(--eixo-graphite)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Plano Base · Apenas os 100 primeiros
+              </div>
             </div>
 
             <h1 className="font-brand text-balance text-3xl font-extrabold leading-[1.15] text-[var(--eixo-text)] sm:text-4xl lg:text-6xl">
@@ -220,9 +222,11 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               Controle do rebanho, financeiro completo, manejo de pastos, e tudo no mesmo lugar — sem precisar cadastrar cartão. Veja sua operação com clareza desde o primeiro dia.
             </p>
 
-            <p className="mt-3 text-center text-xs text-[var(--eixo-text-muted)]/70">
-              Sem custo* no Plano Base. Planos pagos disponíveis para recursos avançados.
-            </p>
+            <div className="mt-3 flex justify-center">
+              <p className="text-center text-xs text-[var(--eixo-text-muted)]/70">
+                Sem custo* no Plano Base. Planos pagos disponíveis para recursos avançados.
+              </p>
+            </div>
 
             <div className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-graphite)]">
               <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -242,14 +246,16 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </div>
 
             {/* Prova social + mini stats */}
-            <p className="mt-10 text-center text-sm font-semibold text-[var(--eixo-text-muted)]">
-              <span className="inline-flex items-center gap-1.5">
-                <svg className="h-3.5 w-3.5 text-[var(--eixo-green-dark)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                Produtores já organizando o rebanho no EIXO — junte-se a eles.
-              </span>
-            </p>
+            <div className="mt-10 flex justify-center">
+              <p className="text-center text-sm font-semibold text-[var(--eixo-text-muted)]">
+                <span className="inline-flex items-center gap-1.5">
+                  <svg className="h-3.5 w-3.5 text-[var(--eixo-green-dark)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Produtores já organizando o rebanho no EIXO — junte-se a eles.
+                </span>
+              </p>
+            </div>
           </div>
         </section>
 
