@@ -262,16 +262,25 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
                         <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Ajuda rápida sobre o sistema</p>
                     </div>
                 </div>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
-                    aria-label="Fechar"
-                >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={handleCreateNewConversation}
+                        className="rounded-lg bg-[var(--eixo-text)] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[var(--eixo-graphite)]"
+                    >
+                        Nova conversa
+                    </button>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
+                        aria-label="Fechar"
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             {/* Área de mensagens */}
@@ -281,13 +290,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
                         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">
                             Conversas recentes
                         </p>
-                        <button
-                            type="button"
-                            onClick={handleCreateNewConversation}
-                            className="rounded-lg bg-[var(--eixo-text)] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[var(--eixo-graphite)]"
-                        >
-                            Nova conversa
-                        </button>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                         {recentConversations.map((item) => (
