@@ -1599,9 +1599,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             if (!row.values.brinco.trim()) fieldErrors.brinco = 'Brinco obrigatório';
             if (!row.values.sexo.trim()) fieldErrors.sexo = 'Sexo obrigatório';
             if (!row.values.raca.trim()) fieldErrors.raca = 'Raça obrigatória';
-            if (!row.values.dataNascimento.trim()) {
-                fieldErrors.dataNascimento = 'Data/idade obrigatória';
-            } else if (!parseBirthDateOrAge(row.values.dataNascimento.trim())) {
+            if (row.values.dataNascimento.trim() && !parseBirthDateOrAge(row.values.dataNascimento.trim())) {
                 fieldErrors.dataNascimento = 'Data/idade inválida';
             }
             const isPoRow = resolvedMode === 'PO' || Boolean(row.values.registro.trim());
@@ -3681,19 +3679,24 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                         ))}
                                                     </div>
                                                     {importProgress.failedRows.length > 0 && !importCorrectionOpen && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={openInlineCorrection}
-                                                            className="mt-3 rounded-xl border border-[#efc2ba] bg-white px-3 py-2 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[#fff7f5]"
-                                                        >
-                                                            Corrigir erros agora
-                                                        </button>
+                                                        <div className="mt-3 rounded-lg border border-[#efc2ba] bg-white p-3">
+                                                            <p className="text-xs font-semibold text-[var(--eixo-danger)]">Passo 1</p>
+                                                            <p className="mt-0.5 text-xs text-[var(--eixo-danger)]">Abra o editor e corrija os campos das linhas com erro.</p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={openInlineCorrection}
+                                                                className="mt-2 rounded-xl border border-[#efc2ba] bg-white px-3 py-2 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[#fff7f5]"
+                                                            >
+                                                                Abrir editor de correção
+                                                            </button>
+                                                        </div>
                                                     )}
                                                     {importCorrectionOpen && (
                                                         <div className="mt-3 space-y-2 rounded-xl border border-[#efc2ba] bg-white p-3">
-                                                            <p className="text-xs font-semibold text-[var(--eixo-danger)]">
-                                                                Corrija os campos e revalide sem sair do sistema.
-                                                            </p>
+                                                            <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                                                <p className="text-xs font-semibold text-[var(--eixo-text)]">Passo 2</p>
+                                                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">Corrija os campos, clique em <span className="font-semibold">Revalidar correções</span> e depois em <span className="font-semibold">Importar corrigidas</span>.</p>
+                                                            </div>
                                                             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-2">
                                                                 <button
                                                                     type="button"
@@ -3733,13 +3736,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             </div>
                                                             <div className="max-h-56 overflow-auto rounded-lg border border-[var(--eixo-border)]">
                                                                 <table className="w-full text-xs">
-                                                                    <thead className="bg-[var(--eixo-surface-soft)]">
+                                                                    <thead className="sticky top-0 z-10 bg-[var(--eixo-surface-soft)]">
                                                                         <tr>
                                                                             <th className="px-2 py-2 text-left">Sel.</th>
-                                                                            <th className="px-2 py-2 text-left">Brinco</th>
+                                                                            <th className="px-2 py-2 text-left">ID</th>
                                                                             <th className="px-2 py-2 text-left">Sexo</th>
                                                                             <th className="px-2 py-2 text-left">Raça</th>
-                                                                            <th className="px-2 py-2 text-left">Data/Idade</th>
+                                                                            <th className="px-2 py-2 text-left">Data/Idade (opcional)</th>
                                                                             <th className="px-2 py-2 text-left">Registro</th>
                                                                         </tr>
                                                                     </thead>
@@ -3794,7 +3797,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                 </table>
                                                             </div>
                                                             <div className="flex items-center justify-between">
-                                                                <p className="text-xs text-[var(--eixo-text-muted)]">
+                                                                <p className="text-xs font-medium text-[var(--eixo-text-muted)]">
                                                                     {importCorrectionRows.filter((row) => Object.keys(row.fieldErrors).length === 0 && !row.deferred).length} de {importCorrectionRows.filter((row) => !row.deferred).length} linhas prontas
                                                                 </p>
                                                                 <div className="flex items-center gap-2">
@@ -3827,6 +3830,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                     {deferredCorrectionCount} {deferredCorrectionCount === 1 ? 'linha marcada' : 'linhas marcadas'} para revisar depois.
                                                                 </p>
                                                             )}
+                                                            <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                                                <p className="text-xs font-semibold text-[var(--eixo-text)]">Passo 3</p>
+                                                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">Depois de importar as corrigidas, finalize no rodapé em <span className="font-semibold">Concluir</span>.</p>
+                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
