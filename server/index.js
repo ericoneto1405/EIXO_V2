@@ -7920,7 +7920,6 @@ app.post('/animals/import-batch', async (req, res) => {
                             gmd30: null,
                             currentPaddockId: validPaddockId,
                             categoria: item.categoria ? String(item.categoria).trim() || null : null,
-                            observacoes: item.observacoes ? String(item.observacoes).trim() || null : null,
                             tipoCadastro: normalizeAnimalTipoCadastro(item.tipoCadastro),
                             tatuagem: item.tatuagem ? String(item.tatuagem).trim() || null : null,
                             sisbov: item.sisbov ? String(item.sisbov).trim() || null : null,
