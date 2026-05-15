@@ -25,12 +25,19 @@ type ImportCorrectionRow = {
     id: string;
     selected: boolean;
     deferred?: boolean;
+    isPoCandidate?: boolean;
     values: {
         brinco: string;
         sexo: string;
         raca: string;
         dataNascimento: string;
         registro: string;
+        paddockId: string;
+        tipoCadastro: string;
+        tatuagem: string;
+        sisbov: string;
+        maeNome: string;
+        paiNome: string;
     };
     fieldErrors: Partial<Record<'brinco' | 'sexo' | 'raca' | 'dataNascimento' | 'registro', string>>;
 };
@@ -1379,7 +1386,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     registro: getValue(row, 'registro') || undefined,
                     pesoAtual: pesoAtual || undefined,
                     categoria: normalizeImportedCategory(getValue(row, 'categoria')) || undefined,
-                    observacoes: getValue(row, 'observacoes') || undefined,
                     dataEntrada: dataEntrada || undefined,
                     valorCompra: valorCompra || undefined,
                     tipoCadastro: getValue(row, 'tipoCadastro') || undefined,
@@ -1602,7 +1608,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             if (row.values.dataNascimento.trim() && !parseBirthDateOrAge(row.values.dataNascimento.trim())) {
                 fieldErrors.dataNascimento = 'Data/idade inválida';
             }
-            const isPoRow = resolvedMode === 'PO' || Boolean(row.values.registro.trim());
+            const isPoRow = resolvedMode === 'PO'
+                || Boolean(row.isPoCandidate)
+                || Boolean(
+                    row.values.registro.trim()
+                    || row.values.tatuagem.trim()
+                    || row.values.sisbov.trim()
+                    || row.values.maeNome.trim()
+                    || row.values.paiNome.trim(),
+                );
             if (isPoRow && !row.values.registro.trim()) {
                 fieldErrors.registro = 'Registro obrigatório para P.O.';
             }
@@ -1625,12 +1639,26 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             id: `${idx}-${Date.now()}`,
             selected: false,
             deferred: false,
+            isPoCandidate: resolvedMode === 'PO' || Boolean(
+                getValue(row, 'registro')
+                || getValue(row, 'tatuagem')
+                || getValue(row, 'sisbov')
+                || getValue(row, 'mae')
+                || getValue(row, 'pai')
+                || getValue(row, 'tipoCadastro').toUpperCase() === 'PO',
+            ),
             values: {
                 brinco: getValue(row, 'brinco'),
                 sexo: getValue(row, 'sexo'),
                 raca: getValue(row, 'raca'),
                 dataNascimento: getValue(row, 'dataNascimento'),
                 registro: getValue(row, 'registro'),
+                paddockId: getValue(row, 'paddockId'),
+                tipoCadastro: getValue(row, 'tipoCadastro'),
+                tatuagem: getValue(row, 'tatuagem'),
+                sisbov: getValue(row, 'sisbov'),
+                maeNome: getValue(row, 'mae'),
+                paiNome: getValue(row, 'pai'),
             },
             fieldErrors: {},
         }));
@@ -1701,10 +1729,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 raca: row.values.raca.trim(),
                 dataNascimento: parseImportDateOrAge(row.values.dataNascimento.trim()) || undefined,
                 registro: row.values.registro.trim() || undefined,
+                paddockId: row.values.paddockId.trim() || undefined,
+                tipoCadastro: row.values.tipoCadastro.trim() || undefined,
+                tatuagem: row.values.tatuagem.trim() || undefined,
+                sisbov: row.values.sisbov.trim() || undefined,
+                maeNome: row.values.maeNome.trim() || undefined,
+                paiNome: row.values.paiNome.trim() || undefined,
             });
 
             const readyItems = readyRows.map(toItem);
-            const poItems = readyItems.filter((item) => resolvedMode === 'PO' || Boolean(item.registro));
+            const poItems = readyItems.filter((item, index) => {
+                const sourceRow = readyRows[index]?.row;
+                return resolvedMode === 'PO'
+                    || Boolean(sourceRow?.isPoCandidate)
+                    || Boolean(item.registro || item.tatuagem || item.sisbov || item.maeNome || item.paiNome);
+            });
             const commercialItems = readyItems.filter((item) => !poItems.includes(item));
 
             let importedNow = 0;
