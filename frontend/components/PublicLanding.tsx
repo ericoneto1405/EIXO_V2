@@ -83,7 +83,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
   const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
   const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]';
   const navItems: Array<{ label: string; id?: 'gratis' | 'como' | 'faq'; action: () => void }> = [
-    { label: 'Plano Essencial', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
+    { label: 'Plano Base', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
     { label: 'Como funciona', id: 'como', action: () => { setActiveNav('como'); scrollTo('como'); } },
     { label: 'Dúvidas', id: 'faq', action: () => { setActiveNav('faq'); scrollTo('faq'); } },
     { label: 'Planos', action: () => { window.location.href = '/planos'; } },
@@ -130,7 +130,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               Entrar
             </button>
             <button type="button" onClick={onRegister} className={btnPrimary}>
-              Cadastrar no Plano Essencial
+              Cadastrar no Plano Base
             </button>
           </div>
         </div>
@@ -201,19 +201,19 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
           <div className="absolute inset-0 bg-[rgba(255,250,241,0.58)]" />
           <div className="absolute inset-0 bg-gradient-to-b from-[var(--eixo-surface)]/90 via-[var(--eixo-bg)]/96 to-[var(--eixo-bg)]" />
 
-          <div className="relative mx-auto max-w-5xl px-4 text-center lg:px-8">
+          <div className="relative mx-auto max-w-5xl px-4 text-left lg:px-8">
 
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
               <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--eixo-green)]" />
               <svg className="h-3 w-3 text-[var(--eixo-graphite)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Plano Essencial · Apenas os 100 primeiros
+              Plano Base · Apenas os 100 primeiros
             </div>
 
             <h1 className="font-brand text-balance text-3xl font-extrabold leading-[1.15] text-[var(--eixo-text)] sm:text-4xl lg:text-6xl">
-              Sua fazenda no controle.<br />
-              <span className="text-[#7aad1a]">Sem planilha, sem custo<sup className="text-[0.5em] font-normal text-[var(--eixo-text-muted)]">*</sup>, sem enrolação.</span>
+              Mais controle e visibilidade.<br />
+              <span className="text-[#7aad1a]">Menos planilhas e enrolação. Comece pelo Plano Base, sem custo<sup className="text-[0.5em] font-normal text-[var(--eixo-text-muted)]">*</sup>!</span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--eixo-text-muted)] lg:text-xl">
@@ -221,7 +221,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </p>
 
             <p className="mt-3 text-xs text-[var(--eixo-text-muted)]/70">
-              Sem custo* no Plano Essencial. Planos pagos disponíveis para recursos avançados.
+              Sem custo* no Plano Base. Planos pagos disponíveis para recursos avançados.
             </p>
 
             <div className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-graphite)]">
