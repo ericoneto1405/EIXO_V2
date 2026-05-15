@@ -109,8 +109,8 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 onClick={item.action}
                 className={`inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold transition-colors duration-200 ${
                   item.id && item.id === activeNav
-                    ? 'border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
-                    : 'border border-transparent bg-[var(--eixo-surface)] text-[var(--eixo-text)] hover:border-[var(--eixo-border)] hover:bg-[var(--eixo-bg)]'
+                    ? 'font-brand border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
+                    : 'font-brand border border-transparent bg-[var(--eixo-surface)] text-[var(--eixo-text)] hover:border-[var(--eixo-border)] hover:bg-[var(--eixo-bg)]'
                 }`}
               >
                 {item.label}
@@ -126,7 +126,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <button type="button" onClick={onEnter} className="hidden rounded-xl border border-[var(--eixo-border)] bg-transparent px-6 py-3 text-lg font-semibold text-[var(--eixo-text)] transition-colors hover:border-[var(--eixo-graphite)]/40 hover:bg-[var(--eixo-surface)] sm:inline-flex">
+            <button type="button" onClick={onEnter} className="hidden rounded-xl border border-[var(--eixo-border)] bg-transparent px-6 py-3 text-lg font-brand font-semibold text-[var(--eixo-text)] transition-colors hover:border-[var(--eixo-graphite)]/40 hover:bg-[var(--eixo-surface)] sm:inline-flex">
               Entrar
             </button>
             <button type="button" onClick={onRegister} className={btnPrimary}>
@@ -142,7 +142,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 scrollTo('gratis');
                 setMenuOpen(false);
               }}
-              className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
+              className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
             >
               Plano Essencial
             </button>
@@ -152,7 +152,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 scrollTo('como');
                 setMenuOpen(false);
               }}
-              className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
+              className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
             >
               Como funciona
             </button>
@@ -162,7 +162,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 scrollTo('faq');
                 setMenuOpen(false);
               }}
-              className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
+              className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
             >
               Dúvidas
             </button>
@@ -172,7 +172,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 setMenuOpen(false);
                 window.location.href = '/planos';
               }}
-              className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
+              className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
             >
               Planos
             </button>
@@ -182,7 +182,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 setMenuOpen(false);
                 onEnter();
               }}
-              className="w-full py-3 text-left text-base font-semibold text-[var(--eixo-text)]"
+              className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
             >
               Entrar
             </button>

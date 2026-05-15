@@ -3615,7 +3615,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                         }`}
                                                     >
                                                         <option value="">
-                                                            — Selecionar campo —
+                                                            Excluir campo
                                                         </option>
                                                         <optgroup label="Campos básicos">
                                                             <option value="brinco">{FIELD_LABELS.brinco}</option>
