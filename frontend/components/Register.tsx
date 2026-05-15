@@ -564,7 +564,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                             Crie sua conta
                                         </div>
                                         <div>
-                                            <p className="text-sm uppercase tracking-[0.18em] text-[var(--eixo-text-muted)]">Plano grátis</p>
+                                            <p className="text-sm uppercase tracking-[0.18em] text-[var(--eixo-text-muted)]">Plano Base Gratuito</p>
                                             <h2 className="mt-2 text-3xl font-black text-[var(--eixo-text)]">Comece agora</h2>
                                             <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
                                                 Sem cartão para começar. Organize sua fazenda hoje.
