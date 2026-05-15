@@ -21,7 +21,7 @@ import type { Paddock } from '../types';
 
 type TabKey = 'overview' | 'animals' | 'pastures' | 'lots' | 'weighings' | 'settings';
 type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'sem_categoria' | 'gmd_baixo';
-type AnimalHeaderFilterKey = 'identificacao' | 'raca' | 'sexo' | 'pasto' | 'lote' | 'categoria' | 'peso' | 'nutricao' | null;
+type AnimalHeaderFilterKey = 'identificacao' | 'registro' | 'raca' | 'sexo' | 'pasto' | 'lote' | 'categoria' | 'peso' | 'nutricao' | null;
 type ImportCorrectionRow = {
     id: string;
     selected: boolean;
@@ -164,7 +164,7 @@ const MAX_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_IMPORT_ROWS = 1000;
 const MAX_IMPORT_COLUMNS = 40;
 type SortDirection = 'asc' | 'desc';
-type SortColumn = 'identificacao' | 'raca' | 'sexo' | 'idade' | 'pasto' | 'pesoAtual' | 'gmd' | 'lote' | 'categoria';
+type SortColumn = 'identificacao' | 'registro' | 'raca' | 'sexo' | 'idade' | 'pasto' | 'pesoAtual' | 'gmd' | 'lote' | 'categoria' | 'nutricao';
 
 // Campos P.O. (tatuagem, mae, pai, sisbov) liberados para todos os planos
 const FIELD_PLAN: Record<string, 'free' | 'paid2'> = {
@@ -526,6 +526,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [filterRaca, setFilterRaca] = useState('');
     const [filterCategoria, setFilterCategoria] = useState('');
     const [filterSexo, setFilterSexo] = useState('');
+    const [filterRegistro, setFilterRegistro] = useState<'todas' | 'com' | 'sem'>('todas');
     const [filterIdentificacao, setFilterIdentificacao] = useState<'todas' | 'com' | 'sem'>('todas');
     const [filterPesagem, setFilterPesagem] = useState<'todas' | 'sem' | 'desatualizada'>('todas');
     const [filterPaddock, setFilterPaddock] = useState('');
@@ -757,6 +758,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setFilterRaca('');
         setFilterCategoria('');
         setFilterSexo('');
+        setFilterRegistro('todas');
         setFilterIdentificacao('todas');
         setFilterPesagem('todas');
         setFilterPaddock('');
@@ -790,7 +792,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, lotFilter, filterRaca, filterCategoria, filterSexo, filterIdentificacao, filterPesagem, filterPaddock, filterGmdMin, filterGmdMax, filterNutrition, activeTab]);
+    }, [searchTerm, lotFilter, filterRaca, filterCategoria, filterSexo, filterRegistro, filterIdentificacao, filterPesagem, filterPaddock, filterGmdMin, filterGmdMax, filterNutrition, activeTab]);
 
     useEffect(() => {
         const handleOutside = (event: MouseEvent) => {
@@ -856,6 +858,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 return false;
             }
 
+            if (filterRegistro !== 'todas') {
+                const hasRegistro = Boolean(String(animal.registro || '').trim());
+                if (filterRegistro === 'sem' && hasRegistro) return false;
+                if (filterRegistro === 'com' && !hasRegistro) return false;
+            }
+
             if (filterIdentificacao !== 'todas') {
                 const hasIdentification = Boolean(String(animal.brinco || '').trim());
                 if (filterIdentificacao === 'sem' && hasIdentification) {
@@ -910,6 +918,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         filterGmdMin,
         healthQuickFilter,
         filterIdentificacao,
+        filterRegistro,
         filterPesagem,
         filterNutrition,
         filterPaddock,
@@ -973,6 +982,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setFilterRaca('');
         setFilterCategoria('');
         setFilterSexo('');
+        setFilterRegistro('todas');
         setFilterIdentificacao('todas');
         setFilterPesagem('todas');
         setFilterPaddock('');
@@ -1038,6 +1048,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 case 'identificacao':
                     result = compareText(left.identificacao, right.identificacao);
                     break;
+                case 'registro':
+                    result = compareText(left.registro, right.registro);
+                    break;
                 case 'raca':
                     result = compareText(left.raca, right.raca);
                     break;
@@ -1067,6 +1080,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 }
                 case 'categoria':
                     result = compareText(left.categoria, right.categoria);
+                    break;
+                case 'nutricao':
+                    result = compareText(left.nutritionPlan?.nome, right.nutritionPlan?.nome);
                     break;
             }
 
@@ -2100,6 +2116,17 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         <option value="sem">Sem identificação</option>
                     </select>
                 )}
+                {column === 'registro' && (
+                    <select
+                        value={filterRegistro}
+                        onChange={(event) => setFilterRegistro(event.target.value as 'todas' | 'com' | 'sem')}
+                        className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]"
+                    >
+                        <option value="todas">Todos os registros</option>
+                        <option value="com">Com registro</option>
+                        <option value="sem">Sem registro</option>
+                    </select>
+                )}
                 {column === 'raca' && (
                     <select value={filterRaca} onChange={(event) => setFilterRaca(event.target.value)} className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]">
                         <option value="">Todas as raças</option>
@@ -2161,6 +2188,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 )}
             </div>
         );
+    };
+
+    const isHeaderFiltered = (column: Exclude<AnimalHeaderFilterKey, null>) => {
+        switch (column) {
+            case 'identificacao': return filterIdentificacao !== 'todas';
+            case 'registro': return filterRegistro !== 'todas';
+            case 'raca': return Boolean(filterRaca);
+            case 'sexo': return Boolean(filterSexo);
+            case 'pasto': return Boolean(filterPaddock);
+            case 'lote': return Boolean(lotFilter);
+            case 'categoria': return Boolean(filterCategoria);
+            case 'peso': return filterPesagem !== 'todas';
+            case 'nutricao': return Boolean(filterNutrition);
+            default: return false;
+        }
     };
 
     const renderTable = (actionLabel?: string) => {
@@ -2234,93 +2276,96 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         }}
                                     />
                                 </th>
-                                <th scope="col" className="relative px-4 py-3 border-r border-[var(--eixo-border)]">
-                                    <div className="flex items-center gap-2">
-                                        <button type="button" onClick={() => handleSort('identificacao')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                            <span>ID</span>
-                                            <span>{getSortIndicator('identificacao')}</span>
+                                <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'identificacao' ? null : 'identificacao')} className={`relative cursor-pointer px-4 py-3 border-r border-[var(--eixo-border)] ${isHeaderFiltered('identificacao') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span>ID</span>
+                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('identificacao'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                                            {getSortIndicator('identificacao')}
                                         </button>
-                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'identificacao' ? null : 'identificacao')} className={`text-xs ${filterIdentificacao !== 'todas' ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
                                     </div>
                                     {renderHeaderFilter('identificacao')}
                                 </th>
-                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">Registro</th>
-                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <div className="flex items-center gap-2">
-                                        <button type="button" onClick={() => handleSort('raca')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                            <span>Raça</span>
-                                            <span>{getSortIndicator('raca')}</span>
+                                <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'registro' ? null : 'registro')} className={`relative cursor-pointer px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('registro') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span>Registro</span>
+                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('registro'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                                            {getSortIndicator('registro')}
                                         </button>
-                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'raca' ? null : 'raca')} className={`text-xs ${filterRaca ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
+                                    </div>
+                                    {renderHeaderFilter('registro')}
+                                </th>
+                                <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'raca' ? null : 'raca')} className={`relative cursor-pointer px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('raca') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span>Raça</span>
+                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('raca'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                                            {getSortIndicator('raca')}
+                                        </button>
                                     </div>
                                     {renderHeaderFilter('raca')}
                                 </th>
-                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <div className="flex items-center gap-2">
-                                        <button type="button" onClick={() => handleSort('sexo')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                            <span>Sexo</span>
-                                            <span>{getSortIndicator('sexo')}</span>
+                                <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'sexo' ? null : 'sexo')} className={`relative cursor-pointer px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('sexo') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span>Sexo</span>
+                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('sexo'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                                            {getSortIndicator('sexo')}
                                         </button>
-                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'sexo' ? null : 'sexo')} className={`text-xs ${filterSexo ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
                                     </div>
                                     {renderHeaderFilter('sexo')}
                                 </th>
                                 <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('idade')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
+                                    <button type="button" onClick={() => handleSort('idade')} className="flex items-center justify-between gap-2 w-full">
                                         <span>Idade</span>
-                                        <span>{getSortIndicator('idade')}</span>
+                                        <span className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)]">{getSortIndicator('idade')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <div className="flex items-center gap-2">
-                                        <button type="button" onClick={() => handleSort('pasto')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                            <span>Pasto</span>
-                                            <span>{getSortIndicator('pasto')}</span>
+                                <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'pasto' ? null : 'pasto')} className={`relative cursor-pointer px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('pasto') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span>Pasto</span>
+                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('pasto'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                                            {getSortIndicator('pasto')}
                                         </button>
-                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'pasto' ? null : 'pasto')} className={`text-xs ${filterPaddock ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
                                     </div>
                                     {renderHeaderFilter('pasto')}
                                 </th>
-                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <div className="flex items-center gap-2">
-                                        <button type="button" onClick={() => handleSort('lote')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                            <span>Lote</span>
-                                            <span>{getSortIndicator('lote')}</span>
+                                <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'lote' ? null : 'lote')} className={`relative cursor-pointer px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('lote') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span>Lote</span>
+                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('lote'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                                            {getSortIndicator('lote')}
                                         </button>
-                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'lote' ? null : 'lote')} className={`text-xs ${lotFilter ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
                                     </div>
                                     {renderHeaderFilter('lote')}
                                 </th>
-                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <div className="flex items-center gap-2">
-                                        <button type="button" onClick={() => handleSort('categoria')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                            <span>Categoria</span>
-                                            <span>{getSortIndicator('categoria')}</span>
+                                <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'categoria' ? null : 'categoria')} className={`relative cursor-pointer px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('categoria') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span>Categoria</span>
+                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('categoria'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                                            {getSortIndicator('categoria')}
                                         </button>
-                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'categoria' ? null : 'categoria')} className={`text-xs ${filterCategoria ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
                                     </div>
                                     {renderHeaderFilter('categoria')}
                                 </th>
-                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <div className="flex items-center gap-2">
-                                        <button type="button" onClick={() => handleSort('pesoAtual')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                            <span>Peso Atual</span>
-                                            <span>{getSortIndicator('pesoAtual')}</span>
+                                <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'peso' ? null : 'peso')} className={`relative cursor-pointer px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('peso') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span>Peso Atual</span>
+                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('pesoAtual'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                                            {getSortIndicator('pesoAtual')}
                                         </button>
-                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'peso' ? null : 'peso')} className={`text-xs ${filterPesagem !== 'todas' ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
                                     </div>
                                     {renderHeaderFilter('peso')}
                                 </th>
                                 <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('gmd')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
+                                    <button type="button" onClick={() => handleSort('gmd')} className="flex items-center justify-between gap-2 w-full">
                                         <span>GMD</span>
-                                        <span>{getSortIndicator('gmd')}</span>
+                                        <span className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)]">{getSortIndicator('gmd')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <div className="flex items-center gap-2">
+                                <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'nutricao' ? null : 'nutricao')} className={`relative cursor-pointer px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('nutricao') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
+                                    <div className="flex items-center justify-between gap-2">
                                         <span>Nutrição</span>
-                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'nutricao' ? null : 'nutricao')} className={`text-xs ${filterNutrition ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
+                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('nutricao'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                                            {getSortIndicator('nutricao')}
+                                        </button>
                                     </div>
                                     {renderHeaderFilter('nutricao')}
                                 </th>

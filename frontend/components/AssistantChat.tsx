@@ -7,6 +7,13 @@ interface ChatMessage {
     text: string;
 }
 
+interface RecentConversation {
+    conversationId: string;
+    lastAt: string;
+    preview: string;
+    farmId: string | null;
+}
+
 interface AssistantChatProps {
     onClose: () => void;
     farmId: string | null;
@@ -25,6 +32,15 @@ const SUGESTOES = [
 
 const MAX_CHARS = 150;
 
+const formatConversationDate = (value: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+    });
+};
+
 const SendIcon: React.FC = () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -36,6 +52,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [conversationId, setConversationId] = useState('');
+    const [recentConversations, setRecentConversations] = useState<RecentConversation[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -59,6 +76,32 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
         setConversationId(created);
     }, [farmId]);
 
+    const loadRecentConversations = async (targetConversationId?: string) => {
+        try {
+            const query = new URLSearchParams();
+            query.set('limit', '3');
+            if (farmId) query.set('farmId', farmId);
+
+            const response = await fetch(buildApiUrl(`/api/chat/conversations?${query.toString()}`), {
+                credentials: 'include',
+            });
+            if (!response.ok) return;
+            const data = await response.json().catch(() => ({}));
+            const fetched = Array.isArray(data?.conversations) ? data.conversations : [];
+            setRecentConversations(fetched);
+
+            if (!conversationId && fetched.length > 0) {
+                const selectedId = targetConversationId || fetched[0]?.conversationId;
+                if (selectedId) {
+                    setConversationId(selectedId);
+                    window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, selectedId);
+                }
+            }
+        } catch {
+            // silencioso
+        }
+    };
+
     const loadConversationMessages = async (targetConversationId: string) => {
         if (!targetConversationId) return;
         try {
@@ -79,6 +122,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
             // silencioso
         }
     };
+
+    useEffect(() => {
+        void loadRecentConversations();
+    }, [farmId]);
 
     useEffect(() => {
         if (!conversationId) return;
@@ -120,8 +167,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
             const data = await response.json();
             if (data?.conversationId && data.conversationId !== conversationId) {
                 setConversationId(data.conversationId);
+                window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, data.conversationId);
             }
             await loadConversationMessages(data?.conversationId || conversationId);
+            await loadRecentConversations(data?.conversationId || conversationId);
         } catch (error: any) {
             setMessages(prev => [...prev, {
                 role: 'model',
@@ -130,6 +179,25 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleCreateNewConversation = () => {
+        const created = crypto.randomUUID();
+        setConversationId(created);
+        setMessages([]);
+        window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, created);
+        setRecentConversations((prev) => {
+            const next = [
+                {
+                    conversationId: created,
+                    lastAt: new Date().toISOString(),
+                    preview: 'Nova conversa',
+                    farmId,
+                },
+                ...prev.filter((item) => item.conversationId !== created),
+            ];
+            return next.slice(0, 3);
+        });
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -208,6 +276,50 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
 
             {/* Área de mensagens */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+                <div className="mb-1 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-2.5">
+                    <div className="mb-2 flex items-center justify-between">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">
+                            Conversas recentes
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleCreateNewConversation}
+                            className="rounded-lg bg-[var(--eixo-text)] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[var(--eixo-graphite)]"
+                        >
+                            Nova conversa
+                        </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                        {recentConversations.map((item) => (
+                            <button
+                                key={item.conversationId}
+                                type="button"
+                                onClick={() => {
+                                    setConversationId(item.conversationId);
+                                    window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, item.conversationId);
+                                }}
+                                className={`max-w-full truncate rounded-lg border px-2.5 py-1 text-[11px] ${
+                                    conversationId === item.conversationId
+                                        ? 'border-[var(--eixo-text)] bg-[var(--eixo-text)] text-white'
+                                        : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-[var(--eixo-text)] hover:bg-[#eedfc8]'
+                                }`}
+                                title={item.preview || item.conversationId}
+                            >
+                                <span className="block truncate">
+                                    {(item.preview || 'Sem texto').slice(0, 28)}
+                                </span>
+                                <span className={`block text-[10px] ${conversationId === item.conversationId ? 'text-white/80' : 'text-[var(--eixo-text-muted)]'}`}>
+                                    {formatConversationDate(item.lastAt)}
+                                </span>
+                            </button>
+                        ))}
+                        {!recentConversations.length && (
+                            <span className="text-[11px] text-[var(--eixo-text-muted)]">
+                                Sem conversas recentes.
+                            </span>
+                        )}
+                    </div>
+                </div>
 
                 {/* Estado vazio — boas-vindas + sugestões */}
                 {messages.length === 0 && (
