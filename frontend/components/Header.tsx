@@ -65,7 +65,8 @@ const getDayLabel = (offsetDays: number) => {
     return DIAS_PT[d.getDay()];
 };
 
-const formatMm = (mm: number) => `${Math.round(mm)}mm`;
+const normalizeMm = (mm: number) => Math.round(mm * 10) / 10;
+const formatMm = (mm: number) => `${normalizeMm(mm)}mm`;
 const getRainLevelStyle = (mm: number) => {
     if (mm < 1) return 'bg-[#fffaf1] text-[#8a7a63] border-[#e7dcc8]';
     if (mm < 8) return 'bg-[#e7f7ec] text-[#2f6b3f] border-[#bfe7cc]';
@@ -75,30 +76,62 @@ const getRainLevelStyle = (mm: number) => {
 
 // ---- RainWidget ----
 interface RainWidgetProps {
-    lat: number;
-    lng: number;
+    lat?: number | null;
+    lng?: number | null;
+    city?: string | null;
 }
 
-const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng }) => {
+const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
     const [rain, setRain] = useState<number[] | null>(null);
 
     useEffect(() => {
+        if ((lat == null || lng == null) && !city?.trim()) {
+            setRain(null);
+            return;
+        }
         let active = true;
         const load = async () => {
             try {
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&daily=precipitation_sum&forecast_days=7&timezone=auto`;
+                let latitude = lat;
+                let longitude = lng;
+
+                if ((latitude == null || longitude == null) && city?.trim()) {
+                    const cityName = city.split('/')[0].trim();
+                    const geoRes = await fetch(
+                        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&country_code=BR&count=1&language=pt`
+                    );
+                    const geoData = await geoRes.json();
+                    const result = geoData?.results?.[0];
+                    if (!result) {
+                        if (active) setRain(null);
+                        return;
+                    }
+                    latitude = result.latitude;
+                    longitude = result.longitude;
+                }
+
+                if (latitude == null || longitude == null) {
+                    if (active) setRain(null);
+                    return;
+                }
+
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=precipitation_sum&forecast_days=7&timezone=America%2FSao_Paulo`;
                 const res = await fetch(url);
                 const data = await res.json();
                 if (active && Array.isArray(data?.daily?.precipitation_sum)) {
                     setRain(data.daily.precipitation_sum.slice(0, 7));
                 }
+                if (active && !Array.isArray(data?.daily?.precipitation_sum)) {
+                    setRain(null);
+                }
             } catch {
                 // silently fail
+                if (active) setRain(null);
             }
         };
         void load();
         return () => { active = false; };
-    }, [lat, lng]);
+    }, [lat, lng, city]);
 
     if (!rain) return null;
 
@@ -142,6 +175,7 @@ interface HeaderProps {
     canRegisterUsers?: boolean;
     onOpenUserRegister?: () => void;
     onOpenProfile?: () => void;
+    farmCity?: string | null;
     farmLat?: number | null;
     farmLng?: number | null;
 }
@@ -156,6 +190,7 @@ const Header: React.FC<HeaderProps> = ({
     canRegisterUsers,
     onOpenUserRegister,
     onOpenProfile,
+    farmCity,
     farmLat,
     farmLng,
 }) => {
@@ -269,10 +304,10 @@ const Header: React.FC<HeaderProps> = ({
                     )}
                 </div>
 
-                {/* Widget de previsão de chuva — só aparece quando a fazenda tem coordenadas */}
-                {farmLat != null && farmLng != null && (
-                    <RainWidget lat={farmLat} lng={farmLng} />
-                )}
+                {/* Widget de previsão de chuva — usa coordenadas ou fallback por cidade */}
+                {(farmLat != null && farmLng != null) || farmCity?.trim() ? (
+                    <RainWidget lat={farmLat} lng={farmLng} city={farmCity ?? null} />
+                ) : null}
 
                 {/* Spacer */}
                 <div className="flex-1" />

@@ -1,14 +1,17 @@
 # Tarefas — EIXO V2
 
+## Concluído (local)
+
+- [x] Segurança de sessão: desativado “lembrar-me”, removida restauração automática de sessão ao abrir o app e exigido login explícito na landing.
+- [x] Sessão única por outro dispositivo: novo login revoga sessão ativa anterior de outro dispositivo (mantendo múltiplas abas no mesmo dispositivo).
+- [x] Frontend: tratamento centralizado de `401 + SESSION_REVOKED`, com retorno ao login e mensagem amigável sem loop.
+- [x] Previsão de chuva: padronizado Header com Visão Geral (timezone `America/Sao_Paulo` e arredondamento em 1 casa decimal).
+- [x] Header: adicionado fallback por cidade para previsão de chuva quando a fazenda não tiver coordenadas GPS (alinhado à Visão Geral).
+
 ## Pendente de deploy
 
-- [ ] Rebanho: importar animais em lote com separação automática por linha entre Comercial e P.O., com retorno unificado no modal.
-- [ ] Rebanho: pré-validar importação antes do envio, exigindo `Brinco`, `Sexo`, `Raça`, `Data/Idade` e `Registro` quando a linha for P.O.
-- [ ] Rebanho: fluxo de correção inline no modal para linhas com erro, sem voltar para a planilha.
-- [ ] Rebanho: tabela editável das linhas com erro no próprio modal, com validação visual por campo.
-- [ ] Rebanho: ação em massa para aplicar o mesmo valor em várias linhas na correção inline.
-- [ ] Rebanho: opção `Revisar depois` para linhas pendentes, sem travar a importação das válidas.
-- [ ] Rebanho: resumo final da sessão de correção com importadas agora e pendentes para revisar depois.
-- [ ] Rebanho: CTA final do modal com aviso claro quando ainda existirem pendências de revisão.
-- [ ] Rebanho: remover qualquer saída para download de linhas com erro nesse fluxo.
-- [ ] Deploy/higiene: revisar `frontend/vite.config.ts` antes do commit de deploy para garantir configuração correta de produção/desenvolvimento.
+- [ ] Validar em produção o fluxo completo do modal de importação do rebanho (login, importar, correção inline, concluir com/sem pendências).
+- [ ] Publicar e validar em produção o ajuste de segurança de sessão/login (abrir navegador deve cair na landing; sem reaproveitar sessão automaticamente).
+- [ ] Publicar e validar em produção a revogação de sessão em outro dispositivo (`SESSION_REVOKED`) e o redirecionamento automático para login.
+- [ ] Publicar e validar em produção a padronização da previsão de chuva entre Header e Visão Geral.
+- [ ] Publicar e validar em produção o fallback por cidade da previsão de chuva no Header (quando não houver `lat/lng`).

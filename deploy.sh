@@ -9,6 +9,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 ENV_FILE="server/.env.production"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-main}"
 
 if [ ! -f "$ENV_FILE" ]; then
     echo "Erro: arquivo $ENV_FILE não encontrado."
@@ -23,6 +24,25 @@ set +a
 
 if [ -z "${DATABASE_URL:-}" ]; then
     echo "Erro: DATABASE_URL não definido em $ENV_FILE."
+    exit 1
+fi
+
+# ── Pré-checagens de segurança ────────────────────────────────────────────────
+CURRENT_BRANCH="$(git branch --show-current 2>/dev/null || true)"
+if [ -z "$CURRENT_BRANCH" ]; then
+    echo "Erro: não foi possível identificar a branch atual."
+    exit 1
+fi
+
+if [ "$CURRENT_BRANCH" != "$DEPLOY_BRANCH" ]; then
+    echo "Erro: branch atual é '$CURRENT_BRANCH', esperado '$DEPLOY_BRANCH'."
+    echo "Defina DEPLOY_BRANCH se quiser usar outra branch."
+    exit 1
+fi
+
+if [ -n "$(git status --porcelain)" ]; then
+    echo "Erro: árvore git não está limpa. Faça commit/stash antes do deploy."
+    git status --short
     exit 1
 fi
 
@@ -43,7 +63,7 @@ bash server/backup.sh
 # ── 2. Atualiza o código ──────────────────────────────────────────────────────
 echo ""
 echo "▶ 2/6 Atualizando código (git pull)..."
-git pull --ff-only origin main
+git pull --ff-only origin "$DEPLOY_BRANCH"
 
 # ── 3. Instala dependências ───────────────────────────────────────────────────
 echo ""
@@ -81,6 +101,17 @@ else
     "${PM2_CMD[@]}" start server/index.js --name eixo-server
 fi
 "${PM2_CMD[@]}" save --force
+
+# ── Pós-checagem rápida de saúde ──────────────────────────────────────────────
+echo ""
+echo "▶ Health check rápido..."
+HEALTH_URL="${DEPLOY_HEALTH_URL:-http://127.0.0.1:${PORT:-3001}/health}"
+if ! curl -fsS --max-time 10 "$HEALTH_URL" >/dev/null; then
+    echo "Erro: health check falhou em $HEALTH_URL"
+    echo "Verifique logs: pm2 logs eixo-server --lines 100"
+    exit 1
+fi
+echo "Health OK: $HEALTH_URL"
 
 echo ""
 echo "======================================================"

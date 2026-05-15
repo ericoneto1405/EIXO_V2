@@ -43,8 +43,7 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 const IS_PROD = NODE_ENV === 'production';
 const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'session';
 const SESSION_TOKEN_SALT = process.env.SESSION_TOKEN_SALT || 'dev-session-salt';
-const SESSION_TTL_MS = Number(process.env.SESSION_TTL_MS) || 24 * 60 * 60 * 1000;
-const SESSION_REMEMBER_TTL_MS = Number(process.env.SESSION_REMEMBER_TTL_MS) || 30 * 24 * 60 * 60 * 1000;
+const SESSION_LOGIN_TTL_MS = Number(process.env.SESSION_LOGIN_TTL_MS) || 2 * 60 * 60 * 1000;
 const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
 const ALLOW_X_USER_ID = process.env.ALLOW_X_USER_ID === 'true';
 const OTP_SEND_WINDOW_MS = Number(process.env.OTP_SEND_WINDOW_MS) || 10 * 60 * 1000;
@@ -1760,11 +1759,10 @@ const hashSessionToken = (token) =>
 
 const generateSessionToken = () => crypto.randomBytes(32).toString('hex');
 
-const buildCookieOptions = (expiresAt) => ({
+const buildCookieOptions = () => ({
     httpOnly: true,
     sameSite: 'lax',
     secure: IS_PROD,
-    expires: expiresAt,
     path: '/',
 });
 
@@ -1894,11 +1892,10 @@ const recordActivityLog = async (req, { statusCode = null, requestMeta = null } 
     }
 };
 
-const createSessionForUser = async (userId, req, { rememberMe = false, deviceId = null } = {}) => {
+const createSessionForUser = async (userId, req, { deviceId = null } = {}) => {
     const token = generateSessionToken();
     const tokenHash = hashSessionToken(token);
-    const ttl = rememberMe ? SESSION_REMEMBER_TTL_MS : SESSION_TTL_MS;
-    const expiresAt = new Date(Date.now() + ttl);
+    const expiresAt = new Date(Date.now() + SESSION_LOGIN_TTL_MS);
 
     await prisma.session.create({
         data: {
@@ -1990,6 +1987,7 @@ const getSessionFromRequest = async (req) => {
 
 const requireAuth = async (req, res, next) => {
     try {
+        const presentedSessionToken = extractSessionTokenFromRequest(req);
         const session = await getSessionFromRequest(req);
         if (session?.user) {
             if (session.deviceId) {
@@ -2029,6 +2027,13 @@ const requireAuth = async (req, res, next) => {
             req.saas = await ensureSaasContextForUser(user.id);
             req.access = await ensureFieldWorkerFarmAccess(user, req.saas);
             return next();
+        }
+
+        if (presentedSessionToken) {
+            return res.status(401).json({
+                code: 'SESSION_REVOKED',
+                message: 'Sessão encerrada. Faça login novamente.',
+            });
         }
 
         return res.status(401).json({ message: 'Usuário não autenticado.' });
@@ -2798,7 +2803,7 @@ app.post('/auth/recover-email/verify', async (req, res) => {
 });
 
 app.post('/auth/login', async (req, res) => {
-    const { email, password, rememberMe } = req.body || {};
+    const { email, password } = req.body || {};
     const rateLimitKeys = buildLoginRateLimitKeys(email, req.ip);
 
     if (isAnyLoginRateLimited(rateLimitKeys)) {
@@ -2839,10 +2844,37 @@ app.post('/auth/login', async (req, res) => {
 
         clearLoginRateLimits(rateLimitKeys);
 
-        const shouldRemember = Boolean(rememberMe);
-        const { token, expiresAt } = await createSessionForUser(user.id, req, { rememberMe: shouldRemember });
+        // Sessão única por dispositivo:
+        // - Mantém sessões do mesmo navegador/dispositivo (mesmo IP + user-agent).
+        // - Revoga sessões de outros dispositivos.
+        const currentIp = req.ip || '';
+        const currentUserAgent = req.get('user-agent') || '';
+        await prisma.session.updateMany({
+            where: {
+                userId: user.id,
+                revokedAt: null,
+                OR: [
+                    // Sessões de app (com deviceId) são consideradas outro dispositivo.
+                    { deviceId: { not: null } },
+                    {
+                        AND: [
+                            { deviceId: null },
+                            {
+                                OR: [
+                                    { ip: { not: currentIp } },
+                                    { userAgent: { not: currentUserAgent } },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            },
+            data: { revokedAt: new Date() },
+        });
 
-        res.cookie(SESSION_COOKIE_NAME, token, buildCookieOptions(expiresAt));
+        const { token, expiresAt } = await createSessionForUser(user.id, req);
+
+        res.cookie(SESSION_COOKIE_NAME, token, buildCookieOptions());
         return res.json({
             user: serializeAuthUser(user, saasContext, {
                 ...accessContext,
@@ -2960,7 +2992,7 @@ app.post('/auth/logout', async (req, res) => {
                 data: { revokedAt: new Date() },
             });
         }
-        res.clearCookie(SESSION_COOKIE_NAME, buildCookieOptions(new Date(0)));
+        res.clearCookie(SESSION_COOKIE_NAME, buildCookieOptions());
         return res.json({ ok: true });
     } catch (error) {
         console.error(error);
@@ -4086,11 +4118,10 @@ app.post('/app/activate', async (req, res) => {
         device = result;
 
         const { token, expiresAt } = await createSessionForUser(targetUser.id, req, {
-            rememberMe: true,
             deviceId: device.id,
         });
 
-        res.cookie(SESSION_COOKIE_NAME, token, buildCookieOptions(expiresAt));
+        res.cookie(SESSION_COOKIE_NAME, token, buildCookieOptions());
 
         const payload = await buildAppAuthPayload(targetUser.id, { device });
         return res.json({

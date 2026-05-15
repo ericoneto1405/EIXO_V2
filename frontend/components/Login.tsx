@@ -15,13 +15,12 @@ interface LoginProps {
 const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegister, onForgotPassword, onRecoverEmail }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [rememberMe, setRememberMe] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [openModal, setOpenModal] = useState<LegalDoc | null>(null);
 
     const handleSubmit = (event: React.FormEvent) => {
         event.preventDefault();
-        onLogin(email, password, rememberMe);
+        onLogin(email, password, false);
     };
 
     return (
@@ -114,15 +113,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between gap-4 text-sm">
-                                                <label className="flex items-center gap-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={rememberMe}
-                                                        onChange={(e) => setRememberMe(e.target.checked)}
-                                                        className="h-4 w-4 rounded border-[var(--eixo-border)] text-[var(--eixo-green)] focus:ring-[var(--eixo-green)]"
-                                                    />
-                                                    <span className="text-[var(--eixo-text)]/72">Lembrar de mim</span>
-                                                </label>
+                                                <div />
                                                 <div className="flex flex-col items-end gap-1">
                                                     <button
                                                         type="button"

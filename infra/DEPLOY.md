@@ -73,7 +73,7 @@ sudo systemctl reload nginx
 ### 5. Certificado SSL (Let's Encrypt)
 
 ```bash
-sudo certbot --nginx -d eixo.ag -d www.eixo.ag
+sudo certbot --nginx -d eixo.agr.br -d www.eixo.agr.br
 # Renovação automática já é configurada pelo certbot
 ```
 
@@ -110,9 +110,9 @@ gunzip -c server/backups/eixo_backup_YYYY-MM-DD_HH-MM-SS.sql.gz | psql -U eixo_u
 
 ### Opção gratuita recomendada: UptimeRobot
 1. Criar conta em https://uptimerobot.com
-2. Criar monitor HTTP(S) para `https://eixo.ag`
+2. Criar monitor HTTP(S) para `https://eixo.agr.br`
 3. Intervalo: 5 minutos
-4. Alerta: e-mail para `admin@eixo.ag`
+4. Alerta: e-mail para `contato@eixo.agr.br`
 
 ### Comandos úteis no servidor
 
@@ -131,9 +131,9 @@ sudo tail -f /var/log/nginx/eixo_error.log
 
 - [ ] `.env.production` preenchido com valores reais
 - [ ] `SESSION_TOKEN_SALT` único e gerado aleatoriamente
-- [ ] `CORS_ORIGIN` apontando para `https://eixo.ag`
-- [ ] `APP_BASE_URL` apontando para `https://eixo.ag`
-- [ ] DNS do domínio `eixo.ag` apontando para o IP do servidor
+- [ ] `CORS_ORIGIN` apontando para `https://eixo.agr.br`
+- [ ] `APP_BASE_URL` apontando para `https://eixo.agr.br`
+- [ ] DNS do domínio `eixo.agr.br` apontando para o IP do servidor
 - [ ] Certificado SSL instalado e renovação automática ativa
 - [ ] PM2 configurado para iniciar com o servidor (`pm2 startup`)
 - [ ] Backup automático configurado no cron

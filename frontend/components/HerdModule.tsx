@@ -1807,6 +1807,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         void handleImportConfirm();
     };
 
+    const importFailedWithoutSuccess = Boolean(
+        importProgress
+        && !isImporting
+        && importProgress.success === 0
+        && importProgress.errors.length > 0,
+    );
+
     const handleCreateAnimal = async (event: React.FormEvent) => {
         event.preventDefault();
         if (!farmId) {
@@ -3744,6 +3751,16 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {/* Resultado final */}
                                     {!isImporting && (
                                         <>
+                                            {importFailedWithoutSuccess && (
+                                                <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] p-4">
+                                                    <p className="font-bold text-[var(--eixo-danger)]">
+                                                        Nenhum animal foi salvo nesta tentativa.
+                                                    </p>
+                                                    <p className="mt-1 text-sm text-[var(--eixo-danger)]">
+                                                        Corrija os erros listados abaixo e reimporte o arquivo.
+                                                    </p>
+                                                </div>
+                                            )}
                                             {/* Card de sucesso */}
                                             <div className="rounded-xl border border-[#c8ddc4] bg-[var(--eixo-green-soft)] p-4 flex items-center gap-3">
                                                 <span className="text-2xl">✓</span>
@@ -4038,21 +4055,31 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             Reimportar arquivo
                                         </button>
                                     )}
-                                    <button
-                                        type="button"
-                                        onClick={() => setImportModalOpen(false)}
-                                        className={`rounded-xl px-6 py-2 text-sm font-semibold text-[#1a1a1a] ${
-                                            deferredCorrectionCount > 0
-                                                ? 'bg-amber-300 hover:bg-amber-400'
-                                                : 'bg-[var(--eixo-green)] hover:bg-[var(--eixo-green-dark)]'
-                                        }`}
-                                    >
-                                        {deferredCorrectionCount > 0
-                                            ? `Concluir com ${deferredCorrectionCount} pendente${deferredCorrectionCount > 1 ? 's' : ''}`
-                                            : importProgress.errors.length > 0 || importProgress.weighingIssues.length > 0
-                                                ? 'Concluir com pendências'
-                                                : 'Concluir'}
-                                    </button>
+                                    {importFailedWithoutSuccess ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setImportModalOpen(false)}
+                                            className="rounded-xl border border-[#efc2ba] bg-white px-6 py-2 text-sm font-semibold text-[var(--eixo-danger)] hover:bg-[#fff2ef]"
+                                        >
+                                            Fechar sem salvar
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => setImportModalOpen(false)}
+                                            className={`rounded-xl px-6 py-2 text-sm font-semibold text-[#1a1a1a] ${
+                                                deferredCorrectionCount > 0
+                                                    ? 'bg-amber-300 hover:bg-amber-400'
+                                                    : 'bg-[var(--eixo-green)] hover:bg-[var(--eixo-green-dark)]'
+                                            }`}
+                                        >
+                                            {deferredCorrectionCount > 0
+                                                ? `Concluir com ${deferredCorrectionCount} pendente${deferredCorrectionCount > 1 ? 's' : ''}`
+                                                : importProgress.errors.length > 0 || importProgress.weighingIssues.length > 0
+                                                    ? 'Concluir com pendências'
+                                                    : 'Concluir'}
+                                        </button>
+                                    )}
                                 </>
                             )}
                         </div>

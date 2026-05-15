@@ -330,6 +330,7 @@ const AppContent: React.FC = () => {
     const [upgradeModal, setUpgradeModal] = useState<string | null>(null); // nome do módulo bloqueado
     const [isSupportOpen, setIsSupportOpen] = useState(false);
     const supportRef = useRef<HTMLDivElement>(null);
+    const isHandlingSessionRevokedRef = useRef(false);
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -532,25 +533,8 @@ const AppContent: React.FC = () => {
     }, [selectedFarmId]);
 
     React.useEffect(() => {
-        const bootstrapAuth = async () => {
-            try {
-            const response = await fetch(buildApiUrl('/auth/me'), { credentials: 'include' });
-                const payload = await response.json().catch(() => ({}));
-                if (response.ok && payload.user) {
-                    const foundUser: User = payload.user;
-                    setIsAuthenticated(true);
-                    setCurrentUser(foundUser);
-                    await loadFarms(foundUser.defaultFarmId || foundUser.lastFarmId || null);
-                }
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setIsAuthLoading(false);
-            }
-        };
-
-        bootstrapAuth();
-    }, [loadFarms]);
+        setIsAuthLoading(false);
+    }, []);
 
     React.useEffect(() => {
         const parentView = SUB_VIEW_PARENT[activeView] ?? activeView;
@@ -668,6 +652,38 @@ const AppContent: React.FC = () => {
         setRegisterError(null);
         setIsRegisterModalOpen(false);
     };
+
+    React.useEffect(() => {
+        const handleSessionRevoked = () => {
+            if (isHandlingSessionRevokedRef.current) {
+                return;
+            }
+            isHandlingSessionRevokedRef.current = true;
+
+            setIsAuthenticated(false);
+            setCurrentUser(null);
+            setAuthScreen('login');
+            setFarms([]);
+            setSelectedFarmId(null);
+            setOpenFarmForm(false);
+            updateFarmFormQuery(false);
+            setActiveView('Visão Geral');
+            setHerdTabRequest(null);
+            setAuthError('Sua sessão foi encerrada porque houve login em outro dispositivo.');
+            setRegisterMessage(null);
+            setRegisterError(null);
+            setIsRegisterModalOpen(false);
+
+            window.setTimeout(() => {
+                isHandlingSessionRevokedRef.current = false;
+            }, 500);
+        };
+
+        window.addEventListener('eixo:session-revoked', handleSessionRevoked);
+        return () => {
+            window.removeEventListener('eixo:session-revoked', handleSessionRevoked);
+        };
+    }, [updateFarmFormQuery]);
 
     const getUpgradeModuleForView = React.useCallback((view: string) => {
         const moduleConfig = UPGRADE_CONTENT[view];
@@ -1043,6 +1059,7 @@ const AppContent: React.FC = () => {
                             currentUser={currentUser}
                             onLogout={handleLogout}
                             canRegisterUsers={canManageUsers}
+                            farmCity={selectedFarm?.city ?? null}
                             farmLat={selectedFarm?.lat ?? null}
                             farmLng={selectedFarm?.lng ?? null}
                             onOpenUserRegister={() => {
