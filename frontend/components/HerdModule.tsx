@@ -21,6 +21,7 @@ import type { Paddock } from '../types';
 
 type TabKey = 'overview' | 'animals' | 'pastures' | 'lots' | 'weighings' | 'settings';
 type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'sem_categoria' | 'gmd_baixo';
+type AnimalHeaderFilterKey = 'identificacao' | 'raca' | 'sexo' | 'pasto' | 'lote' | 'categoria' | 'peso' | 'nutricao' | null;
 type ImportCorrectionRow = {
     id: string;
     selected: boolean;
@@ -532,6 +533,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [filterGmdMax, setFilterGmdMax] = useState('');
     const [filterNutrition, setFilterNutrition] = useState('');
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+    const [activeHeaderFilter, setActiveHeaderFilter] = useState<AnimalHeaderFilterKey>(null);
     const [healthQuickFilter, setHealthQuickFilter] = useState<HealthQuickFilter>('none');
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
@@ -576,6 +578,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [importSessionSuccessCount, setImportSessionSuccessCount] = useState(0);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const headerFilterRef = useRef<HTMLDivElement | null>(null);
 
     // Modal de nascimento
     const [nascimentoModalOpen, setNascimentoModalOpen] = useState(false);
@@ -789,6 +792,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setCurrentPage(1);
     }, [searchTerm, lotFilter, filterRaca, filterCategoria, filterSexo, filterIdentificacao, filterPesagem, filterPaddock, filterGmdMin, filterGmdMax, filterNutrition, activeTab]);
 
+    useEffect(() => {
+        const handleOutside = (event: MouseEvent) => {
+            if (!headerFilterRef.current) return;
+            if (!headerFilterRef.current.contains(event.target as Node)) {
+                setActiveHeaderFilter(null);
+            }
+        };
+        if (activeHeaderFilter) {
+            document.addEventListener('mousedown', handleOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleOutside);
+        };
+    }, [activeHeaderFilter]);
+
     const filteredAnimals = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
         const gmdMin = filterGmdMin ? Number(filterGmdMin) : null;
@@ -962,6 +980,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setFilterGmdMax('');
         setFilterNutrition('');
         setHealthQuickFilter('none');
+        setActiveHeaderFilter(null);
     };
 
     const applyHealthQuickFilter = (quickFilter: HealthQuickFilter) => {
@@ -2065,6 +2084,85 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         return sortDirection === 'asc' ? '↑' : '↓';
     };
 
+    const renderHeaderFilter = (column: Exclude<AnimalHeaderFilterKey, null>) => {
+        if (activeHeaderFilter !== column) return null;
+
+        return (
+            <div className="absolute left-0 top-full z-30 mt-1 min-w-[210px] rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 shadow-lg">
+                {column === 'identificacao' && (
+                    <select
+                        value={filterIdentificacao}
+                        onChange={(event) => setFilterIdentificacao(event.target.value as 'todas' | 'com' | 'sem')}
+                        className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]"
+                    >
+                        <option value="todas">Todas as identificações</option>
+                        <option value="com">Com identificação</option>
+                        <option value="sem">Sem identificação</option>
+                    </select>
+                )}
+                {column === 'raca' && (
+                    <select value={filterRaca} onChange={(event) => setFilterRaca(event.target.value)} className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]">
+                        <option value="">Todas as raças</option>
+                        {racaOptions.map((raca) => <option key={raca} value={raca}>{raca}</option>)}
+                    </select>
+                )}
+                {column === 'sexo' && (
+                    <select value={filterSexo} onChange={(event) => setFilterSexo(event.target.value)} className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]">
+                        <option value="">Todos os sexos</option>
+                        <option value="Macho">Macho</option>
+                        <option value="Fêmea">Fêmea</option>
+                    </select>
+                )}
+                {column === 'pasto' && (
+                    <select value={filterPaddock} onChange={(event) => setFilterPaddock(event.target.value)} className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]">
+                        <option value="">Todos os pastos</option>
+                        {paddocks.map((paddock) => <option key={paddock.id} value={paddock.id}>{paddock.name}</option>)}
+                    </select>
+                )}
+                {column === 'lote' && (
+                    <select value={lotFilter} onChange={(event) => setLotFilter(event.target.value)} className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]">
+                        <option value="">Todos os lotes</option>
+                        {lots.map((lot) => <option key={lot.id} value={lot.id}>{lot.name}</option>)}
+                    </select>
+                )}
+                {column === 'categoria' && (
+                    <select value={filterCategoria} onChange={(event) => setFilterCategoria(event.target.value)} className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]">
+                        <option value="">Todas as categorias</option>
+                        <option value="Bezerro">Bezerro</option>
+                        <option value="Bezerra">Bezerra</option>
+                        <option value="Novilho">Novilho</option>
+                        <option value="Novilha">Novilha</option>
+                        <option value="Garrote">Garrote</option>
+                        <option value="Garrota">Garrota</option>
+                        <option value="Boi">Boi</option>
+                        <option value="Vaca">Vaca</option>
+                        <option value="Vaca de cria">Vaca de cria</option>
+                        <option value="Vaca seca">Vaca seca</option>
+                        <option value="Vaca de descarte">Vaca de descarte</option>
+                        <option value="Touro">Touro</option>
+                    </select>
+                )}
+                {column === 'peso' && (
+                    <select
+                        value={filterPesagem}
+                        onChange={(event) => setFilterPesagem(event.target.value as 'todas' | 'sem' | 'desatualizada')}
+                        className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]"
+                    >
+                        <option value="todas">Todas as pesagens</option>
+                        <option value="sem">Sem pesagem</option>
+                        <option value="desatualizada">Pesagem desatualizada (+30d)</option>
+                    </select>
+                )}
+                {column === 'nutricao' && (
+                    <select value={filterNutrition} onChange={(event) => setFilterNutrition(event.target.value)} className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]">
+                        <option value="">Todas as nutrições</option>
+                        {nutritionOptions.map((nutritionName) => <option key={nutritionName} value={nutritionName}>{nutritionName}</option>)}
+                    </select>
+                )}
+            </div>
+        );
+    };
+
     const renderTable = (actionLabel?: string) => {
         const totalPages = Math.ceil(sortedAnimals.length / PAGE_SIZE);
         const paginatedAnimals = sortedAnimals.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
@@ -2114,7 +2212,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         </button>
                     </div>
                 )}
-                <div className="overflow-x-auto">
+                <div ref={headerFilterRef} className="overflow-x-auto">
                     <table className="w-full text-left text-sm text-[var(--eixo-text-muted)]">
                         <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                             <tr>
@@ -2136,24 +2234,36 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         }}
                                     />
                                 </th>
-                                <th scope="col" className="px-4 py-3 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('identificacao')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                        <span>ID</span>
-                                        <span>{getSortIndicator('identificacao')}</span>
-                                    </button>
+                                <th scope="col" className="relative px-4 py-3 border-r border-[var(--eixo-border)]">
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={() => handleSort('identificacao')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
+                                            <span>ID</span>
+                                            <span>{getSortIndicator('identificacao')}</span>
+                                        </button>
+                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'identificacao' ? null : 'identificacao')} className={`text-xs ${filterIdentificacao !== 'todas' ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
+                                    </div>
+                                    {renderHeaderFilter('identificacao')}
                                 </th>
                                 <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">Registro</th>
-                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('raca')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                        <span>Raça</span>
-                                        <span>{getSortIndicator('raca')}</span>
-                                    </button>
+                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={() => handleSort('raca')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
+                                            <span>Raça</span>
+                                            <span>{getSortIndicator('raca')}</span>
+                                        </button>
+                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'raca' ? null : 'raca')} className={`text-xs ${filterRaca ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
+                                    </div>
+                                    {renderHeaderFilter('raca')}
                                 </th>
-                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('sexo')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                        <span>Sexo</span>
-                                        <span>{getSortIndicator('sexo')}</span>
-                                    </button>
+                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={() => handleSort('sexo')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
+                                            <span>Sexo</span>
+                                            <span>{getSortIndicator('sexo')}</span>
+                                        </button>
+                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'sexo' ? null : 'sexo')} className={`text-xs ${filterSexo ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
+                                    </div>
+                                    {renderHeaderFilter('sexo')}
                                 </th>
                                 <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('idade')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
@@ -2161,29 +2271,45 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         <span>{getSortIndicator('idade')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('pasto')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                        <span>Pasto</span>
-                                        <span>{getSortIndicator('pasto')}</span>
-                                    </button>
+                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={() => handleSort('pasto')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
+                                            <span>Pasto</span>
+                                            <span>{getSortIndicator('pasto')}</span>
+                                        </button>
+                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'pasto' ? null : 'pasto')} className={`text-xs ${filterPaddock ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
+                                    </div>
+                                    {renderHeaderFilter('pasto')}
                                 </th>
-                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('lote')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                        <span>Lote</span>
-                                        <span>{getSortIndicator('lote')}</span>
-                                    </button>
+                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={() => handleSort('lote')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
+                                            <span>Lote</span>
+                                            <span>{getSortIndicator('lote')}</span>
+                                        </button>
+                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'lote' ? null : 'lote')} className={`text-xs ${lotFilter ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
+                                    </div>
+                                    {renderHeaderFilter('lote')}
                                 </th>
-                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('categoria')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                        <span>Categoria</span>
-                                        <span>{getSortIndicator('categoria')}</span>
-                                    </button>
+                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={() => handleSort('categoria')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
+                                            <span>Categoria</span>
+                                            <span>{getSortIndicator('categoria')}</span>
+                                        </button>
+                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'categoria' ? null : 'categoria')} className={`text-xs ${filterCategoria ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
+                                    </div>
+                                    {renderHeaderFilter('categoria')}
                                 </th>
-                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('pesoAtual')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
-                                        <span>Peso Atual</span>
-                                        <span>{getSortIndicator('pesoAtual')}</span>
-                                    </button>
+                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
+                                    <div className="flex items-center gap-2">
+                                        <button type="button" onClick={() => handleSort('pesoAtual')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
+                                            <span>Peso Atual</span>
+                                            <span>{getSortIndicator('pesoAtual')}</span>
+                                        </button>
+                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'peso' ? null : 'peso')} className={`text-xs ${filterPesagem !== 'todas' ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
+                                    </div>
+                                    {renderHeaderFilter('peso')}
                                 </th>
                                 <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('gmd')} className="flex cursor-pointer select-none items-center gap-1 hover:bg-[var(--eixo-surface-soft)]">
@@ -2191,7 +2317,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         <span>{getSortIndicator('gmd')}</span>
                                     </button>
                                 </th>
-                                <th scope="col" className="px-4 py-2.5 border-r border-[var(--eixo-border)]">Nutrição</th>
+                                <th scope="col" className="relative px-4 py-2.5 border-r border-[var(--eixo-border)]">
+                                    <div className="flex items-center gap-2">
+                                        <span>Nutrição</span>
+                                        <button type="button" onClick={() => setActiveHeaderFilter((prev) => prev === 'nutricao' ? null : 'nutricao')} className={`text-xs ${filterNutrition ? 'text-[var(--eixo-green)]' : 'text-[var(--eixo-text-muted)]'}`}>▾</button>
+                                    </div>
+                                    {renderHeaderFilter('nutricao')}
+                                </th>
                                 <th scope="col" className="px-6 py-3 text-center">Ações</th>
                             </tr>
                         </thead>
@@ -2856,120 +2988,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] py-2 pl-9 pr-3 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
-                        <select
-                            value={filterCategoria}
-                            onChange={(event) => setFilterCategoria(event.target.value)}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        >
-                            <option value="">Todas as categorias</option>
-                            <option value="Bezerro">Bezerro</option>
-                            <option value="Bezerra">Bezerra</option>
-                            <option value="Novilho">Novilho</option>
-                            <option value="Novilha">Novilha</option>
-                            <option value="Garrote">Garrote</option>
-                            <option value="Garrota">Garrota</option>
-                            <option value="Boi">Boi</option>
-                            <option value="Vaca">Vaca</option>
-                            <option value="Vaca de cria">Vaca de cria</option>
-                            <option value="Vaca seca">Vaca seca</option>
-                            <option value="Vaca de descarte">Vaca de descarte</option>
-                            <option value="Touro">Touro</option>
-                        </select>
-                        <select
-                            value={filterSexo}
-                            onChange={(event) => setFilterSexo(event.target.value)}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        >
-                            <option value="">Todos os sexos</option>
-                            <option value="Macho">Macho</option>
-                            <option value="Fêmea">Fêmea</option>
-                        </select>
-                        <select
-                            value={filterIdentificacao}
-                            onChange={(event) => setFilterIdentificacao(event.target.value as 'todas' | 'com' | 'sem')}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        >
-                            <option value="todas">Todas as identificações</option>
-                            <option value="com">Com identificação</option>
-                            <option value="sem">Sem identificação</option>
-                        </select>
-                        <select
-                            value={filterPesagem}
-                            onChange={(event) => setFilterPesagem(event.target.value as 'todas' | 'sem' | 'desatualizada')}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        >
-                            <option value="todas">Todas as pesagens</option>
-                            <option value="sem">Sem pesagem</option>
-                            <option value="desatualizada">Pesagem desatualizada (+30d)</option>
-                        </select>
-                        <select
-                            value={filterPaddock}
-                            onChange={(event) => setFilterPaddock(event.target.value)}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        >
-                            <option value="">Todos os pastos</option>
-                            {paddocks.map((paddock) => (
-                                <option key={paddock.id} value={paddock.id}>{paddock.name}</option>
-                            ))}
-                        </select>
-                        <select
-                            value={lotFilter}
-                            onChange={(event) => setLotFilter(event.target.value)}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                        >
-                            <option value="">Todos os lotes</option>
-                            {lots.map((lot) => (
-                                <option key={lot.id} value={lot.id}>{lot.name}</option>
-                            ))}
-                        </select>
-                        <button
-                            type="button"
-                            onClick={() => setShowAdvancedFilters((prev) => !prev)}
-                            className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
-                        >
-                            {showAdvancedFilters ? 'Esconder filtros avançados' : 'Mostrar filtros avançados'}
-                        </button>
-                    </div>
-                    {showAdvancedFilters && (
-                        <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
-                            <input
-                                type="number"
-                                value={filterGmdMin}
-                                onChange={(event) => setFilterGmdMin(event.target.value)}
-                                placeholder="GMD mín"
-                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                            />
-                            <input
-                                type="number"
-                                value={filterGmdMax}
-                                onChange={(event) => setFilterGmdMax(event.target.value)}
-                                placeholder="GMD máx"
-                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                            />
-                            <select
-                                value={filterRaca}
-                                onChange={(event) => setFilterRaca(event.target.value)}
-                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                            >
-                                <option value="">Todas as raças</option>
-                                {racaOptions.map((r) => (
-                                    <option key={r} value={r}>{r}</option>
-                                ))}
-                            </select>
-                            <select
-                                value={filterNutrition}
-                                onChange={(event) => setFilterNutrition(event.target.value)}
-                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                            >
-                                <option value="">Todas as nutrições</option>
-                                {nutritionOptions.map((nutritionName) => (
-                                    <option key={nutritionName} value={nutritionName}>{nutritionName}</option>
-                                ))}
-                            </select>
-                            <div />
-                        </div>
-                    )}
                     <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
                         <button
                             type="button"

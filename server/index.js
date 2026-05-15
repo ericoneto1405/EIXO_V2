@@ -2361,6 +2361,70 @@ app.post('/api/chat/send-message', requireAuth, async (req, res) => {
     }
 });
 
+app.get('/api/chat/conversations', requireAuth, async (req, res) => {
+    const requestedFarmId = typeof req.query?.farmId === 'string' ? req.query.farmId.trim() : '';
+    const normalizedFarmId = requestedFarmId || null;
+    const parsedLimit = Number.parseInt(String(req.query?.limit || '3'), 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 3) : 3;
+
+    try {
+        const logs = await prisma.activityLog.findMany({
+            where: {
+                entity: SUPPORT_ENTITY,
+                action: { in: [SUPPORT_ACTION_USER, SUPPORT_ACTION_AI, SUPPORT_ACTION_ADMIN] },
+                userId: req.user.id,
+                entityId: { not: null },
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 2000,
+            select: {
+                id: true,
+                entityId: true,
+                description: true,
+                createdAt: true,
+                requestMeta: true,
+            },
+        });
+
+        const grouped = new Map();
+        for (const log of logs) {
+            const conversationId = String(log.entityId || '').trim();
+            if (!conversationId) continue;
+
+            const requestMeta = log.requestMeta && typeof log.requestMeta === 'object'
+                ? log.requestMeta
+                : {};
+            const farmIdFromLog = typeof requestMeta?.farmId === 'string' && requestMeta.farmId.trim()
+                ? requestMeta.farmId.trim()
+                : null;
+
+            if (normalizedFarmId && farmIdFromLog !== normalizedFarmId) {
+                continue;
+            }
+
+            if (grouped.has(conversationId)) {
+                continue;
+            }
+
+            grouped.set(conversationId, {
+                conversationId,
+                lastAt: log.createdAt,
+                preview: String(log.description || '').slice(0, 140),
+                farmId: farmIdFromLog,
+            });
+
+            if (grouped.size >= limit) {
+                break;
+            }
+        }
+
+        return res.json({ conversations: Array.from(grouped.values()) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar conversas.' });
+    }
+});
+
 app.get('/api/chat/conversations/:conversationId/messages', requireAuth, async (req, res) => {
     const { conversationId } = req.params;
     if (!conversationId) {
