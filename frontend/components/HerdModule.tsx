@@ -3705,6 +3705,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         </ul>
                                     </div>
                                     <div className="space-y-3">
+                                    {importCorrectionOpen && (
+                                        <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                            <p className="text-xs font-semibold text-[var(--eixo-text)]">Passo 2</p>
+                                            <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">Corrija os campos, clique em <span className="font-semibold">Revalidar correções</span> e depois em <span className="font-semibold">Importar corrigidas</span>.</p>
+                                        </div>
+                                    )}
                                     {/* Progresso durante importação */}
                                     {isImporting && (
                                         <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
@@ -3797,10 +3803,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                     </div>
                                                     {importCorrectionOpen && (
                                                         <div className="mt-3 space-y-2 rounded-xl border border-[#efc2ba] bg-white p-3">
-                                                            <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
-                                                                <p className="text-xs font-semibold text-[var(--eixo-text)]">Passo 2</p>
-                                                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">Corrija os campos, clique em <span className="font-semibold">Revalidar correções</span> e depois em <span className="font-semibold">Importar corrigidas</span>.</p>
-                                                            </div>
                                                             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-2">
                                                                 <button
                                                                     type="button"
