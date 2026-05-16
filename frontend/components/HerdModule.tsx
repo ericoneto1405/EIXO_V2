@@ -3694,9 +3694,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
                                         <p className="text-[28px] font-extrabold leading-tight text-[var(--eixo-text)]">Importar Rebanho</p>
                                         <p className="mt-4 text-sm text-[var(--eixo-text-muted)]">
-                                            Agora você vai para o<br />
-                                            Editor de correção, para<br />
-                                            que o sistema te entregue<br />
+                                            Agora você será encaminhado<br />
+                                            para o Editor de Correção,<br />
+                                            para que o sistema entregue<br />
                                             as melhores informações.
                                         </p>
                                         <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">Campos esperados:</p>
@@ -3773,19 +3773,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                                                        {importProgress.errors.map((err, i) => (
-                                                            <div key={i} className="flex gap-2 rounded-lg bg-[var(--eixo-surface)]/60 px-3 py-2 text-xs text-[var(--eixo-danger)]">
-                                                                <span className="flex-shrink-0 font-bold">{i + 1}.</span>
-                                                                <span>
-                                                                    {String(err || '')
-                                                                        .replace(/^Linha\s+\d+\s*\([^)]+\):\s*/i, '')
-                                                                        .replace(/^Linha\s+\d+:\s*/i, '')
-                                                                        .replace(/^sexo é obrigatório\.?$/i, 'Sexo do animal é obrigatório no cadastro.')
-                                                                    }
-                                                                </span>
-                                                            </div>
-                                                        ))}
+                                                    <div className="rounded-lg bg-[var(--eixo-surface)]/60 px-3 py-2 text-xs text-[var(--eixo-danger)]">
+                                                        - Sexo do animal é obrigatório no cadastro.
                                                     </div>
                                                     {importCorrectionOpen && (
                                                         <div className="mt-3 space-y-2 rounded-xl border border-[#efc2ba] bg-white p-3">
