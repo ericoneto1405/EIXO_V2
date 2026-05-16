@@ -3711,7 +3711,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {importCorrectionOpen && (
                                         <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
                                             <p className="text-xs font-semibold text-[var(--eixo-text)]">Passo 2</p>
-                                            <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">Corrija os campos, clique em <span className="font-semibold">Revalidar correções</span> e depois em <span className="font-semibold">Importar corrigidas</span>.</p>
+                                            <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">
+                                                Selecione os animais individualmente, ou todos com o botão <span className="font-semibold">Selecionar todas</span>. Complete a tabela do seu rebanho, com as informações obrigatórias e ao finalizar aperte <span className="font-semibold">Aplicar selecionadas</span>. Para finalizar, clique em <span className="font-semibold">Importar corrigidas</span>.
+                                            </p>
                                         </div>
                                     )}
                                     {/* Progresso durante importação */}
@@ -3748,7 +3750,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         <>
                                             {/* Card de erros — só aparece se houver erros */}
                                             {importProgress.errors.length > 0 && (
-                                                <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] p-4">
+                                                <div className={`rounded-xl p-4 ${importCorrectionOpen ? 'border border-[var(--eixo-border)] bg-[var(--eixo-surface)]' : 'border border-[#efc2ba] bg-[#fff2ef]'}`}>
                                                     {importProgress.failedRows.length > 0 && !importCorrectionOpen && (
                                                         <div className="mb-3 rounded-xl border-2 border-[#e39b8d] bg-white p-3.5 shadow-sm">
                                                             <p className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]">Passo 1 (1º ação de correção)</p>
@@ -3762,34 +3764,20 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             </button>
                                                         </div>
                                                     )}
-                                                    <div className="mb-3 flex items-center gap-2">
-                                                        <span className="text-lg">⚠️</span>
-                                                        <div>
-                                                            <p className="font-bold text-[var(--eixo-danger)]">
-                                                                {importProgress.errors.length} {importProgress.errors.length === 1 ? 'animal ainda não foi importado.' : 'animais ainda não foram importados.'}
-                                                            </p>
-                                                            <p className="text-xs text-[var(--eixo-danger)]">
-                                                                Corrija os itens abaixo, de forma simples, sem precisar voltar para planilha:
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="rounded-lg bg-[var(--eixo-surface)]/60 px-3 py-2 text-xs text-[var(--eixo-danger)]">
-                                                        - Sexo do animal é obrigatório no cadastro.
-                                                    </div>
                                                     {importCorrectionOpen && (
-                                                        <div className="mt-3 space-y-2 rounded-xl border border-[#efc2ba] bg-white p-3">
+                                                        <div className="mt-3 space-y-2 rounded-xl border border-[var(--eixo-border)] bg-white p-3">
                                                             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-2">
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setImportCorrectionRows((prev) => prev.map((row) => ({ ...row, selected: true })))}
-                                                                    className="rounded-lg border border-[var(--eixo-border)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]"
+                                                                    className="rounded-lg border border-[#c7b898] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[var(--eixo-text)] shadow-sm transition-colors hover:bg-[#f6efe3]"
                                                                 >
                                                                     Selecionar todas
                                                                 </button>
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setImportCorrectionRows((prev) => prev.map((row) => ({ ...row, selected: false })))}
-                                                                    className="rounded-lg border border-[var(--eixo-border)] bg-white px-2 py-1 text-[11px] font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]"
+                                                                    className="rounded-lg border border-[#c7b898] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-[var(--eixo-text)] shadow-sm transition-colors hover:bg-[#f6efe3]"
                                                                 >
                                                                     Limpar seleção
                                                                 </button>
@@ -3801,12 +3789,24 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                     <option value="sexo">Sexo</option>
                                                                     <option value="raca">Raça</option>
                                                                 </select>
-                                                                <input
-                                                                    value={bulkCorrectionValue}
-                                                                    onChange={(event) => setBulkCorrectionValue(event.target.value)}
-                                                                    placeholder="Valor para aplicar"
-                                                                    className="rounded-lg border border-[var(--eixo-border)] bg-white px-2 py-1 text-[11px] text-[var(--eixo-text)]"
-                                                                />
+                                                                {bulkCorrectionField === 'sexo' ? (
+                                                                    <select
+                                                                        value={bulkCorrectionValue}
+                                                                        onChange={(event) => setBulkCorrectionValue(event.target.value)}
+                                                                        className="rounded-lg border border-[var(--eixo-border)] bg-white px-2 py-1 text-[11px] text-[var(--eixo-text)]"
+                                                                    >
+                                                                        <option value="">Selecione o sexo</option>
+                                                                        <option value="MACHO">Macho</option>
+                                                                        <option value="FEMEA">Fêmea</option>
+                                                                    </select>
+                                                                ) : (
+                                                                    <input
+                                                                        value={bulkCorrectionValue}
+                                                                        onChange={(event) => setBulkCorrectionValue(event.target.value)}
+                                                                        placeholder="Valor para aplicar"
+                                                                        className="rounded-lg border border-[var(--eixo-border)] bg-white px-2 py-1 text-[11px] text-[var(--eixo-text)]"
+                                                                    />
+                                                                )}
                                                                 <button
                                                                     type="button"
                                                                     onClick={applyBulkCorrectionValue}
@@ -3845,11 +3845,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                                     />
                                                                                 </td>
                                                                                 <td className="px-2 py-2">
-                                                                                    <input
+                                                                                    <select
                                                                                         value={row.values.sexo}
                                                                                         onChange={(event) => setImportCorrectionRows((prev) => prev.map((item) => item.id === row.id ? { ...item, values: { ...item.values, sexo: event.target.value } } : item))}
                                                                                         className={`w-full rounded-lg border px-2 py-1 ${row.fieldErrors.sexo ? 'border-[#ef4444]' : 'border-[var(--eixo-border)]'}`}
-                                                                                    />
+                                                                                    >
+                                                                                        <option value="">Selecione</option>
+                                                                                        <option value="MACHO">Macho</option>
+                                                                                        <option value="FEMEA">Fêmea</option>
+                                                                                    </select>
                                                                                 </td>
                                                                                 <td className="px-2 py-2">
                                                                                     <input
@@ -3911,10 +3915,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                     {deferredCorrectionCount} {deferredCorrectionCount === 1 ? 'linha marcada' : 'linhas marcadas'} para revisar depois.
                                                                 </p>
                                                             )}
-                                                            <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
-                                                                <p className="text-xs font-semibold text-[var(--eixo-text)]">Passo 3</p>
-                                                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">Depois de importar as corrigidas, finalize no rodapé em <span className="font-semibold">Concluir</span>.</p>
-                                                            </div>
                                                         </div>
                                                     )}
                                                 </div>
