@@ -577,6 +577,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [bulkCorrectionValue, setBulkCorrectionValue] = useState('');
     const [deferredCorrectionCount, setDeferredCorrectionCount] = useState(0);
     const [importSessionSuccessCount, setImportSessionSuccessCount] = useState(0);
+    const [importReasonModalOpen, setImportReasonModalOpen] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const headerFilterRef = useRef<HTMLDivElement | null>(null);
@@ -1903,6 +1904,36 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         && importProgress.success === 0
         && importProgress.errors.length > 0,
     );
+
+    const importFailureReasons = useMemo(() => {
+        if (!importProgress?.errors?.length) return [];
+        const normalized = new Set<string>();
+        for (const err of importProgress.errors) {
+            const lower = String(err || '').toLowerCase();
+            if (lower.includes('identificação já cadastrada nesta fazenda')) {
+                normalized.add('Já existe animal com o mesmo ID nesta fazenda.');
+                continue;
+            }
+            if (lower.includes('sexo é obrigatório')) {
+                normalized.add('Sexo do animal é obrigatório no cadastro.');
+                continue;
+            }
+            if (lower.includes('raça é obrigatória')) {
+                normalized.add('Raça do animal é obrigatória no cadastro.');
+                continue;
+            }
+            if (lower.includes('brinco duplicado na planilha')) {
+                normalized.add('Existem IDs duplicados na planilha.');
+                continue;
+            }
+            if (lower.includes('identificação (brinco) não encontrada')) {
+                normalized.add('Há linha sem identificação (ID/Brinco).');
+                continue;
+            }
+            normalized.add('Existem linhas com dados obrigatórios inválidos.');
+        }
+        return Array.from(normalized);
+    }, [importProgress]);
 
     const handleCreateAnimal = async (event: React.FormEvent) => {
         event.preventDefault();
@@ -3801,6 +3832,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             >
                                                                 Abrir editor de correção
                                                             </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => setImportReasonModalOpen(true)}
+                                                                className="mt-2 inline-flex w-full items-center justify-center rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                            >
+                                                                Ver motivo da não importação
+                                                            </button>
                                                         </div>
                                                     )}
                                                     {importCorrectionOpen && (
@@ -4134,6 +4172,41 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
                             >
                                 Confirmar e importar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {importReasonModalOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                    <div className="w-full max-w-md rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
+                        <div className="border-b border-[var(--eixo-border)] px-5 py-4">
+                            <p className="text-base font-bold text-[var(--eixo-text)]">Motivo da não importação</p>
+                            <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">
+                                Alguns animais não foram importados porque faltam dados obrigatórios.
+                            </p>
+                        </div>
+                        <div className="space-y-2 px-5 py-4">
+                            {importFailureReasons.length > 0 ? (
+                                importFailureReasons.map((reason) => (
+                                    <p key={reason} className="rounded-lg bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)]">
+                                        - {reason}
+                                    </p>
+                                ))
+                            ) : (
+                                <p className="text-sm text-[var(--eixo-text-muted)]">
+                                    Não foi possível identificar os motivos.
+                                </p>
+                            )}
+                        </div>
+                        <div className="flex justify-end border-t border-[var(--eixo-border)] px-5 py-4">
+                            <button
+                                type="button"
+                                onClick={() => setImportReasonModalOpen(false)}
+                                className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
+                            >
+                                Entendi
                             </button>
                         </div>
                     </div>
