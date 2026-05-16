@@ -242,7 +242,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
                     </div>
                     <div>
                         <div className="flex items-end gap-2">
-                            <img src="/logo_eixo_primary.svg" alt="eixo" className="h-5 w-auto" />
+                            <img src="/logo_eixo_official.svg" alt="eixo" className="h-5 w-auto" />
                             <span className="pb-[1px] text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--eixo-graphite)]">
                                 Suporte
                             </span>
