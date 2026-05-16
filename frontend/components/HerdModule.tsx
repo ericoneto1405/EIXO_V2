@@ -3774,6 +3774,19 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             </p>
                                                         </div>
                                                     </div>
+                                                    {importProgress.failedRows.length > 0 && !importCorrectionOpen && (
+                                                        <div className="mb-3 rounded-xl border-2 border-[#e39b8d] bg-white p-3.5 shadow-sm">
+                                                            <p className="text-xs font-bold uppercase tracking-wide text-[var(--eixo-danger)]">Passo 1 (ação principal)</p>
+                                                            <p className="mt-1 text-sm font-semibold text-[var(--eixo-danger)]">Abra o editor para corrigir as linhas com erro e continuar a importação.</p>
+                                                            <button
+                                                                type="button"
+                                                                onClick={openInlineCorrection}
+                                                                className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-[#e39b8d] bg-[#fbede8] px-3 py-2.5 text-sm font-bold text-[var(--eixo-danger)] hover:bg-[#f8ded6]"
+                                                            >
+                                                                Abrir editor de correção
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                     <div className="space-y-1.5 max-h-40 overflow-y-auto">
                                                         {importProgress.errors.map((err, i) => (
                                                             <div key={i} className="flex gap-2 rounded-lg bg-[var(--eixo-surface)]/60 px-3 py-2 text-xs text-[var(--eixo-danger)]">
@@ -3782,19 +3795,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             </div>
                                                         ))}
                                                     </div>
-                                                    {importProgress.failedRows.length > 0 && !importCorrectionOpen && (
-                                                        <div className="mt-3 rounded-lg border border-[#efc2ba] bg-white p-3">
-                                                            <p className="text-xs font-semibold text-[var(--eixo-danger)]">Passo 1</p>
-                                                            <p className="mt-0.5 text-xs text-[var(--eixo-danger)]">Abra o editor e corrija os campos das linhas com erro.</p>
-                                                            <button
-                                                                type="button"
-                                                                onClick={openInlineCorrection}
-                                                                className="mt-2 rounded-xl border border-[#efc2ba] bg-white px-3 py-2 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[#fff7f5]"
-                                                            >
-                                                                Abrir editor de correção
-                                                            </button>
-                                                        </div>
-                                                    )}
                                                     {importCorrectionOpen && (
                                                         <div className="mt-3 space-y-2 rounded-xl border border-[#efc2ba] bg-white p-3">
                                                             <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
