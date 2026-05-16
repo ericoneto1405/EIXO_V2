@@ -3580,7 +3580,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
             {importModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
+                    <div className="flex max-h-[90vh] w-full max-w-5xl flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl xl:max-w-6xl">
 
                         <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
                             <div>
@@ -3616,13 +3616,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
                             {!importProgress && (
                                 <>
-                                    <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+                                    <div className="grid gap-3 lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr]">
                                         <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
                                             <p className="text-[28px] font-extrabold leading-tight text-[var(--eixo-text)]">Importar Rebanho</p>
-                                            <p className="mt-4 text-sm text-[var(--eixo-text-muted)]">
+                                            <p className="mt-4 max-w-[29ch] text-sm text-[var(--eixo-text-muted)]">
                                                 Primeiramente selecione o arquivo <span className="font-semibold">xlsx</span> em seu computador.
                                             </p>
-                                            <p className="mt-4 text-sm text-[var(--eixo-text-muted)]">
+                                            <p className="mt-3 max-w-[29ch] text-sm text-[var(--eixo-text-muted)]">
                                                 Em seguida, selecione a coluna desejada ao lado e nos diga em qual categoria ela se encaixa.
                                             </p>
                                             <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">Valores que podem ser importados:</p>
@@ -3641,7 +3641,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                 </div>
                                             )}
                                             <div className="overflow-x-auto">
-                                                <table className="w-full min-w-[640px] text-sm">
+                                                <table className="w-full min-w-[560px] text-sm xl:min-w-[600px]">
                                                     <thead>
                                                         <tr>
                                                             {importHeaders.map((h) => (
