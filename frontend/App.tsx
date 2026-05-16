@@ -1214,10 +1214,10 @@ const AppContent: React.FC = () => {
 
             {/* ── Eixo Suporte — botão flutuante + painel ── */}
             {isAuthenticated && (
-                <div ref={supportRef} className="fixed bottom-6 right-6 top-6 z-50 flex flex-col items-end justify-end gap-3">
+                <div ref={supportRef} className="pointer-events-none fixed bottom-6 right-6 top-6 z-50 flex flex-col items-end justify-end gap-3">
                     {/* Painel de chat */}
                     {isSupportOpen && (
-                        <div className="h-[560px] max-h-[calc(100dvh-140px)] w-[360px] max-w-[calc(100vw-32px)]">
+                        <div className="pointer-events-auto h-[560px] max-h-[calc(100dvh-140px)] w-[360px] max-w-[calc(100vw-32px)]">
                             <AssistantChat
                                 onClose={() => setIsSupportOpen(false)}
                                 farmId={selectedFarmId}
@@ -1226,7 +1226,7 @@ const AppContent: React.FC = () => {
                     )}
 
                     {/* Botão FAB — balão de fala */}
-                    <div className="relative">
+                    <div className="pointer-events-auto relative">
                         {/* Corpo do balão */}
                         <button
                             type="button"
