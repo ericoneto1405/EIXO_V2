@@ -3694,7 +3694,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
                                         <p className="text-[28px] font-extrabold leading-tight text-[var(--eixo-text)]">Importar Rebanho</p>
                                         <p className="mt-4 text-sm text-[var(--eixo-text-muted)]">
-                                            Continue a revisão das linhas nesta mesma tela.
+                                            Agora você vai para o<br />
+                                            Editor de correção, para<br />
+                                            que o sistema te entregue<br />
+                                            as melhores informações.
                                         </p>
                                         <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">Campos esperados:</p>
                                         <ul className="mt-2 list-disc pl-5 text-sm text-[var(--eixo-text-muted)]">
@@ -3748,12 +3751,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                 <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] p-4">
                                                     {importProgress.failedRows.length > 0 && !importCorrectionOpen && (
                                                         <div className="mb-3 rounded-xl border-2 border-[#e39b8d] bg-white p-3.5 shadow-sm">
-                                                            <p className="text-xs font-bold uppercase tracking-wide text-[var(--eixo-danger)]">Passo 1 (ação principal)</p>
-                                                            <p className="mt-1 text-sm font-semibold text-[var(--eixo-danger)]">Abra o editor para corrigir as linhas com erro e continuar a importação.</p>
+                                                            <p className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]">Passo 1 (1º ação de correção)</p>
+                                                            <p className="mt-1 text-sm font-semibold text-[#1a1a1a]">Abra o editor para corrigir as linhas com erro e continuar a importação.</p>
                                                             <button
                                                                 type="button"
                                                                 onClick={openInlineCorrection}
-                                                                className="mt-3 inline-flex w-full items-center justify-center rounded-xl border border-[#e39b8d] bg-[#fbede8] px-3 py-2.5 text-sm font-bold text-[var(--eixo-danger)] hover:bg-[#f8ded6]"
+                                                                className="mt-3 inline-flex w-full items-center justify-center rounded-xl bg-[var(--eixo-green)] px-3 py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
                                                             >
                                                                 Abrir editor de correção
                                                             </button>
@@ -3763,10 +3766,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                         <span className="text-lg">⚠️</span>
                                                         <div>
                                                             <p className="font-bold text-[var(--eixo-danger)]">
-                                                                {importProgress.errors.length} {importProgress.errors.length === 1 ? 'linha não foi importada' : 'linhas não foram importadas'}
+                                                                {importProgress.errors.length} {importProgress.errors.length === 1 ? 'animal ainda não foi importado.' : 'animais ainda não foram importados.'}
                                                             </p>
                                                             <p className="text-xs text-[var(--eixo-danger)]">
-                                                                Corrija os itens abaixo aqui no sistema e continue sem sair deste modal.
+                                                                Corrija os itens abaixo, de forma simples, sem precisar voltar para planilha:
                                                             </p>
                                                         </div>
                                                     </div>
@@ -3774,7 +3777,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                         {importProgress.errors.map((err, i) => (
                                                             <div key={i} className="flex gap-2 rounded-lg bg-[var(--eixo-surface)]/60 px-3 py-2 text-xs text-[var(--eixo-danger)]">
                                                                 <span className="flex-shrink-0 font-bold">{i + 1}.</span>
-                                                                <span>{err}</span>
+                                                                <span>
+                                                                    {String(err || '')
+                                                                        .replace(/^Linha\s+\d+\s*\([^)]+\):\s*/i, '')
+                                                                        .replace(/^Linha\s+\d+:\s*/i, '')
+                                                                        .replace(/^sexo é obrigatório\.?$/i, 'Sexo do animal é obrigatório no cadastro.')
+                                                                    }
+                                                                </span>
                                                             </div>
                                                         ))}
                                                     </div>
