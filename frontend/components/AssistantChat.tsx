@@ -69,14 +69,10 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
         const stored = window.localStorage.getItem(storageKey);
         if (stored) {
             setConversationId(stored);
-            return;
         }
-        const created = crypto.randomUUID();
-        window.localStorage.setItem(storageKey, created);
-        setConversationId(created);
     }, [farmId]);
 
-    const loadRecentConversations = async (targetConversationId?: string) => {
+    const loadRecentConversations = async () => {
         try {
             const query = new URLSearchParams();
             query.set('limit', '3');
@@ -89,14 +85,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
             const data = await response.json().catch(() => ({}));
             const fetched = Array.isArray(data?.conversations) ? data.conversations : [];
             setRecentConversations(fetched);
-
-            if (!conversationId && fetched.length > 0) {
-                const selectedId = targetConversationId || fetched[0]?.conversationId;
-                if (selectedId) {
-                    setConversationId(selectedId);
-                    window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, selectedId);
-                }
-            }
         } catch {
             // silencioso
         }
@@ -170,7 +158,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
                 window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, data.conversationId);
             }
             await loadConversationMessages(data?.conversationId || conversationId);
-            await loadRecentConversations(data?.conversationId || conversationId);
+            await loadRecentConversations();
         } catch (error: any) {
             setMessages(prev => [...prev, {
                 role: 'model',
@@ -265,13 +253,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        onClick={handleCreateNewConversation}
-                        className="rounded-lg bg-[var(--eixo-text)] px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-[var(--eixo-graphite)]"
-                    >
-                        Nova conversa
-                    </button>
-                    <button
-                        type="button"
                         onClick={onClose}
                         className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
                         aria-label="Fechar"
@@ -307,11 +288,11 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
                                 }`}
                                 title={item.preview || item.conversationId}
                             >
-                                <span className="block truncate">
-                                    {(item.preview || 'Sem texto').slice(0, 28)}
+                                <span className="block truncate text-left">
+                                    Assunto: {(item.preview || 'Sem texto').slice(0, 24)}
                                 </span>
-                                <span className={`block text-[10px] ${conversationId === item.conversationId ? 'text-white/80' : 'text-[var(--eixo-text-muted)]'}`}>
-                                    {formatConversationDate(item.lastAt)}
+                                <span className={`block text-left text-[10px] ${conversationId === item.conversationId ? 'text-white/80' : 'text-[var(--eixo-text-muted)]'}`}>
+                                    Data: {formatConversationDate(item.lastAt)}
                                 </span>
                             </button>
                         ))}
@@ -396,6 +377,13 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
 
             {/* Input */}
             <div className="border-t border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3">
+                <button
+                    type="button"
+                    onClick={handleCreateNewConversation}
+                    className="mb-2 w-full rounded-xl bg-[var(--eixo-text)] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-graphite)]"
+                >
+                    Iniciar nova conversa
+                </button>
                 <div className={`flex items-center gap-2 rounded-2xl border bg-[var(--eixo-surface-soft)] px-3 py-2 transition-colors ${inputMessage.length >= MAX_CHARS ? 'border-[#c0644a]' : 'border-[var(--eixo-border)]'}`}>
                     <input
                         ref={inputRef}
@@ -403,15 +391,15 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value.slice(0, MAX_CHARS))}
                         onKeyDown={handleKeyDown}
-                        placeholder="Digite sua dúvida..."
-                        disabled={isLoading}
+                        placeholder={conversationId ? 'Digite sua dúvida...' : 'Escolha um histórico ou inicie nova conversa'}
+                        disabled={isLoading || !conversationId}
                         maxLength={MAX_CHARS}
                         className="flex-1 bg-transparent text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:outline-none disabled:opacity-50"
                     />
                     <button
                         type="button"
                         onClick={() => void sendMessage()}
-                        disabled={isLoading || !inputMessage.trim()}
+                        disabled={isLoading || !inputMessage.trim() || !conversationId}
                         className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--eixo-text)] text-white transition-colors hover:bg-[var(--eixo-graphite)] disabled:opacity-40"
                         aria-label="Enviar"
                     >

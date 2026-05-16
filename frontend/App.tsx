@@ -43,6 +43,23 @@ const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
 const HQPage = React.lazy(() => import('./components/HQPage'));
 
+const WEB_DEVICE_KEY_STORAGE = 'eixo:web:device-key';
+const getWebDeviceKey = () => {
+    try {
+        const existing = window.localStorage.getItem(WEB_DEVICE_KEY_STORAGE);
+        if (existing && existing.trim()) {
+            return existing.trim();
+        }
+        const generated = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+            ? crypto.randomUUID()
+            : `web-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+        window.localStorage.setItem(WEB_DEVICE_KEY_STORAGE, generated);
+        return generated;
+    } catch {
+        return `web-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`;
+    }
+};
+
 interface User {
     id: string;
     name: string;
@@ -553,11 +570,12 @@ const AppContent: React.FC = () => {
     const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
         setAuthError(null);
         try {
+            const webDeviceKey = getWebDeviceKey();
             const response = await fetch(buildApiUrl('/auth/login'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ email, password, rememberMe }),
+                body: JSON.stringify({ email, password, rememberMe, webDeviceKey }),
             });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {

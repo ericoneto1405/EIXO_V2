@@ -1892,7 +1892,24 @@ const recordActivityLog = async (req, { statusCode = null, requestMeta = null } 
     }
 };
 
-const createSessionForUser = async (userId, req, { deviceId = null } = {}) => {
+const WEB_DEVICE_MARKER = '::eixo-web-device:';
+
+const sanitizeWebDeviceKey = (value) => {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim();
+    if (!normalized) return null;
+    if (!/^[A-Za-z0-9._:-]{8,128}$/.test(normalized)) return null;
+    return normalized;
+};
+
+const buildSessionUserAgent = (req, webDeviceKey = null) => {
+    const baseUserAgent = req.get('user-agent') || null;
+    if (!webDeviceKey) return baseUserAgent;
+    if (!baseUserAgent) return `${WEB_DEVICE_MARKER}${webDeviceKey}`;
+    return `${baseUserAgent}${WEB_DEVICE_MARKER}${webDeviceKey}`;
+};
+
+const createSessionForUser = async (userId, req, { deviceId = null, webDeviceKey = null } = {}) => {
     const token = generateSessionToken();
     const tokenHash = hashSessionToken(token);
     const expiresAt = new Date(Date.now() + SESSION_LOGIN_TTL_MS);
@@ -1903,7 +1920,7 @@ const createSessionForUser = async (userId, req, { deviceId = null } = {}) => {
             deviceId,
             tokenHash,
             expiresAt,
-            userAgent: req.get('user-agent') || null,
+            userAgent: buildSessionUserAgent(req, webDeviceKey),
             ip: req.ip,
         },
     });
@@ -2867,7 +2884,7 @@ app.post('/auth/recover-email/verify', async (req, res) => {
 });
 
 app.post('/auth/login', async (req, res) => {
-    const { email, password } = req.body || {};
+    const { email, password, webDeviceKey } = req.body || {};
     const rateLimitKeys = buildLoginRateLimitKeys(email, req.ip);
 
     if (isAnyLoginRateLimited(rateLimitKeys)) {
@@ -2908,11 +2925,11 @@ app.post('/auth/login', async (req, res) => {
 
         clearLoginRateLimits(rateLimitKeys);
 
-        // Sessão única por dispositivo:
-        // - Mantém sessões do mesmo navegador/dispositivo (mesmo IP + user-agent).
-        // - Revoga sessões de outros dispositivos.
-        const currentIp = req.ip || '';
-        const currentUserAgent = req.get('user-agent') || '';
+        // Sessão única por dispositivo real:
+        // - Mantém múltiplas abas no mesmo navegador/dispositivo.
+        // - Revoga apenas sessões de outro dispositivo.
+        const normalizedWebDeviceKey = sanitizeWebDeviceKey(webDeviceKey);
+        const currentSessionUserAgent = buildSessionUserAgent(req, normalizedWebDeviceKey);
         await prisma.session.updateMany({
             where: {
                 userId: user.id,
@@ -2923,12 +2940,7 @@ app.post('/auth/login', async (req, res) => {
                     {
                         AND: [
                             { deviceId: null },
-                            {
-                                OR: [
-                                    { ip: { not: currentIp } },
-                                    { userAgent: { not: currentUserAgent } },
-                                ],
-                            },
+                            { userAgent: { not: currentSessionUserAgent } },
                         ],
                     },
                 ],
@@ -2936,7 +2948,9 @@ app.post('/auth/login', async (req, res) => {
             data: { revokedAt: new Date() },
         });
 
-        const { token, expiresAt } = await createSessionForUser(user.id, req);
+        const { token, expiresAt } = await createSessionForUser(user.id, req, {
+            webDeviceKey: normalizedWebDeviceKey,
+        });
 
         res.cookie(SESSION_COOKIE_NAME, token, buildCookieOptions());
         return res.json({
