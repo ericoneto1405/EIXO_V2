@@ -1506,7 +1506,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         return Array.from(uniq.values()).slice(0, 10);
     }, [importMapping, importRows]);
 
-    const validateImportBeforeSubmit = () => {
+    const validateImportBeforeSubmit = async () => {
+        if (!farmId) return false;
         const errors: string[] = [];
         const failedRows: Record<string, string>[] = [];
         const mappingEntries = Object.entries(importMapping);
@@ -1535,6 +1536,28 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
         const seenBrinco = new Set<string>();
         const duplicatedBrinco = new Set<string>();
+        const normalizedExistingBrincos = new Set<string>();
+        const normalizeBrinco = (value: string) => String(value || '').trim().toUpperCase();
+
+        try {
+            const [commercialAnimals, poAnimals] = await Promise.all([
+                listAnimals(farmId, 'COMMERCIAL'),
+                listAnimals(farmId, 'PO'),
+            ]);
+            [...commercialAnimals, ...poAnimals].forEach((animal) => {
+                const normalized = normalizeBrinco(animal.brinco || '');
+                if (normalized) normalizedExistingBrincos.add(normalized);
+            });
+        } catch {
+            setImportProgress({
+                total: importRows.length,
+                success: 0,
+                errors: ['Não foi possível validar IDs já cadastrados na fazenda. Tente novamente em instantes.'],
+                failedRows: [],
+                weighingIssues: [],
+            });
+            return false;
+        }
         for (const row of importRows) {
             const brinco = getValue(row, 'brinco');
             if (!brinco) continue;
@@ -1552,6 +1575,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             }
             if (duplicatedBrinco.has(brinco)) {
                 errors.push(`Linha ${i + 2} (${brinco}): brinco duplicado na planilha.`);
+                failedRows.push(row);
+                continue;
+            }
+            if (normalizedExistingBrincos.has(normalizeBrinco(brinco))) {
+                errors.push(`Linha ${i + 2} (${brinco}): identificação já cadastrada nesta fazenda.`);
                 failedRows.push(row);
                 continue;
             }
@@ -1856,9 +1884,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         }
     };
 
-    const handleImportStart = () => {
+    const handleImportStart = async () => {
         setImportProgress(null);
-        if (!validateImportBeforeSubmit()) {
+        if (!(await validateImportBeforeSubmit())) {
             return;
         }
         const hasCategoriaMap = Object.values(importMapping).includes('categoria');
@@ -3748,6 +3776,17 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {/* Resultado final */}
                                     {!isImporting && (
                                         <>
+                                            {importProgress.errors.length === 0 && (
+                                                <div className="rounded-xl border border-[#c8ddc4] bg-[var(--eixo-green-soft)] p-4 flex items-center gap-3">
+                                                    <span className="text-2xl">✓</span>
+                                                    <div>
+                                                        <p className="font-bold text-[var(--eixo-text)]">
+                                                            {importProgress.success} {importProgress.success === 1 ? 'animal importado' : 'animais importados'} com sucesso
+                                                        </p>
+                                                        <p className="text-sm text-[var(--eixo-success)]">Todos os registros foram processados sem erros.</p>
+                                                    </div>
+                                                </div>
+                                            )}
                                             {/* Card de erros — só aparece se houver erros */}
                                             {importProgress.errors.length > 0 && (
                                                 <div className={`rounded-xl p-4 ${importCorrectionOpen ? 'border border-[var(--eixo-border)] bg-[var(--eixo-surface)]' : 'border border-[#efc2ba] bg-[#fff2ef]'}`}>
