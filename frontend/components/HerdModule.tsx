@@ -3743,43 +3743,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {/* Resultado final */}
                                     {!isImporting && (
                                         <>
-                                            {importFailedWithoutSuccess && (
-                                                <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] p-4">
-                                                    <p className="font-bold text-[var(--eixo-danger)]">
-                                                        Nenhum animal foi salvo nesta tentativa.
-                                                    </p>
-                                                    <p className="mt-1 text-sm text-[var(--eixo-danger)]">
-                                                        Corrija os erros listados abaixo e reimporte o arquivo.
-                                                    </p>
-                                                </div>
-                                            )}
-                                            {/* Card de sucesso */}
-                                            <div className="rounded-xl border border-[#c8ddc4] bg-[var(--eixo-green-soft)] p-4 flex items-center gap-3">
-                                                <span className="text-2xl">✓</span>
-                                                <div>
-                                                    <p className="font-bold text-[var(--eixo-text)]">
-                                                        {importProgress.success} {importProgress.success === 1 ? 'animal importado' : 'animais importados'} com sucesso
-                                                    </p>
-                                                    {importProgress.errors.length === 0 && (
-                                                        <p className="text-sm text-[var(--eixo-success)]">Todos os registros foram processados sem erros.</p>
-                                                    )}
-                                                </div>
-                                            </div>
-
                                             {/* Card de erros — só aparece se houver erros */}
                                             {importProgress.errors.length > 0 && (
                                                 <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] p-4">
-                                                    <div className="flex items-center gap-2 mb-3">
-                                                        <span className="text-lg">⚠️</span>
-                                                        <div>
-                                                            <p className="font-bold text-[var(--eixo-danger)]">
-                                                                {importProgress.errors.length} {importProgress.errors.length === 1 ? 'linha não foi importada' : 'linhas não foram importadas'}
-                                                            </p>
-                                                            <p className="text-xs text-[var(--eixo-danger)]">
-                                                                Corrija os itens abaixo aqui no sistema e continue sem sair deste modal.
-                                                            </p>
-                                                        </div>
-                                                    </div>
                                                     {importProgress.failedRows.length > 0 && !importCorrectionOpen && (
                                                         <div className="mb-3 rounded-xl border-2 border-[#e39b8d] bg-white p-3.5 shadow-sm">
                                                             <p className="text-xs font-bold uppercase tracking-wide text-[var(--eixo-danger)]">Passo 1 (ação principal)</p>
@@ -3793,6 +3759,17 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             </button>
                                                         </div>
                                                     )}
+                                                    <div className="mb-3 flex items-center gap-2">
+                                                        <span className="text-lg">⚠️</span>
+                                                        <div>
+                                                            <p className="font-bold text-[var(--eixo-danger)]">
+                                                                {importProgress.errors.length} {importProgress.errors.length === 1 ? 'linha não foi importada' : 'linhas não foram importadas'}
+                                                            </p>
+                                                            <p className="text-xs text-[var(--eixo-danger)]">
+                                                                Corrija os itens abaixo aqui no sistema e continue sem sair deste modal.
+                                                            </p>
+                                                        </div>
+                                                    </div>
                                                     <div className="space-y-1.5 max-h-40 overflow-y-auto">
                                                         {importProgress.errors.map((err, i) => (
                                                             <div key={i} className="flex gap-2 rounded-lg bg-[var(--eixo-surface)]/60 px-3 py-2 text-xs text-[var(--eixo-danger)]">
