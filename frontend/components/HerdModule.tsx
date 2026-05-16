@@ -3957,34 +3957,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                     </div>
                                                 </div>
                                             )}
-                                            {(healthOverview.withoutPaddock > 0 || healthOverview.withoutWeighing > 0) && (
-                                                <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
-                                                    <p className="text-sm font-bold text-[var(--eixo-text)]">Próxima melhor ação</p>
-                                                    <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
-                                                        Finalize a base para o manejo diário com as correções abaixo.
-                                                    </p>
-                                                    <div className="mt-3 flex flex-wrap gap-2">
-                                                        {healthOverview.withoutPaddock > 0 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleImportNextActionAssignPaddock}
-                                                                className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]"
-                                                            >
-                                                                Associar {healthOverview.withoutPaddock} {healthOverview.withoutPaddock === 1 ? 'animal sem pasto' : 'animais sem pasto'}
-                                                            </button>
-                                                        )}
-                                                        {healthOverview.withoutWeighing > 0 && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleImportNextActionWeigh}
-                                                                className="rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
-                                                            >
-                                                                Registrar pesagem de {healthOverview.withoutWeighing} {healthOverview.withoutWeighing === 1 ? 'animal' : 'animais'}
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
                                         </>
                                     )}
                                     </div>
