@@ -2478,11 +2478,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         </td>
                                         <th scope="row" className="whitespace-nowrap border-r border-[var(--eixo-border)] px-4 py-3 font-bold text-[var(--eixo-text)]">
                                             <div>{animal.identificacao}</div>
-                                            <div className="mt-1">
-                                                <span className="rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
-                                                    {animal.tipoCadastro === 'PO' ? 'P.O.' : 'Comercial'}
-                                                </span>
-                                            </div>
                                         </th>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {animal.registro
