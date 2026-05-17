@@ -194,10 +194,6 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
         {/* ── Hero ── */}
         <section className="relative overflow-hidden pb-20 pt-28 lg:pt-36 lg:pb-28">
-          <div
-            className="absolute inset-0 opacity-[0.25]"
-            style={{ backgroundImage: "url('/pasture-horizon.jpg')", backgroundPosition: 'center', backgroundSize: 'cover' }}
-          />
           <div className="absolute inset-0 bg-[rgba(255,250,241,0.58)]" />
           <div className="absolute inset-0 bg-gradient-to-b from-[var(--eixo-surface)]/90 via-[var(--eixo-bg)]/96 to-[var(--eixo-bg)]" />
 
@@ -262,8 +258,13 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         </section>
 
         {/* ── O que é grátis ── */}
-        <section id="gratis" className="bg-[var(--eixo-surface)] py-20 lg:py-28">
-          <div className="mx-auto max-w-5xl px-4 lg:px-8">
+        <section id="gratis" className="relative overflow-hidden bg-[var(--eixo-surface)] py-20 lg:py-28">
+          <div
+            className="absolute inset-0 opacity-[0.16]"
+            style={{ backgroundImage: "url('/pasture-horizon.jpg')", backgroundPosition: 'center', backgroundSize: 'cover' }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[var(--eixo-surface)]/92 via-[var(--eixo-surface)]/88 to-[var(--eixo-surface)]/94" />
+          <div className="relative z-10 mx-auto max-w-5xl px-4 lg:px-8">
             <div className="mx-auto mb-12 max-w-2xl text-center">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                 Plano Base
