@@ -195,7 +195,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         {/* ── Hero ── */}
         <section className="relative overflow-hidden pb-20 pt-28 lg:pt-36 lg:pb-28">
           <div
-            className="absolute inset-0 opacity-[0.25]"
+            className="absolute inset-0 opacity-[0.40]"
             style={{
               backgroundImage: "url('/homem de costas no curral.png')",
               backgroundPosition: 'center',
