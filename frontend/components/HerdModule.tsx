@@ -124,11 +124,6 @@ const LayersIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' })
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 14l-9 5-9-5" />
     </svg>
 );
-const DotsVerticalIcon: React.FC = () => (
-    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-    </svg>
-);
 
 const calculateAge = (birthDateString?: string | null): string => {
     if (!birthDateString) {
@@ -2264,7 +2259,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         }
     };
 
-    const renderTable = (actionLabel?: string) => {
+    const renderTable = () => {
         const totalPages = Math.ceil(sortedAnimals.length / PAGE_SIZE);
         const paginatedAnimals = sortedAnimals.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
@@ -2428,19 +2423,18 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     {renderHeaderFilter('nutricao')}
                                 </th>
-                                <th scope="col" className="px-6 py-3 text-center">Ações</th>
                             </tr>
                         </thead>
                         <tbody>
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={13} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
+                                    <td colSpan={12} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         Carregando animais...
                                     </td>
                                 </tr>
                             ) : sortedAnimals.length === 0 ? (
                                 <tr>
-                                    <td colSpan={13} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
+                                    <td colSpan={12} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         <OnboardingSpotlight
                                             step={3}
                                             totalSteps={3}
@@ -2582,16 +2576,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         </td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {animal.nutritionPlan?.nome || '—'}
-                                        </td>
-                                        <td className="px-6 py-4 text-center" onClick={(event) => event.stopPropagation()}>
-                                            <button
-                                                type="button"
-                                                className="rounded-full p-1 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-green)]"
-                                                onClick={() => setSelectedAnimal(animal)}
-                                                aria-label={actionLabel || 'Abrir detalhes'}
-                                            >
-                                                <DotsVerticalIcon />
-                                            </button>
                                         </td>
                                     </tr>
                                 ))
