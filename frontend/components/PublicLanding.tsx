@@ -217,13 +217,13 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               </div>
             </div>
 
-            <h1 className="font-brand text-balance text-3xl font-extrabold leading-[1.15] text-[var(--eixo-text)] sm:text-4xl lg:text-6xl">
-              Mais controle e visibilidade.<br />
-              <span className="text-[#7aad1a]">Menos planilhas e enrolação. Comece pelo Plano Base, sem custo<sup className="text-[0.5em] font-normal text-[var(--eixo-text-muted)]">*</sup>!</span>
+            <h1 className="font-brand text-balance text-3xl font-semibold tracking-[0.01em] leading-[1.12] text-[var(--eixo-text)] sm:text-4xl lg:text-6xl">
+              A fazenda no eixo.<br />
+              <span className="text-[#7aad1a]">A decisão na mão.</span>
             </h1>
 
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-[var(--eixo-text-muted)] lg:text-xl">
-              Controle do rebanho, financeiro completo, manejo de pastos, e tudo no mesmo lugar — sem precisar cadastrar cartão. Veja sua operação com clareza desde o primeiro dia.
+            <p className="mx-auto mt-6 max-w-2xl font-sans text-lg font-normal leading-relaxed text-[var(--eixo-text-muted)] lg:text-xl">
+              Controle rebanho, fazendas, financeiro, pastos e indicadores em um só lugar. Simples para começar. Forte para decidir.
             </p>
 
             <div className="mt-3 flex justify-center">
