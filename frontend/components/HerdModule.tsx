@@ -2456,7 +2456,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 paginatedAnimals.map((animal) => (
                                     <tr
                                         key={animal.id}
-                                        className="cursor-pointer border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] transition-colors duration-150 hover:bg-[var(--eixo-surface)]"
+                                        className="group cursor-pointer border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] transition-colors duration-150 hover:bg-[var(--eixo-surface)]"
                                         onClick={() => {
                                             setSelectedAnimal(animal);
                                         }}
@@ -2489,32 +2489,26 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.sexo}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{calculateAge(animal.dataNascimento)}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
-                                            {animal.currentPaddockName
-                                                ? animal.currentPaddockName
-                                                : (
-                                                    <div className="flex flex-col items-start gap-1.5">
-                                                        <span className="inline-flex items-center gap-1 rounded-full bg-[#fce8e8] px-2 py-0.5 text-[10px] font-semibold text-[#8c2020]">
-                                                            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M10.29 3.86l-8.08 14A2 2 0 003.93 21h16.14a2 2 0 001.72-3.14l-8.08-14a2 2 0 00-3.42 0z" />
-                                                            </svg>
-                                                            Sem pasto
-                                                        </span>
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setSelectedAnimals(new Set([animal.id]));
-                                                                setBulkError(null);
-                                                                setBulkTargetPastoId('');
-                                                                setBulkMoveToPastoOpen(true);
-                                                            }}
-                                                            className="inline-flex items-center rounded-lg border border-[#d7cab3] bg-[#fffaf1] px-2.5 py-1 text-[11px] font-semibold text-[#6d6558] hover:bg-[#f3ebdc]"
-                                                        >
-                                                            Associar pasto
-                                                        </button>
-                                                    </div>
-                                                )
-                                            }
+                                            {animal.currentPaddockName ? (
+                                                <span className="text-[#2f3a2d]">{animal.currentPaddockName}</span>
+                                            ) : (
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <span className="text-[#6d6558]">Sem pasto</span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setSelectedAnimals(new Set([animal.id]));
+                                                            setBulkError(null);
+                                                            setBulkTargetPastoId('');
+                                                            setBulkMoveToPastoOpen(true);
+                                                        }}
+                                                        className="invisible inline-flex items-center rounded-md border border-[#d7cab3] bg-[#fffaf1] px-2 py-0.5 text-[11px] font-semibold text-[#6d6558] opacity-0 transition-opacity duration-150 hover:bg-[#f3ebdc] group-hover:visible group-hover:opacity-100 focus:visible focus:opacity-100"
+                                                    >
+                                                        Associar
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{lots.find((l) => l.id === animal.lotId)?.name || '—'}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.categoria || '—'}</td>
