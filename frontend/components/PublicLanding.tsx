@@ -194,10 +194,18 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
         {/* ── Hero ── */}
         <section className="relative overflow-hidden pb-20 pt-28 lg:pt-36 lg:pb-28">
+          <div
+            className="absolute inset-0 opacity-[0.25]"
+            style={{
+              backgroundImage: "url('/homem de costas no curral.png')",
+              backgroundPosition: 'center',
+              backgroundSize: 'cover',
+            }}
+          />
           <div className="absolute inset-0 bg-[rgba(255,250,241,0.58)]" />
           <div className="absolute inset-0 bg-gradient-to-b from-[var(--eixo-surface)]/90 via-[var(--eixo-bg)]/96 to-[var(--eixo-bg)]" />
 
-          <div className="relative mx-auto max-w-5xl px-4 text-left lg:px-8">
+          <div className="relative z-10 mx-auto max-w-5xl px-4 text-left lg:px-8">
 
             <div className="mb-6 flex justify-center">
               <div className="inline-flex items-center gap-2 rounded-full border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
