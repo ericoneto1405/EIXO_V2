@@ -66,7 +66,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
-  const [activeNav, setActiveNav] = React.useState<'gratis' | 'como' | 'faq'>('gratis');
+  const [activeNav, setActiveNav] = React.useState<'gratis' | 'antes-depois' | 'como' | 'faq'>('gratis');
 
   React.useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -85,8 +85,9 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
   const headerButtonFont = { fontFamily: "Georgia, 'Times New Roman', serif" };
   const headerGlassButton = 'border border-white/55 bg-white/35 text-[var(--eixo-text)] shadow-[0_10px_28px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.70)] backdrop-blur-xl transition-all duration-200 hover:border-white/80 hover:bg-white/55 hover:shadow-[0_12px_34px_rgba(47,47,47,0.14),0_0_18px_rgba(182,226,58,0.18),inset_0_1px_0_rgba(255,255,255,0.80)]';
   const headerPrimaryButton = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.72)] bg-[rgba(182,226,58,0.72)] px-6 py-3 text-lg font-bold text-[#1a1a1a] shadow-[0_12px_30px_rgba(121,160,24,0.22),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-xl transition-all duration-200 hover:bg-[rgba(182,226,58,0.88)] hover:shadow-[0_14px_36px_rgba(121,160,24,0.30),0_0_22px_rgba(182,226,58,0.26),inset_0_1px_0_rgba(255,255,255,0.65)]';
-  const navItems: Array<{ label: string; id?: 'gratis' | 'como' | 'faq'; action: () => void }> = [
+  const navItems: Array<{ label: string; id?: 'gratis' | 'antes-depois' | 'como' | 'faq'; action: () => void }> = [
     { label: 'Plano Base', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
+    { label: 'Antes e Depois', id: 'antes-depois', action: () => { setActiveNav('antes-depois'); scrollTo('antes-depois'); } },
     { label: 'Como funciona', id: 'como', action: () => { setActiveNav('como'); scrollTo('como'); } },
     { label: 'Dúvidas', id: 'faq', action: () => { setActiveNav('faq'); scrollTo('faq'); } },
     { label: 'Planos', action: () => { window.location.href = '/planos'; } },
@@ -332,7 +333,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         </section>
 
         {/* ── Antes e depois ── */}
-        <section className="bg-gradient-to-b from-[#EDEDED] to-white py-20 lg:py-28">
+        <section id="antes-depois" className="bg-gradient-to-b from-[#EDEDED] to-white py-20 lg:py-28">
           <div className="mx-auto max-w-5xl px-4 lg:px-8">
             <div className="mb-12 text-center">
               <h2 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] lg:text-4xl">
