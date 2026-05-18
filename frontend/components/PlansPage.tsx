@@ -44,7 +44,7 @@ const PLANS: Plan[] = [
     },
     {
         id: 'gestao',
-        name: 'Eixo Gestão',
+        name: 'EIXO Gestão',
         badge: 'Mais popular',
         price: 'Em breve',
         priceNote: '',
@@ -55,7 +55,7 @@ const PLANS: Plan[] = [
             { text: 'Animais ilimitados', included: true },
             { text: 'Até 3 fazendas', included: true },
             { text: 'Até 5 usuários', included: true },
-            { text: 'Tudo do Plano Grátis', included: true },
+            { text: 'Tudo do EIXO Essencial', included: true },
             { text: 'Dashboard (Visão Geral)', included: true },
             { text: 'Nutrição avançada', included: true },
             { text: 'Pesagens avançadas', included: true },
@@ -67,7 +67,7 @@ const PLANS: Plan[] = [
     },
     {
         id: 'decisao',
-        name: 'Eixo Decisão',
+        name: 'EIXO Performance',
         price: 'Em breve',
         priceNote: '',
         description: 'Operação profissional, P.O. e exportação sem limites.',
@@ -77,7 +77,7 @@ const PLANS: Plan[] = [
             { text: 'Animais ilimitados', included: true },
             { text: 'Fazendas ilimitadas', included: true },
             { text: 'Usuários ilimitados', included: true },
-            { text: 'Tudo do Eixo Gestão', included: true },
+            { text: 'Tudo do EIXO Gestão', included: true },
             { text: 'Eixo Acasalamento', included: true },
             { text: 'Confinamento e contratos', included: true },
             { text: 'Rastreabilidade completa', included: true },
@@ -235,7 +235,7 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
 
                 {/* Nota de preços + Early Access */}
                 <p className="mt-8 text-center text-sm text-[#a8a29e]">
-                    Os primeiros 500 produtores que cadastrarem agora ganham <span className="font-semibold text-[var(--eixo-text)]">Plano Grátis Vitalício</span> + prioridade no suporte.
+                    Os primeiros 100 produtores que cadastrarem agora ganham <span className="font-semibold text-[var(--eixo-text)]">EIXO Base Vitalício</span> + prioridade no suporte.
                 </p>
                 <p className="mt-1 text-center text-xs text-[#a8a29e]">
                     Preços dos planos pagos em breve. Dúvidas? <a href="mailto:contato@eixo.ag" className="text-[var(--eixo-green)] hover:underline">contato@eixo.ag</a>

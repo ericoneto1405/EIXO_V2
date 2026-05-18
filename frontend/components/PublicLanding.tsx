@@ -85,12 +85,11 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
   const headerButtonFont = { fontFamily: 'Manrope, Inter, sans-serif' };
   const headerGlassButton = 'border border-white/55 bg-white/35 text-[var(--eixo-text)] shadow-[0_10px_28px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.70)] backdrop-blur-xl transition-all duration-200 hover:border-white/80 hover:bg-white/55 hover:shadow-[0_12px_34px_rgba(47,47,47,0.14),0_0_18px_rgba(182,226,58,0.18),inset_0_1px_0_rgba(255,255,255,0.80)]';
   const headerPrimaryButton = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.72)] bg-[rgba(182,226,58,0.72)] px-6 py-3 text-lg font-bold text-[#1a1a1a] shadow-[0_12px_30px_rgba(121,160,24,0.22),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-xl transition-all duration-200 hover:bg-[rgba(182,226,58,0.88)] hover:shadow-[0_14px_36px_rgba(121,160,24,0.30),0_0_22px_rgba(182,226,58,0.26),inset_0_1px_0_rgba(255,255,255,0.65)]';
-  const navItems: Array<{ label: string; id?: 'gratis' | 'antes-depois' | 'como' | 'faq'; action: () => void }> = [
+  const navItems: Array<{ label: string; id: 'gratis' | 'antes-depois' | 'como' | 'faq'; action: () => void }> = [
     { label: 'Plano Base', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
     { label: 'Antes e Depois', id: 'antes-depois', action: () => { setActiveNav('antes-depois'); scrollTo('antes-depois'); } },
     { label: 'Como funciona', id: 'como', action: () => { setActiveNav('como'); scrollTo('como'); } },
     { label: 'Dúvidas', id: 'faq', action: () => { setActiveNav('faq'); scrollTo('faq'); } },
-    { label: 'Planos', action: () => { window.location.href = '/planos'; } },
   ];
 
   return (
@@ -115,7 +114,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 type="button"
                 onClick={item.action}
                 className={`inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold tracking-[0.01em] ${
-                  item.id && item.id === activeNav
+                  item.id === activeNav
                     ? 'border border-[rgba(182,226,58,0.72)] bg-[rgba(240,249,212,0.62)] text-[var(--eixo-graphite)] shadow-[0_0_18px_rgba(182,226,58,0.22),inset_0_1px_0_rgba(255,255,255,0.70)] backdrop-blur-xl'
                     : headerGlassButton
                 }`}
@@ -135,6 +134,14 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </button>
             <button type="button" onClick={onEnter} className={`hidden rounded-xl px-6 py-3 text-lg font-semibold sm:inline-flex ${headerGlassButton}`} style={headerButtonFont}>
               Entrar
+            </button>
+            <button
+              type="button"
+              onClick={() => { window.location.href = '/planos'; }}
+              className="hidden rounded-xl border border-white/60 bg-white/45 px-6 py-3 text-lg font-semibold text-[var(--eixo-text)] shadow-[0_10px_28px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-all duration-200 hover:border-white/85 hover:bg-white/62 hover:shadow-[0_12px_34px_rgba(47,47,47,0.14),0_0_16px_rgba(182,226,58,0.14),inset_0_1px_0_rgba(255,255,255,0.82)] sm:inline-flex"
+              style={headerButtonFont}
+            >
+              Planos
             </button>
             <button type="button" onClick={onRegister} className={headerPrimaryButton} style={headerButtonFont}>
               Cadastrar no Plano Base
@@ -192,6 +199,17 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
             >
               Entrar
+            </button>
+            <div className="my-2 border-t border-[var(--eixo-border)]" />
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                window.location.href = '/planos';
+              }}
+              className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+            >
+              Planos
             </button>
           </div>
         )}
