@@ -190,14 +190,14 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         )}
       </header>
 
-      <main>
+      <main className={isScrolled ? 'pt-0' : 'pt-[92px] lg:pt-[92px]'}>
 
         {/* ── Hero ── */}
         <section
           className={`relative overflow-hidden pb-20 lg:pb-28 ${
             isScrolled
               ? '-mt-4 pt-28 lg:-mt-6 lg:pt-36'
-              : 'mt-[92px] pt-0 lg:mt-[92px] lg:pt-0'
+              : 'mt-0 pt-0'
           }`}
         >
           <div
