@@ -82,7 +82,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
   const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
   const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]';
-  const headerButtonFont = { fontFamily: "Georgia, 'Times New Roman', serif" };
+  const headerButtonFont = { fontFamily: 'Manrope, Inter, sans-serif' };
   const headerGlassButton = 'border border-white/55 bg-white/35 text-[var(--eixo-text)] shadow-[0_10px_28px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.70)] backdrop-blur-xl transition-all duration-200 hover:border-white/80 hover:bg-white/55 hover:shadow-[0_12px_34px_rgba(47,47,47,0.14),0_0_18px_rgba(182,226,58,0.18),inset_0_1px_0_rgba(255,255,255,0.80)]';
   const headerPrimaryButton = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.72)] bg-[rgba(182,226,58,0.72)] px-6 py-3 text-lg font-bold text-[#1a1a1a] shadow-[0_12px_30px_rgba(121,160,24,0.22),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-xl transition-all duration-200 hover:bg-[rgba(182,226,58,0.88)] hover:shadow-[0_14px_36px_rgba(121,160,24,0.30),0_0_22px_rgba(182,226,58,0.26),inset_0_1px_0_rgba(255,255,255,0.65)]';
   const navItems: Array<{ label: string; id?: 'gratis' | 'antes-depois' | 'como' | 'faq'; action: () => void }> = [
