@@ -82,6 +82,9 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
   const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
   const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]';
+  const headerButtonFont = { fontFamily: "Georgia, 'Times New Roman', serif" };
+  const headerGlassButton = 'border border-white/55 bg-white/35 text-[var(--eixo-text)] shadow-[0_10px_28px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.70)] backdrop-blur-xl transition-all duration-200 hover:border-white/80 hover:bg-white/55 hover:shadow-[0_12px_34px_rgba(47,47,47,0.14),0_0_18px_rgba(182,226,58,0.18),inset_0_1px_0_rgba(255,255,255,0.80)]';
+  const headerPrimaryButton = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.72)] bg-[rgba(182,226,58,0.72)] px-6 py-3 text-lg font-bold text-[#1a1a1a] shadow-[0_12px_30px_rgba(121,160,24,0.22),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-xl transition-all duration-200 hover:bg-[rgba(182,226,58,0.88)] hover:shadow-[0_14px_36px_rgba(121,160,24,0.30),0_0_22px_rgba(182,226,58,0.26),inset_0_1px_0_rgba(255,255,255,0.65)]';
   const navItems: Array<{ label: string; id?: 'gratis' | 'como' | 'faq'; action: () => void }> = [
     { label: 'Plano Base', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
     { label: 'Como funciona', id: 'como', action: () => { setActiveNav('como'); scrollTo('como'); } },
@@ -101,16 +104,19 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               Tecnologia para Gestão Pecuária
             </div>
           </div>
-          <nav className="hidden items-center rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-1.5 lg:flex">
+          <nav
+            className="hidden items-center rounded-2xl border border-white/50 bg-white/25 p-1.5 shadow-[0_14px_40px_rgba(47,47,47,0.08),inset_0_1px_0_rgba(255,255,255,0.60)] backdrop-blur-xl lg:flex"
+            style={headerButtonFont}
+          >
             {navItems.map((item) => (
               <button
                 key={item.label}
                 type="button"
                 onClick={item.action}
-                className={`inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold transition-colors duration-200 ${
+                className={`inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold tracking-[0.01em] ${
                   item.id && item.id === activeNav
-                    ? 'font-brand border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
-                    : 'font-brand border border-transparent bg-[var(--eixo-surface)] text-[var(--eixo-text)] hover:border-[var(--eixo-border)] hover:bg-[var(--eixo-bg)]'
+                    ? 'border border-[rgba(182,226,58,0.72)] bg-[rgba(240,249,212,0.62)] text-[var(--eixo-graphite)] shadow-[0_0_18px_rgba(182,226,58,0.22),inset_0_1px_0_rgba(255,255,255,0.70)] backdrop-blur-xl'
+                    : headerGlassButton
                 }`}
               >
                 {item.label}
@@ -121,15 +127,15 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             <button
               type="button"
               onClick={() => setMenuOpen((prev) => !prev)}
-              className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-2 text-[var(--eixo-text)] lg:hidden"
+              className={`rounded-xl p-2 lg:hidden ${headerGlassButton}`}
               aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <button type="button" onClick={onEnter} className="hidden rounded-xl border border-[var(--eixo-border)] bg-transparent px-6 py-3 text-lg font-brand font-semibold text-[var(--eixo-text)] transition-colors hover:border-[var(--eixo-graphite)]/40 hover:bg-[var(--eixo-surface)] sm:inline-flex">
+            <button type="button" onClick={onEnter} className={`hidden rounded-xl px-6 py-3 text-lg font-semibold sm:inline-flex ${headerGlassButton}`} style={headerButtonFont}>
               Entrar
             </button>
-            <button type="button" onClick={onRegister} className={btnPrimary}>
+            <button type="button" onClick={onRegister} className={headerPrimaryButton} style={headerButtonFont}>
               Cadastrar no Plano Base
             </button>
           </div>
