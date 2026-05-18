@@ -9,7 +9,7 @@ export default defineConfig(() => {
         host: '0.0.0.0',
         proxy: {
           '/api/': {
-            target: 'https://eixo.agr.br',
+            target: 'http://localhost:3001',
             changeOrigin: true,
             secure: false,
           },
