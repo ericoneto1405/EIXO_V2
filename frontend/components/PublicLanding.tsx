@@ -274,7 +274,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         {/* ── O que é grátis ── */}
         <section id="gratis" className="relative overflow-hidden bg-[var(--eixo-surface)] py-20 lg:py-28">
           <div
-            className="absolute inset-0 opacity-[0.16]"
+            className="absolute inset-0 opacity-[0.40]"
             style={{ backgroundImage: "url('/pasture-horizon.jpg')", backgroundPosition: 'center', backgroundSize: 'cover' }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[var(--eixo-surface)]/92 via-[var(--eixo-surface)]/88 to-[var(--eixo-surface)]/94" />
