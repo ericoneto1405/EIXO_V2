@@ -190,21 +190,21 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         )}
       </header>
 
-      <main className={isScrolled ? 'pt-0' : 'pt-[92px] lg:pt-[92px]'}>
+      <main className="pt-[75px]">
 
         {/* ── Hero ── */}
         <section
-          className={`relative overflow-hidden pb-20 lg:pb-28 ${
+          className={`relative min-h-[calc(100svh-75px)] overflow-hidden pb-20 lg:pb-24 ${
             isScrolled
-              ? '-mt-4 pt-28 lg:-mt-6 lg:pt-36'
-              : 'mt-0 pt-0'
+              ? '-mt-4 pt-24 lg:-mt-6 lg:pt-32'
+              : 'pt-12 lg:pt-16'
           }`}
         >
           <div
             className="absolute inset-0 opacity-[0.60]"
             style={{
               backgroundImage: "url('/homem de costas no curral.png')",
-              backgroundPosition: 'center',
+              backgroundPosition: 'center 42%',
               backgroundSize: 'cover',
             }}
           />
