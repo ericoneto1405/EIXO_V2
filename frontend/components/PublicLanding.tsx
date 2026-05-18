@@ -93,7 +93,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
     <div className="min-h-screen bg-[var(--eixo-bg)] text-[var(--eixo-text)]">
 
       {/* ── Nav ── */}
-      <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${isScrolled ? 'border-b border-[var(--eixo-border)] bg-[var(--eixo-bg)]/95 shadow-sm backdrop-blur' : 'bg-[rgba(247,248,246,0.58)] backdrop-blur-[2px]'}`}>
+      <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${isScrolled ? 'border-b border-[var(--eixo-border)] bg-[var(--eixo-bg)]/95 shadow-sm backdrop-blur' : 'bg-[var(--eixo-bg)]'}`}>
         <div className="mx-auto flex h-[75px] max-w-7xl items-center justify-between px-4 lg:px-8">
           <div className="inline-flex flex-col items-center leading-none">
             <img src="/logo_eixo_official.svg" alt="EIXO" className="h-[2.53575rem] w-auto" />
@@ -197,7 +197,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
           className={`relative overflow-hidden pb-20 lg:pb-28 ${
             isScrolled
               ? '-mt-4 pt-28 lg:-mt-6 lg:pt-36'
-              : 'mt-[75px] pt-0 lg:mt-[75px] lg:pt-0'
+              : 'mt-[92px] pt-0 lg:mt-[92px] lg:pt-0'
           }`}
         >
           <div
