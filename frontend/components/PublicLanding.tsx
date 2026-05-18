@@ -197,7 +197,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
           className={`relative overflow-hidden pb-20 lg:pb-28 ${
             isScrolled
               ? '-mt-4 pt-28 lg:-mt-6 lg:pt-36'
-              : 'mt-0 pt-[75px] lg:pt-[75px]'
+              : 'mt-[75px] pt-0 lg:mt-[75px] lg:pt-0'
           }`}
         >
           <div
