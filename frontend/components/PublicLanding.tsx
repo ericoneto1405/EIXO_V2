@@ -150,7 +150,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               }}
               className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
             >
-              Plano Essencial
+              Plano Base
             </button>
             <button
               type="button"
