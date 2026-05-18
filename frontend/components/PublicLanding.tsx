@@ -280,6 +280,10 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
         {/* ── O que é grátis ── */}
         <section id="gratis" className="relative overflow-hidden bg-[var(--eixo-surface)] py-20 lg:py-28">
+          <div
+            className="absolute inset-0 opacity-[0.60]"
+            style={{ backgroundImage: "url('/pasture-horizon.jpg')", backgroundPosition: 'center', backgroundSize: 'cover' }}
+          />
 
           <div className="relative z-10 mx-auto max-w-5xl px-4 lg:px-8">
             <div className="mx-auto mb-12 max-w-2xl text-center">
