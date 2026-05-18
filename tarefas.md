@@ -1,17 +1,22 @@
-# Tarefas — EIXO V2
+# Tarefas - EIXO V2
 
-## Concluído local (aguardando validação em produção)
+## Antes do próximo deploy
 
-- [x] Novo favicon com fundo branco (melhor contraste na aba do navegador).
-- [x] Ajustes de texto da Landing: “Plano Essencial” → “Plano Base” (Header, badge e frase de apoio).
-- [x] Novo título da Hero da Landing e alinhamento à esquerda.
-- [x] Sessão por dispositivo real no login web (remove falso “outro dispositivo” por troca de IP/rede).
+- [ ] Revisar textos restantes de "Plano Essencial" e trocar para "Plano Base" onde fizer sentido.
+- [ ] Conferir se `frontend/vite.config.ts` deve ficar apontando para producao ou localhost antes de commitar/deploy.
+- [ ] Rodar validacao TypeScript do frontend.
 
-## Pendências abertas (produção)
+## Publicar e validar em producao
 
-- [ ] Validar em produção o fluxo completo do modal de importação do rebanho (login, importar, correção inline, concluir com/sem pendências).
-- [ ] Publicar e validar em produção o ajuste de segurança de sessão/login (abrir navegador deve cair na landing; sem reaproveitar sessão automaticamente).
-- [ ] Publicar e validar em produção a revogação de sessão em outro dispositivo (`SESSION_REVOKED`) e o redirecionamento automático para login.
-- [ ] Validar em produção o novo comportamento de sessão por dispositivo: mesmo dispositivo mantém sessão (múltiplas abas), novo dispositivo encerra sessão anterior.
-- [ ] Publicar e validar em produção a padronização da previsão de chuva entre Header e Visão Geral.
-- [ ] Publicar e validar em produção o fallback por cidade da previsão de chuva no Header (quando não houver `lat/lng`).
+- [ ] Fluxo completo do modal de importacao do rebanho: login, importar, corrigir linhas com erro e concluir com/sem pendencias.
+- [ ] Ajuste de seguranca de sessao/login: abrir navegador deve cair na landing sem reaproveitar sessao automaticamente.
+- [ ] Revogacao de sessao em outro dispositivo: validar `SESSION_REVOKED` e redirecionamento automatico para login.
+- [ ] Sessao por dispositivo real: mesmo dispositivo mantem sessao em multiplas abas; novo dispositivo encerra sessao anterior.
+- [ ] Previsao de chuva: Header e Visao Geral devem mostrar dados padronizados.
+- [ ] Previsao de chuva no Header: validar fallback por cidade quando nao houver `lat/lng`.
+
+## Ja concluido no codigo local
+
+- [x] Novo favicon com fundo branco.
+- [x] Novo titulo da Hero da Landing e alinhamento a esquerda.
+- [x] Sessao por dispositivo real no login web.

@@ -332,7 +332,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         </section>
 
         {/* ── Antes e depois ── */}
-        <section className="bg-[var(--eixo-surface-soft)]/80 py-20 lg:py-28">
+        <section className="bg-gradient-to-b from-[#EDEDED] to-white py-20 lg:py-28">
           <div className="mx-auto max-w-5xl px-4 lg:px-8">
             <div className="mb-12 text-center">
               <h2 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] lg:text-4xl">
