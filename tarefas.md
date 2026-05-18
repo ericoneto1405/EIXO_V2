@@ -1,11 +1,5 @@
 # Tarefas - EIXO V2
 
-## Antes do próximo deploy
-
-- [ ] Revisar textos restantes de "Plano Essencial" e trocar para "Plano Base" onde fizer sentido.
-- [ ] Conferir se `frontend/vite.config.ts` deve ficar apontando para producao ou localhost antes de commitar/deploy.
-- [ ] Rodar validacao TypeScript do frontend.
-
 ## Publicar e validar em producao
 
 - [ ] Fluxo completo do modal de importacao do rebanho: login, importar, corrigir linhas com erro e concluir com/sem pendencias.
@@ -20,3 +14,6 @@
 - [x] Novo favicon com fundo branco.
 - [x] Novo titulo da Hero da Landing e alinhamento a esquerda.
 - [x] Sessao por dispositivo real no login web.
+- [x] Texto restante da Landing corrigido em `PublicLanding.tsx`: "Plano Essencial" para "Plano Base".
+- [x] `frontend/vite.config.ts` confirmado apontando para producao por enquanto.
+- [x] Validacao TypeScript do frontend executada sem erros.
