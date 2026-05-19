@@ -9,6 +9,9 @@ export const formatDateYYYYMMDD = (value) => {
 
 export const parseMarketReferenceDate = (value) => {
   if (!value) return null;
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
   const str = String(value).trim();
   const datePart = str.includes('T') ? str.split('T')[0] : str;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return null;
