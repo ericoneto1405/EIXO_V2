@@ -10233,12 +10233,6 @@ const MARKET_ALLOWED_UNITS = new Set(['ARROBA', 'CABECA', 'KG']);
 const MARKET_ALLOWED_SOURCE_TYPES = new Set(['MANUAL', 'SITE_NOTICIAS', 'CONSULTORIA', 'API', 'B3', 'OUTRO']);
 const MARKET_ALLOWED_PAYMENT_TYPES = new Set(['A_VISTA', 'TRINTA_DIAS', 'NAO_INFORMADO']);
 const MARKET_ALLOWED_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'ARCHIVED']);
-const MARKET_TREND_MOCK = {
-    fatCattleTrendPercent: 2.1,
-    replacementAnimalTrendPercent: -1.4,
-    replacementCostTrendArrobas: -0.3,
-};
-
 const formatNumberPtBr = (value, decimals = 1) => Number(value).toLocaleString('pt-BR', {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
@@ -10692,7 +10686,9 @@ const buildPartialMarketReplacementSnapshot = ({
         sourceName: base.sourceName,
         sourceBase: base.sourceBase,
         referenceDate: base.referenceDate,
-        ...MARKET_TREND_MOCK,
+        fatCattleTrendPercent: null,
+        replacementAnimalTrendPercent: null,
+        replacementCostTrendArrobas: null,
         aiInsight,
     };
 };
@@ -10885,7 +10881,7 @@ const buildMarketReplacementSnapshot = async ({ scope, farm }) => {
 
     const [fatCattlePrice, replacementPrice] = await Promise.all([
         findLatestPublishedMarketPrice({ regionId: regionContext.id, productType: 'BOI_GORDO' }),
-        findLatestPublishedMarketPrice({ regionId: regionContext.id, productType: 'BEZERRO_12M' }),
+        findLatestPublishedMarketPrice({ regionId: regionContext.id, productType: 'BEZERRO_DESMAMA' }),
     ]);
 
     if (!fatCattlePrice && !replacementPrice) {
@@ -10965,7 +10961,9 @@ const buildMarketReplacementSnapshot = async ({ scope, farm }) => {
         sourceName: base.sourceName,
         sourceBase: base.sourceBase,
         referenceDate: base.referenceDate,
-        ...MARKET_TREND_MOCK,
+        fatCattleTrendPercent: null,
+        replacementAnimalTrendPercent: null,
+        replacementCostTrendArrobas: null,
         aiInsight,
     };
 };
