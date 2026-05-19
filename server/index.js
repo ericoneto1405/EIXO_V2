@@ -10851,7 +10851,7 @@ const resolveMarketRegionContext = async ({ farm, scope }) => {
     const farmRegionContext = resolveFarmMarketRegion(farm);
     const marketTablesAvailable = hasMarketModelDelegates();
 
-    if (scope === 'farm') {
+    if (scope === 'farm' && process.env.NODE_ENV !== 'production') {
         console.log('[overview/dashboard] farm market region', {
             farmId: farm?.id || null,
             farmName: farm?.name || null,
@@ -11594,12 +11594,16 @@ app.get('/overview/dashboard', requireAuth, async (req, res) => {
         try {
             marketReplacement = await buildMarketReplacementSnapshot({ scope, farm: selectedFarm });
         } catch (marketError) {
+            const fallbackRegionContext = scope === 'farm' ? resolveFarmMarketRegion(selectedFarm) : null;
             console.error('[overview/dashboard] marketReplacement failed', {
                 scope,
                 farmId: farmId || null,
                 error: marketError?.message || 'unknown_error',
             });
-            marketReplacement = buildEmptyMarketReplacementSnapshot();
+            marketReplacement = buildEmptyMarketReplacementSnapshot({
+                region: fallbackRegionContext?.region || null,
+                state: fallbackRegionContext?.state || null,
+            });
         }
         if (!farmIds.length) {
             return res.json({

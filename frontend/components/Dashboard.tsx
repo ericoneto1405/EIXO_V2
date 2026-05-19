@@ -511,11 +511,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                         )}
                         <details className="mt-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
                             <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Detalhes</summary>
-                            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
-                                <div>
-                                    <p className="text-xs text-[var(--eixo-text-muted)]">Poder de compra</p>
-                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{fmt(marketSnapshot!.replacementAnimalsPerFinishedAnimal as number, 2)} bezerros/boi</p>
-                                </div>
+                            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
                                 <div>
                                     <p className="text-xs text-[var(--eixo-text-muted)]">Arroba do bezerro</p>
                                     <p className="text-sm font-semibold text-[var(--eixo-text)]">{fmtMoney(marketSnapshot!.replacementArrobaPrice as number)}/@</p>
