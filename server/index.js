@@ -10645,15 +10645,76 @@ const buildPartialMarketReplacementSnapshot = ({
     };
 };
 
+const resolveFarmMarketRegion = (farm) => {
+    const mapData = farm?.mapData && typeof farm.mapData === 'object' ? farm.mapData : null;
+    const farmRegion = normalizeMarketOptionalText(farm?.region || mapData?.region || mapData?.regiao || mapData?.região);
+    const farmState = normalizeMarketState(farm?.state || farm?.uf || mapData?.state || mapData?.uf);
+    const farmCity = normalizeMarketOptionalText(farm?.city || farm?.cidade || mapData?.city || mapData?.cidade);
+    const farmLat = farm?.latitude ?? farm?.lat ?? mapData?.latitude ?? mapData?.lat ?? null;
+    const farmLng = farm?.longitude ?? farm?.lng ?? mapData?.longitude ?? mapData?.lng ?? null;
+
+    return {
+        region: farmRegion,
+        state: farmState || null,
+        city: farmCity,
+        lat: farmLat,
+        lng: farmLng,
+    };
+};
+
 const resolveMarketRegionContext = async ({ farm, scope }) => {
-    const farmCity = normalizeMarketOptionalText(farm?.city);
-    if (scope === 'farm' && farmCity) {
+    const farmRegionContext = resolveFarmMarketRegion(farm);
+
+    if (scope === 'farm') {
+        console.log('[overview/dashboard] farm market region', {
+            farmId: farm?.id || null,
+            farmName: farm?.name || null,
+            uf: farm?.uf || null,
+            state: farm?.state || farmRegionContext.state || null,
+            region: farm?.region || farmRegionContext.region || null,
+            city: farm?.city || farm?.cidade || farmRegionContext.city || null,
+            latitude: farm?.latitude || farm?.lat || farmRegionContext.lat || null,
+            longitude: farm?.longitude || farm?.lng || farmRegionContext.lng || null,
+        });
+    }
+
+    if (scope === 'farm' && farmRegionContext.city) {
         const byCity = await prisma.marketRegion.findFirst({
-            where: { isActive: true, city: { equals: farmCity, mode: 'insensitive' } },
+            where: {
+                isActive: true,
+                city: { equals: farmRegionContext.city, mode: 'insensitive' },
+                ...(farmRegionContext.state ? { state: farmRegionContext.state } : {}),
+            },
             orderBy: { updatedAt: 'desc' },
         });
         if (byCity) return byCity;
     }
+
+    if (scope === 'farm' && farmRegionContext.region) {
+        const byRegionName = await prisma.marketRegion.findFirst({
+            where: {
+                isActive: true,
+                name: { equals: farmRegionContext.region, mode: 'insensitive' },
+                ...(farmRegionContext.state ? { state: farmRegionContext.state } : {}),
+            },
+            orderBy: { updatedAt: 'desc' },
+        });
+        if (byRegionName) return byRegionName;
+    }
+
+    if (scope === 'farm' && farmRegionContext.state) {
+        const byState = await prisma.marketRegion.findFirst({
+            where: { isActive: true, state: farmRegionContext.state },
+            orderBy: [{ updatedAt: 'desc' }],
+        });
+        if (byState) return byState;
+        return {
+            id: null,
+            name: farmRegionContext.region || farmRegionContext.state,
+            state: farmRegionContext.state,
+        };
+    }
+
     const byDefaultState = await prisma.marketRegion.findFirst({
         where: { isActive: true, state: DEFAULT_MARKET_STATE },
         orderBy: [{ updatedAt: 'desc' }],
@@ -11063,7 +11124,7 @@ app.get('/overview/dashboard', requireAuth, async (req, res) => {
 
         const farms = await prisma.farm.findMany({
             where: buildFarmScopeFilter(req, scope === 'farm' ? { id: farmId } : {}),
-            select: { id: true, size: true },
+            select: { id: true, name: true, size: true, city: true, lat: true, lng: true, mapData: true },
         });
         if (scope === 'farm' && farms.length === 0) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
