@@ -189,18 +189,21 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
         };
     }, [activeView, farmId]);
 
+    useEffect(() => {
+        if (!config || !visible) return;
+        const completedCount = config.steps.filter((step) => step.done).length;
+        const doneNow = completedCount === config.steps.length;
+        if (!doneNow) return;
+        const timeoutId = window.setTimeout(() => setVisible(false), 1500);
+        return () => window.clearTimeout(timeoutId);
+    }, [config, visible]);
+
     if (!config || !visible) return null;
 
     const completedCount = config.steps.filter((step) => step.done).length;
     const allDone = completedCount === config.steps.length;
     const progressPct = Math.round((completedCount / config.steps.length) * 100);
     const ctaHint = !allDone ? getNextCta(activeView, config.steps) : null;
-
-    useEffect(() => {
-        if (!allDone) return;
-        const timeoutId = window.setTimeout(() => setVisible(false), 1500);
-        return () => window.clearTimeout(timeoutId);
-    }, [allDone]);
 
     return (
         <div className="mb-6 rounded-2xl border-2 border-[#B6E23A] bg-[var(--eixo-surface)] shadow-sm transition-all duration-200 hover:shadow-md">
