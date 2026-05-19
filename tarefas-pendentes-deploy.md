@@ -18,7 +18,9 @@
 
 | ID | Tarefa | Status | Validado | Data |
 |---|---|---|---|---|
-| - | Nenhuma tarefa pendente no momento | - | - | 2026-05-19 |
+| DEP-018 | Ajuste final no card “Mercado e Reposição”: remover “(Manual)” da fonte exibida ao cliente e exibir preço da reposição com sufixo “/cab” no KPI “Bezerro 12M”, sem alterar cálculos ou backend | PENDENTE_DEPLOY | Frontend build OK (`npm run build --prefix frontend`) + Schema Prisma válido (`npx prisma validate --schema server/prisma/schema.prisma`) + Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) | 2026-05-19 |
+| DEP-019 | Implementar EIXO Mercado com persistência real de cotações: modelos Prisma (`MarketSource`, `MarketRegion`, `MarketPrice`), endpoints internos `/market/*` com acesso `SUPER_ADMIN`, tela interna de backoffice (`EIXO Mercado`) e integração do `/overview/dashboard` para usar cotações `PUBLISHED` no `marketReplacement` com fallback seguro sem quebrar o card | PENDENTE_DEPLOY | Prisma validate OK (`npx prisma validate --schema server/prisma/schema.prisma`) + Prisma generate OK (`npx prisma generate --schema server/prisma/schema.prisma`) + Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) + Build frontend OK (`npm run build --prefix frontend`) + Migration SQL gerada em `server/prisma/migrations/20260519002000_market_prices/migration.sql` | 2026-05-19 |
+| DEP-020 | Refinar card “Mercado e Reposição” para versão executiva: label “Bezerro desmamado”, peso 7 @, sinal de reposição “Cautela / Reposição exige eficiência”, leitura EIXO curta, tendências semanais (boi, reposição e custo em arrobas) e redução visual com detalhes secundários recolhidos | PENDENTE_DEPLOY | Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) + Build frontend OK (`npm run build --prefix frontend`) + Schema Prisma válido (`npx prisma validate --schema server/prisma/schema.prisma`) | 2026-05-19 |
 
 ## Observações
 - Arquivo `frontend/components/PublicLanding.tsx` alterado de forma cirúrgica.

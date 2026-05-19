@@ -47,8 +47,64 @@ model User {
   activeOrganization             Organization?                  @relation("ActiveOrganization", fields: [activeOrganizationId], references: [id])
   farmAccesses                   UserFarmAccess[]
   reproCheckupSessions           ReproCheckupSession[]          @relation("ReproCheckupCreatedBy")
+  marketPricesCreated            MarketPrice[]                  @relation("MarketPriceCreatedBy")
 
   @@index([phone])
+}
+
+model MarketSource {
+  id        String           @id @default(uuid())
+  name      String
+  type      MarketSourceType
+  url       String?
+  isActive  Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  prices    MarketPrice[]
+
+  @@unique([name])
+  @@index([isActive])
+}
+
+model MarketRegion {
+  id               String        @id @default(uuid())
+  name             String
+  state            String
+  city             String?
+  marketPlaceName  String?
+  sourceRegionName String?
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  prices           MarketPrice[]
+
+  @@index([state, isActive])
+  @@index([name, state])
+}
+
+model MarketPrice {
+  id                      String             @id @default(uuid())
+  regionId                String
+  sourceId                String
+  productType             MarketProductType
+  price                   Decimal            @db.Decimal(12, 2)
+  unit                    MarketUnit
+  paymentType             MarketPaymentType  @default(NAO_INFORMADO)
+  referenceDate           DateTime
+  referenceWeightArrobas  Float?
+  sourceBase              String?
+  notes                   String?
+  status                  MarketPriceStatus  @default(DRAFT)
+  createdByUserId         String?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  region                  MarketRegion       @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  source                  MarketSource       @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  createdByUser           User?              @relation("MarketPriceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([regionId, productType, status, referenceDate])
+  @@index([sourceId, status, referenceDate])
+  @@index([productType, status])
 }
 
 model Farm {
@@ -2190,6 +2246,43 @@ enum AcasalamentoRegistryType {
   RGN
   RGD
   UNKNOWN
+}
+
+enum MarketSourceType {
+  MANUAL
+  SITE_NOTICIAS
+  CONSULTORIA
+  API
+  B3
+  OUTRO
+}
+
+enum MarketProductType {
+  BOI_GORDO
+  VACA_GORDA
+  NOVILHA_GORDA
+  BEZERRO_DESMAMA
+  BEZERRO_12M
+  GARROTE
+  BOI_MAGRO
+}
+
+enum MarketUnit {
+  ARROBA
+  CABECA
+  KG
+}
+
+enum MarketPaymentType {
+  A_VISTA
+  TRINTA_DIAS
+  NAO_INFORMADO
+}
+
+enum MarketPriceStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
 }
 
 enum AcasalamentoTargetMode {

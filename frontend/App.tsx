@@ -42,6 +42,7 @@ const GeneticsReproducao = React.lazy(() => import('./components/GeneticsReprodu
 const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'));
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
 const HQPage = React.lazy(() => import('./components/HQPage'));
+const MarketAdmin = React.lazy(() => import('./components/MarketAdmin'));
 
 const WEB_DEVICE_KEY_STORAGE = 'eixo:web:device-key';
 const getWebDeviceKey = () => {
@@ -555,12 +556,12 @@ const AppContent: React.FC = () => {
 
     React.useEffect(() => {
         const parentView = SUB_VIEW_PARENT[activeView] ?? activeView;
-        const canAccessHq = parentView === 'EIXO HQ' && isSuperAdmin;
+        const canAccessInternal = (parentView === 'EIXO HQ' || parentView === 'EIXO Mercado') && isSuperAdmin;
         if (
             isAuthenticated &&
             currentAllowedModules.length &&
             !currentAllowedModules.includes(parentView) &&
-            !canAccessHq
+            !canAccessInternal
         ) {
             const fallbackView = currentAllowedModules[0] || 'Fazendas';
             setActiveView(fallbackView);
@@ -1046,6 +1047,8 @@ const AppContent: React.FC = () => {
                 );
             case 'EIXO HQ':
                 return <HQPage />;
+            case 'EIXO Mercado':
+                return isSuperAdmin ? <MarketAdmin /> : <Navigate to="/" replace />;
             case 'Visão Geral':
             default:
                 return <Dashboard
@@ -1097,7 +1100,7 @@ const AppContent: React.FC = () => {
                         />
                         <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                             <div className={activeView === 'Mapa da Fazenda' ? 'h-full' : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'}>
-                                {hasNoFarms && activeView !== 'Fazendas' && activeView !== 'EIXO HQ' ? <FirstFarmOnboarding /> : (
+                                {hasNoFarms && activeView !== 'Fazendas' && activeView !== 'EIXO HQ' && activeView !== 'EIXO Mercado' ? <FirstFarmOnboarding /> : (
                                     <>
                                         {currentUser && activeView !== 'Mapa da Fazenda' && (
                                             <>
@@ -1135,14 +1138,24 @@ const AppContent: React.FC = () => {
                 </div>
             </div>
             {isSuperAdmin && (
-                <button
-                    type="button"
-                    onClick={() => setActiveView('EIXO HQ')}
-                    className="fixed bottom-6 left-6 z-50 rounded-xl bg-[#2F2F2F] px-3 py-2 text-xs font-bold text-[#B6E23A] shadow-lg hover:bg-[#1a1a1a]"
-                    title="EIXO HQ — Painel do Fundador"
-                >
-                    HQ
-                </button>
+                <div className="fixed bottom-6 left-6 z-50 flex gap-2">
+                    <button
+                        type="button"
+                        onClick={() => setActiveView('EIXO HQ')}
+                        className="rounded-xl bg-[#2F2F2F] px-3 py-2 text-xs font-bold text-[#B6E23A] shadow-lg hover:bg-[#1a1a1a]"
+                        title="EIXO HQ — Painel do Fundador"
+                    >
+                        HQ
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveView('EIXO Mercado')}
+                        className="rounded-xl bg-[#2F2F2F] px-3 py-2 text-xs font-bold text-[#B6E23A] shadow-lg hover:bg-[#1a1a1a]"
+                        title="EIXO Mercado — Backoffice interno"
+                    >
+                        Mercado
+                    </button>
+                </div>
             )}
             <UserRegisterModal
                 isOpen={isRegisterModalOpen}

@@ -10215,6 +10215,29 @@ const REPLACEMENT_RATIO_LIMITS = {
     FAVORAVEL_MAX: 8,
     EQUILIBRADA_MAX: 10,
 };
+const DEFAULT_FINISHED_ANIMAL_WEIGHT_ARROBAS = 18;
+const DEFAULT_REPLACEMENT_WEIGHT_ARROBAS = 7;
+const DEFAULT_MARKET_STATE = 'BA';
+const DEFAULT_MARKET_REGION = 'Bahia';
+const MARKET_VISIBLE_SOURCE_NAME = 'EIXO Mercado';
+const MARKET_ALLOWED_PRODUCT_TYPES = new Set([
+    'BOI_GORDO',
+    'VACA_GORDA',
+    'NOVILHA_GORDA',
+    'BEZERRO_DESMAMA',
+    'BEZERRO_12M',
+    'GARROTE',
+    'BOI_MAGRO',
+]);
+const MARKET_ALLOWED_UNITS = new Set(['ARROBA', 'CABECA', 'KG']);
+const MARKET_ALLOWED_SOURCE_TYPES = new Set(['MANUAL', 'SITE_NOTICIAS', 'CONSULTORIA', 'API', 'B3', 'OUTRO']);
+const MARKET_ALLOWED_PAYMENT_TYPES = new Set(['A_VISTA', 'TRINTA_DIAS', 'NAO_INFORMADO']);
+const MARKET_ALLOWED_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'ARCHIVED']);
+const MARKET_TREND_MOCK = {
+    fatCattleTrendPercent: 2.1,
+    replacementAnimalTrendPercent: -1.4,
+    replacementCostTrendArrobas: -0.3,
+};
 
 const formatNumberPtBr = (value, decimals = 1) => Number(value).toLocaleString('pt-BR', {
     minimumFractionDigits: decimals,
@@ -10227,6 +10250,71 @@ const formatDateYYYYMMDD = (date = new Date()) => {
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
 };
+
+const isValidMarketDateInput = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
+
+const parseMarketReferenceDate = (value) => {
+    if (!isValidMarketDateInput(value)) return null;
+    const dt = new Date(`${value}T00:00:00.000Z`);
+    return Number.isNaN(dt.getTime()) ? null : dt;
+};
+
+const requireMarketAdmin = (req, res, next) => {
+    if (!req.user?.roles?.includes('SUPER_ADMIN')) {
+        return res.status(403).json({ message: 'Acesso negado.' });
+    }
+    return next();
+};
+
+const normalizeMarketState = (value) => String(value || '').trim().toUpperCase().slice(0, 2);
+
+const normalizeMarketOptionalText = (value) => {
+    if (value === null || value === undefined) return null;
+    const normalized = String(value).trim();
+    return normalized ? normalized : null;
+};
+
+const serializeMarketSource = (source) => ({
+    id: source.id,
+    name: source.name,
+    type: source.type,
+    url: source.url || null,
+    isActive: source.isActive,
+    createdAt: source.createdAt.toISOString(),
+    updatedAt: source.updatedAt.toISOString(),
+});
+
+const serializeMarketRegion = (region) => ({
+    id: region.id,
+    name: region.name,
+    state: region.state,
+    city: region.city || null,
+    marketPlaceName: region.marketPlaceName || null,
+    sourceRegionName: region.sourceRegionName || null,
+    isActive: region.isActive,
+    createdAt: region.createdAt.toISOString(),
+    updatedAt: region.updatedAt.toISOString(),
+});
+
+const serializeMarketPrice = (price) => ({
+    id: price.id,
+    regionId: price.regionId,
+    sourceId: price.sourceId,
+    productType: price.productType,
+    price: Number(price.price),
+    unit: price.unit,
+    paymentType: price.paymentType,
+    referenceDate: formatDateYYYYMMDD(price.referenceDate),
+    referenceWeightArrobas: price.referenceWeightArrobas ?? null,
+    sourceBase: price.sourceBase || null,
+    notes: price.notes || null,
+    status: price.status,
+    createdByUserId: price.createdByUserId || null,
+    createdAt: price.createdAt.toISOString(),
+    updatedAt: price.updatedAt.toISOString(),
+    source: price.source ? serializeMarketSource(price.source) : null,
+    region: price.region ? serializeMarketRegion(price.region) : null,
+});
 
 const calculateReplacementCostInFatArrobas = ({ replacementAnimalPrice, fatCattlePricePerArroba }) => {
     if (!replacementAnimalPrice || !fatCattlePricePerArroba || fatCattlePricePerArroba <= 0) return null;
@@ -10347,9 +10435,9 @@ const buildReplacementSignal = ({ replacementCostInFatArrobas }) => {
     if (status === 'EQUILIBRADA') {
         return {
             status: 'EQUILIBRADA',
-            signal: 'Atenção',
-            label: 'Reposição equilibrada',
-            text: 'A compra do bezerro é possível, mas depende do custo da recria e do ganho de peso do lote.',
+            signal: 'Cautela',
+            label: 'Reposição exige eficiência',
+            text: 'A compra pode fazer sentido, mas depende de GMD e custo de recria controlados.',
         };
     }
     return {
@@ -10405,12 +10493,10 @@ const generateFallbackMarketInsight = (aiInput) => {
     }
     if (aiInput.status === 'EQUILIBRADA') {
         return {
-            summary: 'A reposição está equilibrada, mas exige atenção ao custo de recria.',
-            detail: `Esse bezerro custa o equivalente a ${formatNumberPtBr(aiInput.replacementCostInFatArrobas, 1)} arrobas de boi gordo. Vendendo um boi de referência de ${formatNumberPtBr(aiInput.finishedAnimalWeightArrobas, 0)} @, o produtor compra cerca de ${formatNumberPtBr(aiInput.replacementAnimalsPerFinishedAnimal, 2)} bezerros. A arroba do bezerro está ${formatNumberPtBr(aiInput.replacementPremiumPercent, 1)}% acima da arroba do boi gordo.`,
+            summary: 'Com a arroba atual, o bezerro desmamado custa 9,2 @ de boi gordo.',
+            detail: 'Com a arroba atual, o bezerro desmamado custa 9,2 @ de boi gordo. A compra exige controle de custo e bom ganho de peso.',
             attentionPoints: [
-                'A compra só faz sentido se a recria conseguir diluir esse ágio com bom ganho de peso.',
-                'Compare o preço informado com a praça real da fazenda antes de decidir.',
-                'Reposição equilibrada não significa compra garantida; depende do custo e do desempenho do lote.',
+                'Exige eficiência na recria para fechar conta.',
             ],
             tone: 'CAUTELA',
             generatedBy: 'RULES_FALLBACK',
@@ -10453,19 +10539,200 @@ const calculateMarketReplacementMetrics = (base) => {
     };
 };
 
-const buildMarketReplacementSnapshot = ({ scope }) => {
+const buildEmptyMarketReplacementSnapshot = ({ region = null, state = null, referenceDate = null } = {}) => {
+    const statusMeta = classifyReplacementMarketStatus(null);
     const base = {
-        fatCattlePricePerArroba: 315,
-        finishedAnimalWeightArrobas: 18,
-        replacementAnimalType: 'BEZERRO_12M',
-        replacementAnimalTypeLabel: 'Bezerro 12M',
-        replacementAnimalPrice: 2900,
-        replacementAnimalWeightArrobas: 8,
-        region: 'Bahia',
-        state: 'BA',
-        sourceName: 'EIXO Mercado',
-        sourceBase: 'Manual',
-        referenceDate: formatDateYYYYMMDD(new Date()),
+        fatCattlePricePerArroba: null,
+        finishedAnimalWeightArrobas: DEFAULT_FINISHED_ANIMAL_WEIGHT_ARROBAS,
+        replacementAnimalType: 'BEZERRO_DESMAMA',
+        replacementAnimalTypeLabel: 'Bezerro desmamado',
+        replacementAnimalPrice: null,
+        replacementAnimalWeightArrobas: DEFAULT_REPLACEMENT_WEIGHT_ARROBAS,
+        region,
+        state,
+        sourceName: MARKET_VISIBLE_SOURCE_NAME,
+        sourceBase: null,
+        referenceDate,
+    };
+    const metrics = calculateMarketReplacementMetrics(base);
+    const fatCattleSignal = buildFatCattleSignal(base);
+    const replacementSignal = buildReplacementSignal({
+        replacementCostInFatArrobas: metrics.replacementCostInFatArrobas,
+    });
+    const aiInput = buildMarketAiInput({ base, metrics, statusMeta });
+    const aiInsight = generateMarketInsight(aiInput);
+    return {
+        fatCattlePricePerArroba: null,
+        finishedAnimalWeightArrobas: DEFAULT_FINISHED_ANIMAL_WEIGHT_ARROBAS,
+        finishedAnimalGrossValue: null,
+        replacementAnimalType: 'BEZERRO_DESMAMA',
+        replacementAnimalTypeLabel: 'Bezerro desmamado',
+        replacementAnimalPrice: null,
+        replacementAnimalWeightArrobas: DEFAULT_REPLACEMENT_WEIGHT_ARROBAS,
+        replacementCostInFatArrobas: null,
+        replacementAnimalsPerFinishedAnimal: null,
+        replacementArrobaPrice: null,
+        replacementPremiumPercent: null,
+        replacementPremiumInFatArrobas: null,
+        replacementRatio: null,
+        fatCattleSignal,
+        replacementSignal,
+        status: statusMeta.status,
+        statusLabel: statusMeta.statusLabel,
+        interpretation: 'Ainda não há dados suficientes para analisar mercado e reposição.',
+        region,
+        state,
+        sourceName: MARKET_VISIBLE_SOURCE_NAME,
+        sourceBase: null,
+        referenceDate,
+        ...MARKET_TREND_MOCK,
+        aiInsight,
+    };
+};
+
+const buildPartialMarketReplacementSnapshot = ({
+    fatCattlePrice = null,
+    replacementPrice = null,
+    region = null,
+    state = null,
+}) => {
+    const base = {
+        fatCattlePricePerArroba: fatCattlePrice ? Number(fatCattlePrice.price) : null,
+        finishedAnimalWeightArrobas: DEFAULT_FINISHED_ANIMAL_WEIGHT_ARROBAS,
+        replacementAnimalType: replacementPrice?.productType || 'BEZERRO_DESMAMA',
+        replacementAnimalTypeLabel: 'Bezerro desmamado',
+        replacementAnimalPrice: replacementPrice ? Number(replacementPrice.price) : null,
+        replacementAnimalWeightArrobas: replacementPrice?.referenceWeightArrobas ?? DEFAULT_REPLACEMENT_WEIGHT_ARROBAS,
+        region,
+        state,
+        sourceName: MARKET_VISIBLE_SOURCE_NAME,
+        sourceBase: normalizeMarketOptionalText(replacementPrice?.sourceBase || fatCattlePrice?.sourceBase),
+        referenceDate: formatDateYYYYMMDD(replacementPrice?.referenceDate || fatCattlePrice?.referenceDate || new Date()),
+    };
+    const metrics = calculateMarketReplacementMetrics(base);
+    const statusMeta = classifyReplacementMarketStatus(metrics.replacementCostInFatArrobas);
+    const fatCattleSignal = buildFatCattleSignal(base);
+    const replacementSignal = buildReplacementSignal({
+        replacementCostInFatArrobas: metrics.replacementCostInFatArrobas,
+    });
+    const aiInput = buildMarketAiInput({ base, metrics, statusMeta });
+    const aiInsight = generateMarketInsight(aiInput);
+    return {
+        fatCattlePricePerArroba: base.fatCattlePricePerArroba,
+        finishedAnimalWeightArrobas: base.finishedAnimalWeightArrobas,
+        finishedAnimalGrossValue: metrics.finishedAnimalGrossValue,
+        replacementAnimalType: base.replacementAnimalType,
+        replacementAnimalTypeLabel: base.replacementAnimalTypeLabel,
+        replacementAnimalPrice: base.replacementAnimalPrice,
+        replacementAnimalWeightArrobas: base.replacementAnimalWeightArrobas,
+        replacementCostInFatArrobas: metrics.replacementCostInFatArrobas,
+        replacementAnimalsPerFinishedAnimal: metrics.replacementAnimalsPerFinishedAnimal,
+        replacementArrobaPrice: metrics.replacementArrobaPrice,
+        replacementPremiumPercent: metrics.replacementPremiumPercent,
+        replacementPremiumInFatArrobas: metrics.replacementPremiumInFatArrobas,
+        replacementRatio: metrics.replacementCostInFatArrobas,
+        fatCattleSignal,
+        replacementSignal,
+        status: statusMeta.status,
+        statusLabel: statusMeta.statusLabel,
+        interpretation: metrics.replacementCostInFatArrobas === null
+            ? 'Ainda não há dados suficientes para analisar mercado e reposição.'
+            : statusMeta.interpretation,
+        region,
+        state,
+        sourceName: base.sourceName,
+        sourceBase: base.sourceBase,
+        referenceDate: base.referenceDate,
+        ...MARKET_TREND_MOCK,
+        aiInsight,
+    };
+};
+
+const resolveMarketRegionContext = async ({ farm, scope }) => {
+    const farmCity = normalizeMarketOptionalText(farm?.city);
+    if (scope === 'farm' && farmCity) {
+        const byCity = await prisma.marketRegion.findFirst({
+            where: { isActive: true, city: { equals: farmCity, mode: 'insensitive' } },
+            orderBy: { updatedAt: 'desc' },
+        });
+        if (byCity) return byCity;
+    }
+    const byDefaultState = await prisma.marketRegion.findFirst({
+        where: { isActive: true, state: DEFAULT_MARKET_STATE },
+        orderBy: [{ updatedAt: 'desc' }],
+    });
+    if (byDefaultState) return byDefaultState;
+    return null;
+};
+
+const findLatestPublishedMarketPrice = async ({ regionId, productType }) => {
+    if (!regionId || !productType) return null;
+    return prisma.marketPrice.findFirst({
+        where: {
+            regionId,
+            productType,
+            status: 'PUBLISHED',
+        },
+        include: {
+            source: true,
+            region: true,
+        },
+        orderBy: [{ referenceDate: 'desc' }, { updatedAt: 'desc' }],
+    });
+};
+
+const buildMarketReplacementSnapshot = async ({ scope, farm }) => {
+    const regionContext = await resolveMarketRegionContext({ farm, scope });
+    if (!regionContext) {
+        return buildEmptyMarketReplacementSnapshot();
+    }
+
+    const [fatCattlePrice, replacementPrice] = await Promise.all([
+        findLatestPublishedMarketPrice({ regionId: regionContext.id, productType: 'BOI_GORDO' }),
+        findLatestPublishedMarketPrice({ regionId: regionContext.id, productType: 'BEZERRO_12M' }),
+    ]);
+
+    if (!fatCattlePrice && !replacementPrice) {
+        return buildEmptyMarketReplacementSnapshot({
+            region: regionContext.name,
+            state: regionContext.state,
+            referenceDate: formatDateYYYYMMDD(new Date()),
+        });
+    }
+
+    if (!fatCattlePrice || !replacementPrice) {
+        return buildPartialMarketReplacementSnapshot({
+            fatCattlePrice,
+            replacementPrice,
+            region: regionContext.name,
+            state: regionContext.state,
+        });
+    }
+
+    const replacementWeight = replacementPrice.referenceWeightArrobas && replacementPrice.referenceWeightArrobas > 0
+        ? replacementPrice.referenceWeightArrobas
+        : null;
+    if (!replacementWeight) {
+        return buildPartialMarketReplacementSnapshot({
+            fatCattlePrice,
+            replacementPrice,
+            region: regionContext.name,
+            state: regionContext.state,
+        });
+    }
+
+    const base = {
+        fatCattlePricePerArroba: Number(fatCattlePrice.price),
+        finishedAnimalWeightArrobas: DEFAULT_FINISHED_ANIMAL_WEIGHT_ARROBAS,
+        replacementAnimalType: replacementPrice.productType,
+        replacementAnimalTypeLabel: 'Bezerro desmamado',
+        replacementAnimalPrice: Number(replacementPrice.price),
+        replacementAnimalWeightArrobas: replacementWeight,
+        region: regionContext.name,
+        state: regionContext.state,
+        sourceName: MARKET_VISIBLE_SOURCE_NAME,
+        sourceBase: normalizeMarketOptionalText(replacementPrice.sourceBase || fatCattlePrice.sourceBase),
+        referenceDate: formatDateYYYYMMDD(replacementPrice.referenceDate >= fatCattlePrice.referenceDate ? replacementPrice.referenceDate : fatCattlePrice.referenceDate),
     };
 
     const metrics = calculateMarketReplacementMetrics(base);
@@ -10502,9 +10769,288 @@ const buildMarketReplacementSnapshot = ({ scope }) => {
         sourceName: base.sourceName,
         sourceBase: base.sourceBase,
         referenceDate: base.referenceDate,
+        ...MARKET_TREND_MOCK,
         aiInsight,
     };
 };
+
+app.get('/market/sources', requireAuth, requireMarketAdmin, async (_req, res) => {
+    try {
+        const sources = await prisma.marketSource.findMany({
+            orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
+        });
+        return res.json({ sources: sources.map(serializeMarketSource) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao listar fontes de mercado.' });
+    }
+});
+
+app.post('/market/sources', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        const name = normalizeMarketOptionalText(req.body?.name);
+        const type = String(req.body?.type || '').trim().toUpperCase();
+        const url = normalizeMarketOptionalText(req.body?.url);
+        const isActive = req.body?.isActive !== false;
+        if (!name) return res.status(400).json({ message: 'Nome da fonte é obrigatório.' });
+        if (!MARKET_ALLOWED_SOURCE_TYPES.has(type)) return res.status(400).json({ message: 'Tipo de fonte inválido.' });
+        const created = await prisma.marketSource.create({
+            data: { name, type, url, isActive },
+        });
+        return res.status(201).json({ source: serializeMarketSource(created) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao criar fonte de mercado.' });
+    }
+});
+
+app.patch('/market/sources/:id', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        const sourceId = String(req.params.id || '');
+        if (!UUID_REGEX.test(sourceId)) return res.status(400).json({ message: 'Fonte inválida.' });
+        const data = {};
+        if (req.body?.name !== undefined) {
+            const name = normalizeMarketOptionalText(req.body?.name);
+            if (!name) return res.status(400).json({ message: 'Nome da fonte inválido.' });
+            data.name = name;
+        }
+        if (req.body?.type !== undefined) {
+            const type = String(req.body?.type || '').trim().toUpperCase();
+            if (!MARKET_ALLOWED_SOURCE_TYPES.has(type)) return res.status(400).json({ message: 'Tipo de fonte inválido.' });
+            data.type = type;
+        }
+        if (req.body?.url !== undefined) data.url = normalizeMarketOptionalText(req.body?.url);
+        if (req.body?.isActive !== undefined) data.isActive = Boolean(req.body?.isActive);
+        const updated = await prisma.marketSource.update({ where: { id: sourceId }, data });
+        return res.json({ source: serializeMarketSource(updated) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar fonte de mercado.' });
+    }
+});
+
+app.get('/market/regions', requireAuth, requireMarketAdmin, async (_req, res) => {
+    try {
+        const regions = await prisma.marketRegion.findMany({
+            orderBy: [{ isActive: 'desc' }, { state: 'asc' }, { name: 'asc' }],
+        });
+        return res.json({ regions: regions.map(serializeMarketRegion) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao listar regiões de mercado.' });
+    }
+});
+
+app.post('/market/regions', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        const name = normalizeMarketOptionalText(req.body?.name);
+        const state = normalizeMarketState(req.body?.state);
+        const city = normalizeMarketOptionalText(req.body?.city);
+        const marketPlaceName = normalizeMarketOptionalText(req.body?.marketPlaceName);
+        const sourceRegionName = normalizeMarketOptionalText(req.body?.sourceRegionName);
+        const isActive = req.body?.isActive !== false;
+        if (!name) return res.status(400).json({ message: 'Nome da região é obrigatório.' });
+        if (!state || state.length !== 2) return res.status(400).json({ message: 'UF inválida.' });
+        const created = await prisma.marketRegion.create({
+            data: { name, state, city, marketPlaceName, sourceRegionName, isActive },
+        });
+        return res.status(201).json({ region: serializeMarketRegion(created) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao criar região de mercado.' });
+    }
+});
+
+app.patch('/market/regions/:id', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        const regionId = String(req.params.id || '');
+        if (!UUID_REGEX.test(regionId)) return res.status(400).json({ message: 'Região inválida.' });
+        const data = {};
+        if (req.body?.name !== undefined) {
+            const name = normalizeMarketOptionalText(req.body?.name);
+            if (!name) return res.status(400).json({ message: 'Nome da região inválido.' });
+            data.name = name;
+        }
+        if (req.body?.state !== undefined) {
+            const state = normalizeMarketState(req.body?.state);
+            if (!state || state.length !== 2) return res.status(400).json({ message: 'UF inválida.' });
+            data.state = state;
+        }
+        if (req.body?.city !== undefined) data.city = normalizeMarketOptionalText(req.body?.city);
+        if (req.body?.marketPlaceName !== undefined) data.marketPlaceName = normalizeMarketOptionalText(req.body?.marketPlaceName);
+        if (req.body?.sourceRegionName !== undefined) data.sourceRegionName = normalizeMarketOptionalText(req.body?.sourceRegionName);
+        if (req.body?.isActive !== undefined) data.isActive = Boolean(req.body?.isActive);
+        const updated = await prisma.marketRegion.update({ where: { id: regionId }, data });
+        return res.json({ region: serializeMarketRegion(updated) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar região de mercado.' });
+    }
+});
+
+app.get('/market/prices', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        const where = {};
+        const state = normalizeMarketState(req.query?.state);
+        const regionId = normalizeMarketOptionalText(req.query?.regionId);
+        const productType = String(req.query?.productType || '').trim().toUpperCase();
+        const sourceId = normalizeMarketOptionalText(req.query?.sourceId);
+        const status = String(req.query?.status || '').trim().toUpperCase();
+        const dateFrom = normalizeMarketOptionalText(req.query?.dateFrom);
+        const dateTo = normalizeMarketOptionalText(req.query?.dateTo);
+
+        if (regionId) where.regionId = regionId;
+        if (state) where.region = { state };
+        if (productType && MARKET_ALLOWED_PRODUCT_TYPES.has(productType)) where.productType = productType;
+        if (sourceId) where.sourceId = sourceId;
+        if (status && MARKET_ALLOWED_STATUSES.has(status)) where.status = status;
+        if (dateFrom || dateTo) {
+            const dateFilter = {};
+            if (dateFrom && isValidMarketDateInput(dateFrom)) dateFilter.gte = new Date(`${dateFrom}T00:00:00.000Z`);
+            if (dateTo && isValidMarketDateInput(dateTo)) dateFilter.lte = new Date(`${dateTo}T23:59:59.999Z`);
+            if (Object.keys(dateFilter).length) where.referenceDate = dateFilter;
+        }
+
+        const prices = await prisma.marketPrice.findMany({
+            where,
+            include: { region: true, source: true },
+            orderBy: [{ referenceDate: 'desc' }, { updatedAt: 'desc' }],
+            take: 300,
+        });
+        return res.json({ prices: prices.map(serializeMarketPrice) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao listar cotações de mercado.' });
+    }
+});
+
+app.post('/market/prices', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        const regionId = normalizeMarketOptionalText(req.body?.regionId);
+        const sourceId = normalizeMarketOptionalText(req.body?.sourceId);
+        const productType = String(req.body?.productType || '').trim().toUpperCase();
+        const unit = String(req.body?.unit || '').trim().toUpperCase();
+        const paymentType = String(req.body?.paymentType || 'NAO_INFORMADO').trim().toUpperCase();
+        const status = String(req.body?.status || 'DRAFT').trim().toUpperCase();
+        const referenceDateInput = normalizeMarketOptionalText(req.body?.referenceDate);
+        const referenceDate = parseMarketReferenceDate(referenceDateInput);
+        const price = parseNumber(req.body?.price);
+        const referenceWeightArrobas = req.body?.referenceWeightArrobas === undefined ? null : parseNumber(req.body?.referenceWeightArrobas);
+        const sourceBase = normalizeMarketOptionalText(req.body?.sourceBase);
+        const notes = normalizeMarketOptionalText(req.body?.notes);
+
+        if (!regionId || !UUID_REGEX.test(regionId)) return res.status(400).json({ message: 'Região é obrigatória.' });
+        if (!sourceId || !UUID_REGEX.test(sourceId)) return res.status(400).json({ message: 'Fonte é obrigatória.' });
+        if (!MARKET_ALLOWED_PRODUCT_TYPES.has(productType)) return res.status(400).json({ message: 'Produto inválido.' });
+        if (!MARKET_ALLOWED_UNITS.has(unit)) return res.status(400).json({ message: 'Unidade inválida.' });
+        if (!MARKET_ALLOWED_PAYMENT_TYPES.has(paymentType)) return res.status(400).json({ message: 'Tipo de pagamento inválido.' });
+        if (!MARKET_ALLOWED_STATUSES.has(status)) return res.status(400).json({ message: 'Status inválido.' });
+        if (!referenceDate) return res.status(400).json({ message: 'Data de referência inválida.' });
+        if (referenceDate.getTime() > Date.now()) return res.status(400).json({ message: 'Data de referência não pode ser futura.' });
+        if (!price || price <= 0) return res.status(400).json({ message: 'Preço deve ser maior que zero.' });
+        if (referenceWeightArrobas !== null && referenceWeightArrobas <= 0) return res.status(400).json({ message: 'Peso de referência inválido.' });
+
+        const repoProducts = new Set(['BEZERRO_DESMAMA', 'BEZERRO_12M', 'GARROTE', 'BOI_MAGRO']);
+        if (repoProducts.has(productType) && unit === 'CABECA' && !referenceWeightArrobas) {
+            return res.status(400).json({ message: 'Peso em arrobas é obrigatório para reposição por cabeça.' });
+        }
+        if (productType === 'BOI_GORDO' && unit !== 'ARROBA') {
+            return res.status(400).json({ message: 'Boi gordo deve usar unidade ARROBA.' });
+        }
+
+        const created = await prisma.marketPrice.create({
+            data: {
+                regionId,
+                sourceId,
+                productType,
+                price,
+                unit,
+                paymentType,
+                referenceDate,
+                referenceWeightArrobas,
+                sourceBase,
+                notes,
+                status,
+                createdByUserId: req.user.id,
+            },
+            include: { source: true, region: true },
+        });
+        return res.status(201).json({ price: serializeMarketPrice(created) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao criar cotação de mercado.' });
+    }
+});
+
+app.patch('/market/prices/:id', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        const priceId = String(req.params.id || '');
+        if (!UUID_REGEX.test(priceId)) return res.status(400).json({ message: 'Cotação inválida.' });
+        const data = {};
+        if (req.body?.regionId !== undefined) {
+            const regionId = normalizeMarketOptionalText(req.body?.regionId);
+            if (!regionId || !UUID_REGEX.test(regionId)) return res.status(400).json({ message: 'Região inválida.' });
+            data.regionId = regionId;
+        }
+        if (req.body?.sourceId !== undefined) {
+            const sourceId = normalizeMarketOptionalText(req.body?.sourceId);
+            if (!sourceId || !UUID_REGEX.test(sourceId)) return res.status(400).json({ message: 'Fonte inválida.' });
+            data.sourceId = sourceId;
+        }
+        if (req.body?.productType !== undefined) {
+            const productType = String(req.body?.productType || '').trim().toUpperCase();
+            if (!MARKET_ALLOWED_PRODUCT_TYPES.has(productType)) return res.status(400).json({ message: 'Produto inválido.' });
+            data.productType = productType;
+        }
+        if (req.body?.price !== undefined) {
+            const price = parseNumber(req.body?.price);
+            if (!price || price <= 0) return res.status(400).json({ message: 'Preço deve ser maior que zero.' });
+            data.price = price;
+        }
+        if (req.body?.unit !== undefined) {
+            const unit = String(req.body?.unit || '').trim().toUpperCase();
+            if (!MARKET_ALLOWED_UNITS.has(unit)) return res.status(400).json({ message: 'Unidade inválida.' });
+            data.unit = unit;
+        }
+        if (req.body?.paymentType !== undefined) {
+            const paymentType = String(req.body?.paymentType || '').trim().toUpperCase();
+            if (!MARKET_ALLOWED_PAYMENT_TYPES.has(paymentType)) return res.status(400).json({ message: 'Tipo de pagamento inválido.' });
+            data.paymentType = paymentType;
+        }
+        if (req.body?.status !== undefined) {
+            const status = String(req.body?.status || '').trim().toUpperCase();
+            if (!MARKET_ALLOWED_STATUSES.has(status)) return res.status(400).json({ message: 'Status inválido.' });
+            data.status = status;
+        }
+        if (req.body?.referenceDate !== undefined) {
+            const referenceDate = parseMarketReferenceDate(req.body?.referenceDate);
+            if (!referenceDate) return res.status(400).json({ message: 'Data de referência inválida.' });
+            if (referenceDate.getTime() > Date.now()) return res.status(400).json({ message: 'Data de referência não pode ser futura.' });
+            data.referenceDate = referenceDate;
+        }
+        if (req.body?.referenceWeightArrobas !== undefined) {
+            if (req.body?.referenceWeightArrobas === null || req.body?.referenceWeightArrobas === '') {
+                data.referenceWeightArrobas = null;
+            } else {
+                const weight = parseNumber(req.body?.referenceWeightArrobas);
+                if (!weight || weight <= 0) return res.status(400).json({ message: 'Peso em arrobas inválido.' });
+                data.referenceWeightArrobas = weight;
+            }
+        }
+        if (req.body?.sourceBase !== undefined) data.sourceBase = normalizeMarketOptionalText(req.body?.sourceBase);
+        if (req.body?.notes !== undefined) data.notes = normalizeMarketOptionalText(req.body?.notes);
+
+        const updated = await prisma.marketPrice.update({
+            where: { id: priceId },
+            data,
+            include: { source: true, region: true },
+        });
+        return res.json({ price: serializeMarketPrice(updated) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar cotação de mercado.' });
+    }
+});
 
 app.get('/overview/dashboard', requireAuth, async (req, res) => {
     try {
@@ -10527,7 +11073,8 @@ app.get('/overview/dashboard', requireAuth, async (req, res) => {
         }
 
         const farmIds = farms.map((farm) => farm.id);
-        const marketReplacement = buildMarketReplacementSnapshot({ scope });
+        const selectedFarm = scope === 'farm' ? farms[0] : null;
+        const marketReplacement = await buildMarketReplacementSnapshot({ scope, farm: selectedFarm });
         if (!farmIds.length) {
             return res.json({
                 kpis: {
