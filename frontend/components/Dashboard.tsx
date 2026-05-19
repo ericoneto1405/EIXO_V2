@@ -433,7 +433,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Mercado e Reposição</p>
                         <p className="mt-1 text-sm text-[var(--eixo-text-soft)]">
-                            {(marketSnapshot?.region || 'Região não informada')}
+                            {(marketSnapshot?.region || marketSnapshot?.state || 'Região não configurada')}
                             {marketSnapshot?.sourceName ? ` • ${marketSnapshot.sourceName}` : ''}
                             {marketSnapshot?.referenceDate ? ` • Atualizado em ${fmtDate(marketSnapshot.referenceDate)}` : ''}
                         </p>
