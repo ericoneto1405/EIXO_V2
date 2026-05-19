@@ -10276,6 +10276,39 @@ const normalizeMarketOptionalText = (value) => {
     return normalized ? normalized : null;
 };
 
+const normalizeText = (value) => {
+    const raw = normalizeMarketOptionalText(value);
+    if (!raw) return null;
+    return raw
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
+const parseFarmMapData = (mapData) => {
+    if (!mapData) return null;
+    if (typeof mapData === 'object' && !Array.isArray(mapData)) return mapData;
+    if (typeof mapData === 'string') {
+        try {
+            const parsed = JSON.parse(mapData);
+            return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+        } catch (_error) {
+            return null;
+        }
+    }
+    return null;
+};
+
+const pickFirstText = (...values) => {
+    for (const value of values) {
+        const normalized = normalizeMarketOptionalText(value);
+        if (normalized) return normalized;
+    }
+    return null;
+};
+
 const serializeMarketSource = (source) => ({
     id: source.id,
     name: source.name,
@@ -10646,19 +10679,89 @@ const buildPartialMarketReplacementSnapshot = ({
 };
 
 const resolveFarmMarketRegion = (farm) => {
-    const mapData = farm?.mapData && typeof farm.mapData === 'object' ? farm.mapData : null;
-    const farmRegion = normalizeMarketOptionalText(farm?.region || mapData?.region || mapData?.regiao || mapData?.região);
-    const farmState = normalizeMarketState(farm?.state || farm?.uf || mapData?.state || mapData?.uf);
-    const farmCity = normalizeMarketOptionalText(farm?.city || farm?.cidade || mapData?.city || mapData?.cidade);
+    const mapData = parseFarmMapData(farm?.mapData);
+
+    const farmCity = pickFirstText(
+        farm?.city,
+        farm?.cidade,
+        mapData?.city,
+        mapData?.cidade,
+        mapData?.municipio,
+        mapData?.município,
+        mapData?.localidade,
+    );
+
+    const farmRegion = pickFirstText(
+        farm?.region,
+        mapData?.region,
+        mapData?.regiao,
+        mapData?.região,
+        mapData?.marketRegion,
+        mapData?.marketPlaceName,
+        mapData?.praca,
+        mapData?.praça,
+    );
+
+    const stateRaw = pickFirstText(
+        farm?.state,
+        farm?.uf,
+        mapData?.uf,
+        mapData?.UF,
+        mapData?.state,
+        mapData?.estado,
+        mapData?.siglaUf,
+        mapData?.siglaUF,
+        mapData?.estadoSigla,
+        mapData?.stateCode,
+    );
+    const farmState = stateRaw ? normalizeMarketState(stateRaw) : null;
+
+    const addressRaw = pickFirstText(
+        mapData?.address,
+        mapData?.endereco,
+        mapData?.endereço,
+        mapData?.location,
+        mapData?.place,
+    );
+
     const farmLat = farm?.latitude ?? farm?.lat ?? mapData?.latitude ?? mapData?.lat ?? null;
     const farmLng = farm?.longitude ?? farm?.lng ?? mapData?.longitude ?? mapData?.lng ?? null;
 
+    let resolvedRegion = farmRegion;
+    let resolvedState = farmState;
+    let source = farmRegion || farmState || farmCity ? 'farm-field' : 'empty';
+
+    const cityKey = normalizeText(farmCity);
+    const addressKey = normalizeText(addressRaw);
+
+    if ((!resolvedRegion || !resolvedState) && (cityKey === 'feira de santana' || cityKey === 'feira' || cityKey === 'lagoa do capim')) {
+        resolvedRegion = resolvedRegion || 'Bahia';
+        resolvedState = resolvedState || 'BA';
+        source = 'city-fallback';
+    }
+
+    if ((!resolvedRegion || !resolvedState) && (addressKey?.includes('bahia') || addressKey?.includes(' ba '))) {
+        resolvedRegion = resolvedRegion || 'Bahia';
+        resolvedState = resolvedState || 'BA';
+        source = 'city-fallback';
+    }
+
+    if (!resolvedRegion && !resolvedState && (farmLat !== null || farmLng !== null)) {
+        source = 'coords-fallback';
+    } else if (!resolvedRegion && !resolvedState) {
+        source = 'empty';
+    } else if (!source) {
+        source = 'mapData';
+    }
+
     return {
-        region: farmRegion,
-        state: farmState || null,
-        city: farmCity,
+        region: resolvedRegion || null,
+        state: resolvedState || null,
+        city: farmCity || null,
         lat: farmLat,
         lng: farmLng,
+        source,
+        mapDataKeys: mapData ? Object.keys(mapData) : [],
     };
 };
 
@@ -10669,12 +10772,13 @@ const resolveMarketRegionContext = async ({ farm, scope }) => {
         console.log('[overview/dashboard] farm market region', {
             farmId: farm?.id || null,
             farmName: farm?.name || null,
-            uf: farm?.uf || null,
-            state: farm?.state || farmRegionContext.state || null,
-            region: farm?.region || farmRegionContext.region || null,
-            city: farm?.city || farm?.cidade || farmRegionContext.city || null,
-            latitude: farm?.latitude || farm?.lat || farmRegionContext.lat || null,
-            longitude: farm?.longitude || farm?.lng || farmRegionContext.lng || null,
+            city: farm?.city || farm?.cidade || null,
+            lat: farm?.lat ?? null,
+            lng: farm?.lng ?? null,
+            mapDataKeys: farmRegionContext.mapDataKeys || [],
+            resolvedRegion: farmRegionContext.region || null,
+            resolvedState: farmRegionContext.state || null,
+            source: farmRegionContext.source || 'empty',
         });
     }
 
