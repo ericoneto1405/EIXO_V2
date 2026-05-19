@@ -10251,6 +10251,8 @@ const formatDateYYYYMMDD = (date = new Date()) => {
     return `${y}-${m}-${d}`;
 };
 
+const isPositiveFiniteNumber = (value) => Number.isFinite(value) && Number(value) > 0;
+
 const isValidMarketDateInput = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
 
 const parseMarketReferenceDate = (value) => {
@@ -10317,27 +10319,27 @@ const serializeMarketPrice = (price) => ({
 });
 
 const calculateReplacementCostInFatArrobas = ({ replacementAnimalPrice, fatCattlePricePerArroba }) => {
-    if (!replacementAnimalPrice || !fatCattlePricePerArroba || fatCattlePricePerArroba <= 0) return null;
+    if (!isPositiveFiniteNumber(replacementAnimalPrice) || !isPositiveFiniteNumber(fatCattlePricePerArroba)) return null;
     return replacementAnimalPrice / fatCattlePricePerArroba;
 };
 
 const calculateFinishedAnimalGrossValue = ({ fatCattlePricePerArroba, finishedAnimalWeightArrobas }) => {
-    if (!fatCattlePricePerArroba || !finishedAnimalWeightArrobas || fatCattlePricePerArroba <= 0 || finishedAnimalWeightArrobas <= 0) return null;
+    if (!isPositiveFiniteNumber(fatCattlePricePerArroba) || !isPositiveFiniteNumber(finishedAnimalWeightArrobas)) return null;
     return fatCattlePricePerArroba * finishedAnimalWeightArrobas;
 };
 
 const calculateReplacementAnimalsPerFinishedAnimal = ({ finishedAnimalGrossValue, replacementAnimalPrice }) => {
-    if (!finishedAnimalGrossValue || !replacementAnimalPrice || replacementAnimalPrice <= 0) return null;
+    if (!isPositiveFiniteNumber(finishedAnimalGrossValue) || !isPositiveFiniteNumber(replacementAnimalPrice)) return null;
     return finishedAnimalGrossValue / replacementAnimalPrice;
 };
 
 const calculateReplacementArrobaPrice = ({ replacementAnimalPrice, replacementAnimalWeightArrobas }) => {
-    if (!replacementAnimalPrice || !replacementAnimalWeightArrobas || replacementAnimalWeightArrobas <= 0) return null;
+    if (!isPositiveFiniteNumber(replacementAnimalPrice) || !isPositiveFiniteNumber(replacementAnimalWeightArrobas)) return null;
     return replacementAnimalPrice / replacementAnimalWeightArrobas;
 };
 
 const calculateReplacementPremiumPercent = ({ replacementArrobaPrice, fatCattlePricePerArroba }) => {
-    if (!replacementArrobaPrice || !fatCattlePricePerArroba || fatCattlePricePerArroba <= 0) return null;
+    if (!isPositiveFiniteNumber(replacementArrobaPrice) || !isPositiveFiniteNumber(fatCattlePricePerArroba)) return null;
     return ((replacementArrobaPrice / fatCattlePricePerArroba) - 1) * 100;
 };
 
@@ -10346,7 +10348,7 @@ const calculateReplacementPremiumInFatArrobas = ({
     replacementAnimalWeightArrobas,
     fatCattlePricePerArroba,
 }) => {
-    if (!replacementAnimalPrice || !replacementAnimalWeightArrobas || !fatCattlePricePerArroba || fatCattlePricePerArroba <= 0) return null;
+    if (!isPositiveFiniteNumber(replacementAnimalPrice) || !isPositiveFiniteNumber(replacementAnimalWeightArrobas) || !isPositiveFiniteNumber(fatCattlePricePerArroba)) return null;
     const baseValueAtFatCattlePrice = replacementAnimalWeightArrobas * fatCattlePricePerArroba;
     const premiumValue = replacementAnimalPrice - baseValueAtFatCattlePrice;
     return premiumValue / fatCattlePricePerArroba;
@@ -10539,56 +10541,51 @@ const calculateMarketReplacementMetrics = (base) => {
     };
 };
 
-const buildEmptyMarketReplacementSnapshot = ({ region = null, state = null, referenceDate = null } = {}) => {
-    const statusMeta = classifyReplacementMarketStatus(null);
-    const base = {
-        fatCattlePricePerArroba: null,
-        finishedAnimalWeightArrobas: DEFAULT_FINISHED_ANIMAL_WEIGHT_ARROBAS,
-        replacementAnimalType: 'BEZERRO_DESMAMA',
-        replacementAnimalTypeLabel: 'Bezerro desmamado',
-        replacementAnimalPrice: null,
-        replacementAnimalWeightArrobas: DEFAULT_REPLACEMENT_WEIGHT_ARROBAS,
-        region,
-        state,
-        sourceName: MARKET_VISIBLE_SOURCE_NAME,
-        sourceBase: null,
-        referenceDate,
-    };
-    const metrics = calculateMarketReplacementMetrics(base);
-    const fatCattleSignal = buildFatCattleSignal(base);
-    const replacementSignal = buildReplacementSignal({
-        replacementCostInFatArrobas: metrics.replacementCostInFatArrobas,
-    });
-    const aiInput = buildMarketAiInput({ base, metrics, statusMeta });
-    const aiInsight = generateMarketInsight(aiInput);
-    return {
-        fatCattlePricePerArroba: null,
-        finishedAnimalWeightArrobas: DEFAULT_FINISHED_ANIMAL_WEIGHT_ARROBAS,
-        finishedAnimalGrossValue: null,
-        replacementAnimalType: 'BEZERRO_DESMAMA',
-        replacementAnimalTypeLabel: 'Bezerro desmamado',
-        replacementAnimalPrice: null,
-        replacementAnimalWeightArrobas: DEFAULT_REPLACEMENT_WEIGHT_ARROBAS,
-        replacementCostInFatArrobas: null,
-        replacementAnimalsPerFinishedAnimal: null,
-        replacementArrobaPrice: null,
-        replacementPremiumPercent: null,
-        replacementPremiumInFatArrobas: null,
-        replacementRatio: null,
-        fatCattleSignal,
-        replacementSignal,
-        status: statusMeta.status,
-        statusLabel: statusMeta.statusLabel,
-        interpretation: 'Ainda não há dados suficientes para analisar mercado e reposição.',
-        region,
-        state,
-        sourceName: MARKET_VISIBLE_SOURCE_NAME,
-        sourceBase: null,
-        referenceDate,
-        ...MARKET_TREND_MOCK,
-        aiInsight,
-    };
-};
+const buildEmptyMarketReplacementSnapshot = ({ region = null, state = null, referenceDate = null } = {}) => ({
+    fatCattlePricePerArroba: null,
+    fatCattleTrendPercent: null,
+    finishedAnimalWeightArrobas: null,
+    finishedAnimalGrossValue: null,
+    replacementAnimalType: null,
+    replacementAnimalTypeLabel: null,
+    replacementAnimalPrice: null,
+    replacementAnimalTrendPercent: null,
+    replacementAnimalWeightArrobas: null,
+    replacementArrobaPrice: null,
+    replacementCostInFatArrobas: null,
+    replacementCostTrendArrobas: null,
+    replacementAnimalsPerFinishedAnimal: null,
+    replacementPremiumPercent: null,
+    replacementPremiumInFatArrobas: null,
+    replacementRatio: null,
+    fatCattleSignal: {
+        status: 'SEM_DADOS',
+        signal: 'Sem dados',
+        label: 'Sem dados de arroba',
+        text: 'Ainda não há dados suficientes para avaliar o sinal do boi gordo.',
+    },
+    replacementSignal: {
+        status: 'SEM_DADOS',
+        signal: 'Sem dados',
+        label: 'Sem dados de reposição',
+        text: 'Ainda não há dados suficientes para analisar a compra da reposição.',
+    },
+    status: 'SEM_DADOS',
+    statusLabel: 'Sem dados de mercado',
+    interpretation: 'Ainda não há dados suficientes para analisar mercado e reposição.',
+    region,
+    state,
+    sourceName: MARKET_VISIBLE_SOURCE_NAME,
+    sourceBase: null,
+    referenceDate,
+    aiInsight: {
+        summary: 'Ainda não há dados suficientes para analisar mercado e reposição.',
+        detail: '',
+        attentionPoints: [],
+        tone: 'SEM_DADOS',
+        generatedBy: 'RULES_FALLBACK',
+    },
+});
 
 const buildPartialMarketReplacementSnapshot = ({
     fatCattlePrice = null,
@@ -11074,7 +11071,17 @@ app.get('/overview/dashboard', requireAuth, async (req, res) => {
 
         const farmIds = farms.map((farm) => farm.id);
         const selectedFarm = scope === 'farm' ? farms[0] : null;
-        const marketReplacement = await buildMarketReplacementSnapshot({ scope, farm: selectedFarm });
+        let marketReplacement = buildEmptyMarketReplacementSnapshot();
+        try {
+            marketReplacement = await buildMarketReplacementSnapshot({ scope, farm: selectedFarm });
+        } catch (marketError) {
+            console.error('[overview/dashboard] marketReplacement failed', {
+                scope,
+                farmId: farmId || null,
+                error: marketError?.message || 'unknown_error',
+            });
+            marketReplacement = buildEmptyMarketReplacementSnapshot();
+        }
         if (!farmIds.length) {
             return res.json({
                 kpis: {

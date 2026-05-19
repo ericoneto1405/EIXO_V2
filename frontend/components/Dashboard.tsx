@@ -443,12 +443,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                 {!marketHasData ? (
                     <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
                         <p className="text-sm font-semibold text-[var(--eixo-text)]">Ainda não há dados suficientes para analisar mercado e reposição.</p>
-                        <button
-                            type="button"
-                            className="mt-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-bg)] hover:text-[var(--eixo-text)]"
-                        >
-                            Cadastrar cotação manual
-                        </button>
+                        <p className="mt-2 text-xs text-[var(--eixo-text-soft)]">A cotação regional ainda não está disponível.</p>
                     </div>
                 ) : (
                     <>
