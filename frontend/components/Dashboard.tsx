@@ -76,19 +76,70 @@ interface KpiData {
     areaTotalHa: number | null;
 }
 
+type ReplacementRatioStatus = 'FAVORAVEL' | 'EQUILIBRADA' | 'PRESSIONADA' | 'SEM_DADOS';
+
+interface ReplacementMarketSnapshot {
+    fatCattlePricePerArroba: number | null;
+    finishedAnimalWeightArrobas: number | null;
+    finishedAnimalGrossValue: number | null;
+    replacementAnimalType: 'BEZERRO_DESMAMA' | 'BEZERRO_12M' | 'GARROTE' | 'BOI_MAGRO' | 'NOVILHA' | null;
+    replacementAnimalTypeLabel: string | null;
+    replacementAnimalPrice: number | null;
+    replacementAnimalWeightArrobas: number | null;
+    replacementCostInFatArrobas: number | null;
+    replacementAnimalsPerFinishedAnimal: number | null;
+    replacementArrobaPrice: number | null;
+    replacementPremiumPercent: number | null;
+    replacementPremiumInFatArrobas: number | null;
+    replacementRatio?: number | null;
+    status: ReplacementRatioStatus;
+    statusLabel: string;
+    interpretation: string;
+    region: string | null;
+    state: string | null;
+    sourceName: string | null;
+    referenceDate: string | null;
+    aiInsight?: {
+        summary: string;
+        detail: string;
+        attentionPoints: string[];
+        tone: 'OPORTUNIDADE' | 'NEUTRO' | 'CAUTELA' | 'SEM_DADOS';
+        generatedBy: 'RULES_FALLBACK' | 'AI';
+    } | null;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const fmt = (n: number, decimals = 1) =>
     n.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
 const fmtMoney = (n: number) =>
-    n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+    n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const fmtDate = (isoDate: string) => {
+    const dt = new Date(isoDate);
+    if (Number.isNaN(dt.getTime())) return 'Data não informada';
+    return dt.toLocaleDateString('pt-BR');
+};
 
 // Classifica taxa de ocupação
 const getOccupationStatus = (taxa: number) => {
     if (taxa < 0.8) return { label: 'Leve', color: 'text-[var(--eixo-info)]', bg: 'bg-[rgba(63,111,143,0.10)]' };
     if (taxa <= 1.5) return { label: 'Adequada', color: 'text-[var(--eixo-success)]', bg: 'bg-[var(--eixo-green-soft)]' };
     return { label: 'Sobrecarregado', color: 'text-[var(--eixo-danger)]', bg: 'bg-[rgba(184,66,50,0.08)]' };
+};
+
+const getReplacementStatusUi = (status: ReplacementRatioStatus) => {
+    if (status === 'FAVORAVEL') {
+        return { label: 'Reposição favorável', cls: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' };
+    }
+    if (status === 'EQUILIBRADA') {
+        return { label: 'Reposição equilibrada', cls: 'bg-[rgba(213,150,0,0.10)] text-[#8a6000]' };
+    }
+    if (status === 'PRESSIONADA') {
+        return { label: 'Reposição pressionada', cls: 'bg-[rgba(184,66,50,0.10)] text-[var(--eixo-danger)]' };
+    }
+    return { label: 'Sem dados de mercado', cls: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' };
 };
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
@@ -124,6 +175,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
         totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null,
         gmdMedio: null, entradas: null, saidas: null, saldoMes: null, animaisSemPesagem: 0, areaTotalHa: null,
     });
+    const [marketReplacement, setMarketReplacement] = useState<ReplacementMarketSnapshot | null>(null);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -155,6 +207,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
 
                 if (!active) return;
                 const payload = overviewData?.kpis || {};
+                const marketPayload = overviewData?.marketReplacement || null;
                 setKpis({
                     totalAnimais: Number(payload.totalAnimais || 0),
                     nascimentosMes: Number(payload.nascimentosMes || 0),
@@ -167,6 +220,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                     animaisSemPesagem: Number(payload.animaisSemPesagem || 0),
                     areaTotalHa: payload.areaTotalHa ?? null,
                 });
+                setMarketReplacement(marketPayload);
             } catch (err) {
                 console.error('Dashboard load error', err);
                 if (active) setLoadError('Não foi possível carregar os dados. Verifique sua conexão.');
@@ -181,6 +235,19 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
 
     const occupationStatus = kpis.taxaOcupacao !== null ? getOccupationStatus(kpis.taxaOcupacao) : null;
     const mesLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    const marketSnapshot = marketReplacement;
+    const marketStatusUi = marketSnapshot ? getReplacementStatusUi(marketSnapshot.status) : null;
+    const marketHasData = Boolean(
+        marketSnapshot
+        && marketSnapshot.status !== 'SEM_DADOS'
+        && marketSnapshot.fatCattlePricePerArroba !== null
+        && marketSnapshot.replacementAnimalPrice !== null
+        && marketSnapshot.replacementAnimalWeightArrobas !== null
+        && marketSnapshot.replacementCostInFatArrobas !== null
+        && marketSnapshot.replacementAnimalsPerFinishedAnimal !== null
+        && marketSnapshot.replacementArrobaPrice !== null
+        && marketSnapshot.replacementPremiumPercent !== null,
+    );
 
     return (
         <div className="space-y-6">
@@ -341,6 +408,83 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
             })()}
 
             {/* Clima + Notícias */}
+            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Mercado e Reposição</p>
+                        <p className="mt-1 text-sm text-[var(--eixo-text-soft)]">
+                            {(marketSnapshot?.region || 'Região não informada')}
+                            {marketSnapshot?.sourceName ? ` • Fonte ${marketSnapshot.sourceName}` : ''}
+                            {marketSnapshot?.referenceDate ? ` • ${fmtDate(marketSnapshot.referenceDate)}` : ''}
+                        </p>
+                    </div>
+                    {marketSnapshot && marketStatusUi && (
+                        <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${marketStatusUi.cls}`}>
+                            {marketSnapshot.statusLabel || marketStatusUi.label}
+                        </span>
+                    )}
+                </div>
+
+                {!marketHasData ? (
+                    <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
+                        <p className="text-sm font-semibold text-[var(--eixo-text)]">Ainda não há cotações cadastradas para calcular a relação de reposição.</p>
+                        <button
+                            type="button"
+                            className="mt-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-bg)] hover:text-[var(--eixo-text)]"
+                        >
+                            Cadastrar cotação manual
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Arroba do boi gordo</p>
+                                <p className="mt-1 text-lg font-extrabold text-[var(--eixo-text)]">{fmtMoney(marketSnapshot!.fatCattlePricePerArroba as number)}/@</p>
+                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Boi de referência: {fmt(marketSnapshot!.finishedAnimalWeightArrobas as number, 0)} @</p>
+                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Valor do boi: {fmtMoney(marketSnapshot!.finishedAnimalGrossValue as number)}</p>
+                            </div>
+                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">{marketSnapshot?.replacementAnimalTypeLabel || 'Reposição'}</p>
+                                <p className="mt-1 text-lg font-extrabold text-[var(--eixo-text)]">{fmtMoney(marketSnapshot!.replacementAnimalPrice as number)}/cab</p>
+                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Peso estimado: {fmt(marketSnapshot!.replacementAnimalWeightArrobas as number, 1)} @</p>
+                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Arroba do bezerro: {fmtMoney(marketSnapshot!.replacementArrobaPrice as number)}/@</p>
+                            </div>
+                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Leitura direta</p>
+                                <p className="mt-1 text-sm font-semibold text-[var(--eixo-text)]">Custo da reposição: {fmt(marketSnapshot!.replacementCostInFatArrobas as number, 1)} @ por bezerro</p>
+                                <p className="mt-1 text-sm font-semibold text-[var(--eixo-text)]">Poder de compra: {fmt(marketSnapshot!.replacementAnimalsPerFinishedAnimal as number, 2)} bezerros por boi</p>
+                                <p className="mt-1 text-sm font-semibold text-[var(--eixo-text)]">Ágio da reposição: {fmt(marketSnapshot!.replacementPremiumPercent as number, 1)}%</p>
+                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">
+                                    Ágio em arrobas: {marketSnapshot?.replacementPremiumInFatArrobas === null ? '—' : `${fmt(marketSnapshot!.replacementPremiumInFatArrobas as number, 1)} @`}
+                                </p>
+                            </div>
+                        </div>
+                        <p className="mt-3 text-sm font-medium text-[var(--eixo-text-muted)]">{marketSnapshot!.interpretation}</p>
+                        {marketSnapshot?.aiInsight && (
+                            <div className="mt-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Leitura EIXO</p>
+                                <p className="mt-1 text-sm font-semibold text-[var(--eixo-text)]">{marketSnapshot.aiInsight.summary}</p>
+                                <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{marketSnapshot.aiInsight.detail}</p>
+                                {Array.isArray(marketSnapshot.aiInsight.attentionPoints) && marketSnapshot.aiInsight.attentionPoints.length > 0 && (
+                                    <div className="mt-2">
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-soft)]">Pontos de atenção</p>
+                                        <ul className="mt-1 space-y-1">
+                                            {marketSnapshot.aiInsight.attentionPoints.slice(0, 3).map((point) => (
+                                                <li key={point} className="text-sm text-[var(--eixo-text-muted)]">- {point}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">
+                            Referência: {marketSnapshot?.referenceDate ? fmtDate(marketSnapshot.referenceDate) : 'Data não informada'} · Fonte: {marketSnapshot?.sourceName || 'Manual / não informada'}
+                        </p>
+                    </>
+                )}
+            </div>
+
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <WeatherCard city={farmCity ?? null} lat={farmLat} lng={farmLng} onNavigateToFarms={onNavigateToFarms} />
                 <CattleNewsCard />

@@ -10211,6 +10211,228 @@ app.delete('/financial/transactions/:id', requireAuth, requireBillingAccess, asy
     }
 });
 
+const REPLACEMENT_RATIO_LIMITS = {
+    FAVORAVEL_MAX: 8,
+    EQUILIBRADA_MAX: 10,
+};
+
+const formatNumberPtBr = (value, decimals = 1) => Number(value).toLocaleString('pt-BR', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+});
+
+const formatDateYYYYMMDD = (date = new Date()) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+const calculateReplacementCostInFatArrobas = ({ replacementAnimalPrice, fatCattlePricePerArroba }) => {
+    if (!replacementAnimalPrice || !fatCattlePricePerArroba || fatCattlePricePerArroba <= 0) return null;
+    return replacementAnimalPrice / fatCattlePricePerArroba;
+};
+
+const calculateFinishedAnimalGrossValue = ({ fatCattlePricePerArroba, finishedAnimalWeightArrobas }) => {
+    if (!fatCattlePricePerArroba || !finishedAnimalWeightArrobas || fatCattlePricePerArroba <= 0 || finishedAnimalWeightArrobas <= 0) return null;
+    return fatCattlePricePerArroba * finishedAnimalWeightArrobas;
+};
+
+const calculateReplacementAnimalsPerFinishedAnimal = ({ finishedAnimalGrossValue, replacementAnimalPrice }) => {
+    if (!finishedAnimalGrossValue || !replacementAnimalPrice || replacementAnimalPrice <= 0) return null;
+    return finishedAnimalGrossValue / replacementAnimalPrice;
+};
+
+const calculateReplacementArrobaPrice = ({ replacementAnimalPrice, replacementAnimalWeightArrobas }) => {
+    if (!replacementAnimalPrice || !replacementAnimalWeightArrobas || replacementAnimalWeightArrobas <= 0) return null;
+    return replacementAnimalPrice / replacementAnimalWeightArrobas;
+};
+
+const calculateReplacementPremiumPercent = ({ replacementArrobaPrice, fatCattlePricePerArroba }) => {
+    if (!replacementArrobaPrice || !fatCattlePricePerArroba || fatCattlePricePerArroba <= 0) return null;
+    return ((replacementArrobaPrice / fatCattlePricePerArroba) - 1) * 100;
+};
+
+const calculateReplacementPremiumInFatArrobas = ({
+    replacementAnimalPrice,
+    replacementAnimalWeightArrobas,
+    fatCattlePricePerArroba,
+}) => {
+    if (!replacementAnimalPrice || !replacementAnimalWeightArrobas || !fatCattlePricePerArroba || fatCattlePricePerArroba <= 0) return null;
+    const baseValueAtFatCattlePrice = replacementAnimalWeightArrobas * fatCattlePricePerArroba;
+    const premiumValue = replacementAnimalPrice - baseValueAtFatCattlePrice;
+    return premiumValue / fatCattlePricePerArroba;
+};
+
+const classifyReplacementMarketStatus = (replacementCostInFatArrobas) => {
+    // Regra provisória. No futuro, calibrar por categoria, peso, região e histórico da praça.
+    if (replacementCostInFatArrobas === null) {
+        return {
+            status: 'SEM_DADOS',
+            statusLabel: 'Sem dados de mercado',
+            interpretation: 'Ainda não há dados suficientes para analisar a reposição.',
+        };
+    }
+
+    if (replacementCostInFatArrobas <= REPLACEMENT_RATIO_LIMITS.FAVORAVEL_MAX) {
+        return {
+            status: 'FAVORAVEL',
+            statusLabel: 'Reposição favorável',
+            interpretation: 'A reposição está mais favorável para quem precisa comprar bezerros.',
+        };
+    }
+    if (replacementCostInFatArrobas <= REPLACEMENT_RATIO_LIMITS.EQUILIBRADA_MAX) {
+        return {
+            status: 'EQUILIBRADA',
+            statusLabel: 'Reposição equilibrada',
+            interpretation: 'A relação está equilibrada. A compra exige atenção ao custo de recria.',
+        };
+    }
+    return {
+        status: 'PRESSIONADA',
+        statusLabel: 'Reposição pressionada',
+        interpretation: 'A reposição está pressionada. Comprar bezerro agora exige mais arrobas de boi gordo.',
+    };
+};
+
+const buildMarketAiInput = ({ base, metrics, statusMeta }) => ({
+    state: base.state,
+    region: base.region,
+    fatCattlePricePerArroba: base.fatCattlePricePerArroba,
+    replacementAnimalPrice: base.replacementAnimalPrice,
+    replacementAnimalWeightArrobas: base.replacementAnimalWeightArrobas,
+    replacementCostInFatArrobas: metrics.replacementCostInFatArrobas,
+    replacementAnimalsPerFinishedAnimal: metrics.replacementAnimalsPerFinishedAnimal,
+    finishedAnimalWeightArrobas: base.finishedAnimalWeightArrobas,
+    finishedAnimalGrossValue: metrics.finishedAnimalGrossValue,
+    replacementAnimalType: base.replacementAnimalType,
+    replacementAnimalTypeLabel: base.replacementAnimalTypeLabel,
+    replacementArrobaPrice: metrics.replacementArrobaPrice,
+    replacementPremiumPercent: metrics.replacementPremiumPercent,
+    replacementPremiumInFatArrobas: metrics.replacementPremiumInFatArrobas,
+    status: statusMeta.status,
+    statusLabel: statusMeta.statusLabel,
+    sourceName: base.sourceName,
+    referenceDate: base.referenceDate,
+});
+
+const generateFallbackMarketInsight = (aiInput) => {
+    if (aiInput.status === 'SEM_DADOS') {
+        return {
+            summary: 'Ainda não há dados suficientes para gerar uma leitura de mercado.',
+            detail: 'Cadastre cotações de arroba e reposição para liberar a leitura comparativa da reposição.',
+            attentionPoints: ['Use essa leitura apenas como referência operacional.'],
+            tone: 'SEM_DADOS',
+            generatedBy: 'RULES_FALLBACK',
+        };
+    }
+    if (aiInput.status === 'FAVORAVEL') {
+        return {
+            summary: 'A reposição está favorável para quem precisa comprar bezerros.',
+            detail: `Esse bezerro custa o equivalente a ${formatNumberPtBr(aiInput.replacementCostInFatArrobas, 1)} arrobas de boi gordo. Vendendo um boi de referência de ${formatNumberPtBr(aiInput.finishedAnimalWeightArrobas, 0)} @, o produtor compra cerca de ${formatNumberPtBr(aiInput.replacementAnimalsPerFinishedAnimal, 2)} bezerros. A arroba do bezerro está ${formatNumberPtBr(aiInput.replacementPremiumPercent, 1)}% acima da arroba do boi gordo.`,
+            attentionPoints: [
+                'Ainda assim, acompanhe custo de recria e desempenho do lote.',
+                'Use essa leitura como referência, não como decisão automática.',
+            ],
+            tone: 'OPORTUNIDADE',
+            generatedBy: 'RULES_FALLBACK',
+        };
+    }
+    if (aiInput.status === 'EQUILIBRADA') {
+        return {
+            summary: 'A reposição está equilibrada, mas exige atenção ao custo de recria.',
+            detail: `Esse bezerro custa o equivalente a ${formatNumberPtBr(aiInput.replacementCostInFatArrobas, 1)} arrobas de boi gordo. Vendendo um boi de referência de ${formatNumberPtBr(aiInput.finishedAnimalWeightArrobas, 0)} @, o produtor compra cerca de ${formatNumberPtBr(aiInput.replacementAnimalsPerFinishedAnimal, 2)} bezerros. A arroba do bezerro está ${formatNumberPtBr(aiInput.replacementPremiumPercent, 1)}% acima da arroba do boi gordo.`,
+            attentionPoints: [
+                'A compra só faz sentido se a recria conseguir diluir esse ágio com bom ganho de peso.',
+                'Compare o preço informado com a praça real da fazenda antes de decidir.',
+                'Reposição equilibrada não significa compra garantida; depende do custo e do desempenho do lote.',
+            ],
+            tone: 'CAUTELA',
+            generatedBy: 'RULES_FALLBACK',
+        };
+    }
+    return {
+        summary: 'A reposição está pressionada. Comprar bezerro agora exige mais arrobas de boi gordo.',
+        detail: `Esse bezerro custa cerca de ${formatNumberPtBr(aiInput.replacementCostInFatArrobas, 1)} arrobas de boi gordo. O poder de compra está em aproximadamente ${formatNumberPtBr(aiInput.replacementAnimalsPerFinishedAnimal, 2)} bezerros por boi de referência, com ágio de ${formatNumberPtBr(aiInput.replacementPremiumPercent, 1)}%.`,
+        attentionPoints: [
+            'Reforce análise de custo antes de repor.',
+            'Use essa leitura apenas como referência operacional.',
+        ],
+        tone: 'CAUTELA',
+        generatedBy: 'RULES_FALLBACK',
+    };
+};
+
+const generateMarketInsight = (aiInput) => generateFallbackMarketInsight(aiInput);
+
+const calculateMarketReplacementMetrics = (base) => {
+    const finishedAnimalGrossValue = calculateFinishedAnimalGrossValue(base);
+    const replacementCostInFatArrobas = calculateReplacementCostInFatArrobas(base);
+    const replacementAnimalsPerFinishedAnimal = calculateReplacementAnimalsPerFinishedAnimal({
+        finishedAnimalGrossValue,
+        replacementAnimalPrice: base.replacementAnimalPrice,
+    });
+    const replacementArrobaPrice = calculateReplacementArrobaPrice(base);
+    const replacementPremiumPercent = calculateReplacementPremiumPercent({
+        replacementArrobaPrice,
+        fatCattlePricePerArroba: base.fatCattlePricePerArroba,
+    });
+    const replacementPremiumInFatArrobas = calculateReplacementPremiumInFatArrobas(base);
+    return {
+        finishedAnimalGrossValue,
+        replacementCostInFatArrobas,
+        replacementAnimalsPerFinishedAnimal,
+        replacementArrobaPrice,
+        replacementPremiumPercent,
+        replacementPremiumInFatArrobas,
+    };
+};
+
+const buildMarketReplacementSnapshot = ({ scope }) => {
+    const base = {
+        fatCattlePricePerArroba: 315,
+        finishedAnimalWeightArrobas: 18,
+        replacementAnimalType: 'BEZERRO_12M',
+        replacementAnimalTypeLabel: 'Bezerro 12M',
+        replacementAnimalPrice: 2900,
+        replacementAnimalWeightArrobas: 8,
+        region: 'Bahia',
+        state: 'BA',
+        sourceName: 'Manual',
+        referenceDate: formatDateYYYYMMDD(new Date()),
+    };
+
+    const metrics = calculateMarketReplacementMetrics(base);
+    const statusMeta = classifyReplacementMarketStatus(metrics.replacementCostInFatArrobas);
+    const aiInput = buildMarketAiInput({ base, metrics, statusMeta });
+    const aiInsight = generateMarketInsight(aiInput);
+
+    return {
+        fatCattlePricePerArroba: base.fatCattlePricePerArroba,
+        finishedAnimalWeightArrobas: base.finishedAnimalWeightArrobas,
+        finishedAnimalGrossValue: metrics.finishedAnimalGrossValue,
+        replacementAnimalType: base.replacementAnimalType,
+        replacementAnimalTypeLabel: base.replacementAnimalTypeLabel,
+        replacementAnimalPrice: base.replacementAnimalPrice,
+        replacementAnimalWeightArrobas: base.replacementAnimalWeightArrobas,
+        replacementCostInFatArrobas: metrics.replacementCostInFatArrobas,
+        replacementAnimalsPerFinishedAnimal: metrics.replacementAnimalsPerFinishedAnimal,
+        replacementArrobaPrice: metrics.replacementArrobaPrice,
+        replacementPremiumPercent: metrics.replacementPremiumPercent,
+        replacementPremiumInFatArrobas: metrics.replacementPremiumInFatArrobas,
+        // compatibilidade temporária com versão anterior do frontend
+        replacementRatio: metrics.replacementCostInFatArrobas,
+        status: statusMeta.status,
+        statusLabel: statusMeta.statusLabel,
+        interpretation: statusMeta.interpretation,
+        region: base.region,
+        state: base.state,
+        sourceName: base.sourceName,
+        referenceDate: base.referenceDate,
+        aiInsight,
+    };
+};
+
 app.get('/overview/dashboard', requireAuth, async (req, res) => {
     try {
         const scope = req.query?.scope === 'farm' ? 'farm' : 'all';
@@ -10232,6 +10454,7 @@ app.get('/overview/dashboard', requireAuth, async (req, res) => {
         }
 
         const farmIds = farms.map((farm) => farm.id);
+        const marketReplacement = buildMarketReplacementSnapshot({ scope });
         if (!farmIds.length) {
             return res.json({
                 kpis: {
@@ -10246,6 +10469,7 @@ app.get('/overview/dashboard', requireAuth, async (req, res) => {
                     animaisSemPesagem: 0,
                     areaTotalHa: null,
                 },
+                marketReplacement,
             });
         }
 
@@ -10341,6 +10565,7 @@ app.get('/overview/dashboard', requireAuth, async (req, res) => {
                 animaisSemPesagem,
                 areaTotalHa,
             },
+            marketReplacement,
         });
     } catch (error) {
         console.error(error);

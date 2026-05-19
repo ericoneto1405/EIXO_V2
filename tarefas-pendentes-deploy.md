@@ -9,6 +9,9 @@
 | DEP-011 | Padronizar nomenclatura na página de planos: `EIXO Gestão`, `EIXO Performance`, remover termos `Plano Grátis`/`Eixo Decisão` e ajustar nota para `EIXO Base Vitalício` | CONCLUIDA | Build frontend OK (`npm run build --prefix frontend`) | 2026-05-18 |
 | DEP-012 | Ajustar hierarquia visual do header da landing: navegação interna mais leve, `Entrar` discreto, `Ver Planos` como CTA secundário e `Começar agora` como CTA principal menor (desktop + mobile) | CONCLUIDA | Build frontend OK (`npm run build --prefix frontend`) | 2026-05-18 |
 | DEP-013 | Ajustar Visão Geral para escopo `all`/`farm`: dashboard consolidado para “Todas as Fazendas” e específico por fazenda, com endpoint `GET /overview/dashboard` no backend sem alterar KPIs | CONCLUIDA | Frontend build OK (`npm run build --prefix frontend`) + Schema Prisma válido (`npx prisma validate --schema server/prisma/schema.prisma`) | 2026-05-18 |
+| DEP-014 | Adicionar bloco “Mercado e Reposição” na Visão Geral com KPIs (arroba, reposição, relação de troca, ágio), interpretação automática e estado vazio, sem criar módulo novo e sem integração externa | CONCLUIDA | Build frontend OK (`npm run build --prefix frontend`) | 2026-05-18 |
+| DEP-015 | Evoluir “Mercado e Reposição” com camada `aiInsight` no payload de `/overview/dashboard`, mantendo cálculo determinístico e geração textual por `RULES_FALLBACK` na Visão Geral | CONCLUIDA | Frontend build OK (`npm run build --prefix frontend`) + Schema Prisma válido (`npx prisma validate --schema server/prisma/schema.prisma`) | 2026-05-19 |
+| DEP-016 | Ajustes finais de qualidade em mercado/reposição: `referenceDate` em `YYYY-MM-DD`, números pt-BR (vírgula decimal e moeda com centavos) e fallback textual revisado sem alterar fórmulas | CONCLUIDA | Frontend build OK (`npm run build --prefix frontend`) + Schema Prisma válido (`npx prisma validate --schema server/prisma/schema.prisma`) | 2026-05-19 |
 
 ## Tarefas pendentes
 
@@ -19,3 +22,5 @@
 ## Observações
 - Arquivo `frontend/components/PublicLanding.tsx` alterado de forma cirúrgica.
 - Hierarquia desktop aplicada: `[Plano Base] [Antes e Depois] [Como funciona] [Dúvidas] [Entrar] [Planos] [Cadastrar no Plano Base]`.
+- Deploy da DEP-013 realizado em produção com sucesso em 2026-05-18 via `./deploy-local.sh "chore: aplicar DEP-013 e atualizar tarefas-pendentes-deploy.md"`.
+- Commit de deploy: `0d05066` (push em `main`, build na VPS OK, PM2 reload OK).
