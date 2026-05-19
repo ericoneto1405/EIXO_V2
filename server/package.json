@@ -10,7 +10,9 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js",
-    "seed:market": "node scripts/seed-market-prices.mjs"
+    "seed:market": "node scripts/seed-market-prices.mjs",
+    "market:mock-national": "node market/jobs/runMarketCaptureJob.js",
+    "market:publish-pending": "node market/jobs/publishPendingNormalized.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

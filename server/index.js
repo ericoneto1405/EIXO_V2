@@ -11,6 +11,9 @@ import dotenv from 'dotenv';
 import { registerNutritionModuleRoutes } from './nutritionModule.js';
 import { registerAcasalamentoRoutes } from './acasalamentoModule.js';
 import { upsertSystemAccountCategories } from './accountCategoryDefaults.js';
+import { runMarketCapture } from './market/services/marketCaptureService.js';
+import { publishNormalizedPrice, rejectNormalizedPrice } from './market/services/marketPublishService.js';
+import { resolveMarketTrends } from './market/services/marketTrendService.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import twilio from 'twilio';
 import { Resend } from 'resend';
@@ -10220,6 +10223,13 @@ const DEFAULT_REPLACEMENT_WEIGHT_ARROBAS = 7;
 const DEFAULT_MARKET_STATE = 'BA';
 const DEFAULT_MARKET_REGION = 'Bahia';
 const MARKET_VISIBLE_SOURCE_NAME = 'EIXO Mercado';
+const MARKET_MACRO_REGION_BY_STATE = {
+    AC: 'NORTE', AL: 'NORDESTE', AP: 'NORTE', AM: 'NORTE', BA: 'NORDESTE', CE: 'NORDESTE',
+    DF: 'CENTRO_OESTE', ES: 'SUDESTE', GO: 'CENTRO_OESTE', MA: 'NORDESTE', MT: 'CENTRO_OESTE',
+    MS: 'CENTRO_OESTE', MG: 'SUDESTE', PA: 'NORTE', PB: 'NORDESTE', PR: 'SUL', PE: 'NORDESTE',
+    PI: 'NORDESTE', RJ: 'SUDESTE', RN: 'NORDESTE', RS: 'SUL', RO: 'NORTE', RR: 'NORTE', SC: 'SUL',
+    SP: 'SUDESTE', SE: 'NORDESTE', TO: 'NORTE',
+};
 const MARKET_ALLOWED_PRODUCT_TYPES = new Set([
     'BOI_GORDO',
     'VACA_GORDA',
@@ -10263,6 +10273,7 @@ const requireMarketAdmin = (req, res, next) => {
 };
 
 const normalizeMarketState = (value) => String(value || '').trim().toUpperCase().slice(0, 2);
+const marketMacroRegionFromState = (state) => MARKET_MACRO_REGION_BY_STATE[normalizeMarketState(state)] || null;
 
 const normalizeMarketOptionalText = (value) => {
     if (value === null || value === undefined) return null;
@@ -10322,11 +10333,24 @@ const hasMarketModelDelegates = () => Boolean(
     && prisma?.marketSource,
 );
 
+const hasMarketPipelineDelegates = () => Boolean(
+    hasMarketModelDelegates()
+    && prisma?.marketRawCapture
+    && prisma?.marketNormalizedPrice
+    && prisma?.marketPublishJob
+    && prisma?.marketValidationRule,
+);
+
 const serializeMarketSource = (source) => ({
     id: source.id,
     name: source.name,
     type: source.type,
     url: source.url || null,
+    priority: source.priority,
+    trustScore: source.trustScore,
+    autoPublishMinConfidence: source.autoPublishMinConfidence,
+    requiresReview: source.requiresReview,
+    isAutomationEnabled: source.isAutomationEnabled,
     isActive: source.isActive,
     createdAt: source.createdAt.toISOString(),
     updatedAt: source.updatedAt.toISOString(),
@@ -10339,6 +10363,7 @@ const serializeMarketRegion = (region) => ({
     city: region.city || null,
     marketPlaceName: region.marketPlaceName || null,
     sourceRegionName: region.sourceRegionName || null,
+    macroRegion: region.macroRegion || null,
     isActive: region.isActive,
     createdAt: region.createdAt.toISOString(),
     updatedAt: region.updatedAt.toISOString(),
@@ -10362,6 +10387,46 @@ const serializeMarketPrice = (price) => ({
     updatedAt: price.updatedAt.toISOString(),
     source: price.source ? serializeMarketSource(price.source) : null,
     region: price.region ? serializeMarketRegion(price.region) : null,
+});
+
+const serializeMarketRawCapture = (capture) => ({
+    id: capture.id,
+    sourceId: capture.sourceId,
+    capturedAt: capture.capturedAt?.toISOString?.() || null,
+    referenceDate: capture.referenceDate ? formatDateYYYYMMDD(capture.referenceDate) : null,
+    rawTitle: capture.rawTitle || null,
+    rawText: capture.rawText || null,
+    rawUrl: capture.rawUrl || null,
+    rawPayload: capture.rawPayload || null,
+    captureMethod: capture.captureMethod,
+    status: capture.status,
+    errorMessage: capture.errorMessage || null,
+    createdAt: capture.createdAt?.toISOString?.() || null,
+    updatedAt: capture.updatedAt?.toISOString?.() || null,
+    source: capture.source ? serializeMarketSource(capture.source) : null,
+});
+
+const serializeMarketNormalizedPrice = (normalized) => ({
+    id: normalized.id,
+    rawCaptureId: normalized.rawCaptureId || null,
+    sourceId: normalized.sourceId,
+    regionId: normalized.regionId || null,
+    productType: normalized.productType,
+    price: Number(normalized.price),
+    unit: normalized.unit,
+    paymentType: normalized.paymentType,
+    referenceDate: formatDateYYYYMMDD(normalized.referenceDate),
+    referenceWeightArrobas: normalized.referenceWeightArrobas ?? null,
+    confidenceScore: normalized.confidenceScore,
+    validationStatus: normalized.validationStatus,
+    validationReasons: normalized.validationReasons || [],
+    normalizedPayload: normalized.normalizedPayload || null,
+    status: normalized.status,
+    reviewerNotes: normalized.reviewerNotes || null,
+    createdAt: normalized.createdAt?.toISOString?.() || null,
+    updatedAt: normalized.updatedAt?.toISOString?.() || null,
+    source: normalized.source ? serializeMarketSource(normalized.source) : null,
+    region: normalized.region ? serializeMarketRegion(normalized.region) : null,
 });
 
 const calculateReplacementCostInFatArrobas = ({ replacementAnimalPrice, fatCattlePricePerArroba }) => {
@@ -10842,6 +10907,14 @@ const resolveMarketRegionContext = async ({ farm, scope }) => {
             orderBy: [{ updatedAt: 'desc' }],
         });
         if (byState) return byState;
+        const macroRegion = marketMacroRegionFromState(farmRegionContext.state);
+        if (macroRegion) {
+            const byMacroRegion = await prisma.marketRegion.findFirst({
+                where: { isActive: true, macroRegion },
+                orderBy: [{ updatedAt: 'desc' }],
+            });
+            if (byMacroRegion) return byMacroRegion;
+        }
         return {
             id: null,
             name: farmRegionContext.region || farmRegionContext.state,
@@ -10935,6 +11008,12 @@ const buildMarketReplacementSnapshot = async ({ scope, farm }) => {
     });
     const aiInput = buildMarketAiInput({ base, metrics, statusMeta });
     const aiInsight = generateMarketInsight(aiInput);
+    const trends = await resolveMarketTrends(prisma, {
+        regionId: regionContext.id,
+        referenceDate: replacementPrice.referenceDate >= fatCattlePrice.referenceDate ? replacementPrice.referenceDate : fatCattlePrice.referenceDate,
+        fatPrice: base.fatCattlePricePerArroba,
+        replacementPrice: base.replacementAnimalPrice,
+    });
 
     return {
         fatCattlePricePerArroba: base.fatCattlePricePerArroba,
@@ -10961,9 +11040,9 @@ const buildMarketReplacementSnapshot = async ({ scope, farm }) => {
         sourceName: base.sourceName,
         sourceBase: base.sourceBase,
         referenceDate: base.referenceDate,
-        fatCattleTrendPercent: null,
-        replacementAnimalTrendPercent: null,
-        replacementCostTrendArrobas: null,
+        fatCattleTrendPercent: trends.fatCattleTrendPercent,
+        replacementAnimalTrendPercent: trends.replacementAnimalTrendPercent,
+        replacementCostTrendArrobas: trends.replacementCostTrendArrobas,
         aiInsight,
     };
 };
@@ -10998,10 +11077,17 @@ app.post('/market/sources', requireAuth, requireMarketAdmin, async (req, res) =>
         const type = String(req.body?.type || '').trim().toUpperCase();
         const url = normalizeMarketOptionalText(req.body?.url);
         const isActive = req.body?.isActive !== false;
+        const priority = Number.isFinite(Number(req.body?.priority)) ? Math.max(1, Math.round(Number(req.body?.priority))) : 100;
+        const trustScore = Number.isFinite(Number(req.body?.trustScore)) ? Math.min(100, Math.max(0, Math.round(Number(req.body?.trustScore)))) : 70;
+        const autoPublishMinConfidence = Number.isFinite(Number(req.body?.autoPublishMinConfidence))
+            ? Math.min(100, Math.max(0, Math.round(Number(req.body?.autoPublishMinConfidence))))
+            : 85;
+        const requiresReview = req.body?.requiresReview !== undefined ? Boolean(req.body?.requiresReview) : true;
+        const isAutomationEnabled = req.body?.isAutomationEnabled !== undefined ? Boolean(req.body?.isAutomationEnabled) : false;
         if (!name) return res.status(400).json({ message: 'Nome da fonte é obrigatório.' });
         if (!MARKET_ALLOWED_SOURCE_TYPES.has(type)) return res.status(400).json({ message: 'Tipo de fonte inválido.' });
         const created = await prisma.marketSource.create({
-            data: { name, type, url, isActive },
+            data: { name, type, url, isActive, priority, trustScore, autoPublishMinConfidence, requiresReview, isAutomationEnabled },
         });
         return res.status(201).json({ source: serializeMarketSource(created) });
     } catch (error) {
@@ -11033,6 +11119,11 @@ app.patch('/market/sources/:id', requireAuth, requireMarketAdmin, async (req, re
         }
         if (req.body?.url !== undefined) data.url = normalizeMarketOptionalText(req.body?.url);
         if (req.body?.isActive !== undefined) data.isActive = Boolean(req.body?.isActive);
+        if (req.body?.priority !== undefined) data.priority = Math.max(1, Math.round(Number(req.body?.priority)));
+        if (req.body?.trustScore !== undefined) data.trustScore = Math.min(100, Math.max(0, Math.round(Number(req.body?.trustScore))));
+        if (req.body?.autoPublishMinConfidence !== undefined) data.autoPublishMinConfidence = Math.min(100, Math.max(0, Math.round(Number(req.body?.autoPublishMinConfidence))));
+        if (req.body?.requiresReview !== undefined) data.requiresReview = Boolean(req.body?.requiresReview);
+        if (req.body?.isAutomationEnabled !== undefined) data.isAutomationEnabled = Boolean(req.body?.isAutomationEnabled);
         const updated = await prisma.marketSource.update({ where: { id: sourceId }, data });
         return res.json({ source: serializeMarketSource(updated) });
     } catch (error) {
@@ -11072,11 +11163,15 @@ app.post('/market/regions', requireAuth, requireMarketAdmin, async (req, res) =>
         const city = normalizeMarketOptionalText(req.body?.city);
         const marketPlaceName = normalizeMarketOptionalText(req.body?.marketPlaceName);
         const sourceRegionName = normalizeMarketOptionalText(req.body?.sourceRegionName);
+        const macroRegion = normalizeMarketOptionalText(req.body?.macroRegion);
         const isActive = req.body?.isActive !== false;
         if (!name) return res.status(400).json({ message: 'Nome da região é obrigatório.' });
         if (!state || state.length !== 2) return res.status(400).json({ message: 'UF inválida.' });
+        if (macroRegion && !['NORTE', 'NORDESTE', 'CENTRO_OESTE', 'SUDESTE', 'SUL'].includes(macroRegion)) {
+            return res.status(400).json({ message: 'Macro região inválida.' });
+        }
         const created = await prisma.marketRegion.create({
-            data: { name, state, city, marketPlaceName, sourceRegionName, isActive },
+            data: { name, state, city, marketPlaceName, sourceRegionName, macroRegion, isActive },
         });
         return res.status(201).json({ region: serializeMarketRegion(created) });
     } catch (error) {
@@ -11109,6 +11204,13 @@ app.patch('/market/regions/:id', requireAuth, requireMarketAdmin, async (req, re
         if (req.body?.city !== undefined) data.city = normalizeMarketOptionalText(req.body?.city);
         if (req.body?.marketPlaceName !== undefined) data.marketPlaceName = normalizeMarketOptionalText(req.body?.marketPlaceName);
         if (req.body?.sourceRegionName !== undefined) data.sourceRegionName = normalizeMarketOptionalText(req.body?.sourceRegionName);
+        if (req.body?.macroRegion !== undefined) {
+            const macroRegion = normalizeMarketOptionalText(req.body?.macroRegion);
+            if (macroRegion && !['NORTE', 'NORDESTE', 'CENTRO_OESTE', 'SUDESTE', 'SUL'].includes(macroRegion)) {
+                return res.status(400).json({ message: 'Macro região inválida.' });
+            }
+            data.macroRegion = macroRegion;
+        }
         if (req.body?.isActive !== undefined) data.isActive = Boolean(req.body?.isActive);
         const updated = await prisma.marketRegion.update({ where: { id: regionId }, data });
         return res.json({ region: serializeMarketRegion(updated) });
@@ -11297,6 +11399,172 @@ app.patch('/market/prices/:id', requireAuth, requireMarketAdmin, async (req, res
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao atualizar cotação de mercado.' });
+    }
+});
+
+app.post('/market/jobs/run-mock-national', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        if (!hasMarketPipelineDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado Nacional ainda não está disponível neste ambiente.',
+            });
+        }
+
+        const source = await prisma.marketSource.findFirst({
+            where: { name: { equals: 'EIXO Mercado', mode: 'insensitive' } },
+            orderBy: { updatedAt: 'desc' },
+        });
+        if (!source) {
+            return res.status(404).json({ message: 'Fonte EIXO Mercado não encontrada.' });
+        }
+
+        const result = await runMarketCapture({
+            prisma,
+            sourceId: source.id,
+            adapterName: 'mock-national',
+            actorUserId: req.user?.id || null,
+        });
+        return res.status(201).json({
+            job: result.job,
+            summary: result.counters,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao executar job mock nacional.' });
+    }
+});
+
+app.get('/market/jobs', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        if (!hasMarketPipelineDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado Nacional ainda não está disponível neste ambiente.',
+            });
+        }
+        const takeRaw = Number(req.query?.take);
+        const take = Number.isFinite(takeRaw) && takeRaw > 0 ? Math.min(takeRaw, 200) : 50;
+        const jobs = await prisma.marketPublishJob.findMany({
+            include: { source: true },
+            orderBy: [{ createdAt: 'desc' }],
+            take,
+        });
+        return res.json({
+            jobs: jobs.map((job) => ({
+                id: job.id,
+                status: job.status,
+                startedAt: job.startedAt?.toISOString?.() || null,
+                finishedAt: job.finishedAt?.toISOString?.() || null,
+                sourceId: job.sourceId || null,
+                sourceName: job.source?.name || null,
+                summary: job.summary || null,
+                errorMessage: job.errorMessage || null,
+                createdAt: job.createdAt.toISOString(),
+                updatedAt: job.updatedAt.toISOString(),
+            })),
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao listar jobs de mercado.' });
+    }
+});
+
+app.get('/market/raw-captures', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        if (!hasMarketPipelineDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado Nacional ainda não está disponível neste ambiente.',
+            });
+        }
+        const sourceId = normalizeMarketOptionalText(req.query?.sourceId);
+        const status = String(req.query?.status || '').trim().toUpperCase();
+        const where = {};
+        if (sourceId && UUID_REGEX.test(sourceId)) where.sourceId = sourceId;
+        if (status) where.status = status;
+
+        const captures = await prisma.marketRawCapture.findMany({
+            where,
+            include: { source: true },
+            orderBy: [{ capturedAt: 'desc' }],
+            take: 300,
+        });
+        return res.json({ captures: captures.map(serializeMarketRawCapture) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao listar capturas brutas.' });
+    }
+});
+
+app.get('/market/normalized-prices', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        if (!hasMarketPipelineDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado Nacional ainda não está disponível neste ambiente.',
+            });
+        }
+        const status = String(req.query?.status || '').trim().toUpperCase();
+        const validationStatus = String(req.query?.validationStatus || '').trim().toUpperCase();
+        const where = {};
+        if (status) where.status = status;
+        if (validationStatus) where.validationStatus = validationStatus;
+
+        const normalized = await prisma.marketNormalizedPrice.findMany({
+            where,
+            include: { source: true, region: true },
+            orderBy: [{ referenceDate: 'desc' }, { createdAt: 'desc' }],
+            take: 500,
+        });
+        return res.json({ normalizedPrices: normalized.map(serializeMarketNormalizedPrice) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao listar cotações normalizadas.' });
+    }
+});
+
+app.post('/market/normalized-prices/:id/publish', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        if (!hasMarketPipelineDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado Nacional ainda não está disponível neste ambiente.',
+            });
+        }
+        const id = String(req.params.id || '');
+        if (!UUID_REGEX.test(id)) return res.status(400).json({ message: 'ID inválido.' });
+        const published = await publishNormalizedPrice(prisma, id, req.user?.id || null);
+        return res.json({ price: serializeMarketPrice(published) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: error?.message || 'Erro ao publicar cotação normalizada.' });
+    }
+});
+
+app.post('/market/normalized-prices/:id/reject', requireAuth, requireMarketAdmin, async (req, res) => {
+    try {
+        if (!hasMarketPipelineDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado Nacional ainda não está disponível neste ambiente.',
+            });
+        }
+        const id = String(req.params.id || '');
+        if (!UUID_REGEX.test(id)) return res.status(400).json({ message: 'ID inválido.' });
+        const reviewerNotes = normalizeMarketOptionalText(req.body?.reviewerNotes);
+        const rejected = await rejectNormalizedPrice(prisma, id, reviewerNotes);
+        return res.json({
+            normalizedPrice: {
+                id: rejected.id,
+                status: rejected.status,
+                validationStatus: rejected.validationStatus,
+                reviewerNotes: rejected.reviewerNotes || null,
+            },
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: error?.message || 'Erro ao rejeitar cotação normalizada.' });
     }
 });
 
