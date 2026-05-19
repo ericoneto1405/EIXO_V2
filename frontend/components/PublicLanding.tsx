@@ -451,8 +451,17 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         </section>
 
         {/* ── Como funciona ── */}
-        <section id="como" className="bg-[var(--eixo-surface)] py-20 lg:py-28">
-          <div className="mx-auto max-w-5xl px-4 lg:px-8">
+        <section id="como" className="relative overflow-hidden bg-[var(--eixo-surface)] py-20 lg:py-28">
+          <div
+            className="absolute inset-0 opacity-[0.12]"
+            style={{
+              backgroundImage: "url('/vista_aerea_fazenda_eixo.png')",
+              backgroundPosition: 'center',
+              backgroundSize: 'cover',
+            }}
+          />
+          <div className="absolute inset-0 bg-[var(--eixo-surface)]/90" />
+          <div className="relative z-10 mx-auto max-w-5xl px-4 lg:px-8">
             <div className="mb-16 text-center">
               <h2 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] lg:text-4xl">Como começar</h2>
               <p className="mt-4 text-lg text-[var(--eixo-text-muted)]">Três passos. Menos de 10 minutos.</p>
