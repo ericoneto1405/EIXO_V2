@@ -48,7 +48,9 @@ const MoneyIcon: React.FC = () => (
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface DashboardProps {
+    scope: 'all' | 'farm';
     farmId?: string | null;
+    farmName?: string | null;
     farmSize?: number | null;
     farmCity?: string | null;
     farmLat?: number | null;
@@ -71,6 +73,7 @@ interface KpiData {
     saidas: number | null;
     saldoMes: number | null;
     animaisSemPesagem: number;     // animais sem pesagem nos últimos 30 dias
+    areaTotalHa: number | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -116,17 +119,17 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, icon, loading, children }) => 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmLat, farmLng, onNavigateToFarms }) => {
+const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize, farmCity, farmLat, farmLng, onNavigateToFarms }) => {
     const [kpis, setKpis] = useState<KpiData>({
         totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null,
-        gmdMedio: null, entradas: null, saidas: null, saldoMes: null, animaisSemPesagem: 0,
+        gmdMedio: null, entradas: null, saidas: null, saldoMes: null, animaisSemPesagem: 0, areaTotalHa: null,
     });
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (!farmId) {
-            setKpis({ totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null, gmdMedio: null, entradas: null, saidas: null, saldoMes: null, animaisSemPesagem: 0 });
+        if (scope === 'farm' && !farmId) {
+            setKpis({ totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null, gmdMedio: null, entradas: null, saidas: null, saldoMes: null, animaisSemPesagem: 0, areaTotalHa: null });
             return;
         }
 
@@ -138,92 +141,32 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmL
         const load = async () => {
             setLoading(true);
             try {
-                const [animalsRes, weighingsRes, transactionsRes] = await Promise.allSettled([
-                    fetch(buildApiUrl(`/animals?farmId=${farmId}`), { credentials: 'include' }),
-                    fetch(buildApiUrl(`/farms/${farmId}/weighings?limit=200`), { credentials: 'include' }),
-                    fetch(buildApiUrl(`/financial/transactions?farmId=${farmId}&mes=${mes}&ano=${ano}`), { credentials: 'include' }),
-                ]);
+                const query = new URLSearchParams({
+                    scope,
+                    ...(scope === 'farm' && farmId ? { farmId } : {}),
+                    mes: String(mes),
+                    ano: String(ano),
+                });
+                const overviewRes = await fetch(buildApiUrl(`/overview/dashboard?${query.toString()}`), { credentials: 'include' });
+                if (!overviewRes.ok) {
+                    throw new Error('Falha ao carregar dados da visão geral');
+                }
+                const overviewData = await overviewRes.json().catch(() => ({}));
 
                 if (!active) return;
-
-                // ── Animals ──────────────────────────────────────────────────
-                let animals: Array<{ id: string; pesoAtual: number; categoria?: string; dataNascimento?: string | null }> = [];
-                if (animalsRes.status === 'fulfilled' && animalsRes.value.ok) {
-                    const data = await animalsRes.value.json().catch(() => ({}));
-                    animals = Array.isArray(data?.animals) ? data.animals : [];
-                }
-
-                const totalAnimais = animals.length;
-                const nascimentosMes = animals.filter((animal) => {
-                    if (!animal.dataNascimento) return false;
-                    const birthDate = new Date(animal.dataNascimento);
-                    if (Number.isNaN(birthDate.getTime())) return false;
-                    return birthDate.getMonth() + 1 === mes && birthDate.getFullYear() === ano;
-                }).length;
-
-                // Breakdown por categoria (top 4)
-                const catMap = new Map<string, number>();
-                for (const a of animals) {
-                    const cat = a.categoria || 'Sem categoria';
-                    catMap.set(cat, (catMap.get(cat) || 0) + 1);
-                }
-                const categorias: CategoryCount[] = Array.from(catMap.entries())
-                    .map(([name, count]) => ({ name, count }))
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 4);
-
-                // Taxa de ocupação
-                const taxaOcupacao = (farmSize && farmSize > 0 && totalAnimais > 0)
-                    ? totalAnimais / farmSize
-                    : null;
-
-                // ── Weighings ────────────────────────────────────────────────
-                let weighings: Array<{ animalId?: string; animal?: { id: string }; gmd: number | null; date: string }> = [];
-                if (weighingsRes.status === 'fulfilled' && weighingsRes.value.ok) {
-                    const data = await weighingsRes.value.json().catch(() => ({}));
-                    weighings = Array.isArray(data?.weighings) ? data.weighings : [];
-                }
-
-                // Last weighing per animal → GMD médio
-                const lastByAnimal = new Map<string, { gmd: number | null; date: string }>();
-                for (const w of weighings) {
-                    const aid = w.animalId ?? w.animal?.id;
-                    if (!aid) continue;
-                    const existing = lastByAnimal.get(aid);
-                    if (!existing || new Date(w.date) > new Date(existing.date)) {
-                        lastByAnimal.set(aid, { gmd: w.gmd, date: w.date });
-                    }
-                }
-                // Animais sem pesagem nos últimos 30 dias
-                const cutoff30 = new Date();
-                cutoff30.setDate(cutoff30.getDate() - 30);
-                const animaisSemPesagem = animals.filter(a => {
-                    const last = lastByAnimal.get(a.id);
-                    if (!last) return true; // nunca pesado
-                    return new Date(last.date) < cutoff30;
-                }).length;
-
-                const validGmds = Array.from(lastByAnimal.values())
-                    .map(w => w.gmd)
-                    .filter((g): g is number => g !== null && g > 0);
-                const gmdMedio = validGmds.length
-                    ? validGmds.reduce((s, g) => s + g, 0) / validGmds.length
-                    : null;
-
-                // ── Financial (current month) ─────────────────────────────────
-                let entradas: number | null = null;
-                let saidas: number | null = null;
-                let saldoMes: number | null = null;
-                if (transactionsRes.status === 'fulfilled' && transactionsRes.value.ok) {
-                    const data = await transactionsRes.value.json().catch(() => ({}));
-                    const txs: Array<{ type: string; valor: number; status: string }> = data?.transactions ?? [];
-                    const paid = txs.filter(t => t.status !== 'CANCELADO');
-                    entradas = paid.filter(t => t.type === 'ENTRADA').reduce((s, t) => s + (t.valor ?? 0), 0);
-                    saidas = paid.filter(t => t.type === 'SAIDA' || t.type === 'SAÍDA').reduce((s, t) => s + (t.valor ?? 0), 0);
-                    saldoMes = entradas - saidas;
-                }
-
-                setKpis({ totalAnimais, nascimentosMes, categorias, taxaOcupacao, gmdMedio, entradas, saidas, saldoMes, animaisSemPesagem });
+                const payload = overviewData?.kpis || {};
+                setKpis({
+                    totalAnimais: Number(payload.totalAnimais || 0),
+                    nascimentosMes: Number(payload.nascimentosMes || 0),
+                    categorias: Array.isArray(payload.categorias) ? payload.categorias : [],
+                    taxaOcupacao: payload.taxaOcupacao ?? null,
+                    gmdMedio: payload.gmdMedio ?? null,
+                    entradas: payload.entradas ?? null,
+                    saidas: payload.saidas ?? null,
+                    saldoMes: payload.saldoMes ?? null,
+                    animaisSemPesagem: Number(payload.animaisSemPesagem || 0),
+                    areaTotalHa: payload.areaTotalHa ?? null,
+                });
             } catch (err) {
                 console.error('Dashboard load error', err);
                 if (active) setLoadError('Não foi possível carregar os dados. Verifique sua conexão.');
@@ -234,7 +177,7 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmL
 
         load();
         return () => { active = false; };
-    }, [farmId, farmSize]);
+    }, [scope, farmId, farmSize]);
 
     const occupationStatus = kpis.taxaOcupacao !== null ? getOccupationStatus(kpis.taxaOcupacao) : null;
     const mesLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
@@ -257,7 +200,9 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmL
                 </div>
                 <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Dashboard</h1>
                 <p className="mt-1 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
-                    Resumo do rebanho, ocupação e desempenho financeiro da operação.
+                    {scope === 'all'
+                        ? 'Resumo consolidado da operação.'
+                        : `Resumo da Fazenda ${farmName || 'selecionada'}.`}
                 </p>
             </div>
 
@@ -300,7 +245,7 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmL
                                     {occupationStatus!.label}
                                 </span>
                                 <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">
-                                    {kpis.totalAnimais} animais / {farmSize} ha
+                                    {kpis.totalAnimais} animais / {kpis.areaTotalHa ?? farmSize} ha
                                 </p>
                             </div>
                         </>
@@ -308,7 +253,7 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmL
                         <>
                             <p className="text-2xl font-extrabold text-[var(--eixo-text-soft)]">—</p>
                             <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">
-                                {!farmSize ? 'Tamanho da fazenda não cadastrado' : 'Sem animais cadastrados'}
+                                {!(kpis.areaTotalHa ?? farmSize) ? 'Área da fazenda não cadastrada' : 'Sem animais cadastrados'}
                             </p>
                         </>
                     )}
@@ -337,7 +282,7 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmL
             </div>
 
             {/* Raio-X da Fazenda */}
-            {!loading && farmId && (() => {
+            {!loading && (() => {
                 const alertas: { tipo: 'aviso' | 'atencao' | 'ok'; texto: string }[] = [];
 
                 if (kpis.taxaOcupacao !== null && kpis.taxaOcupacao > 1.5) {
@@ -362,7 +307,9 @@ const Dashboard: React.FC<DashboardProps> = ({ farmId, farmSize, farmCity, farmL
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                     d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                             </svg>
-                            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Raio-X da Fazenda</p>
+                            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">
+                                {scope === 'all' ? 'Raio-X da Operação' : 'Raio-X da Fazenda'}
+                            </p>
                         </div>
 
                         {tudo_ok && (

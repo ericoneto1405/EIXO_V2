@@ -82,9 +82,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
   const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
   const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]';
-  const headerButtonFont = { fontFamily: 'Manrope, Inter, sans-serif' };
-  const headerGlassButton = 'border border-white/55 bg-white/35 text-[var(--eixo-text)] shadow-[0_10px_28px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.70)] backdrop-blur-xl transition-all duration-200 hover:border-white/80 hover:bg-white/55 hover:shadow-[0_12px_34px_rgba(47,47,47,0.14),0_0_18px_rgba(182,226,58,0.18),inset_0_1px_0_rgba(255,255,255,0.80)]';
-  const headerPrimaryButton = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.72)] bg-[rgba(182,226,58,0.72)] px-6 py-3 text-lg font-bold text-[#1a1a1a] shadow-[0_12px_30px_rgba(121,160,24,0.22),inset_0_1px_0_rgba(255,255,255,0.55)] backdrop-blur-xl transition-all duration-200 hover:bg-[rgba(182,226,58,0.88)] hover:shadow-[0_14px_36px_rgba(121,160,24,0.30),0_0_22px_rgba(182,226,58,0.26),inset_0_1px_0_rgba(255,255,255,0.65)]';
+  const headerPrimaryButton = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.76)] bg-[rgba(182,226,58,0.82)] px-5 text-sm font-bold text-[#1a1a1a] shadow-[0_10px_22px_rgba(121,160,24,0.18),inset_0_1px_0_rgba(255,255,255,0.58)] transition-all duration-200 hover:bg-[rgba(182,226,58,0.92)] hover:shadow-[0_12px_28px_rgba(121,160,24,0.24),inset_0_1px_0_rgba(255,255,255,0.66)]';
   const navItems: Array<{ label: string; id: 'gratis' | 'antes-depois' | 'como' | 'faq'; action: () => void }> = [
     { label: 'Plano Base', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
     { label: 'Antes e Depois', id: 'antes-depois', action: () => { setActiveNav('antes-depois'); scrollTo('antes-depois'); } },
@@ -105,18 +103,17 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </div>
           </div>
           <nav
-            className="hidden items-center rounded-2xl border border-white/50 bg-white/25 p-1.5 shadow-[0_14px_40px_rgba(47,47,47,0.08),inset_0_1px_0_rgba(255,255,255,0.60)] backdrop-blur-xl lg:flex"
-            style={headerButtonFont}
+            className="hidden items-center rounded-2xl border border-white/45 bg-white/22 p-1 shadow-[0_12px_30px_rgba(47,47,47,0.07),inset_0_1px_0_rgba(255,255,255,0.56)] backdrop-blur-xl lg:flex"
           >
             {navItems.map((item) => (
               <button
                 key={item.label}
                 type="button"
                 onClick={item.action}
-                className={`inline-flex h-10 items-center justify-center rounded-xl px-4 text-sm font-semibold tracking-[0.01em] ${
+                className={`inline-flex h-9 items-center justify-center rounded-lg px-3.5 text-sm font-semibold tracking-[0.01em] transition-colors ${
                   item.id === activeNav
-                    ? 'border border-[rgba(182,226,58,0.72)] bg-[rgba(240,249,212,0.62)] text-[var(--eixo-graphite)] shadow-[0_0_18px_rgba(182,226,58,0.22),inset_0_1px_0_rgba(255,255,255,0.70)] backdrop-blur-xl'
-                    : headerGlassButton
+                    ? 'bg-[rgba(240,249,212,0.68)] text-[var(--eixo-graphite)]'
+                    : 'text-[var(--eixo-text)]/82 hover:bg-white/36 hover:text-[var(--eixo-text)]'
                 }`}
               >
                 {item.label}
@@ -127,24 +124,27 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             <button
               type="button"
               onClick={() => setMenuOpen((prev) => !prev)}
-              className={`rounded-xl p-2 lg:hidden ${headerGlassButton}`}
+              className="rounded-xl border border-white/50 bg-white/34 p-2 text-[var(--eixo-text)] shadow-[0_8px_22px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.66)] backdrop-blur-xl transition-colors hover:bg-white/52 lg:hidden"
               aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <button type="button" onClick={onEnter} className={`hidden rounded-xl px-6 py-3 text-lg font-semibold sm:inline-flex ${headerGlassButton}`} style={headerButtonFont}>
+            <button
+              type="button"
+              onClick={onEnter}
+              className="hidden h-10 items-center px-1 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:text-[var(--eixo-text)] hover:underline sm:inline-flex"
+            >
               Entrar
             </button>
             <button
               type="button"
               onClick={() => { window.location.href = '/planos'; }}
-              className="hidden rounded-xl border border-white/60 bg-white/45 px-6 py-3 text-lg font-semibold text-[var(--eixo-text)] shadow-[0_10px_28px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-all duration-200 hover:border-white/85 hover:bg-white/62 hover:shadow-[0_12px_34px_rgba(47,47,47,0.14),0_0_16px_rgba(182,226,58,0.14),inset_0_1px_0_rgba(255,255,255,0.82)] sm:inline-flex"
-              style={headerButtonFont}
+              className="hidden h-10 items-center rounded-xl border border-white/62 bg-white/46 px-4 text-sm font-semibold text-[var(--eixo-text)] shadow-[0_9px_20px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-all duration-200 hover:border-white/86 hover:bg-white/62 sm:inline-flex"
             >
-              Planos
+              Ver Planos
             </button>
-            <button type="button" onClick={onRegister} className={headerPrimaryButton} style={headerButtonFont}>
-              Cadastrar no Plano Base
+            <button type="button" onClick={onRegister} className={headerPrimaryButton}>
+              Começar agora
             </button>
           </div>
         </div>
@@ -180,36 +180,36 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             >
               Dúvidas
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMenuOpen(false);
-                window.location.href = '/planos';
-              }}
-              className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
-            >
-              Planos
-            </button>
+            <div className="my-2 border-t border-[var(--eixo-border)]" />
             <button
               type="button"
               onClick={() => {
                 setMenuOpen(false);
                 onEnter();
               }}
-              className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
+              className="w-full px-1 py-2 text-left text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:text-[var(--eixo-text)] hover:underline"
             >
               Entrar
             </button>
-            <div className="my-2 border-t border-[var(--eixo-border)]" />
             <button
               type="button"
               onClick={() => {
                 setMenuOpen(false);
                 window.location.href = '/planos';
               }}
-              className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+              className="mt-2 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-3 text-left text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
             >
-              Planos
+              Ver Planos
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setMenuOpen(false);
+                onRegister();
+              }}
+              className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-xl bg-[var(--eixo-green)] px-5 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
+            >
+              Começar agora
             </button>
           </div>
         )}

@@ -1049,7 +1049,9 @@ const AppContent: React.FC = () => {
             case 'Visão Geral':
             default:
                 return <Dashboard
+                    scope={selectedFarmId ? 'farm' : 'all'}
                     farmId={selectedFarmId}
+                    farmName={selectedFarm?.name ?? null}
                     farmSize={selectedFarm?.size ?? null}
                     farmCity={selectedFarm?.city ?? null}
                     farmLat={selectedFarm?.lat ?? null}
