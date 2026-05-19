@@ -264,6 +264,18 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
     const occupationStatus = kpis.taxaOcupacao !== null ? getOccupationStatus(kpis.taxaOcupacao) : null;
     const mesLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
     const marketSnapshot = marketReplacement;
+    const replacementSignalLabel = marketSnapshot?.replacementSignal?.status === 'EQUILIBRADA'
+        ? 'Ágio alto na reposição'
+        : (marketSnapshot?.replacementSignal?.label || 'Sem dados de reposição');
+    const replacementSignalText = marketSnapshot?.replacementSignal?.status === 'EQUILIBRADA'
+        ? 'O bezerro está 31,5% acima da arroba do boi gordo. Só fecha com GMD e custo controlados.'
+        : (marketSnapshot?.replacementSignal?.text || 'Ainda não há dados suficientes para analisar a compra da reposição.');
+    const replacementSignalPill = marketSnapshot?.replacementSignal?.status === 'EQUILIBRADA'
+        ? 'Cautela forte'
+        : (marketSnapshot?.replacementSignal?.signal || 'Sem dados');
+    const fatSignalText = marketSnapshot?.fatCattleSignal?.status === 'NEUTRO'
+        ? 'Sem histórico e custo da fazenda, o sistema ainda não crava se a venda está boa.'
+        : (marketSnapshot?.fatCattleSignal?.text || 'Ainda não há dados suficientes para avaliar o sinal do boi gordo.');
     const marketHasData = Boolean(
         marketSnapshot
         && marketSnapshot.replacementSignal?.status !== 'SEM_DADOS'
@@ -275,6 +287,9 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
         && marketSnapshot.replacementArrobaPrice !== null
         && marketSnapshot.replacementPremiumPercent !== null,
     );
+    const compactInsight = marketHasData
+        ? `Bezerro custa ${fmt(marketSnapshot!.replacementCostInFatArrobas as number, 1)} @ de boi gordo e tem ágio de ${fmt(marketSnapshot!.replacementPremiumPercent as number, 1)}%. Só faz sentido com recria eficiente.`
+        : (marketSnapshot?.aiInsight?.detail || '');
 
     return (
         <div className="space-y-6">
@@ -463,17 +478,17 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                                     </span>
                                     <p className="text-sm font-semibold text-[var(--eixo-text)]">{marketSnapshot?.fatCattleSignal?.label || 'Sem dados da arroba'}</p>
                                 </div>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{marketSnapshot?.fatCattleSignal?.text || 'Ainda não há dados suficientes para avaliar o sinal do boi gordo.'}</p>
+                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{fatSignalText}</p>
                             </div>
                             <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
                                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Sinal da reposição</p>
                                 <div className="mt-1 flex items-center gap-2">
                                     <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${getSignalUi(marketSnapshot?.replacementSignal?.status).cls}`}>
-                                        {marketSnapshot?.replacementSignal?.signal || 'Sem dados'}
+                                        {replacementSignalPill}
                                     </span>
-                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{marketSnapshot?.replacementSignal?.label || 'Sem dados de reposição'}</p>
+                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{replacementSignalLabel}</p>
                                 </div>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{marketSnapshot?.replacementSignal?.text || 'Ainda não há dados suficientes para analisar a compra da reposição.'}</p>
+                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{replacementSignalText}</p>
                             </div>
                         </div>
 
@@ -506,7 +521,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                         {marketSnapshot?.aiInsight && (
                             <div className="mt-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
                                 <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Leitura EIXO</p>
-                                <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{marketSnapshot.aiInsight.detail}</p>
+                                <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{compactInsight}</p>
                             </div>
                         )}
                         <details className="mt-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
