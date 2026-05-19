@@ -97,6 +97,7 @@ const FEED_AND_MED_CATEGORY_NAMES = new Set([
 ]);
 
 const PIE_COLORS = ['#9d7d4d', '#c08a2b', '#6e8b63', '#b35c44', '#8c6d46', '#4f7c83', '#a78b5b', '#7b8f6a'];
+const FINANCIAL_PROGRESS_EVENT = 'eixo:financial-transactions-changed';
 
 // ── Tipos de aba ──────────────────────────────────────────────────────────────
 
@@ -449,6 +450,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             resetForm();
             await loadTransactions();
             if (activeTab === 'contas_pagar' || activeTab === 'contas_receber') await loadPending();
+            window.dispatchEvent(new Event(FINANCIAL_PROGRESS_EVENT));
         } catch (e: any) {
             setFormError(e?.message || 'Erro ao salvar.');
         } finally { setIsSaving(false); }
@@ -463,6 +465,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             setDeleteConfirmId(null);
             await loadTransactions();
             await loadPending();
+            window.dispatchEvent(new Event(FINANCIAL_PROGRESS_EVENT));
         } catch (e: any) {
             setDeleteError(e?.message || 'Erro ao excluir.');
         } finally { setIsDeleting(false); }
@@ -474,6 +477,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             await updateTransaction(id, { status: 'PAGO' });
             await loadPending();
             await loadTransactions();
+            window.dispatchEvent(new Event(FINANCIAL_PROGRESS_EVENT));
         } catch { /* silencioso */ }
         finally { setMarkingPaid(null); }
     };

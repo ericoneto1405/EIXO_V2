@@ -23,6 +23,7 @@ interface StepItem {
 // ─── Cache de métricas (30s TTL por farmId+view) ──────────────────────────────
 const metricsCache = new Map<string, { data: MetricsState; ts: number }>();
 const CACHE_TTL_MS = 30_000;
+const FINANCIAL_PROGRESS_EVENT = 'eixo:financial-transactions-changed';
 
 const getCached = (key: string): MetricsState | null => {
     const entry = metricsCache.get(key);
@@ -119,6 +120,7 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
     const hasFarm = Boolean(farmId);
     const config = cardConfig(activeView, hasFarm, metrics);
     const prevViewRef = useRef<string>('');
+    const [refreshTick, setRefreshTick] = useState(0);
 
     useEffect(() => {
         // Resetar visibilidade ao trocar de módulo
@@ -173,6 +175,18 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
         void run();
         return () => { isActive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeView, farmId, refreshTick]);
+
+    useEffect(() => {
+        const handleFinancialChange = () => {
+            if (activeView !== 'Financeiro' || !farmId) return;
+            metricsCache.delete(`${activeView}::${farmId}`);
+            setRefreshTick((current) => current + 1);
+        };
+        window.addEventListener(FINANCIAL_PROGRESS_EVENT, handleFinancialChange);
+        return () => {
+            window.removeEventListener(FINANCIAL_PROGRESS_EVENT, handleFinancialChange);
+        };
     }, [activeView, farmId]);
 
     if (!config || !visible) return null;
@@ -182,8 +196,11 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
     const progressPct = Math.round((completedCount / config.steps.length) * 100);
     const ctaHint = !allDone ? getNextCta(activeView, config.steps) : null;
 
-    // Auto-oculta após tudo concluído (mantém visível para mostrar celebração brevemente)
-    // O botão de fechar já resolve — não auto-oculta sem interação do usuário
+    useEffect(() => {
+        if (!allDone) return;
+        const timeoutId = window.setTimeout(() => setVisible(false), 1500);
+        return () => window.clearTimeout(timeoutId);
+    }, [allDone]);
 
     return (
         <div className="mb-6 rounded-2xl border-2 border-[#B6E23A] bg-[var(--eixo-surface)] shadow-sm transition-all duration-200 hover:shadow-md">
