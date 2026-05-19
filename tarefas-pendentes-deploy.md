@@ -17,10 +17,12 @@
 
 | ID | Tarefa | Status | Validado | Data |
 |---|---|---|---|---|
-| - | Nenhuma tarefa pendente no momento | - | - | 2026-05-18 |
+| DEP-017 | Refatorar card “Mercado e Reposição” com dois sinais separados (`fatCattleSignal` e `replacementSignal`) no payload de `/overview/dashboard`, atualizar UI para “Sinal do boi gordo” + “Sinal da reposição”, manter cálculos determinísticos e formatação pt-BR | PENDENTE_DEPLOY | Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) + Build frontend OK (`npm run build --prefix frontend`) + Schema Prisma válido (`npx prisma validate --schema server/prisma/schema.prisma`) | 2026-05-19 |
 
 ## Observações
 - Arquivo `frontend/components/PublicLanding.tsx` alterado de forma cirúrgica.
 - Hierarquia desktop aplicada: `[Plano Base] [Antes e Depois] [Como funciona] [Dúvidas] [Entrar] [Planos] [Cadastrar no Plano Base]`.
 - Deploy da DEP-013 realizado em produção com sucesso em 2026-05-18 via `./deploy-local.sh "chore: aplicar DEP-013 e atualizar tarefas-pendentes-deploy.md"`.
-- Commit de deploy: `0d05066` (push em `main`, build na VPS OK, PM2 reload OK).
+- Commit de deploy DEP-013: `0d05066` (push em `main`, build na VPS OK, PM2 reload OK).
+- Deploy das DEP-015 e DEP-016 realizado em produção com sucesso em 2026-05-18 via `./deploy-local.sh "chore: aplicar DEP-015 e DEP-016 (mercado/reposicao) e atualizar tarefas-pendentes-deploy.md"`.
+- Commit de deploy DEP-015/016: `35178e8` (push em `main`, build na VPS OK, PM2 reload OK).

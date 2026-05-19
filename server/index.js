@@ -10295,6 +10295,71 @@ const classifyReplacementMarketStatus = (replacementCostInFatArrobas) => {
     };
 };
 
+const buildFatCattleSignal = ({ fatCattlePricePerArroba }) => {
+    if (!fatCattlePricePerArroba || fatCattlePricePerArroba <= 0) {
+        return {
+            status: 'SEM_DADOS',
+            signal: 'Sem dados',
+            label: 'Sem dados da arroba',
+            text: 'Ainda não há dados suficientes para avaliar o sinal do boi gordo.',
+        };
+    }
+    return {
+        status: 'NEUTRO',
+        signal: 'Neutro',
+        label: 'Arroba em observação',
+        text: 'A arroba serve como referência de venda, mas ainda precisa de histórico regional e custo da fazenda para dizer se está realmente boa.',
+    };
+};
+
+const classifyReplacementSignal = (replacementCostInFatArrobas) => {
+    // Regra provisória. No futuro, calibrar por categoria, peso, região, histórico da praça, sistema produtivo, GMD e custo de recria.
+    if (replacementCostInFatArrobas === null) {
+        return 'SEM_DADOS';
+    }
+    if (replacementCostInFatArrobas <= REPLACEMENT_RATIO_LIMITS.FAVORAVEL_MAX) {
+        return 'FAVORAVEL';
+    }
+    if (replacementCostInFatArrobas <= REPLACEMENT_RATIO_LIMITS.EQUILIBRADA_MAX) {
+        return 'EQUILIBRADA';
+    }
+    return 'PRESSIONADA';
+};
+
+const buildReplacementSignal = ({ replacementCostInFatArrobas }) => {
+    const status = classifyReplacementSignal(replacementCostInFatArrobas);
+    if (status === 'SEM_DADOS') {
+        return {
+            status: 'SEM_DADOS',
+            signal: 'Sem dados',
+            label: 'Sem dados de reposição',
+            text: 'Ainda não há dados suficientes para analisar a compra da reposição.',
+        };
+    }
+    if (status === 'FAVORAVEL') {
+        return {
+            status: 'FAVORAVEL',
+            signal: 'Bom',
+            label: 'Reposição favorável',
+            text: 'A compra da reposição está mais favorável em relação ao preço atual do boi gordo.',
+        };
+    }
+    if (status === 'EQUILIBRADA') {
+        return {
+            status: 'EQUILIBRADA',
+            signal: 'Atenção',
+            label: 'Reposição equilibrada',
+            text: 'A compra do bezerro é possível, mas depende do custo da recria e do ganho de peso do lote.',
+        };
+    }
+    return {
+        status: 'PRESSIONADA',
+        signal: 'Pressionada',
+        label: 'Reposição cara',
+        text: 'A reposição está cara em relação ao boi gordo. Comprar agora exige mais arrobas por cabeça.',
+    };
+};
+
 const buildMarketAiInput = ({ base, metrics, statusMeta }) => ({
     state: base.state,
     region: base.region,
@@ -10398,12 +10463,17 @@ const buildMarketReplacementSnapshot = ({ scope }) => {
         replacementAnimalWeightArrobas: 8,
         region: 'Bahia',
         state: 'BA',
-        sourceName: 'Manual',
+        sourceName: 'EIXO Mercado',
+        sourceBase: 'Manual',
         referenceDate: formatDateYYYYMMDD(new Date()),
     };
 
     const metrics = calculateMarketReplacementMetrics(base);
     const statusMeta = classifyReplacementMarketStatus(metrics.replacementCostInFatArrobas);
+    const fatCattleSignal = buildFatCattleSignal(base);
+    const replacementSignal = buildReplacementSignal({
+        replacementCostInFatArrobas: metrics.replacementCostInFatArrobas,
+    });
     const aiInput = buildMarketAiInput({ base, metrics, statusMeta });
     const aiInsight = generateMarketInsight(aiInput);
 
@@ -10422,12 +10492,15 @@ const buildMarketReplacementSnapshot = ({ scope }) => {
         replacementPremiumInFatArrobas: metrics.replacementPremiumInFatArrobas,
         // compatibilidade temporária com versão anterior do frontend
         replacementRatio: metrics.replacementCostInFatArrobas,
+        fatCattleSignal,
+        replacementSignal,
         status: statusMeta.status,
         statusLabel: statusMeta.statusLabel,
         interpretation: statusMeta.interpretation,
         region: base.region,
         state: base.state,
         sourceName: base.sourceName,
+        sourceBase: base.sourceBase,
         referenceDate: base.referenceDate,
         aiInsight,
     };
