@@ -130,10 +130,17 @@ const fmt = (n: number, decimals = 1) =>
 const fmtMoney = (n: number) =>
     n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const fmtDate = (isoDate: string) => {
-    const dt = new Date(isoDate);
-    if (Number.isNaN(dt.getTime())) return 'Data não informada';
-    return dt.toLocaleDateString('pt-BR');
+const formatMarketReferenceDate = (value: string | null | undefined) => {
+    if (!value) return null;
+    const raw = String(value).trim();
+    if (!raw) return null;
+    const datePart = raw.includes('T') ? raw.split('T')[0] : raw;
+    const parts = datePart.split('-');
+    if (parts.length !== 3) return null;
+    const [year, month, day] = parts;
+    if (!year || !month || !day) return null;
+    if (year.length !== 4 || month.length !== 2 || day.length !== 2) return null;
+    return `${day}/${month}/${year}`;
 };
 
 // Classifica taxa de ocupação
@@ -435,7 +442,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                         <p className="mt-1 text-sm text-[var(--eixo-text-soft)]">
                             {(marketSnapshot?.region || marketSnapshot?.state || 'Região não configurada')}
                             {marketSnapshot?.sourceName ? ` • ${marketSnapshot.sourceName}` : ''}
-                            {marketSnapshot?.referenceDate ? ` • Atualizado em ${fmtDate(marketSnapshot.referenceDate)}` : ''}
+                            {formatMarketReferenceDate(marketSnapshot?.referenceDate) ? ` • Referência: ${formatMarketReferenceDate(marketSnapshot?.referenceDate)}` : ''}
                         </p>
                     </div>
                 </div>
@@ -524,7 +531,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                             </div>
                         </details>
                         <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">
-                            Referência: {marketSnapshot?.referenceDate ? fmtDate(marketSnapshot.referenceDate) : 'Data não informada'} · Fonte: {marketSnapshot?.sourceName || 'EIXO Mercado'}
+                            Referência: {formatMarketReferenceDate(marketSnapshot?.referenceDate) || 'Data não informada'} · Fonte: {marketSnapshot?.sourceName || 'EIXO Mercado'}
                         </p>
                     </>
                 )}

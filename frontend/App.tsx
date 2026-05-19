@@ -551,8 +551,48 @@ const AppContent: React.FC = () => {
     }, [selectedFarmId]);
 
     React.useEffect(() => {
-        setIsAuthLoading(false);
-    }, []);
+        let active = true;
+        const bootstrapAuth = async () => {
+            try {
+                const response = await fetch(buildApiUrl('/auth/me'), {
+                    credentials: 'include',
+                });
+                if (!response.ok) {
+                    if (!active) return;
+                    setIsAuthenticated(false);
+                    setCurrentUser(null);
+                    setAuthScreen('landing');
+                    return;
+                }
+                const payload = await response.json().catch(() => ({}));
+                const user = payload?.user as User | undefined;
+                if (!user) {
+                    if (!active) return;
+                    setIsAuthenticated(false);
+                    setCurrentUser(null);
+                    setAuthScreen('landing');
+                    return;
+                }
+                if (!active) return;
+                setIsAuthenticated(true);
+                setCurrentUser(user);
+                setAuthScreen('login');
+                await loadFarms(user.defaultFarmId || user.lastFarmId || null);
+            } catch (error) {
+                console.error('bootstrap auth error', error);
+                if (!active) return;
+                setIsAuthenticated(false);
+                setCurrentUser(null);
+                setAuthScreen('landing');
+            } finally {
+                if (active) setIsAuthLoading(false);
+            }
+        };
+        bootstrapAuth();
+        return () => {
+            active = false;
+        };
+    }, [loadFarms]);
 
     React.useEffect(() => {
         const parentView = SUB_VIEW_PARENT[activeView] ?? activeView;
