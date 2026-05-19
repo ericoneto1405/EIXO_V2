@@ -10309,6 +10309,25 @@ const pickFirstText = (...values) => {
     return null;
 };
 
+const parseCityState = (value) => {
+    const raw = normalizeMarketOptionalText(value);
+    if (!raw) return { city: null, state: null };
+    const compact = raw.replace(/\s+/g, ' ').trim();
+    const match = compact.match(/^(.*?)[\s,\/-]*([A-Za-z]{2})$/);
+    if (!match) return { city: compact, state: null };
+    const city = normalizeMarketOptionalText(match[1]);
+    const stateCandidate = normalizeMarketOptionalText(match[2]);
+    const state = stateCandidate ? normalizeMarketState(stateCandidate) : null;
+    if (!state || state.length !== 2) return { city: compact, state: null };
+    return { city: city || compact, state };
+};
+
+const hasMarketModelDelegates = () => Boolean(
+    prisma?.marketRegion
+    && prisma?.marketPrice
+    && prisma?.marketSource,
+);
+
 const serializeMarketSource = (source) => ({
     id: source.id,
     name: source.name,
@@ -10681,7 +10700,7 @@ const buildPartialMarketReplacementSnapshot = ({
 const resolveFarmMarketRegion = (farm) => {
     const mapData = parseFarmMapData(farm?.mapData);
 
-    const farmCity = pickFirstText(
+    const farmCityRaw = pickFirstText(
         farm?.city,
         farm?.cidade,
         mapData?.city,
@@ -10690,6 +10709,8 @@ const resolveFarmMarketRegion = (farm) => {
         mapData?.município,
         mapData?.localidade,
     );
+    const parsedFarmCity = parseCityState(farmCityRaw);
+    const farmCity = parsedFarmCity.city;
 
     const farmRegion = pickFirstText(
         farm?.region,
@@ -10714,7 +10735,7 @@ const resolveFarmMarketRegion = (farm) => {
         mapData?.estadoSigla,
         mapData?.stateCode,
     );
-    const farmState = stateRaw ? normalizeMarketState(stateRaw) : null;
+    const farmState = stateRaw ? normalizeMarketState(stateRaw) : parsedFarmCity.state;
 
     const addressRaw = pickFirstText(
         mapData?.address,
@@ -10734,20 +10755,20 @@ const resolveFarmMarketRegion = (farm) => {
     const cityKey = normalizeText(farmCity);
     const addressKey = normalizeText(addressRaw);
 
-    if ((!resolvedRegion || !resolvedState) && (cityKey === 'feira de santana' || cityKey === 'feira' || cityKey === 'lagoa do capim')) {
+    if ((!resolvedRegion || !resolvedState) && (cityKey === 'feira de santana' || cityKey === 'feira' || cityKey === 'lagoa do capim' || parsedFarmCity.state === 'BA')) {
         resolvedRegion = resolvedRegion || 'Bahia';
         resolvedState = resolvedState || 'BA';
-        source = 'city-fallback';
+        source = 'city-state-fallback';
     }
 
     if ((!resolvedRegion || !resolvedState) && (addressKey?.includes('bahia') || addressKey?.includes(' ba '))) {
         resolvedRegion = resolvedRegion || 'Bahia';
         resolvedState = resolvedState || 'BA';
-        source = 'city-fallback';
+        source = 'city-state-fallback';
     }
 
     if (!resolvedRegion && !resolvedState && (farmLat !== null || farmLng !== null)) {
-        source = 'coords-fallback';
+        source = 'coords-only';
     } else if (!resolvedRegion && !resolvedState) {
         source = 'empty';
     } else if (!source) {
@@ -10767,6 +10788,7 @@ const resolveFarmMarketRegion = (farm) => {
 
 const resolveMarketRegionContext = async ({ farm, scope }) => {
     const farmRegionContext = resolveFarmMarketRegion(farm);
+    const marketTablesAvailable = hasMarketModelDelegates();
 
     if (scope === 'farm') {
         console.log('[overview/dashboard] farm market region', {
@@ -10780,6 +10802,18 @@ const resolveMarketRegionContext = async ({ farm, scope }) => {
             resolvedState: farmRegionContext.state || null,
             source: farmRegionContext.source || 'empty',
         });
+    }
+
+    if (!marketTablesAvailable) {
+        console.warn('[market] Prisma market models unavailable');
+        if (farmRegionContext.region || farmRegionContext.state) {
+            return {
+                id: null,
+                name: farmRegionContext.region || farmRegionContext.state,
+                state: farmRegionContext.state,
+            };
+        }
+        return null;
     }
 
     if (scope === 'farm' && farmRegionContext.city) {
@@ -10828,7 +10862,7 @@ const resolveMarketRegionContext = async ({ farm, scope }) => {
 };
 
 const findLatestPublishedMarketPrice = async ({ regionId, productType }) => {
-    if (!regionId || !productType) return null;
+    if (!regionId || !productType || !hasMarketModelDelegates()) return null;
     return prisma.marketPrice.findFirst({
         where: {
             regionId,
@@ -10938,6 +10972,12 @@ const buildMarketReplacementSnapshot = async ({ scope, farm }) => {
 
 app.get('/market/sources', requireAuth, requireMarketAdmin, async (_req, res) => {
     try {
+        if (!hasMarketModelDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado ainda não está disponível neste ambiente.',
+            });
+        }
         const sources = await prisma.marketSource.findMany({
             orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
         });
@@ -10950,6 +10990,12 @@ app.get('/market/sources', requireAuth, requireMarketAdmin, async (_req, res) =>
 
 app.post('/market/sources', requireAuth, requireMarketAdmin, async (req, res) => {
     try {
+        if (!hasMarketModelDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado ainda não está disponível neste ambiente.',
+            });
+        }
         const name = normalizeMarketOptionalText(req.body?.name);
         const type = String(req.body?.type || '').trim().toUpperCase();
         const url = normalizeMarketOptionalText(req.body?.url);
@@ -10968,6 +11014,12 @@ app.post('/market/sources', requireAuth, requireMarketAdmin, async (req, res) =>
 
 app.patch('/market/sources/:id', requireAuth, requireMarketAdmin, async (req, res) => {
     try {
+        if (!hasMarketModelDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado ainda não está disponível neste ambiente.',
+            });
+        }
         const sourceId = String(req.params.id || '');
         if (!UUID_REGEX.test(sourceId)) return res.status(400).json({ message: 'Fonte inválida.' });
         const data = {};
@@ -10993,6 +11045,12 @@ app.patch('/market/sources/:id', requireAuth, requireMarketAdmin, async (req, re
 
 app.get('/market/regions', requireAuth, requireMarketAdmin, async (_req, res) => {
     try {
+        if (!hasMarketModelDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado ainda não está disponível neste ambiente.',
+            });
+        }
         const regions = await prisma.marketRegion.findMany({
             orderBy: [{ isActive: 'desc' }, { state: 'asc' }, { name: 'asc' }],
         });
@@ -11005,6 +11063,12 @@ app.get('/market/regions', requireAuth, requireMarketAdmin, async (_req, res) =>
 
 app.post('/market/regions', requireAuth, requireMarketAdmin, async (req, res) => {
     try {
+        if (!hasMarketModelDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado ainda não está disponível neste ambiente.',
+            });
+        }
         const name = normalizeMarketOptionalText(req.body?.name);
         const state = normalizeMarketState(req.body?.state);
         const city = normalizeMarketOptionalText(req.body?.city);
@@ -11025,6 +11089,12 @@ app.post('/market/regions', requireAuth, requireMarketAdmin, async (req, res) =>
 
 app.patch('/market/regions/:id', requireAuth, requireMarketAdmin, async (req, res) => {
     try {
+        if (!hasMarketModelDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado ainda não está disponível neste ambiente.',
+            });
+        }
         const regionId = String(req.params.id || '');
         if (!UUID_REGEX.test(regionId)) return res.status(400).json({ message: 'Região inválida.' });
         const data = {};
@@ -11052,6 +11122,12 @@ app.patch('/market/regions/:id', requireAuth, requireMarketAdmin, async (req, re
 
 app.get('/market/prices', requireAuth, requireMarketAdmin, async (req, res) => {
     try {
+        if (!hasMarketModelDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado ainda não está disponível neste ambiente.',
+            });
+        }
         const where = {};
         const state = normalizeMarketState(req.query?.state);
         const regionId = normalizeMarketOptionalText(req.query?.regionId);
@@ -11088,6 +11164,12 @@ app.get('/market/prices', requireAuth, requireMarketAdmin, async (req, res) => {
 
 app.post('/market/prices', requireAuth, requireMarketAdmin, async (req, res) => {
     try {
+        if (!hasMarketModelDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado ainda não está disponível neste ambiente.',
+            });
+        }
         const regionId = normalizeMarketOptionalText(req.body?.regionId);
         const sourceId = normalizeMarketOptionalText(req.body?.sourceId);
         const productType = String(req.body?.productType || '').trim().toUpperCase();
@@ -11146,6 +11228,12 @@ app.post('/market/prices', requireAuth, requireMarketAdmin, async (req, res) => 
 
 app.patch('/market/prices/:id', requireAuth, requireMarketAdmin, async (req, res) => {
     try {
+        if (!hasMarketModelDelegates()) {
+            return res.status(503).json({
+                error: 'MARKET_MODULE_NOT_READY',
+                message: 'EIXO Mercado ainda não está disponível neste ambiente.',
+            });
+        }
         const priceId = String(req.params.id || '');
         if (!UUID_REGEX.test(priceId)) return res.status(400).json({ message: 'Cotação inválida.' });
         const data = {};
