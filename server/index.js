@@ -12382,6 +12382,144 @@ app.get('/api/hq/clientes', requireAuth, requireSuperAdmin, async (req, res) => 
     }
 });
 
+app.patch('/api/hq/clientes/:organizationId/plan', requireAuth, requireSuperAdmin, async (req, res) => {
+    const { organizationId } = req.params;
+    const { planCode, billingStatus } = req.body || {};
+
+    const normalizedPlanCode = String(planCode || '').trim().toUpperCase();
+    const normalizedBillingStatus = String(billingStatus || '').trim().toUpperCase();
+    const allowedPlans = new Set(['GRATIS', 'EIXO_GESTAO', 'EIXO_DECISAO']);
+    const allowedStatuses = new Set(['ACTIVE', 'BLOCKED']);
+
+    if (!organizationId) {
+        return res.status(400).json({ message: 'Organização não informada.' });
+    }
+    if (!allowedPlans.has(normalizedPlanCode)) {
+        return res.status(400).json({ message: 'Plano inválido.' });
+    }
+    if (!allowedStatuses.has(normalizedBillingStatus)) {
+        return res.status(400).json({ message: 'Status inválido.' });
+    }
+
+    const planEntitlementsMap = {
+        GRATIS: ['CORE'],
+        EIXO_GESTAO: ['CORE', 'NUTRITION', 'EIXO_GESTAO'],
+        EIXO_DECISAO: ['CORE', 'GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO', 'EIXO_NUTRITION'],
+    };
+
+    try {
+        const organization = await prisma.organization.findUnique({
+            where: { id: String(organizationId) },
+            select: { id: true, name: true },
+        });
+        if (!organization) {
+            return res.status(404).json({ message: 'Organização não encontrada.' });
+        }
+
+        const now = new Date();
+        const subscription = await prisma.$transaction(async (tx) => {
+            await tx.organization.update({
+                where: { id: organization.id },
+                data: { accessState: normalizedBillingStatus },
+            });
+
+            const latestSubscription = await tx.billingSubscription.findFirst({
+                where: { organizationId: organization.id },
+                orderBy: { createdAt: 'desc' },
+            });
+
+            let updatedSubscription;
+            if (latestSubscription) {
+                updatedSubscription = await tx.billingSubscription.update({
+                    where: { id: latestSubscription.id },
+                    data: {
+                        planCode: normalizedPlanCode,
+                        status: normalizedBillingStatus,
+                        updatedAt: now,
+                        currentPeriodStart: latestSubscription.currentPeriodStart || now,
+                        currentPeriodEnd: latestSubscription.currentPeriodEnd || new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000)),
+                    },
+                });
+            } else {
+                updatedSubscription = await tx.billingSubscription.create({
+                    data: {
+                        id: `manual-${organization.id}`,
+                        organizationId: organization.id,
+                        provider: 'INTERNAL',
+                        providerSubscriptionId: `manual-${organization.id}`,
+                        planCode: normalizedPlanCode,
+                        status: normalizedBillingStatus,
+                        currentPeriodStart: now,
+                        currentPeriodEnd: new Date(now.getTime() + (30 * 24 * 60 * 60 * 1000)),
+                    },
+                });
+            }
+
+            const entitlementCodes = planEntitlementsMap[normalizedPlanCode] || ['CORE'];
+            const products = await tx.product.findMany({
+                where: { code: { in: entitlementCodes } },
+                select: { id: true, code: true },
+            });
+            const productIdsToKeep = products.map((item) => item.id);
+
+            await tx.organizationProductEntitlement.updateMany({
+                where: { organizationId: organization.id },
+                data: {
+                    status: 'INACTIVE',
+                    endedAt: now,
+                },
+            });
+
+            for (const product of products) {
+                await tx.organizationProductEntitlement.upsert({
+                    where: {
+                        organizationId_productId: {
+                            organizationId: organization.id,
+                            productId: product.id,
+                        },
+                    },
+                    update: {
+                        status: 'ACTIVE',
+                        startedAt: now,
+                        endedAt: null,
+                    },
+                    create: {
+                        organizationId: organization.id,
+                        productId: product.id,
+                        status: 'ACTIVE',
+                        startedAt: now,
+                    },
+                });
+            }
+
+            if (!productIdsToKeep.length) {
+                await tx.organizationProductEntitlement.deleteMany({
+                    where: { organizationId: organization.id },
+                });
+            }
+
+            return updatedSubscription;
+        });
+
+        logActivity(req, {
+            action: 'HQ_ORG_PLAN_UPDATED',
+            entity: 'Organization',
+            entityId: organization.id,
+            description: `Atualizou plano da organização ${organization.name}: plano ${normalizedPlanCode}, status ${normalizedBillingStatus}`,
+        });
+
+        return res.json({
+            ok: true,
+            organizationId: organization.id,
+            planCode: subscription.planCode,
+            billingStatus: subscription.status,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atualizar plano da organização.' });
+    }
+});
+
 app.get('/api/hq/metricas', requireAuth, requireSuperAdmin, async (req, res) => {
     try {
         const [totalOrgs, totalUsers, subscriptions, animals] = await Promise.all([

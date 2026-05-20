@@ -122,6 +122,13 @@ const HQPage: React.FC = () => {
         suporte: null,
         cadastro: null,
     });
+    const [planModalOrg, setPlanModalOrg] = React.useState<HQCliente | null>(null);
+    const [planForm, setPlanForm] = React.useState<{ planCode: string; billingStatus: string }>({
+        planCode: 'GRATIS',
+        billingStatus: 'ACTIVE',
+    });
+    const [planSaving, setPlanSaving] = React.useState(false);
+    const [planError, setPlanError] = React.useState<string | null>(null);
 
     const loadTab = React.useCallback(async (tab: TabKey, force = false) => {
         if (loadingByTab[tab]) {
@@ -220,6 +227,46 @@ const HQPage: React.FC = () => {
         });
     }, [cadastro, search]);
 
+    const openPlanModal = (org: HQCliente) => {
+        setPlanModalOrg(org);
+        setPlanError(null);
+        setPlanForm({
+            planCode: String(org.plan || 'GRATIS').toUpperCase(),
+            billingStatus: String(org.billingStatus || org.accessState || 'ACTIVE').toUpperCase(),
+        });
+    };
+
+    const closePlanModal = () => {
+        if (planSaving) return;
+        setPlanModalOrg(null);
+        setPlanError(null);
+    };
+
+    const savePlanForOrg = async () => {
+        if (!planModalOrg) return;
+        setPlanSaving(true);
+        setPlanError(null);
+        try {
+            const response = await fetch(buildApiUrl(`/api/hq/clientes/${planModalOrg.id}/plan`), {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    planCode: planForm.planCode,
+                    billingStatus: planForm.billingStatus,
+                }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload?.message || 'Não foi possível atualizar o plano.');
+            await loadTab('clientes', true);
+            setPlanModalOrg(null);
+        } catch (error) {
+            setPlanError(error instanceof Error ? error.message : 'Não foi possível atualizar o plano.');
+        } finally {
+            setPlanSaving(false);
+        }
+    };
+
     const renderClientes = () => (
         <div className="overflow-x-auto rounded-2xl border border-[#D7D7D7] bg-white">
             <table className="min-w-full text-sm text-[#2F2F2F]">
@@ -232,6 +279,7 @@ const HQPage: React.FC = () => {
                         <th className="px-4 py-3">Fazendas</th>
                         <th className="px-4 py-3">Animais</th>
                         <th className="px-4 py-3">Cadastro</th>
+                        <th className="px-4 py-3">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -247,11 +295,20 @@ const HQPage: React.FC = () => {
                             <td className="px-4 py-3">{org.totalFarms}</td>
                             <td className="px-4 py-3">{org.totalAnimals}</td>
                             <td className="px-4 py-3">{formatDate(org.createdAt)}</td>
+                            <td className="px-4 py-3">
+                                <button
+                                    type="button"
+                                    onClick={() => openPlanModal(org)}
+                                    className="rounded-xl border border-[#D7CAB3] bg-[#fffaf1] px-3 py-1.5 text-xs font-semibold text-[#2F3A2D] hover:bg-[#f4ead8]"
+                                >
+                                    Gerenciar plano
+                                </button>
+                            </td>
                         </tr>
                     ))}
                     {!clientes.length && (
                         <tr>
-                            <td className="px-4 py-6 text-center text-[#5E5E5E]" colSpan={7}>Nenhum cliente encontrado.</td>
+                            <td className="px-4 py-6 text-center text-[#5E5E5E]" colSpan={8}>Nenhum cliente encontrado.</td>
                         </tr>
                     )}
                 </tbody>
@@ -580,6 +637,63 @@ const HQPage: React.FC = () => {
             </div>
 
             <div className="mt-4">{renderActiveContent()}</div>
+
+            {planModalOrg && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-md rounded-2xl border border-[#D7CAB3] bg-[#fffaf1] shadow-2xl">
+                        <div className="border-b border-[#D7CAB3] px-5 py-4">
+                            <h3 className="text-base font-bold text-[#2F3A2D]">Gerenciar plano da organização</h3>
+                            <p className="mt-1 text-sm text-[#6d6558]">{planModalOrg.name}</p>
+                        </div>
+                        <div className="space-y-4 px-5 py-4">
+                            <div>
+                                <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-[#6d6558]">Plano</label>
+                                <select
+                                    value={planForm.planCode}
+                                    onChange={(event) => setPlanForm((current) => ({ ...current, planCode: event.target.value }))}
+                                    className="mt-1 w-full rounded-xl border border-[#D7CAB3] bg-white px-3 py-2 text-sm text-[#2F3A2D]"
+                                >
+                                    <option value="GRATIS">GRATIS</option>
+                                    <option value="EIXO_GESTAO">EIXO_GESTAO</option>
+                                    <option value="EIXO_DECISAO">EIXO_DECISAO</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold uppercase tracking-[0.08em] text-[#6d6558]">Status</label>
+                                <select
+                                    value={planForm.billingStatus}
+                                    onChange={(event) => setPlanForm((current) => ({ ...current, billingStatus: event.target.value }))}
+                                    className="mt-1 w-full rounded-xl border border-[#D7CAB3] bg-white px-3 py-2 text-sm text-[#2F3A2D]"
+                                >
+                                    <option value="ACTIVE">ACTIVE (liberado)</option>
+                                    <option value="BLOCKED">BLOCKED (bloqueado)</option>
+                                </select>
+                            </div>
+                            {planError && (
+                                <p className="rounded-xl bg-[#fce8e8] px-3 py-2 text-sm text-[#8c2020]">{planError}</p>
+                            )}
+                        </div>
+                        <div className="flex justify-end gap-3 border-t border-[#D7CAB3] px-5 py-4">
+                            <button
+                                type="button"
+                                onClick={closePlanModal}
+                                disabled={planSaving}
+                                className="rounded-xl border border-[#D7CAB3] px-4 py-2 text-sm text-[#2F3A2D] hover:bg-[#f4ead8] disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={savePlanForOrg}
+                                disabled={planSaving}
+                                className="rounded-xl bg-[#9d7d4d] px-4 py-2 text-sm font-semibold text-white hover:bg-[#8f7144] disabled:opacity-50"
+                            >
+                                {planSaving ? 'Salvando...' : 'Salvar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
