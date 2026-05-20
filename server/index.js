@@ -5920,9 +5920,6 @@ app.post('/po/animals', requireAuth, async (req, res) => {
     if (!farmId || !nome?.trim() || !raca?.trim() || !sexo) {
         return res.status(400).json({ message: 'Dados obrigatórios do animal P.O. ausentes.' });
     }
-    if (!paddockId) {
-        return res.status(400).json({ message: 'Pasto obrigatório para cadastrar o animal P.O.' });
-    }
 
     const sexoEnum = normalizeSexo(sexo);
     if (!sexoEnum) {
@@ -5965,16 +5962,21 @@ app.post('/po/animals', requireAuth, async (req, res) => {
             validLotId = lot.id;
         }
 
-        const paddock = await prisma.paddock.findFirst({
-            where: { id: paddockId, farmId: farm.id, farm: buildFarmRelationFilter(req) },
-        });
-        if (!paddock) {
-            return res.status(400).json({ message: 'Pasto inválido para esta fazenda.' });
-        }
+        let validPaddockId = null;
+        let moveStartAt = null;
+        if (paddockId) {
+            const paddock = await prisma.paddock.findFirst({
+                where: { id: paddockId, farmId: farm.id, farm: buildFarmRelationFilter(req) },
+            });
+            if (!paddock) {
+                return res.status(400).json({ message: 'Pasto inválido para esta fazenda.' });
+            }
 
-        const moveStartAt = paddockStartAt ? parseDateValue(paddockStartAt) : new Date();
-        if (paddockStartAt && !moveStartAt) {
-            return res.status(400).json({ message: 'Data de entrada no pasto inválida.' });
+            moveStartAt = paddockStartAt ? parseDateValue(paddockStartAt) : new Date();
+            if (paddockStartAt && !moveStartAt) {
+                return res.status(400).json({ message: 'Data de entrada no pasto inválida.' });
+            }
+            validPaddockId = paddock.id;
         }
 
         const animal = await prisma.$transaction(async (tx) => {
@@ -5993,17 +5995,19 @@ app.post('/po/animals', requireAuth, async (req, res) => {
                     registro: trimmedRegistro || null,
                     categoria: trimmedCategoria || null,
                     observacoes: trimmedObservacoes || null,
-                    currentPaddockId: paddockId,
+                    currentPaddockId: validPaddockId,
                 },
             });
-            await tx.paddockMove.create({
-                data: {
-                    farmId: farm.id,
-                    paddockId,
-                    poAnimalId: created.id,
-                    startAt: moveStartAt,
-                },
-            });
+            if (validPaddockId && moveStartAt) {
+                await tx.paddockMove.create({
+                    data: {
+                        farmId: farm.id,
+                        paddockId: validPaddockId,
+                        poAnimalId: created.id,
+                        startAt: moveStartAt,
+                    },
+                });
+            }
             return created;
         });
 
@@ -6047,8 +6051,8 @@ app.post('/po/animals/import-batch', requireAuth, async (req, res) => {
             const sexoEnum = normalizeSexo(item.sexo);
             const paddockId = String(item.paddockId || '').trim();
 
-            if (!nome || !raca || !sexoEnum || !paddockId) {
-                results.push({ index, success: false, message: `${rowLabel}: campos obrigatórios ausentes (nome, raça, sexo, pasto).` });
+            if (!nome || !raca || !sexoEnum) {
+                results.push({ index, success: false, message: `${rowLabel}: campos obrigatórios ausentes (nome, raça, sexo).` });
                 continue;
             }
 
@@ -6079,13 +6083,18 @@ app.post('/po/animals/import-batch', requireAuth, async (req, res) => {
                         validLotId = lot.id;
                     }
 
-                    const paddock = await tx.paddock.findFirst({
-                        where: { id: paddockId, farmId: String(farmId), farm: buildFarmRelationFilter(req) },
-                    });
-                    if (!paddock) throw new Error('Pasto inválido para esta fazenda.');
+                    let validPaddockId = null;
+                    let moveStartAt = null;
+                    if (paddockId) {
+                        const paddock = await tx.paddock.findFirst({
+                            where: { id: paddockId, farmId: String(farmId), farm: buildFarmRelationFilter(req) },
+                        });
+                        if (!paddock) throw new Error('Pasto inválido para esta fazenda.');
 
-                    const moveStartAt = item.paddockStartAt ? parseDateValue(item.paddockStartAt) : new Date();
-                    if (item.paddockStartAt && !moveStartAt) throw new Error('Data de entrada no pasto inválida.');
+                        moveStartAt = item.paddockStartAt ? parseDateValue(item.paddockStartAt) : new Date();
+                        if (item.paddockStartAt && !moveStartAt) throw new Error('Data de entrada no pasto inválida.');
+                        validPaddockId = paddock.id;
+                    }
 
                     const created = await tx.poAnimal.create({
                         data: {
@@ -6102,13 +6111,15 @@ app.post('/po/animals/import-batch', requireAuth, async (req, res) => {
                             registro: item.registro ? String(item.registro).trim() || null : null,
                             categoria: item.categoria ? String(item.categoria).trim() || null : null,
                             observacoes: item.observacoes ? String(item.observacoes).trim() || null : null,
-                            currentPaddockId: paddockId,
+                            currentPaddockId: validPaddockId,
                         },
                     });
 
-                    await tx.paddockMove.create({
-                        data: { farmId: String(farmId), paddockId, poAnimalId: created.id, startAt: moveStartAt },
-                    });
+                    if (validPaddockId && moveStartAt) {
+                        await tx.paddockMove.create({
+                            data: { farmId: String(farmId), paddockId: validPaddockId, poAnimalId: created.id, startAt: moveStartAt },
+                        });
+                    }
 
                     const weighingsInput = Array.isArray(item.weighings) ? item.weighings : [];
                     const parsedWeighings = weighingsInput
@@ -8378,6 +8389,89 @@ app.post('/animals/bulk-move-pasto', async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao mover animais para pasto.' });
+    }
+});
+
+app.post('/po/animals/bulk-delete', async (req, res) => {
+    const { ids } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'Informe ao menos um animal P.O.' });
+    }
+    try {
+        const filter = buildFarmRelationFilter(req);
+        const animals = await prisma.poAnimal.findMany({
+            where: { id: { in: ids.map(String) }, farm: filter },
+            select: { id: true },
+        });
+        if (animals.length !== ids.length) {
+            return res.status(403).json({ message: 'Um ou mais animais P.O. não pertencem a esta conta.' });
+        }
+        await prisma.poAnimal.deleteMany({ where: { id: { in: ids.map(String) } } });
+        return res.json({ deleted: ids.length });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao excluir animais P.O.' });
+    }
+});
+
+app.post('/po/animals/bulk-move-lot', async (req, res) => {
+    const { ids, lotId } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: 'Informe ao menos um animal P.O.' });
+    }
+    try {
+        const filter = buildFarmRelationFilter(req);
+        const animals = await prisma.poAnimal.findMany({
+            where: { id: { in: ids.map(String) }, farm: filter },
+            select: { id: true, farmId: true },
+        });
+        if (animals.length !== ids.length) {
+            return res.status(403).json({ message: 'Um ou mais animais P.O. não pertencem a esta conta.' });
+        }
+        if (lotId) {
+            const farmId = animals[0].farmId;
+            const lot = await prisma.poLot.findFirst({ where: { id: String(lotId), farmId } });
+            if (!lot) return res.status(404).json({ message: 'Lote P.O. não encontrado.' });
+        }
+        await prisma.poAnimal.updateMany({
+            where: { id: { in: ids.map(String) } },
+            data: { lotId: lotId ? String(lotId) : null },
+        });
+        return res.json({ updated: ids.length });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao mover animais P.O. para lote.' });
+    }
+});
+
+app.post('/po/animals/bulk-move-pasto', async (req, res) => {
+    const { ids, pastoId } = req.body || {};
+    if (!Array.isArray(ids) || ids.length === 0 || !pastoId) {
+        return res.status(400).json({ message: 'Informe ao menos um animal P.O. e o pasto.' });
+    }
+    try {
+        const filter = buildFarmRelationFilter(req);
+        const animals = await prisma.poAnimal.findMany({
+            where: { id: { in: ids.map(String) }, farm: filter },
+            select: { id: true },
+        });
+        if (animals.length !== ids.length) {
+            return res.status(403).json({ message: 'Um ou mais animais P.O. não pertencem a esta conta.' });
+        }
+        const results = [];
+        for (const animal of animals) {
+            const { error, result } = await moveAnimalBetweenPaddocks({
+                animalId: animal.id,
+                paddockId: String(pastoId),
+                scopeFilter: filter,
+                isPo: true,
+            });
+            if (!error) results.push(result);
+        }
+        return res.json({ updated: results.length });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao mover animais P.O. para pasto.' });
     }
 });
 

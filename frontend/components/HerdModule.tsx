@@ -10,8 +10,8 @@ import {
     HerdLot,
     HerdType,
     createAnimal,
+    createBirthAnimal,
     createLot,
-    createWeighing,
     importAnimalsBatch,
     listAnimals,
     listLots,
@@ -542,11 +542,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [bulkTargetPastoId, setBulkTargetPastoId] = useState('');
     const [bulkLoading, setBulkLoading] = useState(false);
     const [bulkError, setBulkError] = useState<string | null>(null);
-    const [bulkWeighOpen, setBulkWeighOpen] = useState(false);
-    const [bulkWeighDate, setBulkWeighDate] = useState('');
-    const [bulkWeighPeso, setBulkWeighPeso] = useState('');
-    const [bulkWeighLoading, setBulkWeighLoading] = useState(false);
-    const [bulkWeighResult, setBulkWeighResult] = useState<{ success: number; errors: string[] } | null>(null);
     const [selectedAnimal, setSelectedAnimal] = useState<HerdAnimal | null>(null);
     const [selectedLot, setSelectedLot] = useState<HerdLot | null>(null);
     const [lotModalOpen, setLotModalOpen] = useState(false);
@@ -588,6 +583,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         maeNome: '',
     });
     const [nascimentoError, setNascimentoError] = useState<string | null>(null);
+    const [nascimentoSuccess, setNascimentoSuccess] = useState<string | null>(null);
     const [nascimentoSaving, setNascimentoSaving] = useState(false);
 
     const [animalForm, setAnimalForm] = useState({
@@ -998,19 +994,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setImportModalOpen(false);
         setActiveTab('animals');
         applyHealthQuickFilter('sem_pasto');
-    };
-
-    const handleImportNextActionWeigh = () => {
-        const animalsWithoutWeighing = animals.filter((animal) => animal.pesoAtual == null || animal.pesoAtual <= 0);
-        if (animalsWithoutWeighing.length === 0) return;
-        setImportModalOpen(false);
-        setActiveTab('animals');
-        setSelectedAnimals(new Set(animalsWithoutWeighing.map((animal) => animal.id as any)));
-        setBulkError(null);
-        setBulkWeighResult(null);
-        setBulkWeighDate('');
-        setBulkWeighPeso('');
-        setBulkWeighOpen(true);
     };
 
     const sortedAnimals = useMemo(() => {
@@ -1936,10 +1919,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             setAnimalFormError('Selecione uma fazenda para criar animal.');
             return;
         }
-        if (!animalForm.paddockId) {
-            setAnimalFormError('Selecione o pasto do animal.');
-            return;
-        }
         if (!animalForm.brinco.trim() || !animalForm.raca.trim() || !animalForm.dataNascimento) {
             setAnimalFormError('Preencha brinco, raça e data de nascimento.');
             return;
@@ -1964,7 +1943,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 categoria: animalForm.categoria.trim() || undefined,
                 observacoes: animalForm.observacoes.trim() || undefined,
                 lotId: animalForm.lotId || undefined,
-                paddockId: animalForm.paddockId,
+                paddockId: animalForm.paddockId || undefined,
                 paddockStartAt: animalForm.paddockStartAt || undefined,
                 valorCompra: animalForm.valorCompra ? parseFloat(animalForm.valorCompra.replace(',', '.')) || undefined : undefined,
                 dataCompra: animalForm.dataCompra || undefined,
@@ -2008,10 +1987,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkLoading(true);
         setBulkError(null);
         try {
-            if (isPoMode) {
-                throw new Error('Exclusão em massa ainda não disponível para Plantel P.O.');
-            }
-            const res = await fetch(buildApiUrl('/animals/bulk-delete'), {
+            const endpoint = isPoMode ? '/po/animals/bulk-delete' : '/animals/bulk-delete';
+            const res = await fetch(buildApiUrl(endpoint), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -2033,10 +2010,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkLoading(true);
         setBulkError(null);
         try {
-            if (isPoMode) {
-                throw new Error('Mover lote em massa ainda não disponível para Plantel P.O.');
-            }
-            const res = await fetch(buildApiUrl('/animals/bulk-move-lot'), {
+            const endpoint = isPoMode ? '/po/animals/bulk-move-lot' : '/animals/bulk-move-lot';
+            const res = await fetch(buildApiUrl(endpoint), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -2060,10 +2035,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkLoading(true);
         setBulkError(null);
         try {
-            if (isPoMode) {
-                throw new Error('Mover pasto em massa ainda não disponível para Plantel P.O.');
-            }
-            const res = await fetch(buildApiUrl('/animals/bulk-move-pasto'), {
+            const endpoint = isPoMode ? '/po/animals/bulk-move-pasto' : '/animals/bulk-move-pasto';
+            const res = await fetch(buildApiUrl(endpoint), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -2080,34 +2053,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         } finally {
             setBulkLoading(false);
         }
-    };
-
-    const handleBulkWeigh = async () => {
-        const peso = parseFloat(bulkWeighPeso.replace(',', '.'));
-        if (!bulkWeighDate || isNaN(peso) || peso <= 0) {
-            setBulkError('Informe data e peso válidos.');
-            return;
-        }
-        setBulkWeighLoading(true);
-        setBulkError(null);
-        const ids = Array.from(selectedAnimals);
-        let success = 0;
-        const errors: string[] = [];
-        for (const id of ids) {
-            try {
-                await createWeighing(String(id), resolvedMode, {
-                    data: bulkWeighDate,
-                    peso,
-                });
-                success++;
-            } catch (err: any) {
-                const animal = animals.find((a) => a.id === id);
-                errors.push(`${animal?.identificacao || id}: ${err?.message || 'erro'}`);
-            }
-        }
-        setBulkWeighLoading(false);
-        setBulkWeighResult({ success, errors });
-        if (success > 0) await loadData();
     };
 
     const handleExportAnimals = async () => {
@@ -2284,13 +2229,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
                         >
                             Mover para Pasto
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setBulkError(null); setBulkWeighResult(null); setBulkWeighDate(''); setBulkWeighPeso(''); setBulkWeighOpen(true); }}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
-                        >
-                            Registrar pesagem
                         </button>
                         <button
                             type="button"
@@ -3202,79 +3140,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 </div>
             )}
 
-            {bulkWeighOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-xl rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
-                        <div className="border-b border-[var(--eixo-border)] px-6 py-4">
-                            <h3 className="text-base font-bold text-[var(--eixo-text)]">
-                                Registrar pesagem — {selectedAnimals.size} {selectedAnimals.size === 1 ? 'animal' : 'animais'}
-                            </h3>
-                        </div>
-                        <div className="space-y-4 px-6 py-4">
-                            {bulkWeighResult ? (
-                                <>
-                                    <div className="rounded-xl border border-[#c8ddc4] bg-[var(--eixo-green-soft)] p-4">
-                                        <p className="font-bold text-[var(--eixo-text)]">
-                                            {bulkWeighResult.success} {bulkWeighResult.success === 1 ? 'pesagem registrada' : 'pesagens registradas'}
-                                        </p>
-                                    </div>
-                                    {bulkWeighResult.errors.length > 0 && (
-                                        <div className="max-h-32 overflow-y-auto rounded-xl border border-[#efc2ba] bg-[#fff2ef] p-3 space-y-1">
-                                            {bulkWeighResult.errors.map((e, i) => (
-                                                <p key={i} className="text-xs text-[var(--eixo-danger)]">{e}</p>
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            ) : (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Data da pesagem</label>
-                                        <input
-                                            type="date"
-                                            value={bulkWeighDate}
-                                            onChange={(e) => setBulkWeighDate(e.target.value)}
-                                            max={new Date().toISOString().slice(0, 10)}
-                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Peso (kg)</label>
-                                        <input
-                                            type="number"
-                                            value={bulkWeighPeso}
-                                            onChange={(e) => setBulkWeighPeso(e.target.value)}
-                                            placeholder="ex: 420"
-                                            min="1"
-                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
-                                        />
-                                    </div>
-                                    {bulkError && <p className="text-xs text-[var(--eixo-danger)]">{bulkError}</p>}
-                                </>
-                            )}
-                        </div>
-                        <div className="flex justify-end gap-3 border-t border-[var(--eixo-border)] px-6 py-4">
-                            <button
-                                type="button"
-                                onClick={() => { setBulkWeighOpen(false); setBulkWeighResult(null); if (bulkWeighResult?.success) setSelectedAnimals(new Set()); }}
-                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
-                            >
-                                {bulkWeighResult ? 'Fechar' : 'Cancelar'}
-                            </button>
-                            {!bulkWeighResult && (
-                                <button
-                                    type="button"
-                                    onClick={handleBulkWeigh}
-                                    disabled={bulkWeighLoading || !bulkWeighDate || !bulkWeighPeso}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-bold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-40"
-                                >
-                                    {bulkWeighLoading ? 'Registrando...' : 'Confirmar'}
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {animalFormOpen && (
                 <div
@@ -4221,7 +4086,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 <h3 className="text-base font-bold text-[#2F2F2F]">🐄 Registrar nascimento</h3>
                                 <p className="text-xs text-[#5E5E5E]">O EIXO herda raça e pasto da mãe automaticamente</p>
                             </div>
-                            <button type="button" onClick={() => { setNascimentoModalOpen(false); setNascimentoError(null); }}
+                            <button type="button" onClick={() => { setNascimentoModalOpen(false); setNascimentoError(null); setNascimentoSuccess(null); }}
                                 className="rounded-full p-1.5 text-[#5E5E5E] hover:bg-[#e4f7b0]">✕</button>
                         </div>
 
@@ -4229,32 +4094,27 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             e.preventDefault();
                             if (!farmId) return;
                             setNascimentoError(null);
+                            setNascimentoSuccess(null);
                             setNascimentoSaving(true);
                             try {
                                 if (isPoMode) {
                                     throw new Error('Registro de nascimento está disponível apenas no Rebanho Comercial.');
                                 }
-                                const res = await fetch(`/animals/nascimento`, {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    credentials: 'include',
-                                    body: JSON.stringify({
-                                        farmId,
-                                        sexo: nascimentoForm.sexo,
-                                        dataNascimento: nascimentoForm.dataNascimento,
-                                        pesoNascimento: nascimentoForm.pesoNascimento ? Number(nascimentoForm.pesoNascimento) : undefined,
-                                        brinco: nascimentoForm.brinco || undefined,
-                                        maeId: nascimentoForm.maeId || undefined,
-                                        maeNome: nascimentoForm.maeNome || undefined,
-                                    }),
+                                const data = await createBirthAnimal({
+                                    farmId,
+                                    sexo: nascimentoForm.sexo,
+                                    dataNascimento: nascimentoForm.dataNascimento,
+                                    pesoNascimento: nascimentoForm.pesoNascimento ? Number(nascimentoForm.pesoNascimento) : undefined,
+                                    brinco: nascimentoForm.brinco || undefined,
+                                    maeId: nascimentoForm.maeId || undefined,
+                                    maeNome: nascimentoForm.maeNome || undefined,
                                 });
-                                const data = await res.json();
-                                if (!res.ok) throw new Error(data.message || 'Erro ao registrar nascimento');
                                 await loadData();
-                                setNascimentoModalOpen(false);
                                 setNascimentoForm({ sexo: 'Fêmea', dataNascimento: new Date().toISOString().slice(0, 10), pesoNascimento: '', brinco: '', maeId: '', maeNome: '' });
                                 if (data.brincoProvisorio) {
-                                    alert(`Nascimento registrado! Brinco provisório: ${data.animal?.brinco}. Edite o animal para atribuir o brinco definitivo.`);
+                                    setNascimentoSuccess(`Nascimento registrado. Brinco provisório: ${data.animal?.brinco || 'não informado'}.`);
+                                } else {
+                                    setNascimentoSuccess('Nascimento registrado com sucesso.');
                                 }
                             } catch (err: any) {
                                 setNascimentoError(err.message || 'Erro ao registrar nascimento');
@@ -4349,6 +4209,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
                             {nascimentoError && (
                                 <p className="rounded-xl bg-[#fce8e8] px-3 py-2 text-sm text-[#8c2020]">{nascimentoError}</p>
+                            )}
+                            {nascimentoSuccess && (
+                                <p className="rounded-xl bg-[var(--eixo-green-soft)] px-3 py-2 text-sm text-[var(--eixo-success)]">{nascimentoSuccess}</p>
                             )}
 
                             <button type="submit" disabled={nascimentoSaving || !nascimentoForm.dataNascimento}

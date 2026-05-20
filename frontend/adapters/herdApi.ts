@@ -209,6 +209,22 @@ export interface ImportBatchResponse {
     results: ImportBatchRowResult[];
 }
 
+export interface BirthAnimalPayload {
+    farmId: string;
+    sexo: string;
+    dataNascimento: string;
+    pesoNascimento?: number;
+    brinco?: string;
+    maeId?: string;
+    maeNome?: string;
+}
+
+export interface BirthAnimalResponse {
+    animal?: HerdAnimal;
+    brincoProvisorio?: boolean;
+    message?: string;
+}
+
 export const importAnimalsBatch = async (
     farmId: string,
     herdType: HerdType,
@@ -226,6 +242,22 @@ export const importAnimalsBatch = async (
         throw new Error(data?.message || 'Erro ao importar em lote.');
     }
     return data as ImportBatchResponse;
+};
+
+export const createBirthAnimal = async (
+    payload: BirthAnimalPayload,
+): Promise<BirthAnimalResponse> => {
+    const response = await fetch(buildApiUrl('/animals/nascimento'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao registrar nascimento.');
+    }
+    return data as BirthAnimalResponse;
 };
 
 export const listLots = async (farmId: string, herdType: HerdType): Promise<HerdLot[]> => {
