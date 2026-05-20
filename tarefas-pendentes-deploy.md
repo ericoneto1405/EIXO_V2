@@ -18,6 +18,7 @@
 | DEP-020 | Refinar card “Mercado e Reposição” para versão executiva: label “Bezerro desmamado”, peso 7 @, sinal de reposição “Cautela / Reposição exige eficiência”, leitura EIXO curta, tendências semanais (boi, reposição e custo em arrobas) e redução visual com detalhes secundários recolhidos | CONCLUIDA | Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) + Build frontend OK (`npm run build --prefix frontend`) + Schema Prisma válido (`npx prisma validate --schema server/prisma/schema.prisma`) | 2026-05-19 |
 | DEP-021 | Corrigir estabilidade da Visão Geral: isolar falhas de `marketReplacement` no `/overview/dashboard` com fallback seguro `SEM_DADOS`, remover botão de cadastro manual na UI do cliente e evitar quebra geral por ausência/erro de dados de mercado | CONCLUIDA | Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) + Build frontend OK (`npm run build --prefix frontend`) + Schema Prisma válido (`npx prisma validate --schema server/prisma/schema.prisma`) | 2026-05-19 |
 | DEP-022 | Corrigir mapeamento regional da Visão Geral em `scope=farm`: usar campos reais da fazenda (`city`, `lat`, `lng`, `mapData`) e normalização segura para resolver `region/state` no `marketReplacement`, evitando “Região não configurada” quando há dados disponíveis | CONCLUIDA | Prisma validate OK (`npx prisma validate --schema server/prisma/schema.prisma`) + Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) + Build frontend OK (`npm run build --prefix frontend`) | 2026-05-19 |
+| DEP-023 | Corrigir regressão no modal de importação do Manejo do Rebanho: manter caminho de ação visível quando a pré-validação de IDs falhar, preenchendo `failedRows` para não ocultar o editor de correção e evitar tela de erro sem saída | CONCLUIDA | Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) | 2026-05-20 |
 
 ## Tarefas pendentes
 
@@ -40,3 +41,4 @@
 - Commit de deploy DEP-021: `d6eb780` (push em `main`, build na VPS OK, PM2 reload OK).
 - Deploy da DEP-022 realizado em produção com sucesso em 2026-05-19 via `./deploy-local.sh "chore: corrigir mapeamento regional do overview (farm -> marketReplacement) e atualizar tarefas-pendentes-deploy.md"`.
 - Commit de deploy DEP-022: `4664553` (push em `main`, build na VPS OK, PM2 reload OK).
+- DEP-023 identificou regressão no fluxo de correção da importação (pré-validação com falha preenchia `errors` e deixava `failedRows` vazio), e aplicou ajuste mínimo para preservar as linhas e manter ação visível no modal.

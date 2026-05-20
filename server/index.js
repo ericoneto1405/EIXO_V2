@@ -5821,7 +5821,7 @@ app.delete('/genetics/selection/decisions/:animalId', async (req, res) => {
     }
 });
 
-app.get('/po/animals', async (req, res) => {
+app.get('/po/animals', requireAuth, async (req, res) => {
     const { farmId, lotId } = req.query || {};
     if (!farmId) {
         return res.status(400).json({ message: 'Informe a fazenda para listar animais P.O.' });
@@ -5915,7 +5915,7 @@ app.get('/po/animals', async (req, res) => {
     }
 });
 
-app.post('/po/animals', async (req, res) => {
+app.post('/po/animals', requireAuth, async (req, res) => {
     const { farmId, lotId, brinco, nome, raca, sexo, dataNascimento, registro, categoria, observacoes, pesoAtual, paddockId, paddockStartAt } = req.body || {};
     if (!farmId || !nome?.trim() || !raca?.trim() || !sexo) {
         return res.status(400).json({ message: 'Dados obrigatórios do animal P.O. ausentes.' });
@@ -6017,10 +6017,13 @@ app.post('/po/animals', async (req, res) => {
     }
 });
 
-app.post('/po/animals/import-batch', async (req, res) => {
+app.post('/po/animals/import-batch', requireAuth, async (req, res) => {
     const { farmId, items } = req.body || {};
     if (!farmId || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: 'farmId e items são obrigatórios.' });
+    }
+    if (items.length > 500) {
+        return res.status(400).json({ message: 'Limite de importação: até 500 animais por envio.' });
     }
 
     try {
@@ -7671,7 +7674,7 @@ app.delete('/po/embryos/:id', async (req, res) => {
     }
 });
 
-app.get('/animals', async (req, res) => {
+app.get('/animals', requireAuth, async (req, res) => {
     const { farmId, lotId } = req.query || {};
     if (!farmId) {
         return res.status(400).json({ message: 'Informe a fazenda para listar animais.' });
@@ -7754,7 +7757,7 @@ app.get('/animals', async (req, res) => {
     }
 });
 
-app.post('/animals', async (req, res) => {
+app.post('/animals', requireAuth, async (req, res) => {
     const { farmId, lotId, brinco, raca, sexo, dataNascimento, pesoAtual, paddockId, paddockStartAt, valorCompra, dataCompra, tipoCadastro,
             tatuagem, sisbov, maeId, maeNome, paiId, paiNome } = req.body || {};
 
@@ -7908,10 +7911,13 @@ app.post('/animals', async (req, res) => {
 });
 
 // ── Importação em lote (linha a linha com retorno por item) ──────────────────
-app.post('/animals/import-batch', async (req, res) => {
+app.post('/animals/import-batch', requireAuth, async (req, res) => {
     const { farmId, items } = req.body || {};
     if (!farmId || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({ message: 'farmId e items são obrigatórios.' });
+    }
+    if (items.length > 500) {
+        return res.status(400).json({ message: 'Limite de importação: até 500 animais por envio.' });
     }
 
     try {

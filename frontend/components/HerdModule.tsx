@@ -156,7 +156,7 @@ const formatNumber = (value?: number | null) => {
 
 const PAGE_SIZE = 30;
 const MAX_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
-const MAX_IMPORT_ROWS = 1000;
+const MAX_IMPORT_ROWS = 500;
 const MAX_IMPORT_COLUMNS = 40;
 type SortDirection = 'asc' | 'desc';
 type SortColumn = 'identificacao' | 'registro' | 'raca' | 'sexo' | 'idade' | 'pasto' | 'pesoAtual' | 'gmd' | 'lote' | 'categoria' | 'nutricao';
@@ -1549,7 +1549,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 total: importRows.length,
                 success: 0,
                 errors: ['Não foi possível validar IDs já cadastrados na fazenda. Tente novamente em instantes.'],
-                failedRows: [],
+                failedRows: [...importRows],
                 weighingIssues: [],
             });
             return false;
