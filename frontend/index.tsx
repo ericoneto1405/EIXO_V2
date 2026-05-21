@@ -19,8 +19,8 @@ if (!window.__eixoFetchGuardInstalled) {
       try {
         const cloned = response.clone();
         const payload = await cloned.json().catch(() => null);
-        if (payload?.code === 'SESSION_REVOKED') {
-          window.dispatchEvent(new CustomEvent('eixo:session-revoked', {
+        if (payload?.code === 'SESSION_REVOKED' || payload?.code === 'SESSION_EXPIRED' || payload?.code === 'SESSION_INVALID') {
+          window.dispatchEvent(new CustomEvent('eixo:session-ended', {
             detail: payload,
           }));
         }

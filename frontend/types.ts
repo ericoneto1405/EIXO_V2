@@ -9,7 +9,7 @@ export interface Animal {
     raca: string;
     sexo: AnimalSexo;
     dataNascimento: string;
-    pesoAtual: number;
+    ultimoPeso: number | null;
     gmd: number | null; // GMD atual (últimas duas pesagens válidas)
     gmdLast?: number | null;
     gmd30?: number | null;
@@ -85,7 +85,7 @@ export interface AnimalUI {
     raca: string;
     sexo: string;
     dataNascimento?: string | null;
-    pesoAtual: number | null;
+    ultimoPeso: number | null;
     dataUltimaPesagem?: string | null;
     gmd: number | null;
     gmdLast?: number | null;

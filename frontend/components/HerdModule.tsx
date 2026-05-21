@@ -159,7 +159,7 @@ const MAX_IMPORT_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_IMPORT_ROWS = 500;
 const MAX_IMPORT_COLUMNS = 40;
 type SortDirection = 'asc' | 'desc';
-type SortColumn = 'identificacao' | 'registro' | 'raca' | 'sexo' | 'idade' | 'pasto' | 'pesoAtual' | 'gmd' | 'lote' | 'categoria' | 'nutricao';
+type SortColumn = 'identificacao' | 'registro' | 'raca' | 'sexo' | 'idade' | 'pasto' | 'ultimoPeso' | 'gmd' | 'lote' | 'categoria' | 'nutricao';
 
 // Campos P.O. (tatuagem, mae, pai, sisbov) liberados para todos os planos
 const FIELD_PLAN: Record<string, 'free' | 'paid2'> = {
@@ -170,7 +170,7 @@ const FIELD_PLAN: Record<string, 'free' | 'paid2'> = {
     sexo: 'free',
     dataNascimento: 'free',
     registro: 'free',
-    pesoAtual: 'free',
+    ultimoPeso: 'free',
     lote: 'free',
     pasto: 'free',
     categoria: 'free',
@@ -204,7 +204,7 @@ const FIELD_LABELS: Record<string, string> = {
     sexo: 'Sexo',
     dataNascimento: 'Data de Nascimento',
     registro: 'Registro',
-    pesoAtual: 'Peso Atual',
+    ultimoPeso: 'Último peso',
     dataPesagem: 'Data da Pesagem',
     lote: 'Lote',
     pasto: 'Pasto',
@@ -396,7 +396,7 @@ const FIELD_KEYWORDS: Record<string, string[]> = {
         'registro', 'reg', 'registro animal', 'registro po', 'registro p.o', 'n registro',
         'numero registro', 'nro registro', 'registro genealogico', 'rgd', 'rgn',
     ],
-    pesoAtual: [
+    ultimoPeso: [
         'peso', 'peso atual', 'peso vivo', 'kg', 'weight', 'pv', 'p.v',
         'peso_atual', 'peso vivo atual', 'wt', 'arroba', 'arrobas', 'arrb',
         '@', '@s', 'pso', 'ps', 'p/', 'pezo', 'pso atual', 'peso@', 'kg atual',
@@ -592,7 +592,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         raca: '',
         sexo: 'Macho',
         dataNascimento: '',
-        pesoAtual: '',
+        ultimoPeso: '',
         registro: '',
         tipoCadastro: 'MESTICO',
         categoria: '',
@@ -867,7 +867,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             }
 
             if (filterPesagem === 'sem') {
-                if (animal.pesoAtual != null && animal.pesoAtual > 0) return false;
+                if (animal.ultimoPeso != null && animal.ultimoPeso > 0) return false;
             }
             if (filterPesagem === 'desatualizada') {
                 if (!animal.dataUltimaPesagem) return false;
@@ -1045,8 +1045,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 case 'pasto':
                     result = compareText(left.currentPaddockName, right.currentPaddockName);
                     break;
-                case 'pesoAtual':
-                    result = compareNullableNumber(left.pesoAtual, right.pesoAtual);
+                case 'ultimoPeso':
+                    result = compareNullableNumber(left.ultimoPeso ?? null, right.ultimoPeso ?? null);
                     break;
                 case 'gmd':
                     result = compareNullableNumber(left.gmd, right.gmd);
@@ -1075,7 +1075,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         const total = animals.length;
 
         const weights = animals
-            .map((a) => a.pesoAtual)
+            .map((a) => a.ultimoPeso)
             .filter((p): p is number => typeof p === 'number');
         const avgWeight = weights.length
             ? weights.reduce((s, v) => s + v, 0) / weights.length
@@ -1096,7 +1096,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             a.sexo?.toLowerCase() === 'fêmea' ||
             a.sexo?.toLowerCase() === 'femea').length;
 
-        const semPesagem = animals.filter((a) => !a.pesoAtual || a.pesoAtual <= 0).length;
+        const semPesagem = animals.filter((a) => !a.ultimoPeso || a.ultimoPeso <= 0).length;
 
         const avgArroba = avgWeight !== null ? avgWeight / 15 : null;
 
@@ -1105,7 +1105,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             const cat = a.categoria?.trim() || 'Sem categoria';
             const entry = catMap.get(cat) ?? { count: 0, totalPeso: 0 };
             entry.count++;
-            if (typeof a.pesoAtual === 'number') entry.totalPeso += a.pesoAtual;
+            if (typeof a.ultimoPeso === 'number') entry.totalPeso += a.ultimoPeso;
             catMap.set(cat, entry);
         }
         const porCategoria = Array.from(catMap.entries())
@@ -1121,7 +1121,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             const raca = a.raca?.trim() || 'Sem raça';
             const entry = racaMap.get(raca) ?? { count: 0, totalPeso: 0 };
             entry.count++;
-            if (typeof a.pesoAtual === 'number') entry.totalPeso += a.pesoAtual;
+            if (typeof a.ultimoPeso === 'number') entry.totalPeso += a.ultimoPeso;
             racaMap.set(raca, entry);
         }
         const porRaca = Array.from(racaMap.entries())
@@ -1142,7 +1142,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             raca: '',
             sexo: 'Macho',
             dataNascimento: '',
-            pesoAtual: '',
+            ultimoPeso: '',
             registro: '',
             tipoCadastro: 'MESTICO',
             categoria: '',
@@ -1249,7 +1249,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 }
 
                 const pesoCol = Object.entries(autoMapping)
-                    .find(([, value]) => value === 'pesoAtual')?.[0];
+                    .find(([, value]) => value === 'ultimoPeso')?.[0];
                 let suggestArroba = false;
                 if (pesoCol) {
                     const vals = rows
@@ -1368,8 +1368,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 const brinco = getValue(row, 'brinco');
                 const dataNasc = parseBirthDateOrAge(getValue(row, 'dataNascimento'));
                 const dataEntrada = normalizeDate(getValue(row, 'dataEntrada'));
-                const pesoRaw = getValue(row, 'pesoAtual');
-                const pesoAtual = pesoRaw ? parsePesoImportado(pesoRaw) : null;
+                const pesoRaw = getValue(row, 'ultimoPeso');
+                const ultimoPeso = pesoRaw ? parsePesoImportado(pesoRaw) : null;
                 const valorRaw = getValue(row, 'valorCompra');
                 const valorNum = valorRaw
                     ? parseFloat(valorRaw.replace(/[R$\s]/g, '').replace(',', '.'))
@@ -1378,8 +1378,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 const pesagensImportacao: Array<{ data: string; peso: number }> = [];
                 const dataPesagemRaw = getValue(row, 'dataPesagem');
                 const dataPesagemNorm = normalizeDate(dataPesagemRaw);
-                if (dataPesagemNorm && pesoAtual) {
-                    pesagensImportacao.push({ data: dataPesagemNorm, peso: pesoAtual });
+                if (dataPesagemNorm && ultimoPeso) {
+                    pesagensImportacao.push({ data: dataPesagemNorm, peso: ultimoPeso });
                 }
                 const { weighings: pesagensMultiplas, localErrors } = collectMultipleWeighings(row, i, brinco || 'sem-id');
                 if (localErrors.length > 0) {
@@ -1398,7 +1398,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     sexo: normalizeSexo(getValue(row, 'sexo')),
                     dataNascimento: dataNasc || undefined,
                     registro: getValue(row, 'registro') || undefined,
-                    pesoAtual: pesoAtual || undefined,
+                    ultimoPeso: ultimoPeso || undefined,
                     categoria: normalizeImportedCategory(getValue(row, 'categoria')) || undefined,
                     dataEntrada: dataEntrada || undefined,
                     valorCompra: valorCompra || undefined,
@@ -1601,7 +1601,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 continue;
             }
 
-            const pesoRaw = getValue(row, 'pesoAtual');
+            const pesoRaw = getValue(row, 'ultimoPeso');
             if (pesoRaw) {
                 const parsedPeso = parseFloat(pesoRaw.replace(',', '.'));
                 if (Number.isNaN(parsedPeso) || parsedPeso <= 0) {
@@ -1924,8 +1924,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             return;
         }
 
-        const parsedPeso = animalForm.pesoAtual ? Number(animalForm.pesoAtual) : null;
-        if (animalForm.pesoAtual && (!parsedPeso || parsedPeso <= 0)) {
+        const parsedPeso = animalForm.ultimoPeso ? Number(animalForm.ultimoPeso) : null;
+        if (animalForm.ultimoPeso && (!parsedPeso || parsedPeso <= 0)) {
             setAnimalFormError('Informe um peso atual válido.');
             return;
         }
@@ -1937,7 +1937,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 raca: animalForm.raca.trim(),
                 sexo: animalForm.sexo,
                 dataNascimento: animalForm.dataNascimento,
-                pesoAtual: parsedPeso ?? undefined,
+                ultimoPeso: parsedPeso ?? undefined,
                 tipoCadastro: animalForm.tipoCadastro,
                 registro: animalForm.registro.trim() || undefined,
                 categoria: animalForm.categoria.trim() || undefined,
@@ -2062,7 +2062,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         const rows: Array<Array<string | number>> = [headers];
         for (const a of sortedAnimals) {
             const lotName = lots.find((l) => l.id === a.lotId)?.name || '';
-            const arroba = a.pesoAtual != null ? Number((a.pesoAtual / 15).toFixed(1)) : '';
+            const arroba = a.ultimoPeso != null ? Number((a.ultimoPeso / 15).toFixed(1)) : '';
             const gmd = a.gmd30 ?? a.gmd ?? '';
             const ultimaPesagem = a.dataUltimaPesagem
                 ? new Date(a.dataUltimaPesagem).toLocaleDateString('pt-BR')
@@ -2074,7 +2074,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 a.categoria || '',
                 a.currentPaddockName || '',
                 lotName,
-                a.pesoAtual ?? '',
+                a.ultimoPeso ?? '',
                 arroba,
                 typeof gmd === 'number' ? Number(gmd.toFixed(3)) : '',
                 ultimaPesagem,
@@ -2339,9 +2339,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 </th>
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'peso' ? null : 'peso')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('peso') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
                                     <div className="flex items-center justify-between gap-2">
-                                        <span>Peso Atual</span>
-                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('pesoAtual'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
-                                            {getSortIndicator('pesoAtual')}
+                                        <span>Último peso</span>
+                                        <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('ultimoPeso'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                                            {getSortIndicator('ultimoPeso')}
                                         </button>
                                     </div>
                                     {renderHeaderFilter('peso')}
@@ -2453,11 +2453,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                 return (
                                                     <div className="flex flex-col gap-0.5">
                                                         <span className={`font-semibold ${stale ? 'text-amber-600' : 'text-[var(--eixo-text)]'}`}>
-                                                            {animal.pesoAtual != null ? `${animal.pesoAtual} kg` : '—'}
+                                                            {animal.ultimoPeso != null ? `${animal.ultimoPeso} kg` : '—'}
                                                         </span>
-                                                        {animal.pesoAtual != null && (
+                                                        {animal.ultimoPeso != null && (
                                                             <span className="text-[10px] text-[var(--eixo-text-muted)]">
-                                                                {(animal.pesoAtual / 15).toFixed(1)} @
+                                                                {(animal.ultimoPeso / 15).toFixed(1)} @
                                                             </span>
                                                         )}
                                                         {animal.dataUltimaPesagem && diasDesdePesagem !== null && (
@@ -3229,11 +3229,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Peso atual (kg)</label>
+                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Último peso (kg)</label>
                                 <input
                                     type="number"
-                                    value={animalForm.pesoAtual}
-                                    onChange={(event) => setAnimalForm((prev) => ({ ...prev, pesoAtual: event.target.value }))}
+                                    value={animalForm.ultimoPeso}
+                                    onChange={(event) => setAnimalForm((prev) => ({ ...prev, ultimoPeso: event.target.value }))}
                                     className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
                                 />
                             </div>
@@ -3552,7 +3552,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                         <option value="brinco">ID</option>
                                                                         <option value="sexo">SEXO</option>
                                                                         <option value="raca">RAÇA</option>
-                                                                        <option value="pesoAtual">PESO</option>
+                                                                        <option value="ultimoPeso">PESO</option>
                                                                     </select>
                                                                 </th>
                                                             ))}

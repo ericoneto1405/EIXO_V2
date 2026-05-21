@@ -109,6 +109,9 @@ const getSexoLabel = (value: string) => {
 };
 
 const normalizeAnimal = (animal: any): HerdAnimal => {
+    const ultimoPeso = typeof animal.ultimoPeso === 'number'
+        ? animal.ultimoPeso
+        : (typeof animal.pesoAtual === 'number' ? animal.pesoAtual : null);
     return {
         id: animal.id,
         farmId: animal.farmId,
@@ -119,7 +122,7 @@ const normalizeAnimal = (animal: any): HerdAnimal => {
         raca: animal.raca,
         sexo: getSexoLabel(animal.sexo),
         dataNascimento: animal.dataNascimento,
-        pesoAtual: typeof animal.pesoAtual === 'number' ? animal.pesoAtual : null,
+        ultimoPeso,
         dataUltimaPesagem: animal.dataUltimaPesagem || null,
         gmd: typeof animal.gmd === 'number' ? animal.gmd : null,
         gmdLast: typeof animal.gmdLast === 'number' ? animal.gmdLast : null,
@@ -176,7 +179,7 @@ export interface ImportBatchAnimalInput {
     raca?: string;
     sexo?: string;
     dataNascimento?: string;
-    pesoAtual?: number;
+    ultimoPeso?: number;
     categoria?: string;
     observacoes?: string;
     dataEntrada?: string;

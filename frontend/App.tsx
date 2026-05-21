@@ -713,11 +713,18 @@ const AppContent: React.FC = () => {
     };
 
     React.useEffect(() => {
-        const handleSessionRevoked = () => {
+        const handleSessionEnded = (event: Event) => {
             if (isHandlingSessionRevokedRef.current) {
                 return;
             }
             isHandlingSessionRevokedRef.current = true;
+            const customEvent = event as CustomEvent<{ code?: string }>;
+            const sessionCode = String(customEvent?.detail?.code || '').toUpperCase();
+            const sessionMessage = sessionCode === 'SESSION_REVOKED'
+                ? 'Sua sessão foi encerrada porque houve login em outro dispositivo.'
+                : sessionCode === 'SESSION_EXPIRED'
+                    ? 'Sua sessão expirou por tempo. Faça login novamente.'
+                    : 'Sua sessão foi encerrada. Faça login novamente.';
 
             setIsAuthenticated(false);
             setCurrentUser(null);
@@ -728,7 +735,7 @@ const AppContent: React.FC = () => {
             updateFarmFormQuery(false);
             setActiveView('Visão Geral');
             setHerdTabRequest(null);
-            setAuthError('Sua sessão foi encerrada porque houve login em outro dispositivo.');
+            setAuthError(sessionMessage);
             setRegisterMessage(null);
             setRegisterError(null);
             setIsRegisterModalOpen(false);
@@ -738,9 +745,9 @@ const AppContent: React.FC = () => {
             }, 500);
         };
 
-        window.addEventListener('eixo:session-revoked', handleSessionRevoked);
+        window.addEventListener('eixo:session-ended', handleSessionEnded as EventListener);
         return () => {
-            window.removeEventListener('eixo:session-revoked', handleSessionRevoked);
+            window.removeEventListener('eixo:session-ended', handleSessionEnded as EventListener);
         };
     }, [updateFarmFormQuery]);
 

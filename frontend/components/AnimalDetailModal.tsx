@@ -529,7 +529,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             { label: 'Categoria', value: a.categoria || '—' },
             { label: 'Nascimento', value: a.dataNascimento ? new Date(a.dataNascimento).toLocaleDateString('pt-BR') : '—' },
             { label: 'Idade', value: calculateAge(a.dataNascimento) },
-            { label: 'Peso Atual', value: a.pesoAtual != null ? `${a.pesoAtual} kg` : '—' },
+            { label: 'Último peso', value: a.ultimoPeso != null ? `${a.ultimoPeso} kg` : '—' },
             { label: 'GMD 30 dias', value: (a as any).gmd30 != null ? `${((a as any).gmd30 as number).toFixed(2)} kg/dia` : '—' },
             { label: 'GMD último intervalo', value: ((a as any).gmdLast ?? a.gmd) != null ? `${(((a as any).gmdLast ?? a.gmd) as number).toFixed(2)} kg/dia` : '—' },
             { label: 'Pasto atual', value: a.currentPaddockName || '—' },

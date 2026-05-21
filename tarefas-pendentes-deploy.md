@@ -24,7 +24,8 @@
 
 | ID | Tarefa | Status | Validado | Data |
 |---|---|---|---|---|
-| - | Nenhuma tarefa pendente no momento | - | - | 2026-05-19 |
+| DEP-024 | Corrigir mensagem de sessão no login: diferenciar sessão revogada, sessão expirada e sessão inválida para evitar aviso incorreto de “login em outro dispositivo” em casos de expiração/conectividade | PENDENTE_DEPLOY | `node --check server/index.js` + Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) | 2026-05-20 |
+| DEP-025 | Padronizar contrato de peso na Aba Animais para `ultimoPeso`: remover legado funcional de `pesoAtual` no frontend, alinhar backend para aceitar `ultimoPeso` nativamente e bloquear `pesoAtual` na entrada da API com erro orientativo | PENDENTE_DEPLOY | `node --check server/index.js` + Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) | 2026-05-21 |
 
 ## Observações
 - Arquivo `frontend/components/PublicLanding.tsx` alterado de forma cirúrgica.
@@ -42,3 +43,4 @@
 - Deploy da DEP-022 realizado em produção com sucesso em 2026-05-19 via `./deploy-local.sh "chore: corrigir mapeamento regional do overview (farm -> marketReplacement) e atualizar tarefas-pendentes-deploy.md"`.
 - Commit de deploy DEP-022: `4664553` (push em `main`, build na VPS OK, PM2 reload OK).
 - DEP-023 identificou regressão no fluxo de correção da importação (pré-validação com falha preenchia `errors` e deixava `failedRows` vazio), e aplicou ajuste mínimo para preservar as linhas e manter ação visível no modal.
+- DEP-025 consolidou o contrato de peso para `ultimoPeso` na Aba Animais e endureceu a API para rejeitar `pesoAtual` em criação/importação (`/animals`, `/po/animals`, `/animals/import-batch`, `/po/animals/import-batch`, `/animals/batch`), evitando retorno silencioso ao padrão antigo.

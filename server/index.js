@@ -486,7 +486,7 @@ const serializeAnimal = (animal) => ({
     sexo: formatSexoLabel(animal.sexo),
     categoria: animal.categoria,
     dataNascimento: animal.dataNascimento ? animal.dataNascimento.toISOString() : null,
-    pesoAtual: animal.pesoAtual,
+    ultimoPeso: animal.pesagens?.[0]?.peso ?? animal.pesoAtual ?? null,
     gmd: animal.gmd ?? null,
     gmdLast: animal.gmd ?? null,
     gmd30: animal.gmd30 ?? null,
@@ -540,7 +540,7 @@ const serializePoAnimal = (animal) => ({
     raca: animal.raca,
     sexo: animal.sexo,
     dataNascimento: animal.dataNascimento ? animal.dataNascimento.toISOString() : null,
-    pesoAtual: animal.pesoAtual ?? 0,
+    ultimoPeso: animal.pesagens?.[0]?.peso ?? animal.pesoAtual ?? null,
     gmd: animal.gmd ?? null,
     gmdLast: animal.gmd ?? null,
     gmd30: animal.gmd30 ?? null,
@@ -2050,8 +2050,25 @@ const requireAuth = async (req, res, next) => {
         }
 
         if (presentedSessionToken) {
+            const tokenHash = hashSessionToken(presentedSessionToken);
+            const existingSession = await prisma.session.findFirst({
+                where: { tokenHash },
+                select: { revokedAt: true, expiresAt: true },
+            });
+            if (existingSession?.revokedAt) {
+                return res.status(401).json({
+                    code: 'SESSION_REVOKED',
+                    message: 'Sessão encerrada. Faça login novamente.',
+                });
+            }
+            if (existingSession?.expiresAt && existingSession.expiresAt <= new Date()) {
+                return res.status(401).json({
+                    code: 'SESSION_EXPIRED',
+                    message: 'Sessão expirada. Faça login novamente.',
+                });
+            }
             return res.status(401).json({
-                code: 'SESSION_REVOKED',
+                code: 'SESSION_INVALID',
                 message: 'Sessão encerrada. Faça login novamente.',
             });
         }
@@ -5845,7 +5862,7 @@ app.get('/po/animals', requireAuth, async (req, res) => {
                 pesagens: {
                     orderBy: { data: 'desc' },
                     take: 1,
-                    select: { data: true },
+                    select: { data: true, peso: true },
                 },
             },
             orderBy: { createdAt: 'desc' },
@@ -5916,7 +5933,10 @@ app.get('/po/animals', requireAuth, async (req, res) => {
 });
 
 app.post('/po/animals', requireAuth, async (req, res) => {
-    const { farmId, lotId, brinco, nome, raca, sexo, dataNascimento, registro, categoria, observacoes, pesoAtual, paddockId, paddockStartAt } = req.body || {};
+    const { farmId, lotId, brinco, nome, raca, sexo, dataNascimento, registro, categoria, observacoes, ultimoPeso, paddockId, paddockStartAt } = req.body || {};
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'pesoAtual')) {
+        return res.status(400).json({ message: 'Campo inválido: use "ultimoPeso" no lugar de "pesoAtual".' });
+    }
     if (!farmId || !nome?.trim() || !raca?.trim() || !sexo) {
         return res.status(400).json({ message: 'Dados obrigatórios do animal P.O. ausentes.' });
     }
@@ -5936,8 +5956,8 @@ app.post('/po/animals', requireAuth, async (req, res) => {
     const trimmedCategoria = typeof categoria === 'string' ? categoria.trim() : '';
     const trimmedObservacoes = typeof observacoes === 'string' ? observacoes.trim() : '';
     let parsedPesoAtual = 0;
-    if (pesoAtual !== undefined && pesoAtual !== null && pesoAtual !== '') {
-        const parsed = parseNumber(pesoAtual);
+    if (ultimoPeso !== undefined && ultimoPeso !== null && ultimoPeso !== '') {
+        const parsed = parseNumber(ultimoPeso);
         if (parsed === null || parsed <= 0) {
             return res.status(400).json({ message: 'Peso atual inválido.' });
         }
@@ -6045,6 +6065,10 @@ app.post('/po/animals/import-batch', requireAuth, async (req, res) => {
             const item = items[index] || {};
             const rowLabel = item.rowLabel || `Linha ${index + 2}`;
             const warnings = [];
+            if (Object.prototype.hasOwnProperty.call(item, 'pesoAtual')) {
+                results.push({ index, success: false, message: `${rowLabel}: campo inválido "pesoAtual". Use "ultimoPeso".` });
+                continue;
+            }
 
             const nome = String(item.nome || item.brinco || '').trim();
             const raca = String(item.raca || '').trim();
@@ -6063,8 +6087,8 @@ app.post('/po/animals/import-batch', requireAuth, async (req, res) => {
             }
 
             let parsedPesoAtual = 0;
-            if (item.pesoAtual !== undefined && item.pesoAtual !== null && item.pesoAtual !== '') {
-                const parsed = parseNumber(item.pesoAtual);
+            if (item.ultimoPeso !== undefined && item.ultimoPeso !== null && item.ultimoPeso !== '') {
+                const parsed = parseNumber(item.ultimoPeso);
                 if (parsed === null || parsed <= 0) {
                     results.push({ index, success: false, message: `${rowLabel} (${nome}): peso atual inválido.` });
                     continue;
@@ -7707,7 +7731,7 @@ app.get('/animals', requireAuth, async (req, res) => {
             },
             include: {
                 currentPaddock: true,
-                pesagens: { orderBy: { data: 'desc' }, take: 1, select: { data: true } },
+                pesagens: { orderBy: { data: 'desc' }, take: 1, select: { data: true, peso: true } },
             },
             orderBy: { createdAt: 'desc' },
         });
@@ -7769,8 +7793,11 @@ app.get('/animals', requireAuth, async (req, res) => {
 });
 
 app.post('/animals', requireAuth, async (req, res) => {
-    const { farmId, lotId, brinco, raca, sexo, dataNascimento, pesoAtual, paddockId, paddockStartAt, valorCompra, dataCompra, tipoCadastro,
+    const { farmId, lotId, brinco, raca, sexo, dataNascimento, ultimoPeso, paddockId, paddockStartAt, valorCompra, dataCompra, tipoCadastro,
             tatuagem, sisbov, maeId, maeNome, paiId, paiNome } = req.body || {};
+    if (Object.prototype.hasOwnProperty.call(req.body || {}, 'pesoAtual')) {
+        return res.status(400).json({ message: 'Campo inválido: use "ultimoPeso" no lugar de "pesoAtual".' });
+    }
 
     if (!farmId || !brinco?.trim() || !raca?.trim() || !sexo) {
         return res.status(400).json({ message: 'Dados obrigatórios do animal ausentes.' });
@@ -7787,8 +7814,8 @@ app.post('/animals', requireAuth, async (req, res) => {
         return res.status(400).json({ message: 'Data de nascimento inválida.' });
     }
 
-    const parsedPesoAtual = (pesoAtual !== undefined && pesoAtual !== null && pesoAtual !== '')
-        ? parseNumber(pesoAtual)
+    const parsedPesoAtual = (ultimoPeso !== undefined && ultimoPeso !== null && ultimoPeso !== '')
+        ? parseNumber(ultimoPeso)
         : null;
     if (parsedPesoAtual !== null && parsedPesoAtual <= 0) {
         return res.status(400).json({ message: 'Peso atual inválido.' });
@@ -7946,6 +7973,10 @@ app.post('/animals/import-batch', requireAuth, async (req, res) => {
             const item = items[index] || {};
             const rowLabel = item.rowLabel || `Linha ${index + 2}`;
             const warnings = [];
+            if (Object.prototype.hasOwnProperty.call(item, 'pesoAtual')) {
+                results.push({ index, success: false, message: `${rowLabel}: campo inválido "pesoAtual". Use "ultimoPeso".` });
+                continue;
+            }
 
             const brinco = String(item.brinco || '').trim();
             const raca = String(item.raca || '').trim();
@@ -7962,8 +7993,8 @@ app.post('/animals/import-batch', requireAuth, async (req, res) => {
                 continue;
             }
 
-            const parsedPesoAtual = (item.pesoAtual !== undefined && item.pesoAtual !== null && item.pesoAtual !== '')
-                ? parseNumber(item.pesoAtual)
+            const parsedPesoAtual = (item.ultimoPeso !== undefined && item.ultimoPeso !== null && item.ultimoPeso !== '')
+                ? parseNumber(item.ultimoPeso)
                 : null;
             if (parsedPesoAtual !== null && parsedPesoAtual <= 0) {
                 results.push({ index, success: false, message: `${rowLabel} (${brinco}): peso atual inválido.` });
@@ -8239,9 +8270,13 @@ app.post('/animals/batch', async (req, res) => {
     try {
         const created = await prisma.$transaction(async (tx) => {
             const results = [];
-            for (const a of animals) {
+            for (let index = 0; index < animals.length; index++) {
+                const a = animals[index] || {};
+                if (Object.prototype.hasOwnProperty.call(a, 'pesoAtual')) {
+                    throw new Error(`Linha ${index + 1}: campo inválido "pesoAtual". Use "ultimoPeso".`);
+                }
                 const sexoEnum = normalizeSexo(a.sexo || 'Macho');
-                const peso = a.pesoAtual ? parseFloat(a.pesoAtual) : null;
+                const peso = a.ultimoPeso ? parseFloat(a.ultimoPeso) : null;
 
                 const animal = await tx.animal.create({
                     data: {
@@ -8298,6 +8333,9 @@ app.post('/animals/batch', async (req, res) => {
         logActivity(req, { action: 'LOTE_CRIADO', entity: 'Animal', description: `Cadastrou lote de ${created.length} animal(is)`, farmId });
         return res.status(201).json({ count: created.length, message: `${created.length} animal(is) cadastrado(s) com sucesso.` });
     } catch (error) {
+        if (typeof error?.message === 'string' && error.message.includes('campo inválido "pesoAtual"')) {
+            return res.status(400).json({ message: error.message });
+        }
         if (error?.code === 'P2002') {
             return res.status(409).json({ message: 'Um ou mais brincos já estão cadastrados nesta fazenda.' });
         }
