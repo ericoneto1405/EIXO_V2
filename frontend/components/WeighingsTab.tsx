@@ -81,6 +81,67 @@ const csvEscape = (value: string | number | null | undefined) => {
     return `"${text.replace(/"/g, '""')}"`;
 };
 
+const normalizeHeader = (value: string) =>
+    String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+const normalizeImportedMatrix = (matrix: string[][]): Record<string, string>[] => {
+    const cleanedRows = matrix
+        .map((row) => row.map((value) => String(value ?? '').trim()))
+        .filter((row) => row.some((value) => value));
+    if (!cleanedRows.length) return [];
+    const headers = cleanedRows[0].map((value, index) => value || `COLUNA_${index + 1}`);
+    return cleanedRows
+        .slice(1)
+        .filter((row) => row.some((value) => value))
+        .map((row) =>
+            headers.reduce<Record<string, string>>((accumulator, header, index) => {
+                accumulator[header] = row[index] ?? '';
+                return accumulator;
+            }, {}),
+        );
+};
+
+const parseImportedFile = async (file: File): Promise<Record<string, string>[]> => {
+    if (file.name.toLowerCase().endsWith('.csv')) {
+        const { default: Papa } = await import('papaparse');
+        const csvText = await file.text();
+        const parsed = Papa.parse<string[]>(csvText, { skipEmptyLines: true });
+        if (parsed.errors.length) throw new Error('csv_parse_error');
+        return normalizeImportedMatrix(parsed.data);
+    }
+    const buffer = await file.arrayBuffer();
+    const XLSX = await import('xlsx');
+    const workbook = XLSX.read(buffer, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    if (!worksheet) return [];
+    const matrix = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1, defval: '' });
+    return normalizeImportedMatrix(matrix);
+};
+
+const downloadWorkbook = async (fileName: string, sheetName: string, rows: Array<Array<string | number>>) => {
+    const { default: ExcelJS } = await import('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(sheetName);
+    rows.forEach((row) => worksheet.addRow(row));
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob(
+        [buffer],
+        { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+};
+
 const playSuccessBeep = () => {
     try {
         const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -178,6 +239,12 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
     const [deleteSessionPassword, setDeleteSessionPassword] = useState('');
     const [deleteSessionSaving, setDeleteSessionSaving] = useState(false);
     const [deleteSessionError, setDeleteSessionError] = useState<string | null>(null);
+    const [importModalOpen, setImportModalOpen] = useState(false);
+    const [importRows, setImportRows] = useState<Record<string, string>[]>([]);
+    const [importError, setImportError] = useState<string | null>(null);
+    const [importMessage, setImportMessage] = useState<string | null>(null);
+    const [importing, setImporting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     // ── Carregar pesagens ─────────────────────────────────────────────────────
 
@@ -653,6 +720,144 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
         }
     };
 
+    const handleImportClick = () => {
+        setImportError(null);
+        setImportMessage(null);
+        fileInputRef.current?.click();
+    };
+
+    const handleDownloadTemplate = () => {
+        const fileName = 'modelo_pesagens.xlsx';
+        const sheetName = 'Pesagens';
+        const headers = ['ID', 'DATA DA PESAGEM', 'PESO'];
+        const sampleRow = ['BR001', '15/05/2026', '425.5'];
+        void downloadWorkbook(fileName, sheetName, [headers, sampleRow]);
+    };
+
+    const handleImportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setImportError(null);
+        setImportMessage(null);
+        const file = event.target.files?.[0];
+        if (!file) return;
+        event.target.value = '';
+        const lowerName = file.name.toLowerCase();
+        if (!lowerName.endsWith('.csv') && !lowerName.endsWith('.xlsx')) {
+            setImportError('Envie arquivo .csv ou .xlsx.');
+            return;
+        }
+        void (async () => {
+            try {
+                const rows = await parseImportedFile(file);
+                if (!rows.length) {
+                    setImportError('Arquivo sem dados.');
+                    return;
+                }
+                setImportRows(rows);
+                setImportModalOpen(true);
+            } catch {
+                setImportError('Não foi possível ler o arquivo.');
+            }
+        })();
+    };
+
+    const handleImportWeighings = async () => {
+        if (!importRows.length) return;
+        const firstHeaders = Object.keys(importRows[0]);
+        const headerByNorm = new Map<string, string>();
+        for (const header of firstHeaders) {
+            headerByNorm.set(normalizeHeader(header), header);
+        }
+        const idHeader = headerByNorm.get('id');
+        const dateHeader = headerByNorm.get('data da pesagem');
+        const weightHeader = headerByNorm.get('peso');
+        if (!idHeader || !dateHeader || !weightHeader) {
+            setImportError('Colunas obrigatórias: ID, DATA DA PESAGEM, PESO.');
+            return;
+        }
+
+        const findAnimalById = (rawId: string) => {
+            const value = rawId.trim().toLowerCase();
+            if (!value) return null;
+            return animals.find((animal) => {
+                const candidates = [
+                    animal.id,
+                    animal.identificacao,
+                    animal.brinco,
+                    animal.nome,
+                    animal.registro,
+                ]
+                    .filter(Boolean)
+                    .map((item) => String(item).trim().toLowerCase());
+                return candidates.includes(value);
+            }) || null;
+        };
+        const parseDate = (rawDate: string) => {
+            const value = rawDate.trim();
+            if (!value) return null;
+            const br = value.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+            if (br) return `${br[3]}-${br[2].padStart(2, '0')}-${br[1].padStart(2, '0')}`;
+            const iso = value.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+            if (iso) return `${iso[1]}-${iso[2].padStart(2, '0')}-${iso[3].padStart(2, '0')}`;
+            return null;
+        };
+
+        setImporting(true);
+        setImportError(null);
+        let success = 0;
+        const errors: string[] = [];
+        for (let index = 0; index < importRows.length; index += 1) {
+            const row = importRows[index];
+            const rawId = (row[idHeader] || '').trim();
+            const rawDate = (row[dateHeader] || '').trim();
+            const rawWeight = (row[weightHeader] || '').trim();
+            const line = index + 2;
+
+            const animal = findAnimalById(rawId);
+            if (!animal) {
+                errors.push(`Linha ${line}: ID "${rawId}" não encontrado.`);
+                continue;
+            }
+            const date = parseDate(rawDate);
+            if (!date) {
+                errors.push(`Linha ${line}: data inválida.`);
+                continue;
+            }
+            const parsedDate = new Date(date);
+            if (Number.isNaN(parsedDate.getTime()) || parsedDate > startOfToday()) {
+                errors.push(`Linha ${line}: data inválida.`);
+                continue;
+            }
+            const weight = Number(rawWeight.replace(',', '.'));
+            if (!Number.isFinite(weight) || weight <= 0) {
+                errors.push(`Linha ${line}: peso inválido.`);
+                continue;
+            }
+            try {
+                await createWeighing(animal.id, herdType, {
+                    data: date,
+                    peso: weight,
+                    ...(activeSession ? { weighingSessionId: activeSession.id } : {}),
+                });
+                success += 1;
+            } catch (error: any) {
+                errors.push(`Linha ${line}: ${error?.message || 'erro ao salvar pesagem.'}`);
+            }
+        }
+        setImporting(false);
+        if (success > 0) {
+            setImportMessage(`${success} pesagem(ns) importada(s) com sucesso.`);
+            setPage(0);
+            load();
+            loadSessions();
+        }
+        if (errors.length > 0) {
+            setImportError(errors.slice(0, 6).join(' '));
+        } else {
+            setImportModalOpen(false);
+            setImportRows([]);
+        }
+    };
+
     // ── Paginação ─────────────────────────────────────────────────────────────
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -949,22 +1154,91 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                     <h3 className="text-base font-semibold text-[var(--eixo-text)]">Pesagem manual</h3>
                     <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Abra o painel de curral para lançar ID do animal e peso em kg.</p>
                 </div>
-                <button
-                    type="button"
-                    onClick={() => {
-                        setFormMsg(null);
-                        setManualSessionWeighings([]);
-                        if (!activeSession) {
-                            setShowSessionModal(true);
-                        } else {
-                            setManualModalOpen(true);
-                        }
-                    }}
-                    className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30"
-                >
-                    Nova pesagem
-                </button>
+                <div className="flex items-center gap-2">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv,.xlsx"
+                        onChange={handleImportFileChange}
+                        className="hidden"
+                    />
+                    <button
+                        type="button"
+                        onClick={handleDownloadTemplate}
+                        className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-4 py-2 text-sm font-semibold text-[#2f3a2d] hover:bg-[#f1e7d8]"
+                    >
+                        Baixar modelo
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleImportClick}
+                        className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-4 py-2 text-sm font-semibold text-[#2f3a2d] hover:bg-[#f1e7d8]"
+                    >
+                        Importar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setFormMsg(null);
+                            setManualSessionWeighings([]);
+                            if (!activeSession) {
+                                setShowSessionModal(true);
+                            } else {
+                                setManualModalOpen(true);
+                            }
+                        }}
+                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30"
+                    >
+                        Nova pesagem
+                    </button>
+                </div>
             </div>
+            {importMessage && (
+                <div className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-4 py-3 text-sm font-semibold text-[#2f3a2d]">
+                    {importMessage}
+                </div>
+            )}
+            {importError && (
+                <div className="rounded-xl border border-[#e6c7bc] bg-[#fbede8] px-4 py-3 text-sm font-semibold text-[#8c4d39]">
+                    {importError}
+                </div>
+            )}
+
+            {importModalOpen && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                    <div className="w-full max-w-lg rounded-2xl border border-[#d7cab3] bg-[#fffaf1] p-6 shadow-2xl">
+                        <h4 className="text-lg font-black text-[#2f3a2d]">Importar pesagens</h4>
+                        <p className="mt-2 text-sm text-[#6d6558]">
+                            Colunas obrigatórias: <strong>ID</strong>, <strong>DATA DA PESAGEM</strong>, <strong>PESO</strong>.
+                        </p>
+                        <p className="mt-1 text-xs text-[#6d6558]">
+                            Linhas carregadas: {importRows.length}
+                        </p>
+                        {importError && <p className="mt-3 text-sm text-[#8c4d39]">{importError}</p>}
+                        <div className="mt-5 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                disabled={importing}
+                                onClick={() => {
+                                    setImportModalOpen(false);
+                                    setImportRows([]);
+                                }}
+                                className="rounded-xl border border-[#d7cab3] px-4 py-2 text-sm font-semibold text-[#6d6558] hover:bg-[#f3ebdc]"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                disabled={importing}
+                                onClick={() => { void handleImportWeighings(); }}
+                                className="rounded-xl bg-[#9d7d4d] px-4 py-2 text-sm font-bold text-white hover:bg-[#8f7144] disabled:opacity-50"
+                            >
+                                {importing ? 'Importando...' : 'Confirmar importação'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {activeSession && (
                 <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-5 py-3">

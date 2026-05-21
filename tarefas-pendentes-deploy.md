@@ -21,12 +21,13 @@
 | DEP-023 | Corrigir regressão no modal de importação do Manejo do Rebanho: manter caminho de ação visível quando a pré-validação de IDs falhar, preenchendo `failedRows` para não ocultar o editor de correção e evitar tela de erro sem saída | CONCLUIDA | Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) | 2026-05-20 |
 | DEP-024 | Corrigir mensagem de sessão no login: diferenciar sessão revogada, sessão expirada e sessão inválida para evitar aviso incorreto de “login em outro dispositivo” em casos de expiração/conectividade | CONCLUIDA | `node --check server/index.js` + Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) + Build frontend OK (`npm run build --prefix frontend`) | 2026-05-21 |
 | DEP-025 | Padronizar contrato de peso na Aba Animais para `ultimoPeso`: remover legado funcional de `pesoAtual` no frontend, alinhar backend para aceitar `ultimoPeso` nativamente e bloquear `pesoAtual` na entrada da API com erro orientativo | CONCLUIDA | `node --check server/index.js` + Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) + Build frontend OK (`npm run build --prefix frontend`) | 2026-05-21 |
+| DEP-026 | Fechar Grupo 3 da migração de peso no frontend: remover fallback temporário de `pesoAtual` nos módulos secundários (Acasalamento e adapter do Rebanho), mantendo apenas `ultimoPeso` como campo de leitura funcional | CONCLUIDA | Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) + `node --check server/index.js` + Build frontend OK (`npm run build --prefix frontend`) | 2026-05-21 |
 
 ## Tarefas pendentes
 
 | ID | Tarefa | Status | Validado | Data |
 |---|---|---|---|---|
-| DEP-026 | Fechar Grupo 3 da migração de peso no frontend: remover fallback temporário de `pesoAtual` nos módulos secundários (Acasalamento e adapter do Rebanho), mantendo apenas `ultimoPeso` como campo de leitura funcional | PENDENTE_DEPLOY | Frontend typecheck OK (`npx tsc -p frontend/tsconfig.json --noEmit`) + `node --check server/index.js` | 2026-05-21 |
+| — | Sem pendências no momento | — | — | 2026-05-21 |
 
 ## Observações
 - Arquivo `frontend/components/PublicLanding.tsx` alterado de forma cirúrgica.
@@ -48,3 +49,5 @@
 - DEP-026 concluiu o Grupo 3 no frontend, removendo fallback de `pesoAtual` em módulos secundários e mantendo `ultimoPeso` como única referência funcional de peso na interface.
 - Deploy das DEP-024 e DEP-025 realizado em produção com sucesso em 2026-05-21 via `./deploy-local.sh "chore: deploy DEP-025 (ultimoPeso nativo + bloqueio pesoAtual) e atualizar tarefas pendentes"`.
 - Commit de deploy DEP-024/025: `6eba540` (push em `main`, build na VPS OK, PM2 reload OK).
+- Deploy da DEP-026 realizado em produção com sucesso em 2026-05-21 via `./deploy-local.sh "chore: deploy DEP-026 (grupo 3 ultimoPeso frontend) e atualizar tarefas pendentes"`.
+- Commit de deploy DEP-026: `9efbdeb` (push em `main`, build na VPS OK, PM2 reload OK).
