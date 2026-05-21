@@ -117,7 +117,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
             brinco: r.brinco.trim(),
             raca: r.raca.trim() || racaPadrao.trim() || 'Indefinida',
             sexo: r.sexo,
-            pesoAtual: r.peso ? parseFloat(r.peso.replace(',', '.')) || undefined : undefined,
+            ultimoPeso: r.peso ? parseFloat(r.peso.replace(',', '.')) || undefined : undefined,
         }));
 
         setSaving(true);

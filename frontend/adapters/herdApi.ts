@@ -109,9 +109,7 @@ const getSexoLabel = (value: string) => {
 };
 
 const normalizeAnimal = (animal: any): HerdAnimal => {
-    const ultimoPeso = typeof animal.ultimoPeso === 'number'
-        ? animal.ultimoPeso
-        : (typeof animal.pesoAtual === 'number' ? animal.pesoAtual : null);
+    const ultimoPeso = typeof animal.ultimoPeso === 'number' ? animal.ultimoPeso : null;
     return {
         id: animal.id,
         farmId: animal.farmId,

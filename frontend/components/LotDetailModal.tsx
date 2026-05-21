@@ -264,7 +264,7 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
         const parsedAgeMax = ageMaxMonths ? Number(ageMaxMonths.replace(',', '.')) : null;
 
         return availableToAdd.filter((animal) => {
-            const weight = animal.pesoAtual;
+            const weight = animal.ultimoPeso;
             if (parsedWeightMin !== null && (!weight || weight < parsedWeightMin)) return false;
             if (parsedWeightMax !== null && (!weight || weight > parsedWeightMax)) return false;
 
@@ -620,7 +620,7 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
                                                             {animal.identificacao || animal.brinco || animal.nome || 'Sem identificação'}
                                                         </span>
                                                         <span className="block text-xs text-[var(--eixo-text-muted)]">
-                                                            {[animal.raca, animal.sexo, animal.categoria, animal.registro, animal.pesoAtual !== null ? `${animal.pesoAtual} kg` : null, animal.selectionDecision === 'DISCARD' ? 'Descarte' : null]
+                                                            {[animal.raca, animal.sexo, animal.categoria, animal.registro, animal.ultimoPeso !== null ? `${animal.ultimoPeso} kg` : null, animal.selectionDecision === 'DISCARD' ? 'Descarte' : null]
                                                                 .filter(Boolean)
                                                                 .join(' · ') || 'Sem dados complementares'}
                                                         </span>

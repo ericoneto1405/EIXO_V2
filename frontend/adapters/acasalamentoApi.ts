@@ -104,7 +104,7 @@ export interface AcasalamentoAnimalOption {
   id: string;
   brinco: string;
   raca: string | null;
-  pesoAtual: number | null;
+  ultimoPeso: number | null;
   lotId: string | null;
 }
 
