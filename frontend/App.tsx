@@ -350,6 +350,34 @@ const AppContent: React.FC = () => {
     const supportRef = useRef<HTMLDivElement>(null);
     const isHandlingSessionRevokedRef = useRef(false);
 
+    const applyAuthScreenFromQuery = React.useCallback(() => {
+        const params = new URLSearchParams(window.location.search);
+        const shouldOpenRegister = params.get('register') === '1';
+        if (shouldOpenRegister) {
+            setAuthScreen('register');
+            window.history.replaceState({}, '', window.location.pathname);
+            return true;
+        }
+
+        const token = params.get('reset');
+        if (token) {
+            setResetToken(token);
+            setAuthScreen('reset-password');
+            window.history.replaceState({}, '', window.location.pathname);
+            return true;
+        }
+
+        const invite = params.get('invite');
+        if (invite) {
+            setInviteToken(invite);
+            setAuthScreen('accept-invite');
+            window.history.replaceState({}, '', window.location.pathname);
+            return true;
+        }
+
+        return false;
+    }, []);
+
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
             if (supportRef.current && !supportRef.current.contains(e.target as Node)) {
@@ -361,27 +389,10 @@ const AppContent: React.FC = () => {
     }, [isSupportOpen]);
 
     useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const shouldOpenRegister = params.get('register') === '1';
-        if (shouldOpenRegister && !isAuthenticated) {
-            setAuthScreen('register');
-            window.history.replaceState({}, '', window.location.pathname);
-            return;
+        if (!isAuthenticated) {
+            applyAuthScreenFromQuery();
         }
-        const token = params.get('reset');
-        if (token && !isAuthenticated) {
-            setResetToken(token);
-            setAuthScreen('reset-password');
-            window.history.replaceState({}, '', window.location.pathname);
-            return;
-        }
-        const invite = params.get('invite');
-        if (invite && !isAuthenticated) {
-            setInviteToken(invite);
-            setAuthScreen('accept-invite');
-            window.history.replaceState({}, '', window.location.pathname);
-        }
-    }, [isAuthenticated]);
+    }, [isAuthenticated, applyAuthScreenFromQuery]);
     const updateFarmFormQuery = React.useCallback((shouldOpen: boolean) => {
         const url = new URL(window.location.href);
         if (shouldOpen) {
@@ -561,7 +572,9 @@ const AppContent: React.FC = () => {
                     if (!active) return;
                     setIsAuthenticated(false);
                     setCurrentUser(null);
-                    setAuthScreen('landing');
+                    if (!applyAuthScreenFromQuery()) {
+                        setAuthScreen('landing');
+                    }
                     return;
                 }
                 const payload = await response.json().catch(() => ({}));
@@ -570,7 +583,9 @@ const AppContent: React.FC = () => {
                     if (!active) return;
                     setIsAuthenticated(false);
                     setCurrentUser(null);
-                    setAuthScreen('landing');
+                    if (!applyAuthScreenFromQuery()) {
+                        setAuthScreen('landing');
+                    }
                     return;
                 }
                 if (!active) return;
@@ -583,7 +598,9 @@ const AppContent: React.FC = () => {
                 if (!active) return;
                 setIsAuthenticated(false);
                 setCurrentUser(null);
-                setAuthScreen('landing');
+                if (!applyAuthScreenFromQuery()) {
+                    setAuthScreen('landing');
+                }
             } finally {
                 if (active) setIsAuthLoading(false);
             }
@@ -592,7 +609,7 @@ const AppContent: React.FC = () => {
         return () => {
             active = false;
         };
-    }, [loadFarms]);
+    }, [loadFarms, applyAuthScreenFromQuery]);
 
     React.useEffect(() => {
         const parentView = SUB_VIEW_PARENT[activeView] ?? activeView;

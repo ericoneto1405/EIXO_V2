@@ -55,6 +55,8 @@ const OTP_SEND_MAX_PER_PHONE = Number(process.env.OTP_SEND_MAX_PER_PHONE) || 3;
 const OTP_VERIFY_WINDOW_MS = Number(process.env.OTP_VERIFY_WINDOW_MS) || 10 * 60 * 1000;
 const OTP_VERIFY_MAX_PER_IP = Number(process.env.OTP_VERIFY_MAX_PER_IP) || 10;
 const OTP_VERIFY_MAX_PER_PHONE = Number(process.env.OTP_VERIFY_MAX_PER_PHONE) || 5;
+const FORGOT_PASSWORD_WINDOW_MS = Number(process.env.FORGOT_PASSWORD_WINDOW_MS) || 15 * 60 * 1000;
+const FORGOT_PASSWORD_MAX_ATTEMPTS = Number(process.env.FORGOT_PASSWORD_MAX_ATTEMPTS) || 5;
 const CHAT_RATE_WINDOW_MS = Number(process.env.CHAT_RATE_WINDOW_MS) || 60 * 1000;
 const CHAT_RATE_MAX_PER_USER = Number(process.env.CHAT_RATE_MAX_PER_USER) || 30;
 const CHAT_BURST_WINDOW_MS = Number(process.env.CHAT_BURST_WINDOW_MS) || 10 * 1000;
@@ -79,6 +81,7 @@ const otpSendAttempts   = new Map();
 const otpVerifyAttempts = new Map();
 const chatRateAttempts = new Map();
 const chatBurstAttempts = new Map();
+const forgotPasswordAttempts = new Map();
 const PHONE_VERIFY_TTL_MS = 30 * 60 * 1000;
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -1786,12 +1789,28 @@ const extractSessionTokenFromRequest = (req) => {
 };
 
 const normalizeEmailForLogin = (value) => String(value || '').trim().toLowerCase();
+const isEmailValid = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+const hashPasswordResetToken = (token) =>
+    crypto
+        .createHash('sha256')
+        .update(String(token || ''))
+        .update(SESSION_TOKEN_SALT)
+        .digest('hex');
 
 const buildLoginRateLimitKeys = (email, ip) => {
     const keys = [`ip:${String(ip || 'unknown')}`];
     const normalizedEmail = normalizeEmailForLogin(email);
     if (normalizedEmail) {
         keys.push(`email:${normalizedEmail}`);
+    }
+    return keys;
+};
+
+const buildForgotPasswordRateLimitKeys = (email, ip) => {
+    const keys = [`forgot:ip:${String(ip || 'unknown')}`];
+    const normalizedEmail = normalizeEmailForLogin(email);
+    if (normalizedEmail) {
+        keys.push(`forgot:email:${normalizedEmail}`);
     }
     return keys;
 };
@@ -1834,6 +1853,21 @@ const registerFailedLogins = (keys) => {
 const clearLoginRateLimits = (keys) => {
     for (const key of keys) {
         clearLoginAttempts(key);
+    }
+};
+
+const isAnyForgotPasswordRateLimited = (keys) =>
+    keys.some((key) => isWindowRateLimited(forgotPasswordAttempts, key, FORGOT_PASSWORD_MAX_ATTEMPTS, FORGOT_PASSWORD_WINDOW_MS));
+
+const registerForgotPasswordAttempts = (keys) => {
+    for (const key of keys) {
+        registerWindowAttempt(forgotPasswordAttempts, key, FORGOT_PASSWORD_WINDOW_MS);
+    }
+};
+
+const clearForgotPasswordAttempts = (keys) => {
+    for (const key of keys) {
+        clearWindowAttempt(forgotPasswordAttempts, key);
     }
 };
 
@@ -2991,14 +3025,21 @@ app.post('/auth/login', async (req, res) => {
 app.post('/auth/forgot-password', async (req, res) => {
     const { email } = req.body || {};
     if (!email) return res.status(400).json({ message: 'Informe o e-mail.' });
+    if (!isEmailValid(email)) return res.status(400).json({ message: 'Informe um e-mail válido.' });
 
     const responsePayload = {
         message: 'Se esse e-mail estiver cadastrado, você receberá as instruções em breve.',
     };
+    const normalizedEmail = normalizeEmailForLogin(email);
+    const rateLimitKeys = buildForgotPasswordRateLimitKeys(normalizedEmail, req.ip);
+    if (isAnyForgotPasswordRateLimited(rateLimitKeys)) {
+        return res.status(429).json({ message: 'Muitas tentativas. Tente novamente mais tarde.' });
+    }
+    registerForgotPasswordAttempts(rateLimitKeys);
 
     try {
         const user = await prisma.user.findUnique({
-            where: { email: normalizeEmailForLogin(email) },
+            where: { email: normalizedEmail },
         });
         if (!user || !resend) {
             return res.json(responsePayload);
@@ -3010,12 +3051,13 @@ app.post('/auth/forgot-password', async (req, res) => {
         });
 
         const rawToken = crypto.randomBytes(32).toString('hex');
+        const tokenHash = hashPasswordResetToken(rawToken);
         const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
 
         await prisma.passwordResetToken.create({
             data: {
                 userId: user.id,
-                token: rawToken,
+                tokenHash,
                 expiresAt,
             },
         });
@@ -3024,7 +3066,7 @@ app.post('/auth/forgot-password', async (req, res) => {
         const safeName = escapeHtml(user.name);
         const safeResetLink = escapeHtml(resetLink);
 
-        await resend.emails.send({
+        const sendResult = await resend.emails.send({
             from: RESEND_FROM_EMAIL,
             to: user.email,
             subject: 'Redefinir senha — EIXO',
@@ -3036,7 +3078,19 @@ app.post('/auth/forgot-password', async (req, res) => {
                 <p style="color:#888;font-size:12px;">Link alternativo: ${safeResetLink}</p>
             `,
         });
+        clearForgotPasswordAttempts(rateLimitKeys);
+        console.info('[forgot-password] email-send-success', {
+            email: normalizedEmail,
+            timestamp: new Date().toISOString(),
+            resendMessageId: sendResult?.data?.id || null,
+        });
     } catch (err) {
+        const safeErrorMessage = err instanceof Error ? err.message : String(err || 'Erro desconhecido');
+        console.error('[forgot-password] email-send-failure', {
+            email: normalizedEmail,
+            timestamp: new Date().toISOString(),
+            error: safeErrorMessage.slice(0, 500),
+        });
         console.error('forgot-password error:', err);
     }
 
@@ -3048,12 +3102,13 @@ app.post('/auth/reset-password', async (req, res) => {
     if (!token || !password) {
         return res.status(400).json({ message: 'Token e nova senha são obrigatórios.' });
     }
-    if (String(password).length < 8) {
-        return res.status(400).json({ message: 'A senha deve ter pelo menos 8 caracteres.' });
+    if (!isPasswordStrongEnough(password)) {
+        return res.status(400).json({ message: PASSWORD_POLICY_MESSAGE });
     }
 
     try {
-        const record = await prisma.passwordResetToken.findUnique({ where: { token: String(token) } });
+        const tokenHash = hashPasswordResetToken(token);
+        const record = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
 
         if (!record || record.usedAt || record.expiresAt < new Date()) {
             return res.status(400).json({ message: 'Link inválido ou expirado. Solicite um novo link.' });
@@ -11888,89 +11943,93 @@ app.get('/alerts', requireAuth, async (req, res) => {
             return res.json({ alerts: [] });
         }
 
-        const [paddocks, staleOccurrences, immediateOccurrences] = await Promise.all([
-            prisma.paddock.findMany({
-                where: { farmId: { in: farmIds }, active: true },
-                select: { id: true, farmId: true, name: true },
-                orderBy: { name: 'asc' },
-            }),
-            prisma.fieldOccurrence.findMany({
-                where: {
-                    farmId: { in: farmIds },
-                    type: { in: ['COCHO', 'AGUA'] },
-                },
-                include: {
-                    paddock: true,
-                    createdBy: { select: { id: true, name: true } },
-                },
-                orderBy: { occurredAt: 'desc' },
-            }),
-            prisma.fieldOccurrence.findMany({
-                where: {
-                    farmId: { in: farmIds },
-                    status: 'PENDENTE',
-                    type: { in: ['NASCEU', 'MORREU', 'DOENTE', 'AVARIA'] },
-                },
-                include: {
-                    animal: true,
-                    paddock: true,
-                    createdBy: { select: { id: true, name: true } },
-                },
-                orderBy: { occurredAt: 'desc' },
-                take: 50,
-            }),
-        ]);
-
-        const paddocksByFarmId = new Map();
-        paddocks.forEach((paddock) => {
-            const current = paddocksByFarmId.get(paddock.farmId) || [];
-            current.push(paddock);
-            paddocksByFarmId.set(paddock.farmId, current);
-        });
-
-        const latestByKey = new Map();
-        staleOccurrences.forEach((occurrence) => {
-            const scopeId = occurrence.paddockId || '__farm__';
-            const key = `${occurrence.farmId}:${occurrence.type}:${scopeId}`;
-            if (!latestByKey.has(key)) {
-                latestByKey.set(key, occurrence);
-            }
-        });
-
         const alerts = [];
-        for (const farm of farms) {
-            const farmPaddocks = paddocksByFarmId.get(farm.id) || [];
-            for (const type of ['COCHO', 'AGUA']) {
-                const scopes = farmPaddocks.length > 0
-                    ? farmPaddocks.map((paddock) => ({ id: paddock.id, label: paddock.name }))
-                    : [{ id: '__farm__', label: farm.name }];
+        const fieldAppAlertsEnabled = process.env.ENABLE_FIELD_APP_ALERTS === 'true';
 
-                for (const scope of scopes) {
-                    const latest = latestByKey.get(`${farm.id}:${type}:${scope.id}`) || null;
-                    if (latest && latest.occurredAt >= staleCutoff) {
-                        continue;
+        if (fieldAppAlertsEnabled) {
+            const [paddocks, staleOccurrences, immediateOccurrences] = await Promise.all([
+                prisma.paddock.findMany({
+                    where: { farmId: { in: farmIds }, active: true },
+                    select: { id: true, farmId: true, name: true },
+                    orderBy: { name: 'asc' },
+                }),
+                prisma.fieldOccurrence.findMany({
+                    where: {
+                        farmId: { in: farmIds },
+                        type: { in: ['COCHO', 'AGUA'] },
+                    },
+                    include: {
+                        paddock: true,
+                        createdBy: { select: { id: true, name: true } },
+                    },
+                    orderBy: { occurredAt: 'desc' },
+                }),
+                prisma.fieldOccurrence.findMany({
+                    where: {
+                        farmId: { in: farmIds },
+                        status: 'PENDENTE',
+                        type: { in: ['NASCEU', 'MORREU', 'DOENTE', 'AVARIA'] },
+                    },
+                    include: {
+                        animal: true,
+                        paddock: true,
+                        createdBy: { select: { id: true, name: true } },
+                    },
+                    orderBy: { occurredAt: 'desc' },
+                    take: 50,
+                }),
+            ]);
+
+            const paddocksByFarmId = new Map();
+            paddocks.forEach((paddock) => {
+                const current = paddocksByFarmId.get(paddock.farmId) || [];
+                current.push(paddock);
+                paddocksByFarmId.set(paddock.farmId, current);
+            });
+
+            const latestByKey = new Map();
+            staleOccurrences.forEach((occurrence) => {
+                const scopeId = occurrence.paddockId || '__farm__';
+                const key = `${occurrence.farmId}:${occurrence.type}:${scopeId}`;
+                if (!latestByKey.has(key)) {
+                    latestByKey.set(key, occurrence);
+                }
+            });
+
+            for (const farm of farms) {
+                const farmPaddocks = paddocksByFarmId.get(farm.id) || [];
+                for (const type of ['COCHO', 'AGUA']) {
+                    const scopes = farmPaddocks.length > 0
+                        ? farmPaddocks.map((paddock) => ({ id: paddock.id, label: paddock.name }))
+                        : [{ id: '__farm__', label: farm.name }];
+
+                    for (const scope of scopes) {
+                        const latest = latestByKey.get(`${farm.id}:${type}:${scope.id}`) || null;
+                        if (latest && latest.occurredAt >= staleCutoff) {
+                            continue;
+                        }
+                        const daysSince = getDaysSince(latest?.occurredAt);
+                        const workerName = latest?.createdBy?.name ? String(latest.createdBy.name).trim() : '';
+                        const workerPrefix = workerName ? `${workerName}, ` : '';
+                        alerts.push({
+                            id: `stale-${type.toLowerCase()}-${farm.id}-${scope.id}`,
+                            type: 'warning',
+                            message: `${type}: ${workerPrefix}${type === 'COCHO' ? 'cocho' : 'bebedouro'} sem atualização${daysSince === null ? ' no período' : ` há ${daysSince} dia(s)`}.`,
+                            source: 'APP_MANEJO',
+                            sourceType: type,
+                            sourceId: latest?.id || null,
+                            farmId: farm.id,
+                            createdAt: latest?.occurredAt?.toISOString?.() ?? null,
+                        });
                     }
-                    const daysSince = getDaysSince(latest?.occurredAt);
-                    const workerName = latest?.createdBy?.name ? String(latest.createdBy.name).trim() : '';
-                    const workerPrefix = workerName ? `${workerName}, ` : '';
-                    alerts.push({
-                        id: `stale-${type.toLowerCase()}-${farm.id}-${scope.id}`,
-                        type: 'warning',
-                        message: `${type}: ${workerPrefix}${type === 'COCHO' ? 'cocho' : 'bebedouro'} sem atualização${daysSince === null ? ' no período' : ` há ${daysSince} dia(s)`}.`,
-                        source: 'APP_MANEJO',
-                        sourceType: type,
-                        sourceId: latest?.id || null,
-                        farmId: farm.id,
-                        createdAt: latest?.occurredAt?.toISOString?.() ?? null,
-                    });
                 }
             }
-        }
 
-        immediateOccurrences
-            .map(buildFieldOccurrenceAlert)
-            .filter(Boolean)
-            .forEach((alert) => alerts.push(alert));
+            immediateOccurrences
+                .map(buildFieldOccurrenceAlert)
+                .filter(Boolean)
+                .forEach((alert) => alerts.push(alert));
+        }
 
         const severityOrder = { critical: 0, warning: 1, info: 2 };
         alerts.sort((a, b) => {

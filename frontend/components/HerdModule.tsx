@@ -2424,7 +2424,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             {animal.currentPaddockName ? (
                                                 <span className="text-[#2f3a2d]">{animal.currentPaddockName}</span>
                                             ) : (
-                                                <div className="flex items-center justify-between gap-2">
+                                                <div className="flex flex-col items-start gap-1">
                                                     <span className="text-[#6d6558]">Sem pasto</span>
                                                     <button
                                                         type="button"

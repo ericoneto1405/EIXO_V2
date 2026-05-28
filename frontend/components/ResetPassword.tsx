@@ -8,6 +8,10 @@ interface ResetPasswordProps {
     onBack: () => void;
 }
 
+const PASSWORD_POLICY_MESSAGE = 'A senha deve ter pelo menos 8 caracteres, com ao menos 1 letra e 1 número.';
+const isPasswordStrongEnough = (value: string) =>
+    value.length >= 8 && /[A-Za-z]/.test(value) && /\d/.test(value);
+
 const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack }) => {
     const [password, setPassword] = useState('');
     const [confirm, setConfirm] = useState('');
@@ -21,8 +25,8 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
         event.preventDefault();
         setError(null);
 
-        if (password.length < 8) {
-            setError('A senha deve ter pelo menos 8 caracteres.');
+        if (!isPasswordStrongEnough(password)) {
+            setError(PASSWORD_POLICY_MESSAGE);
             return;
         }
         if (password !== confirm) {
@@ -108,7 +112,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
                                                 </div>
                                                 <h2 className="text-3xl font-black text-[var(--eixo-text)]">Redefinir senha</h2>
                                                 <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text)]/72">
-                                                    Crie uma nova senha com pelo menos 8 caracteres.
+                                                    Crie uma nova senha com pelo menos 8 caracteres, com letra e número.
                                                 </p>
                                             </div>
 

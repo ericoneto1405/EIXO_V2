@@ -138,3 +138,12 @@ O sistema usa uma paleta stone/amber consistente. **Nunca usar classes gray/dark
 - `ALLOW_X_USER_ID=true` só pode estar ativo em desenvolvimento. O servidor aborta se detectar isso em produção.
 - Nunca expor senhas — usar `sanitizeUser()` antes de retornar dados de usuário.
 - Rota pública de cadastro: `POST /register` — fica **antes** do middleware `requireAuth`.
+
+## Imported Claude Cowork project instructions
+
+Respostas diretas e curtas. Sem introduções, resumos ou repetição de contexto.
+Sem "vou fazer X", "feito!", "perfeito!". Ler arquivos só nas seções relevantes.
+Código: mostrar só o trecho alterado. Análises: bullets curtos.
+Toda alteração em código (.tsx, .ts, .js, .css, .prisma, etc.) exige aprovação.
+Apresentar: o que muda, onde e por quê (máx. 5 linhas).
+Executar só após "sim", "ok", "pode" ou similar.

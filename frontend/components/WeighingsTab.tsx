@@ -124,6 +124,18 @@ const parseImportedFile = async (file: File): Promise<Record<string, string>[]> 
     return normalizeImportedMatrix(matrix);
 };
 
+const UploadIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-9-13.5V16.5m0-13.5 4.5 4.5m-4.5-4.5L7.5 7.5" />
+    </svg>
+);
+
+const DownloadIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-9 0V3m0 13.5 4.5-4.5m-4.5 4.5L7.5 12" />
+    </svg>
+);
+
 const downloadWorkbook = async (fileName: string, sheetName: string, rows: Array<Array<string | number>>) => {
     const { default: ExcelJS } = await import('exceljs');
     const workbook = new ExcelJS.Workbook();
@@ -1165,16 +1177,18 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                     <button
                         type="button"
                         onClick={handleDownloadTemplate}
-                        className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-4 py-2 text-sm font-semibold text-[#2f3a2d] hover:bg-[#f1e7d8]"
+                        className="flex h-10 items-center justify-center rounded-[10px] border border-dashed border-[var(--eixo-border)] bg-transparent px-[10px] text-[13px] font-semibold text-[var(--eixo-text-muted)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
                     >
-                        Baixar modelo
+                        <DownloadIcon className="h-4 w-4" />
+                        <span className="ml-1.5 hidden sm:block">Baixar modelo</span>
                     </button>
                     <button
                         type="button"
                         onClick={handleImportClick}
-                        className="rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-4 py-2 text-sm font-semibold text-[#2f3a2d] hover:bg-[#f1e7d8]"
+                        className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-border)] bg-white px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
                     >
-                        Importar
+                        <UploadIcon className="h-[18px] w-[18px]" />
+                        <span className="ml-2 hidden sm:block">Importar planilha</span>
                     </button>
                     <button
                         type="button"
