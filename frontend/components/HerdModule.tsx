@@ -2247,22 +2247,22 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     </div>
                 )}
                 <div ref={headerFilterRef} className="overflow-x-auto">
-                    <table className="w-full table-fixed text-left text-xs text-[var(--eixo-text-muted)] [&_td]:overflow-hidden [&_td]:text-ellipsis [&_td]:px-2 [&_td]:py-2.5 [&_th]:px-2 [&_th]:py-2.5">
+                    <table className="w-full table-fixed text-left text-xs text-[var(--eixo-text-muted)] [&_td]:!px-1.5 [&_td]:!py-2.5 [&_td]:overflow-hidden [&_td]:text-ellipsis [&_th]:!px-1.5 [&_th]:!py-2.5 [&_thead_button]:!border-0 [&_thead_button]:!bg-transparent [&_thead_button]:!px-0.5 [&_thead_button]:!py-0 [&_thead_button]:text-[9px]">
                         <colgroup>
-                            <col className="w-[3%]" />
+                            <col className="w-[2.8%]" />
+                            <col className="w-[7%]" />
+                            <col className="w-[8.5%]" />
                             <col className="w-[8%]" />
-                            <col className="w-[9%]" />
-                            <col className="w-[8%]" />
-                            <col className="w-[6%]" />
-                            <col className="w-[8%]" />
-                            <col className="w-[10%]" />
-                            <col className="w-[8%]" />
-                            <col className="w-[9%]" />
+                            <col className="w-[6.5%]" />
+                            <col className="w-[7%]" />
                             <col className="w-[11%]" />
+                            <col className="w-[8.5%]" />
+                            <col className="w-[10.5%]" />
                             <col className="w-[9%]" />
-                            <col className="w-[10%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[12.2%]" />
                         </colgroup>
-                        <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
+                        <thead className="bg-[var(--eixo-surface-soft)] text-[9px] font-bold uppercase tracking-[0.035em] text-[var(--eixo-text-muted)]">
                             <tr>
                                 <th scope="col" className="w-10 whitespace-nowrap px-4 py-3 border-r border-[var(--eixo-border)]">
                                     <input
