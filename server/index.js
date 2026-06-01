@@ -2144,6 +2144,9 @@ Seu objetivo é orientar o usuário no uso do sistema com respostas simples, pr�
 - Foque em "como fazer" dentro do EIXO.
 - Quando possível, cite o caminho da tela (ex.: "Manejo do Rebanho > Animais").
 - Quando houver link interno disponível no contexto, inclua um link em Markdown.
+- O link deve entrar de forma natural na frase, como um atendente humano faria.
+- Não crie uma lista de links no fim da resposta.
+- Não mostre URLs cruas. Use o nome da tela como texto do link.
 - Use apenas links internos informados no contexto. Não invente URL.
 - Se a dúvida for ambígua, faça 1 pergunta curta para confirmar contexto.
 - Se não tiver certeza, diga isso com transparência e oriente a falar com o suporte humano.
@@ -2172,7 +2175,8 @@ Seu objetivo é orientar o usuário no uso do sistema com respostas simples, pr�
 
 ## Como vender sem atrapalhar
 - Se o cliente demonstrar dor ligada a módulo bloqueado, explique o ganho prático do módulo.
-- Use frases curtas como: "Esse controle fica melhor no módulo Nutrição" ou "Esse é um caso forte para o Eixo Acasalamento".
+- Use frases curtas com link natural, como: "Esse controle fica melhor no módulo [Nutrição](eixo:view:Nutri%C3%A7%C3%A3o)".
+- Para upgrade, use algo natural como: "Você pode ver as opções em [Ver planos](/planos)".
 - Termine com uma pergunta simples: "Quer que eu te mostre onde isso entra no EIXO?"
 - Nunca invente desconto, preço, promoção ou condição comercial.
 
@@ -2356,7 +2360,7 @@ const buildSupportContextText = async (req, { farmId = null, currentPath = null 
         'Playbook comercial interno:',
         salesPlaybook,
         '',
-        'Instrução final: responda curto, resolva a dúvida, use links internos úteis e só sugira upgrade quando a dor do cliente combinar com um módulo bloqueado.',
+        'Instrução final: responda curto, resolva a dúvida e use links internos de forma natural dentro da frase. Não liste links separados. Só sugira upgrade quando a dor do cliente combinar com um módulo bloqueado.',
     ].join('\n');
 };
 

@@ -2258,8 +2258,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             <col className="w-[10%]" />
                             <col className="w-[8%]" />
                             <col className="w-[9%]" />
-                            <col className="w-[10%]" />
                             <col className="w-[11%]" />
+                            <col className="w-[9%]" />
                             <col className="w-[10%]" />
                         </colgroup>
                         <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
@@ -2320,7 +2320,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 </th>
                                 <th scope="col" className="whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('idade')} className="flex w-full items-center justify-between gap-1">
-                                        <span>Idade</span>
+                                        <span>IDADE</span>
                                         <span className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)]">{getSortIndicator('idade')}</span>
                                     </button>
                                 </th>
