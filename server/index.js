@@ -2148,12 +2148,15 @@ Seu objetivo é orientar o usuário no uso do sistema com respostas simples, pr�
 - Não crie uma lista de links no fim da resposta.
 - Não mostre URLs cruas. Use o nome da tela como texto do link.
 - Use apenas links internos informados no contexto. Não invente URL.
+- Quando existir link mais específico para uma aba ou ação, prefira ele ao link genérico do módulo.
 - Se a dúvida for ambígua, faça 1 pergunta curta para confirmar contexto.
 - Se não tiver certeza, diga isso com transparência e oriente a falar com o suporte humano.
 - Use o contexto do atendimento para personalizar a resposta.
 - Primeiro ajude o cliente a resolver a dúvida. Depois, se fizer sentido, sugira módulo pago.
 - Seja vendedor consultivo: conecte a dor do cliente ao benefício real do módulo.
 - Não seja insistente. Uma sugestão comercial curta é suficiente.
+- Se a resposta já tiver link direto para a tela/aba certa, não pergunte "Quer que eu te mostre onde isso entra no EIXO?".
+- Se o cliente responder apenas "sim", "quero" ou algo parecido depois dessa pergunta, não repita todo o passo a passo. Entregue o link direto e diga uma frase curta de orientação.
 
 ## Escopo do sistema (resumo)
 - Estrutura da Fazenda: cadastro de fazendas e pastos.
@@ -2177,8 +2180,27 @@ Seu objetivo é orientar o usuário no uso do sistema com respostas simples, pr�
 - Se o cliente demonstrar dor ligada a módulo bloqueado, explique o ganho prático do módulo.
 - Use frases curtas com link natural, como: "Esse controle fica melhor no módulo [Nutrição](eixo:view:Nutri%C3%A7%C3%A3o)".
 - Para upgrade, use algo natural como: "Você pode ver as opções em [Ver planos](/planos)".
-- Termine com uma pergunta simples: "Quer que eu te mostre onde isso entra no EIXO?"
+- Use "Quer que eu te mostre onde isso entra no EIXO?" só quando ainda não houver link claro na resposta.
 - Nunca invente desconto, preço, promoção ou condição comercial.
+
+## Exemplos de resposta boa
+Cliente: "Como registro pesagem?"
+Resposta: "Para registrar uma pesagem, vá em [Animais](eixo:view:Rebanho%20Comercial?tab=animals), localize o animal, clique no botão de ações e abra a aba Pesagens."
+
+Cliente: "Como importar minha planilha?"
+Resposta: "A importação fica em [Importar planilha](eixo:view:Rebanho%20Comercial?tab=animals), dentro da aba Animais. Depois revise as colunas e confirme a importação."
+
+Cliente: "Como controlo dieta?"
+Resposta: "Esse controle fica melhor em [Nutrição](eixo:view:Nutri%C3%A7%C3%A3o). Ele ajuda a acompanhar dieta, consumo e custo por lote. Se o módulo não estiver liberado, veja [Ver planos](/planos)."
+
+Cliente: "Sim"
+Resposta, se a conversa anterior pediu para mostrar o caminho: "Claro. Clique em [Animais](eixo:view:Rebanho%20Comercial?tab=animals) e localize o animal na lista."
+
+## Evite resposta ruim
+- Não responda só "Acesse Manejo do Rebanho > Animais" se puder usar link.
+- Não repita o mesmo passo a passo quando o cliente apenas confirmou "sim".
+- Não finalize todas as respostas com pergunta genérica.
+- Não coloque vários links soltos no fim da mensagem.
 
 ## Dúvidas comuns (base de orientação)
 
@@ -2189,13 +2211,13 @@ Seu objetivo é orientar o usuário no uso do sistema com respostas simples, pr�
 4. Depois, cadastre os pastos da fazenda.
 
 **Como importar animais por planilha?**
-1. Acesse [Manejo do Rebanho](eixo:view:Rebanho%20Comercial) > aba "Animais".
+1. Acesse [Manejo do Rebanho](eixo:view:Rebanho%20Comercial) e vá para a aba [Animais](eixo:view:Rebanho%20Comercial?tab=animals).
 2. Clique em "Importar planilha".
 3. Revise o mapeamento das colunas.
 4. Confirme a importação.
 
 **Como registrar pesagem?**
-1. Em [Manejo do Rebanho](eixo:view:Rebanho%20Comercial) > "Animais", localize o animal.
+1. Em [Manejo do Rebanho](eixo:view:Rebanho%20Comercial), vá para a aba [Animais](eixo:view:Rebanho%20Comercial?tab=animals) e localize o animal.
 2. Clique no botão de ações (⋮).
 3. Abra a aba "Pesagens".
 4. Registre data e peso.
@@ -2286,6 +2308,22 @@ const SUPPORT_MODULE_CATALOG = [
         salesTrigger: 'sêmen, botijão, doses, estoque de touro ou acasalamento.',
     },
 ];
+const SUPPORT_INTERNAL_LINKS = [
+    ...SUPPORT_MODULE_CATALOG.map((module) => ({ label: module.name, href: module.href })),
+    { label: 'Animais', href: 'eixo:view:Rebanho%20Comercial?tab=animals' },
+    { label: 'Adicionar animal', href: 'eixo:view:Rebanho%20Comercial?tab=animals' },
+    { label: 'Importar planilha', href: 'eixo:view:Rebanho%20Comercial?tab=animals' },
+    { label: 'Lotes', href: 'eixo:view:Rebanho%20Comercial?tab=lots' },
+    { label: 'Criar lote', href: 'eixo:view:Rebanho%20Comercial?tab=lots' },
+    { label: 'Pesagens', href: 'eixo:view:Rebanho%20Comercial?tab=weighings' },
+    { label: 'Registrar pesagem', href: 'eixo:view:Rebanho%20Comercial?tab=animals' },
+    { label: 'Visão geral do rebanho', href: 'eixo:view:Rebanho%20Comercial?tab=overview' },
+    { label: 'Cadastrar fazenda', href: 'eixo:view:Fazendas' },
+    { label: 'Cadastrar pasto', href: 'eixo:view:Fazendas' },
+    { label: 'Lançar despesa', href: 'eixo:view:Financeiro' },
+    { label: 'Fluxo de caixa', href: 'eixo:view:Financeiro' },
+    { label: 'Ver planos', href: '/planos' },
+];
 
 const SUPPORT_PLAN_LABELS = {
     GRATIS: 'Grátis',
@@ -2335,10 +2373,8 @@ const buildSupportContextText = async (req, { farmId = null, currentPath = null 
     const salesPlaybook = SUPPORT_MODULE_CATALOG
         .map((module) => `- ${module.name}: vender quando houver dor sobre ${module.salesTrigger} Benefício: ${module.benefit}`)
         .join('\n');
-    const internalLinks = [
-        ...SUPPORT_MODULE_CATALOG.map((module) => `- [${module.name}](${module.href})`),
-        '- [Ver planos](/planos)',
-    ]
+    const internalLinks = SUPPORT_INTERNAL_LINKS
+        .map((link) => `- [${link.label}](${link.href})`)
         .join('\n');
 
     return [
@@ -2360,7 +2396,7 @@ const buildSupportContextText = async (req, { farmId = null, currentPath = null 
         'Playbook comercial interno:',
         salesPlaybook,
         '',
-        'Instrução final: responda curto, resolva a dúvida e use links internos de forma natural dentro da frase. Não liste links separados. Só sugira upgrade quando a dor do cliente combinar com um módulo bloqueado.',
+        'Instrução final: responda curto, resolva a dúvida e use links internos de forma natural dentro da frase. Não liste links separados. Evite perguntas finais repetitivas quando o link já resolver o caminho. Só sugira upgrade quando a dor do cliente combinar com um módulo bloqueado.',
     ].join('\n');
 };
 
@@ -12666,6 +12702,11 @@ app.patch('/api/hq/clientes/:organizationId/plan', requireAuth, requireSuperAdmi
         EIXO_GESTAO: ['CORE', 'NUTRITION', 'EIXO_GESTAO'],
         EIXO_DECISAO: ['CORE', 'GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO', 'EIXO_NUTRITION'],
     };
+    const planModulesMap = {
+        GRATIS: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'],
+        EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades'],
+        EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics'],
+    };
 
     try {
         const organization = await prisma.organization.findUnique({
@@ -12757,6 +12798,19 @@ app.patch('/api/hq/clientes/:organizationId/plan', requireAuth, requireSuperAdmi
                     where: { organizationId: organization.id },
                 });
             }
+
+            const modulesForPlan = planModulesMap[normalizedPlanCode] || planModulesMap.GRATIS;
+            await tx.user.updateMany({
+                where: {
+                    memberships: {
+                        some: { organizationId: organization.id },
+                    },
+                    NOT: {
+                        roles: { hasSome: [FIELD_WORKER_ROLE, FIELD_ADMIN_ROLE] },
+                    },
+                },
+                data: { modules: modulesForPlan },
+            });
 
             return updatedSubscription;
         });

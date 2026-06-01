@@ -17,7 +17,7 @@ interface RecentConversation {
 interface AssistantChatProps {
     onClose: () => void;
     farmId: string | null;
-    onNavigateToView?: (view: string) => void;
+    onNavigateToView?: (view: string, options?: { herdTab?: 'overview' | 'animals' | 'lots' | 'weighings' | 'settings' }) => void;
 }
 
 const SUGESTOES = [
@@ -205,9 +205,19 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
     const handleInternalLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
         if (!href.startsWith('eixo:view:')) return;
         event.preventDefault();
-        const targetView = decodeURIComponent(href.replace('eixo:view:', ''));
+        const rawTarget = href.replace('eixo:view:', '');
+        const [encodedView, queryString = ''] = rawTarget.split('?');
+        const targetView = decodeURIComponent(encodedView || '');
         if (!targetView) return;
-        onNavigateToView?.(targetView);
+        const query = new URLSearchParams(queryString);
+        const herdTab = query.get('tab');
+        const allowedHerdTabs = ['overview', 'animals', 'lots', 'weighings', 'settings'];
+        onNavigateToView?.(
+            targetView,
+            herdTab && allowedHerdTabs.includes(herdTab)
+                ? { herdTab: herdTab as 'overview' | 'animals' | 'lots' | 'weighings' | 'settings' }
+                : undefined,
+        );
         onClose();
     };
 
