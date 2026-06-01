@@ -6459,6 +6459,9 @@ app.post('/po/animals/import-batch', requireAuth, async (req, res) => {
                     if (weighingsInput.length > 0 && parsedWeighings.length === 0) {
                         warnings.push(`${rowLabel} (${nome}): pesagens ignoradas por dados inválidos.`);
                     }
+                    if (parsedWeighings.length === 0 && parsedPesoAtual > 0) {
+                        parsedWeighings.push({ date: new Date(), weight: parsedPesoAtual });
+                    }
 
                     let previous = null;
                     for (const weighing of parsedWeighings) {
@@ -8378,6 +8381,9 @@ app.post('/animals/import-batch', requireAuth, async (req, res) => {
 
                     if (weighingsInput.length > 0 && parsedWeighings.length === 0) {
                         warnings.push(`${rowLabel} (${brinco}): pesagens ignoradas por dados inválidos.`);
+                    }
+                    if (parsedWeighings.length === 0 && parsedPesoAtual !== null && parsedPesoAtual > 0) {
+                        parsedWeighings.push({ date: new Date(), weight: parsedPesoAtual });
                     }
 
                     let previous = null;
