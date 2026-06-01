@@ -2145,12 +2145,18 @@ Seu objetivo é orientar o usuário no uso do sistema com respostas simples, pr�
 - Quando possível, cite o caminho da tela (ex.: "Manejo do Rebanho > Animais").
 - Se a dúvida for ambígua, faça 1 pergunta curta para confirmar contexto.
 - Se não tiver certeza, diga isso com transparência e oriente a falar com o suporte humano.
+- Use o contexto do atendimento para personalizar a resposta.
+- Primeiro ajude o cliente a resolver a dúvida. Depois, se fizer sentido, sugira módulo pago.
+- Seja vendedor consultivo: conecte a dor do cliente ao benefício real do módulo.
+- Não seja insistente. Uma sugestão comercial curta é suficiente.
 
 ## Escopo do sistema (resumo)
 - Estrutura da Fazenda: cadastro de fazendas e pastos.
 - Manejo do Rebanho: cadastro de animais, importação por planilha, pesagens, lotes e eventos.
 - Financeiro: lançamentos, contas a pagar/receber, fluxo de caixa e DRE.
 - Nutrição: disponível conforme plano.
+- Reprodução e Eixo Acasalamento: disponíveis conforme plano.
+- EIXO Campo: aplicativo de manejo no campo, conforme acesso configurado.
 - Módulos bloqueados aparecem com cadeado e podem exigir upgrade.
 
 ## Regras importantes para suporte
@@ -2158,6 +2164,15 @@ Seu objetivo é orientar o usuário no uso do sistema com respostas simples, pr�
 - Não prometer prazo de entrega de funcionalidades.
 - Não pedir senha do usuário.
 - Nunca expor dados sensíveis.
+- Não diga que um módulo está liberado se o contexto indicar bloqueio.
+- Não diga que um módulo está bloqueado se o contexto indicar que está ativo.
+- Se o cliente perguntar por preço, planos ou contratação, explique o benefício e oriente clicar em "Ver planos" ou falar com o time comercial.
+
+## Como vender sem atrapalhar
+- Se o cliente demonstrar dor ligada a módulo bloqueado, explique o ganho prático do módulo.
+- Use frases curtas como: "Esse controle fica melhor no módulo Nutrição" ou "Esse é um caso forte para o Eixo Acasalamento".
+- Termine com uma pergunta simples: "Quer que eu te mostre onde isso entra no EIXO?"
+- Nunca invente desconto, preço, promoção ou condição comercial.
 
 ## Dúvidas comuns (base de orientação)
 
@@ -2207,6 +2222,119 @@ const SUPPORT_ACTION_RELEASE = 'chat_released';
 const SUPPORT_ALERT_TO_EMAIL = process.env.SUPPORT_ALERT_TO_EMAIL || process.env.RESEND_FROM_EMAIL || '';
 const SUPPORT_ALERT_COOLDOWN_MS = Number(process.env.SUPPORT_ALERT_COOLDOWN_MS) || 15 * 60 * 1000;
 const supportAlertCooldownStore = new Map();
+const SUPPORT_MODULE_CATALOG = [
+    {
+        name: 'Estrutura da Fazenda',
+        entitlementCodes: ['CORE'],
+        benefit: 'organiza fazendas, pastos e base operacional.',
+        salesTrigger: 'cadastro de fazenda, pasto, mapa ou estrutura.',
+    },
+    {
+        name: 'Manejo do Rebanho',
+        entitlementCodes: ['CORE'],
+        benefit: 'centraliza animais, lotes, importação, pesagens e eventos.',
+        salesTrigger: 'controle de animais, planilhas, peso, compra, venda ou lotes.',
+    },
+    {
+        name: 'Financeiro',
+        entitlementCodes: ['CORE', 'EIXO_GESTAO', 'EIXO_DECISAO'],
+        benefit: 'liga lançamentos, despesas, receitas e visão econômica da fazenda.',
+        salesTrigger: 'despesas, receitas, lucro, fluxo de caixa, compra ou venda.',
+    },
+    {
+        name: 'Nutrição',
+        entitlementCodes: ['NUTRITION', 'EIXO_NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'],
+        benefit: 'controla dieta, consumo, custo por lote e ingredientes em risco.',
+        salesTrigger: 'cocho, dieta, trato, consumo, suplemento, ração ou custo alimentar.',
+    },
+    {
+        name: 'Reprodução',
+        entitlementCodes: ['GENETICS', 'PO', 'EIXO_DECISAO'],
+        benefit: 'organiza coberturas, diagnósticos, partos e KPIs reprodutivos.',
+        salesTrigger: 'prenhez, parto, matriz, cobertura, IATF ou estação de monta.',
+    },
+    {
+        name: 'Eixo Acasalamento',
+        entitlementCodes: ['GENETICS', 'EIXO_DECISAO'],
+        benefit: 'apoia decisões de acasalamento com histórico e objetivo produtivo.',
+        salesTrigger: 'acasalamento, touro, sêmen, botijão, matriz ou genética.',
+    },
+    {
+        name: 'Gestão Comercial',
+        entitlementCodes: ['EIXO_DECISAO'],
+        benefit: 'apoia negociação, mercado, oportunidades e decisão de venda.',
+        salesTrigger: 'venda, mercado, comprador, negociação, arroba ou margem.',
+    },
+];
+
+const SUPPORT_PLAN_LABELS = {
+    GRATIS: 'Grátis',
+    EIXO_GESTAO: 'EIXO Gestão',
+    EIXO_DECISAO: 'EIXO Decisão',
+};
+
+const hasSupportModuleAccess = (module, entitlements) => {
+    const normalized = new Set((entitlements || []).map((item) => String(item || '').trim().toUpperCase()));
+    return module.entitlementCodes.some((code) => normalized.has(code));
+};
+
+const formatSupportList = (values) => {
+    const filtered = (values || []).map((item) => String(item || '').trim()).filter(Boolean);
+    return filtered.length ? filtered.join(', ') : 'não informado';
+};
+
+const buildSupportContextText = async (req, { farmId = null, currentPath = null } = {}) => {
+    const entitlements = Array.isArray(req.saas?.entitlements) ? req.saas.entitlements : [];
+    const allowedModules = normalizeUserModules(req.user?.modules || [], req.user?.roles || [], getDerivedAccessType(req.user));
+    const activeModules = SUPPORT_MODULE_CATALOG
+        .filter((module) => hasSupportModuleAccess(module, entitlements))
+        .map((module) => module.name);
+    const lockedModules = SUPPORT_MODULE_CATALOG
+        .filter((module) => !hasSupportModuleAccess(module, entitlements))
+        .map((module) => `${module.name}: ${module.benefit}`);
+
+    let subscription = null;
+    if (req.saas?.organizationId) {
+        subscription = await prisma.billingSubscription.findFirst({
+            where: { organizationId: req.saas.organizationId },
+            orderBy: { createdAt: 'desc' },
+            select: { planCode: true, status: true },
+        });
+    }
+
+    let farm = null;
+    if (farmId) {
+        farm = await prisma.farm.findFirst({
+            where: buildFarmScopeFilter(req, { id: farmId }),
+            select: { id: true, name: true, city: true },
+        });
+    }
+
+    const planCode = String(subscription?.planCode || '').trim().toUpperCase();
+    const planLabel = SUPPORT_PLAN_LABELS[planCode] || planCode || 'não identificado';
+    const salesPlaybook = SUPPORT_MODULE_CATALOG
+        .map((module) => `- ${module.name}: vender quando houver dor sobre ${module.salesTrigger} Benefício: ${module.benefit}`)
+        .join('\n');
+
+    return [
+        'Contexto interno do atendimento. Use para responder, mas não copie como relatório para o cliente.',
+        `Usuário: ${req.user?.name || 'não informado'} (${req.user?.email || 'sem e-mail'})`,
+        `Organização: ${req.saas?.organization?.name || 'não informada'}`,
+        `Plano atual: ${planLabel}`,
+        `Status da assinatura: ${subscription?.status || req.saas?.billingAccessState || 'não informado'}`,
+        `Entitlements ativos: ${formatSupportList(entitlements)}`,
+        `Módulos do usuário: ${formatSupportList(allowedModules)}`,
+        `Módulos ativos para orientar uso: ${formatSupportList(activeModules)}`,
+        `Módulos bloqueados/oportunidade comercial: ${formatSupportList(lockedModules)}`,
+        `Fazenda selecionada: ${farm ? `${farm.name}${farm.city ? ` (${farm.city})` : ''}` : 'não selecionada ou não encontrada'}`,
+        `Tela atual: ${currentPath || 'não informada'}`,
+        '',
+        'Playbook comercial interno:',
+        salesPlaybook,
+        '',
+        'Instrução final: responda curto, resolva a dúvida, e só sugira upgrade quando a dor do cliente combinar com um módulo bloqueado.',
+    ].join('\n');
+};
 
 const createSupportLog = async (req, {
     conversationId,
@@ -2322,7 +2450,7 @@ const sendSupportAlertEmail = async (req, {
 };
 
 app.post('/api/chat/send-message', requireAuth, async (req, res) => {
-    const { message, history, conversationId, farmId } = req.body || {};
+    const { message, history, conversationId, farmId, currentPath } = req.body || {};
     if (!message) {
         return res.status(400).json({ message: 'Mensagem vazia.' });
     }
@@ -2346,12 +2474,15 @@ app.post('/api/chat/send-message', requireAuth, async (req, res) => {
 
     const conversationKey = String(conversationId || '').trim() || crypto.randomUUID();
     const normalizedFarmId = typeof farmId === 'string' && farmId.trim() ? farmId.trim() : null;
+    const normalizedCurrentPath = typeof currentPath === 'string' && currentPath.trim()
+        ? currentPath.trim().slice(0, 160)
+        : null;
 
     await createSupportLog(req, {
         conversationId: conversationKey,
         action: SUPPORT_ACTION_USER,
         message: String(message).slice(0, 2000),
-        requestMeta: { role: 'user', farmId: normalizedFarmId },
+        requestMeta: { role: 'user', farmId: normalizedFarmId, currentPath: normalizedCurrentPath },
     });
 
     if (!model) {
@@ -2381,11 +2512,15 @@ app.post('/api/chat/send-message', requireAuth, async (req, res) => {
             });
         }
 
+        const supportContext = await buildSupportContextText(req, {
+            farmId: normalizedFarmId,
+            currentPath: normalizedCurrentPath,
+        });
         const chat = model.startChat({
             history: history || [],
         });
 
-        const result = await chat.sendMessage(message);
+        const result = await chat.sendMessage(`${supportContext}\n\nMensagem do cliente:\n${message}`);
         const response = await result.response;
         const text = response.text();
         if (shouldTriggerSupportNoAnswerFallback(text)) {

@@ -144,7 +144,13 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ message: msgText, history, conversationId, farmId }),
+                body: JSON.stringify({
+                    message: msgText,
+                    history,
+                    conversationId,
+                    farmId,
+                    currentPath: window.location.pathname,
+                }),
             });
 
             if (!response.ok) {

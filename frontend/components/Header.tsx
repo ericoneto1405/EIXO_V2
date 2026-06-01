@@ -134,6 +134,7 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
     }, [lat, lng, city]);
 
     if (!rain) return null;
+    const totalRain = normalizeMm(rain.reduce((sum, mm) => sum + mm, 0));
 
     return (
         <div className="min-w-0 rounded-2xl border border-[#b9dfc8] bg-[linear-gradient(135deg,#f8fbf4_0%,#eef8f1_50%,#e5f4ec_100%)] px-3 py-2.5">
@@ -142,7 +143,7 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
                     <RainIcon />
                 </span>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4e6a57]">
-                    Previsão de chuvas para os próximos 7 dias!
+                    Previsão de chuvas para os próximos 7 dias! {formatMm(totalRain)}
                 </p>
             </div>
             <div className="flex max-w-[520px] items-center gap-1.5 overflow-x-auto pb-0.5">
