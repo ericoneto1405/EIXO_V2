@@ -68,8 +68,8 @@ const getDayLabel = (offsetDays: number) => {
 const normalizeMm = (mm: number) => Math.round(mm * 10) / 10;
 const formatMm = (mm: number) => `${normalizeMm(mm)}mm`;
 const getRainLevelStyle = (mm: number) => {
-    if (mm < 1) return 'bg-[#fffaf1] text-[#8a7a63] border-[#e7dcc8]';
-    if (mm < 8) return 'bg-[#e7f7ec] text-[#2f6b3f] border-[#bfe7cc]';
+    if (mm <= 0) return 'bg-[#fffaf1] text-[#8a7a63] border-[#e7dcc8]';
+    if (mm < 8) return 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]';
     if (mm < 20) return 'bg-[#dcf0ff] text-[#275f88] border-[#b8ddf7]';
     return 'bg-[#d7ecff] text-[#1d4f74] border-[#93c7ec]';
 };
@@ -142,7 +142,7 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
                     <RainIcon />
                 </span>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4e6a57]">
-                    Previsão de chuva · 7 dias
+                    Previsão de chuvas para os próximos 7 dias!
                 </p>
             </div>
             <div className="flex max-w-[520px] items-center gap-1.5 overflow-x-auto pb-0.5">
