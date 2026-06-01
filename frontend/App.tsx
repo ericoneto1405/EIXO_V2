@@ -1163,7 +1163,13 @@ const AppContent: React.FC = () => {
                             onAlertAction={handleHeaderAlertAction}
                         />
                         <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
-                            <div className={activeView === 'Mapa da Fazenda' ? 'h-full' : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'}>
+                            <div className={
+                                activeView === 'Mapa da Fazenda'
+                                    ? 'h-full'
+                                    : activeView === 'Rebanho Comercial'
+                                        ? 'h-full overflow-x-hidden overflow-y-auto px-2 py-4 lg:px-3 lg:py-5'
+                                        : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'
+                            }>
                                 {hasNoFarms && activeView !== 'Fazendas' && activeView !== 'EIXO HQ' && activeView !== 'EIXO Mercado' ? <FirstFarmOnboarding /> : (
                                     <>
                                         {currentUser && activeView !== 'Mapa da Fazenda' && (
