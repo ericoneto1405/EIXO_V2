@@ -2249,8 +2249,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 <div ref={headerFilterRef} className="overflow-x-auto">
                     <table className="w-full table-fixed text-left text-xs text-[var(--eixo-text-muted)] [&_td]:!px-1.5 [&_td]:!py-2.5 [&_td]:overflow-hidden [&_td]:text-ellipsis [&_th]:!px-1.5 [&_th]:!py-2.5 [&_thead_button]:!border-0 [&_thead_button]:!bg-transparent [&_thead_button]:!px-0.5 [&_thead_button]:!py-0 [&_thead_button]:text-[9px]">
                         <colgroup>
-                            <col className="w-[2.8%]" />
-                            <col className="w-[7%]" />
+                            <col className="w-[2.2%]" />
+                            <col className="w-[7.6%]" />
                             <col className="w-[8.5%]" />
                             <col className="w-[8%]" />
                             <col className="w-[6.5%]" />
@@ -2264,7 +2264,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         </colgroup>
                         <thead className="bg-[var(--eixo-surface-soft)] text-[9px] font-bold uppercase tracking-[0.035em] text-[var(--eixo-text-muted)]">
                             <tr>
-                                <th scope="col" className="w-10 whitespace-nowrap px-4 py-3 border-r border-[var(--eixo-border)]">
+                                <th scope="col" className="w-7 whitespace-nowrap border-r border-[var(--eixo-border)] !pl-0.5 !pr-0 text-left">
                                     <input
                                         type="checkbox"
                                         className="h-4 w-4 rounded border-[var(--eixo-border)] accent-[#B6E23A] cursor-pointer"
@@ -2407,7 +2407,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             setSelectedAnimal(animal);
                                         }}
                                     >
-                                        <td className="w-10 border-r border-[var(--eixo-border)] px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                        <td className="w-7 border-r border-[var(--eixo-border)] !pl-0.5 !pr-0" onClick={(e) => e.stopPropagation()}>
                                             <input
                                                 type="checkbox"
                                                 className="h-4 w-4 rounded border-[var(--eixo-border)] accent-[#B6E23A] cursor-pointer"
