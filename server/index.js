@@ -1353,6 +1353,16 @@ const loginAttempts = new Map();
 
 const allowXUserId = !IS_PROD && ALLOW_X_USER_ID;
 const BILLING_BLOCKED_STATES = new Set(['PAST_DUE', 'BLOCKED', 'CANCELED']);
+const PLAN_ENTITLEMENTS = {
+    GRATIS: ['CORE'],
+    EIXO_GESTAO: ['CORE', 'NUTRITION', 'EIXO_GESTAO'],
+    EIXO_DECISAO: ['CORE', 'GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO', 'EIXO_NUTRITION'],
+};
+const PLAN_MODULES = {
+    GRATIS: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'],
+    EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades'],
+    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics'],
+};
 
 const buildLegacyEntitlements = (modules) => {
     const normalized = new Set((modules || []).map((item) => String(item || '').trim()));
@@ -1473,6 +1483,28 @@ const normalizeUserModules = (modules, roles = [], accessType = 'WEB') => {
         return [...normalizedModules, 'Rebanho Comercial'];
     }
     return normalizedModules;
+};
+
+const buildAllowedModulesFromPlan = (modules, entitlements, roles = [], accessType = 'WEB') => {
+    const normalizedModules = normalizeUserModules(modules, roles, accessType);
+    if (accessType === 'APP_MANEJO') {
+        return normalizedModules;
+    }
+
+    const codes = new Set((entitlements || []).map((code) => String(code || '').trim().toUpperCase()));
+    const nextModules = new Set(normalizedModules.length ? normalizedModules : PLAN_MODULES.GRATIS);
+
+    if (codes.has('NUTRITION') || codes.has('EIXO_NUTRITION') || codes.has('EIXO_GESTAO') || codes.has('EIXO_DECISAO')) {
+        nextModules.add('Nutrição');
+    }
+    if (codes.has('GENETICS') || codes.has('PO') || codes.has('EIXO_GENETICS') || codes.has('EIXO_DECISAO')) {
+        nextModules.add('Eixo Genetics');
+    }
+    if (codes.has('EIXO_GESTAO') || codes.has('EIXO_DECISAO')) {
+        nextModules.add('Registro de Atividades');
+    }
+
+    return Array.from(nextModules);
 };
 
 const canManageOrganizationUsers = (req) => {
@@ -1686,12 +1718,26 @@ const ensureSaasContextForUser = async (userId, { allowProvision = false } = {})
         },
         include: { product: true },
     });
+    const activeSubscription = await prisma.billingSubscription.findFirst({
+        where: {
+            organizationId: activeOrganization.id,
+            status: 'ACTIVE',
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { planCode: true },
+    });
+    const subscriptionPlanCode = String(activeSubscription?.planCode || '').trim().toUpperCase();
+    const subscriptionEntitlements = PLAN_ENTITLEMENTS[subscriptionPlanCode] || [];
+    const mergedEntitlementCodes = Array.from(new Set([
+        ...entitlements.map((item) => item.product.code),
+        ...subscriptionEntitlements,
+    ]));
 
     return {
         organizationId: activeOrganization.id,
         membershipRole: membership?.role || null,
         billingAccessState: activeOrganization.accessState,
-        entitlements: entitlements.map((item) => item.product.code),
+        entitlements: mergedEntitlementCodes,
         organization: {
             id: activeOrganization.id,
             name: activeOrganization.name,
@@ -1734,7 +1780,7 @@ const requireEntitlement = (...codes) => async (req, res, next) => {
     if (hasEntitlement) return next();
     // Dupla verificação no banco (evita cache desatualizado)
     const count = await prisma.organizationProductEntitlement.count({
-        where: { organizationId: orgId, product: { code: { in: codes } } },
+        where: { organizationId: orgId, status: 'ACTIVE', product: { code: { in: codes } } },
     });
     if (count > 0) return next();
     return res.status(403).json({
@@ -1752,7 +1798,7 @@ const serializeAuthUserWithContext = async (userId, options) => {
     const accessContext = await ensureFieldWorkerFarmAccess(user, saasContext);
     return serializeAuthUser(user, saasContext, {
         ...accessContext,
-        allowedModules: normalizeUserModules(user.modules, user.roles),
+        allowedModules: buildAllowedModulesFromPlan(user.modules, saasContext?.entitlements || [], user.roles, user.accessType),
     });
 };
 
@@ -3209,7 +3255,7 @@ app.post('/auth/login', async (req, res) => {
         return res.json({
             user: serializeAuthUser(user, saasContext, {
                 ...accessContext,
-                allowedModules: normalizeUserModules(user.modules, user.roles),
+                allowedModules: buildAllowedModulesFromPlan(user.modules, saasContext?.entitlements || [], user.roles, user.accessType),
             }),
         });
     } catch (error) {
@@ -12697,17 +12743,6 @@ app.patch('/api/hq/clientes/:organizationId/plan', requireAuth, requireSuperAdmi
         return res.status(400).json({ message: 'Status inválido.' });
     }
 
-    const planEntitlementsMap = {
-        GRATIS: ['CORE'],
-        EIXO_GESTAO: ['CORE', 'NUTRITION', 'EIXO_GESTAO'],
-        EIXO_DECISAO: ['CORE', 'GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO', 'EIXO_NUTRITION'],
-    };
-    const planModulesMap = {
-        GRATIS: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'],
-        EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades'],
-        EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics'],
-    };
-
     try {
         const organization = await prisma.organization.findUnique({
             where: { id: String(organizationId) },
@@ -12756,7 +12791,7 @@ app.patch('/api/hq/clientes/:organizationId/plan', requireAuth, requireSuperAdmi
                 });
             }
 
-            const entitlementCodes = planEntitlementsMap[normalizedPlanCode] || ['CORE'];
+            const entitlementCodes = PLAN_ENTITLEMENTS[normalizedPlanCode] || ['CORE'];
             const products = await tx.product.findMany({
                 where: { code: { in: entitlementCodes } },
                 select: { id: true, code: true },
@@ -12799,7 +12834,7 @@ app.patch('/api/hq/clientes/:organizationId/plan', requireAuth, requireSuperAdmi
                 });
             }
 
-            const modulesForPlan = planModulesMap[normalizedPlanCode] || planModulesMap.GRATIS;
+            const modulesForPlan = PLAN_MODULES[normalizedPlanCode] || PLAN_MODULES.GRATIS;
             await tx.user.updateMany({
                 where: {
                     memberships: {
