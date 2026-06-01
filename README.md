@@ -1,6 +1,6 @@
 # EIXO — Sistema de Gestão Pecuária
 
-Plataforma web de gestão para pecuária de corte. Multi-tenant, modelo de assinatura mensal.
+Plataforma web de gestão para pecuária de corte. Multi-tenant, com modelo de assinatura mensal.
 
 ## Stack
 
@@ -8,30 +8,66 @@ Plataforma web de gestão para pecuária de corte. Multi-tenant, modelo de assin
 - **Backend:** Node.js + Express
 - **Banco de dados:** PostgreSQL + Prisma ORM
 - **IA de suporte:** Google Gemini 2.5 Flash
-- **Pagamentos:** Asaas (em integração)
+- **Pagamentos:** Asaas
 
 ## Como rodar localmente
 
 ```bash
-# Instalar dependências
+# Instalar dependências da raiz
 npm install
 
-# Configurar variáveis de ambiente
-cp .env.example .env
-# Editar .env com as credenciais do banco e APIs
+# Instalar dependências do frontend
+cd frontend && npm install && cd ..
 
-# Gerar o Prisma client
-npx prisma generate
+# Instalar dependências do backend
+cd server && npm install && cd ..
+```
 
-# Rodar migrações
-npx prisma migrate dev
+Configure as variáveis de ambiente conforme os arquivos de exemplo do projeto.
+
+```bash
+# Gerar Prisma Client
+npx prisma generate --schema server/prisma/schema.prisma
+
+# Rodar migrações em ambiente local
+npx prisma migrate dev --schema server/prisma/schema.prisma
 
 # Iniciar backend
 node server/index.js
 
-# Em outro terminal — iniciar frontend
+# Em outro terminal, iniciar frontend
 cd frontend && npm run dev
 ```
+
+## Deploy
+
+O EIXO está em produção. O deploy deve seguir a documentação própria do projeto.
+
+Documentação:
+
+```txt
+DEPLOY.md
+```
+
+Comando padrão:
+
+```bash
+./deploy-eixo.sh "mensagem do commit"
+```
+
+Exemplo:
+
+```bash
+./deploy-eixo.sh "fix: ajuste no fluxo de login"
+```
+
+Antes de rodar deploy, confirme:
+
+- branch correta;
+- TypeScript sem erro;
+- variáveis de produção configuradas;
+- SSH sem senha funcionando;
+- PM2 ativo na VPS.
 
 ## Módulos
 
@@ -50,28 +86,74 @@ cd frontend && npm run dev
 
 ## Importação de rebanho
 
-O sistema aceita qualquer planilha do produtor — não é necessário usar um modelo específico. Na importação, o usuário mapeia as colunas da sua planilha para os campos do EIXO. Modelos de exemplo estão disponíveis em `frontend/public/` para quem não tem planilha própria.
+O sistema aceita qualquer planilha do produtor. Não é necessário usar um modelo específico.
+
+Na importação, o usuário mapeia as colunas da própria planilha para os campos do EIXO.
+
+Modelos de exemplo ficam em:
+
+```txt
+frontend/public/
+```
+
+Esses modelos são apenas uma conveniência para quem não tem planilha própria.
 
 ## Planos
 
-- **Plano Grátis:** 1 fazenda, até 3 usuários, Rebanho básico + Estrutura da Fazenda + Financeiro + Dashboard (Visão Geral), animais ilimitados
-- **Pago 1:** até 3 fazendas, até 5 usuários, Nutrição, Pesagens avançadas
-- **Pago 2:** ilimitado, todos os módulos, Acasalamento, Confinamento, Rastreabilidade
+### Plano Grátis
+
+- 1 fazenda
+- Até 3 usuários
+- Animais ilimitados
+- Rebanho básico
+- Estrutura da Fazenda
+- Financeiro
+- Visão Geral
+
+### Eixo Gestão
+
+- Até 3 fazendas
+- Até 5 usuários
+- Animais ilimitados
+- Tudo do Plano Grátis
+- Nutrição
+- Pesagens avançadas
+- Exportação Excel/PDF
+
+### Eixo Decisão
+
+- Fazendas ilimitadas
+- Usuários ilimitados
+- Animais ilimitados
+- Todos os módulos
+- Eixo Acasalamento
+- Confinamento
+- Rastreabilidade completa
+- Mapeamento por IA
+- Integração com balanças eletrônicas
 
 ## Identidade visual
 
-Marca guarda-chuva: **EIXO** — cobre todo o ecossistema de produtos futuros.
+Marca guarda-chuva: **EIXO**.
 
-Logo: "EIXO" maiúsculo, tipografia geométrica bold, com o X bicolor — uma diagonal em Grafite `#2F2F2F` (ou branco sobre fundo escuro), outra em Verde EIXO `#B6E23A`.
+A marca cobre o ecossistema de produtos futuros.
 
-### Arquivos de logo (`frontend/public/`)
+Logo: "EIXO" maiúsculo, tipografia geométrica bold, com o X bicolor.
+
+### Arquivos de logo
+
+Arquivos em:
+
+```txt
+frontend/public/
+```
 
 | Arquivo | Uso |
 |---------|-----|
-| `logo_eixo_official.svg` | **Todo o sistema** — sidebar, login, landing, app (logo vetorial fiel) |
+| `logo_eixo_official.svg` | Logo oficial usada no sistema |
 | `eixo-x-icon.svg` | Favicon e ícone de app |
 
-### Paleta EIXO (Manual de Marca v1.0)
+### Paleta EIXO
 
 | Nome | Hex | Uso |
 |------|-----|-----|
@@ -81,7 +163,9 @@ Logo: "EIXO" maiúsculo, tipografia geométrica bold, com o X bicolor — uma di
 | Cinza Claro | `#EDEDED` | Fundo de página, tabs inativas, bordas |
 | Branco | `#FFFFFF` | Fundo de conteúdo, superfícies |
 
-> **Regra de contraste:** `#B6E23A` é uma cor clara — nunca usar texto branco sobre fundo verde. Todo texto sobre verde deve ser `#1a1a1a` ou `#2F2F2F`.
+Regra de contraste:
+
+> `#B6E23A` é uma cor clara. Nunca usar texto branco sobre fundo verde. Todo texto sobre verde deve ser `#1a1a1a` ou `#2F2F2F`.
 
 ### Tipografia
 
@@ -92,60 +176,41 @@ Logo: "EIXO" maiúsculo, tipografia geométrica bold, com o X bicolor — uma di
 
 ## App de Manejo — Área do Vaqueiro
 
-Aplicativo Android voltado para o trabalho em campo, integrado ao sistema web. Um único app com dois perfis de acesso:
+Aplicativo Android integrado ao EIXO, voltado ao trabalho em campo e curral.
+
+Perfis principais:
 
 | Perfil | Descrição |
 |--------|-----------|
-| **Vaqueiro** | Interface simples — receber e confirmar tarefas, registrar ocorrências básicas |
-| **Admin de Campo** | Operação completa em campo — pesagem, movimentação, sanidade, integração com balança eletrônica |
+| `VAQUEIRO` | Interface simples para receber tarefas e registrar ocorrências |
+| `ADMIN_CAMPO` | Operação de campo com pesagem, busca de animais e sincronização |
 
-### Autenticação por código de ativação
+Características principais:
 
-Sem login e senha. O gestor gera um código único no sistema web e repassa ao trabalhador. No primeiro uso, o app vincula o código ao aparelho (device ID). A partir daí, o acesso é automático — o trabalhador só abre o app.
+- ativação por código gerado no sistema web;
+- vínculo do código ao aparelho;
+- uso offline em operações de campo;
+- fila local de pesagens;
+- sincronização ao reconectar;
+- tratamento de conflitos.
 
-**Regras do código:**
-- Validade: 48 horas após geração
-- Uso único no primeiro acesso
-- Vinculado a um único aparelho
-- Não transferível entre dispositivos
+Plano completo:
 
-**Statuses do trabalhador:**
+```txt
+EIXOCAMPO.md
+```
 
-| Status | Descrição |
-|--------|-----------|
-| `PENDENTE_ATIVACAO` | Código gerado, aguardando primeiro uso |
-| `ATIVO` | Código ativado, aparelho vinculado |
-| `CODIGO_EXPIRADO` | 48h sem ativação |
-| `BLOQUEADO` | Acesso revogado pelo gestor |
-| `APARELHO_REVOGADO` | Aparelho desvinculado, novo código necessário |
+Protótipo de referência:
 
-**Alertas automáticos:** exibidos no header do sistema web, vinculados a tarefas e processos com prazo — sem alertas genéricos por inatividade.
+```txt
+app-de-manejo/
+```
 
-### Perfis de acesso
+## Documentação
 
-| Perfil | Destino |
-|--------|---------|
-| `VAQUEIRO` | Tela de ocorrências do campo |
-| `ADMIN_CAMPO` | Tela de Gerenciamento (pesagem, busca de animais) |
-
-### Gerenciamento V1 — ADMIN_CAMPO
-
-- Busca única de animais (sem distinção Comercial/P.O. para o operador)
-- Pesagem manual com funcionamento offline
-- Fila local de pesagens com status: `enviado`, `pendente`, `erro`, `conflito`
-- Sincronização automática ao reconectar + botão "Sincronizar agora"
-- Tratamento de conflito de pesagem (mesmo animal na mesma sessão ou data duplicada no servidor)
-
-### Integração com balanças eletrônicas
-
-Coimma / Tru-Test S3 via Bluetooth — previsto para fase futura.
-
-Protótipo de referência: `app-de-manejo/`
-
----
-
-## Referência técnica
-
-- Instruções para Claude: `CLAUDE.md`
-- Regras de backend e Prisma: `AGENTS.md`
-- Plano completo do EIXO Campo: `EIXOCAMPO.md`
+| Arquivo | Finalidade |
+|--------|------------|
+| `AGENTS.md` | Instruções para Codex e regras técnicas do projeto |
+| `DEPLOY.md` | Deploy e operação em produção |
+| `EIXOCAMPO.md` | Plano completo do App de Manejo |
+| `README.md` | Visão geral do projeto |
