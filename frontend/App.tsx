@@ -1300,6 +1300,7 @@ const AppContent: React.FC = () => {
                             <AssistantChat
                                 onClose={() => setIsSupportOpen(false)}
                                 farmId={selectedFarmId}
+                                onNavigateToView={setActiveView}
                             />
                         </div>
                     )}

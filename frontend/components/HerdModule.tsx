@@ -2247,7 +2247,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     </div>
                 )}
                 <div ref={headerFilterRef} className="overflow-x-auto">
-                    <table className="min-w-full w-max table-auto text-left text-sm text-[var(--eixo-text-muted)]">
+                    <table className="w-full table-fixed text-left text-xs text-[var(--eixo-text-muted)] [&_td]:overflow-hidden [&_td]:text-ellipsis [&_td]:px-2 [&_td]:py-2.5 [&_th]:px-2 [&_th]:py-2.5">
+                        <colgroup>
+                            <col className="w-[3%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[6%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[10%]" />
+                            <col className="w-[8%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[10%]" />
+                            <col className="w-[11%]" />
+                            <col className="w-[10%]" />
+                        </colgroup>
                         <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                             <tr>
                                 <th scope="col" className="w-10 whitespace-nowrap px-4 py-3 border-r border-[var(--eixo-border)]">
@@ -2269,7 +2283,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     />
                                 </th>
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'identificacao' ? null : 'identificacao')} className={`relative cursor-pointer whitespace-nowrap px-4 py-3 border-r border-[var(--eixo-border)] ${isHeaderFiltered('identificacao') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
-                                    <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center justify-between gap-1">
                                         <span>ID</span>
                                         <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('identificacao'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
                                             {getSortIndicator('identificacao')}
@@ -2278,7 +2292,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {renderHeaderFilter('identificacao')}
                                 </th>
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'registro' ? null : 'registro')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('registro') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
-                                    <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center justify-between gap-1">
                                         <span>Registro</span>
                                         <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('registro'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
                                             {getSortIndicator('registro')}
@@ -2287,7 +2301,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {renderHeaderFilter('registro')}
                                 </th>
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'raca' ? null : 'raca')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('raca') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
-                                    <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center justify-between gap-1">
                                         <span>Raça</span>
                                         <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('raca'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
                                             {getSortIndicator('raca')}
@@ -2296,7 +2310,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {renderHeaderFilter('raca')}
                                 </th>
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'sexo' ? null : 'sexo')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('sexo') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
-                                    <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center justify-between gap-1">
                                         <span>Sexo</span>
                                         <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('sexo'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
                                             {getSortIndicator('sexo')}
@@ -2305,13 +2319,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {renderHeaderFilter('sexo')}
                                 </th>
                                 <th scope="col" className="whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('idade')} className="flex items-center justify-between gap-2 w-full">
+                                    <button type="button" onClick={() => handleSort('idade')} className="flex w-full items-center justify-between gap-1">
                                         <span>Idade</span>
                                         <span className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)]">{getSortIndicator('idade')}</span>
                                     </button>
                                 </th>
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'pasto' ? null : 'pasto')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('pasto') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
-                                    <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center justify-between gap-1">
                                         <span>Pasto</span>
                                         <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('pasto'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
                                             {getSortIndicator('pasto')}
@@ -2320,7 +2334,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {renderHeaderFilter('pasto')}
                                 </th>
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'lote' ? null : 'lote')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('lote') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
-                                    <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center justify-between gap-1">
                                         <span>Lote</span>
                                         <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('lote'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
                                             {getSortIndicator('lote')}
@@ -2329,7 +2343,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {renderHeaderFilter('lote')}
                                 </th>
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'categoria' ? null : 'categoria')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('categoria') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
-                                    <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center justify-between gap-1">
                                         <span>Categoria</span>
                                         <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('categoria'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
                                             {getSortIndicator('categoria')}
@@ -2338,8 +2352,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {renderHeaderFilter('categoria')}
                                 </th>
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'peso' ? null : 'peso')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('peso') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
-                                    <div className="flex items-center justify-between gap-2">
-                                        <span>Último peso</span>
+                                    <div className="flex items-center justify-between gap-1">
+                                        <span>Peso</span>
                                         <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('ultimoPeso'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
                                             {getSortIndicator('ultimoPeso')}
                                         </button>
@@ -2347,13 +2361,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     {renderHeaderFilter('peso')}
                                 </th>
                                 <th scope="col" className="whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)]">
-                                    <button type="button" onClick={() => handleSort('gmd')} className="flex items-center justify-between gap-2 w-full">
+                                    <button type="button" onClick={() => handleSort('gmd')} className="flex w-full items-center justify-between gap-1">
                                         <span>GMD</span>
                                         <span className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)]">{getSortIndicator('gmd')}</span>
                                     </button>
                                 </th>
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'nutricao' ? null : 'nutricao')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('nutricao') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
-                                    <div className="flex items-center justify-between gap-2">
+                                    <div className="flex items-center justify-between gap-1">
                                         <span>Nutrição</span>
                                         <button type="button" onClick={(event) => { event.stopPropagation(); handleSort('nutricao'); }} className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
                                             {getSortIndicator('nutricao')}
@@ -2409,20 +2423,20 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             />
                                         </td>
                                         <th scope="row" className="whitespace-nowrap border-r border-[var(--eixo-border)] px-4 py-3 font-bold text-[var(--eixo-text)]">
-                                            <div>{animal.identificacao}</div>
+                                            <div className="truncate" title={animal.identificacao}>{animal.identificacao}</div>
                                         </th>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {animal.registro
-                                                ? <span className="inline-flex items-center rounded-full bg-[#f0f9d4] px-2.5 py-0.5 text-xs font-semibold text-[#3a5c10] border border-[#B6E23A]">{animal.registro}</span>
+                                                ? <span className="inline-flex max-w-full items-center truncate rounded-full border border-[#B6E23A] bg-[#f0f9d4] px-2 py-0.5 text-[11px] font-semibold text-[#3a5c10]" title={animal.registro}>{animal.registro}</span>
                                                 : <span className="text-[var(--eixo-text-muted)]">—</span>
                                             }
                                         </td>
-                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.raca}</td>
+                                        <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={animal.raca}>{animal.raca}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.sexo}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{calculateAge(animal.dataNascimento)}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {animal.currentPaddockName ? (
-                                                <span className="text-[#2f3a2d]">{animal.currentPaddockName}</span>
+                                                <span className="block truncate text-[#2f3a2d]" title={animal.currentPaddockName}>{animal.currentPaddockName}</span>
                                             ) : (
                                                 <div className="flex flex-col items-start gap-1">
                                                     <span className="text-[#6d6558]">Sem pasto</span>
@@ -2442,8 +2456,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                 </div>
                                             )}
                                         </td>
-                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{lots.find((l) => l.id === animal.lotId)?.name || '—'}</td>
-                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.categoria || '—'}</td>
+                                        <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={lots.find((l) => l.id === animal.lotId)?.name || ''}>{lots.find((l) => l.id === animal.lotId)?.name || '—'}</td>
+                                        <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={animal.categoria || ''}>{animal.categoria || '—'}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {(() => {
                                                 const diasDesdePesagem = animal.dataUltimaPesagem
@@ -2491,8 +2505,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                             : 'text-[var(--eixo-danger)]';
                                                 return (
                                                     <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="h-1.5 w-10 flex-shrink-0 overflow-hidden rounded-full bg-[var(--eixo-surface-soft)]">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <div className="h-1.5 w-8 flex-shrink-0 overflow-hidden rounded-full bg-[var(--eixo-surface-soft)]">
                                                                 <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
                                                             </div>
                                                             <span className={`text-sm font-semibold ${colorCls}`}>
@@ -2512,7 +2526,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                 );
                                             })()}
                                         </td>
-                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">
+                                        <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={animal.nutritionPlan?.nome || ''}>
                                             {animal.nutritionPlan?.nome || '—'}
                                         </td>
                                     </tr>

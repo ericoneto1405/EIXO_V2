@@ -17,6 +17,7 @@ interface RecentConversation {
 interface AssistantChatProps {
     onClose: () => void;
     farmId: string | null;
+    onNavigateToView?: (view: string) => void;
 }
 
 const SUGESTOES = [
@@ -47,7 +48,7 @@ const SendIcon: React.FC = () => (
     </svg>
 );
 
-const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
+const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNavigateToView }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -201,10 +202,42 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId }) => {
         }
     };
 
-    const renderInlineText = (value: string, keyPrefix: string) =>
-        value.split(/\*\*(.*?)\*\*/g).map((part, index) =>
-            index % 2 === 1 ? <strong key={`${keyPrefix}-${index}`}>{part}</strong> : part,
-        );
+    const handleInternalLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+        if (!href.startsWith('eixo:view:')) return;
+        event.preventDefault();
+        const targetView = decodeURIComponent(href.replace('eixo:view:', ''));
+        if (!targetView) return;
+        onNavigateToView?.(targetView);
+        onClose();
+    };
+
+    const renderInlineText = (value: string, keyPrefix: string) => {
+        const parts = value.split(/(\*\*.*?\*\*|\[.*?\]\((?:eixo:view:[^)]+|\/[^)]*)\))/g);
+        return parts.map((part, index) => {
+            const bold = part.match(/^\*\*(.*?)\*\*$/);
+            if (bold) {
+                return <strong key={`${keyPrefix}-bold-${index}`}>{bold[1]}</strong>;
+            }
+
+            const link = part.match(/^\[(.*?)\]\((eixo:view:[^)]+|\/[^)]*)\)$/);
+            if (link) {
+                const label = link[1];
+                const href = link[2];
+                return (
+                    <a
+                        key={`${keyPrefix}-link-${index}`}
+                        href={href}
+                        onClick={(event) => handleInternalLinkClick(event, href)}
+                        className="font-semibold text-[#2563eb] underline decoration-[#93c5fd] underline-offset-2 hover:text-[#1d4ed8]"
+                    >
+                        {label}
+                    </a>
+                );
+            }
+
+            return part;
+        });
+    };
 
     // Converte markdown básico (**negrito**, listas numeradas e com bullet)
     const renderText = (text: string) => {

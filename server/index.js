@@ -2143,6 +2143,8 @@ Seu objetivo é orientar o usuário no uso do sistema com respostas simples, pr�
 ## Como responder
 - Foque em "como fazer" dentro do EIXO.
 - Quando possível, cite o caminho da tela (ex.: "Manejo do Rebanho > Animais").
+- Quando houver link interno disponível no contexto, inclua um link em Markdown.
+- Use apenas links internos informados no contexto. Não invente URL.
 - Se a dúvida for ambígua, faça 1 pergunta curta para confirmar contexto.
 - Se não tiver certeza, diga isso com transparência e oriente a falar com o suporte humano.
 - Use o contexto do atendimento para personalizar a resposta.
@@ -2177,25 +2179,25 @@ Seu objetivo é orientar o usuário no uso do sistema com respostas simples, pr�
 ## Dúvidas comuns (base de orientação)
 
 **Como cadastrar uma fazenda?**
-1. Acesse "Estrutura da Fazenda" > "Fazendas e Pastos".
+1. Acesse [Estrutura da Fazenda](eixo:view:Fazendas).
 2. Clique em "Adicionar fazenda".
 3. Preencha os dados básicos e salve.
 4. Depois, cadastre os pastos da fazenda.
 
 **Como importar animais por planilha?**
-1. Acesse "Manejo do Rebanho" > aba "Animais".
+1. Acesse [Manejo do Rebanho](eixo:view:Rebanho%20Comercial) > aba "Animais".
 2. Clique em "Importar planilha".
 3. Revise o mapeamento das colunas.
 4. Confirme a importação.
 
 **Como registrar pesagem?**
-1. Em "Manejo do Rebanho" > "Animais", localize o animal.
+1. Em [Manejo do Rebanho](eixo:view:Rebanho%20Comercial) > "Animais", localize o animal.
 2. Clique no botão de ações (⋮).
 3. Abra a aba "Pesagens".
 4. Registre data e peso.
 
 **Como lançar despesa?**
-1. Acesse "Financeiro" > "Lançamentos".
+1. Acesse [Financeiro](eixo:view:Financeiro) > "Lançamentos".
 2. Clique em "Novo lançamento".
 3. Selecione tipo "Saída", informe categoria, valor e data.
 4. Salve.
@@ -2225,45 +2227,59 @@ const supportAlertCooldownStore = new Map();
 const SUPPORT_MODULE_CATALOG = [
     {
         name: 'Estrutura da Fazenda',
+        href: 'eixo:view:Fazendas',
         entitlementCodes: ['CORE'],
         benefit: 'organiza fazendas, pastos e base operacional.',
         salesTrigger: 'cadastro de fazenda, pasto, mapa ou estrutura.',
     },
     {
         name: 'Manejo do Rebanho',
+        href: 'eixo:view:Rebanho%20Comercial',
         entitlementCodes: ['CORE'],
         benefit: 'centraliza animais, lotes, importação, pesagens e eventos.',
         salesTrigger: 'controle de animais, planilhas, peso, compra, venda ou lotes.',
     },
     {
         name: 'Financeiro',
+        href: 'eixo:view:Financeiro',
         entitlementCodes: ['CORE', 'EIXO_GESTAO', 'EIXO_DECISAO'],
         benefit: 'liga lançamentos, despesas, receitas e visão econômica da fazenda.',
         salesTrigger: 'despesas, receitas, lucro, fluxo de caixa, compra ou venda.',
     },
     {
         name: 'Nutrição',
+        href: 'eixo:view:Nutri%C3%A7%C3%A3o',
         entitlementCodes: ['NUTRITION', 'EIXO_NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'],
         benefit: 'controla dieta, consumo, custo por lote e ingredientes em risco.',
         salesTrigger: 'cocho, dieta, trato, consumo, suplemento, ração ou custo alimentar.',
     },
     {
         name: 'Reprodução',
+        href: '/genetics/reproducao',
         entitlementCodes: ['GENETICS', 'PO', 'EIXO_DECISAO'],
         benefit: 'organiza coberturas, diagnósticos, partos e KPIs reprodutivos.',
         salesTrigger: 'prenhez, parto, matriz, cobertura, IATF ou estação de monta.',
     },
     {
         name: 'Eixo Acasalamento',
+        href: '/genetics/acasalamento',
         entitlementCodes: ['GENETICS', 'EIXO_DECISAO'],
         benefit: 'apoia decisões de acasalamento com histórico e objetivo produtivo.',
         salesTrigger: 'acasalamento, touro, sêmen, botijão, matriz ou genética.',
     },
     {
         name: 'Gestão Comercial',
+        href: 'eixo:view:Gest%C3%A3o%20Comercial',
         entitlementCodes: ['EIXO_DECISAO'],
         benefit: 'apoia negociação, mercado, oportunidades e decisão de venda.',
         salesTrigger: 'venda, mercado, comprador, negociação, arroba ou margem.',
+    },
+    {
+        name: 'Botijão de Sêmen',
+        href: 'eixo:view:Estoque%20e%20Equipamentos',
+        entitlementCodes: ['CORE', 'GENETICS', 'EIXO_DECISAO'],
+        benefit: 'organiza estoque de sêmen usado no Eixo Acasalamento.',
+        salesTrigger: 'sêmen, botijão, doses, estoque de touro ou acasalamento.',
     },
 ];
 
@@ -2315,6 +2331,11 @@ const buildSupportContextText = async (req, { farmId = null, currentPath = null 
     const salesPlaybook = SUPPORT_MODULE_CATALOG
         .map((module) => `- ${module.name}: vender quando houver dor sobre ${module.salesTrigger} Benefício: ${module.benefit}`)
         .join('\n');
+    const internalLinks = [
+        ...SUPPORT_MODULE_CATALOG.map((module) => `- [${module.name}](${module.href})`),
+        '- [Ver planos](/planos)',
+    ]
+        .join('\n');
 
     return [
         'Contexto interno do atendimento. Use para responder, mas não copie como relatório para o cliente.',
@@ -2329,10 +2350,13 @@ const buildSupportContextText = async (req, { farmId = null, currentPath = null 
         `Fazenda selecionada: ${farm ? `${farm.name}${farm.city ? ` (${farm.city})` : ''}` : 'não selecionada ou não encontrada'}`,
         `Tela atual: ${currentPath || 'não informada'}`,
         '',
+        'Links internos permitidos para usar em Markdown:',
+        internalLinks,
+        '',
         'Playbook comercial interno:',
         salesPlaybook,
         '',
-        'Instrução final: responda curto, resolva a dúvida, e só sugira upgrade quando a dor do cliente combinar com um módulo bloqueado.',
+        'Instrução final: responda curto, resolva a dúvida, use links internos úteis e só sugira upgrade quando a dor do cliente combinar com um módulo bloqueado.',
     ].join('\n');
 };
 
