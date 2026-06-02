@@ -342,7 +342,19 @@ const findFarmByCoordinates = async ({ lat, lng, excludeFarmId = null }) => {
 };
 
 const parseNumber = (value) => {
-    const parsed = Number(value);
+    const raw = String(value ?? '').trim().replace(/[^\d,.\-]/g, '');
+    if (!raw) return null;
+    const commaIndex = raw.lastIndexOf(',');
+    const dotIndex = raw.lastIndexOf('.');
+    let normalized = raw;
+    if (commaIndex >= 0 && dotIndex >= 0) {
+        normalized = commaIndex > dotIndex
+            ? raw.replace(/\./g, '').replace(',', '.')
+            : raw.replace(/,/g, '');
+    } else if (commaIndex >= 0) {
+        normalized = raw.replace(',', '.');
+    }
+    const parsed = Number(normalized);
     return Number.isFinite(parsed) ? parsed : null;
 };
 

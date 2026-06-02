@@ -39,8 +39,9 @@ type ImportCorrectionRow = {
         sisbov: string;
         maeNome: string;
         paiNome: string;
+        ultimoPeso: string;
     };
-    fieldErrors: Partial<Record<'brinco' | 'sexo' | 'raca' | 'dataNascimento' | 'registro', string>>;
+    fieldErrors: Partial<Record<'brinco' | 'sexo' | 'raca' | 'dataNascimento' | 'registro' | 'ultimoPeso', string>>;
 };
 
 const LOT_OBJECTIVE_OPTIONS = [
@@ -475,6 +476,23 @@ function normalizeStr(s: string) {
         .replace(/\s+/g, ' ')
         .trim();
 }
+
+const parseImportNumber = (raw: string): number | null => {
+    const cleaned = String(raw ?? '').trim().replace(/[^\d,.\-]/g, '');
+    if (!cleaned) return null;
+    const commaIndex = cleaned.lastIndexOf(',');
+    const dotIndex = cleaned.lastIndexOf('.');
+    let normalized = cleaned;
+    if (commaIndex >= 0 && dotIndex >= 0) {
+        normalized = commaIndex > dotIndex
+            ? cleaned.replace(/\./g, '').replace(',', '.')
+            : cleaned.replace(/,/g, '');
+    } else if (commaIndex >= 0) {
+        normalized = cleaned.replace(',', '.');
+    }
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+};
 
 function detectField(header: string): string | null {
     const normalized = normalizeStr(header);
@@ -1254,8 +1272,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 if (pesoCol) {
                     const vals = rows
                         .slice(0, 20)
-                        .map((row) => parseFloat(row[pesoCol]))
-                        .filter((value) => !Number.isNaN(value));
+                        .map((row) => parseImportNumber(row[pesoCol]))
+                        .filter((value): value is number => value !== null);
                     const allInArrobaRange = vals.length > 0 &&
                         vals.every((value) => value >= 8 && value <= 65);
                     if (allInArrobaRange) suggestArroba = true;
@@ -1312,8 +1330,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         const mappingEntries = Object.entries(importMapping);
         try {
             const parsePesoImportado = (raw: string): number | null => {
-                const pesoNum = parseFloat(raw.replace(',', '.'));
-                if (Number.isNaN(pesoNum) || pesoNum <= 0) return null;
+                const pesoNum = parseImportNumber(raw);
+                if (pesoNum === null || pesoNum <= 0) return null;
                 return importWeightUnit === 'arroba' ? Math.round(pesoNum * 15) : pesoNum;
             };
             const getValue = (row: Record<string, string>, field: string) => {
@@ -1327,9 +1345,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         .toLowerCase()
                         .normalize('NFD')
                         .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/[^a-z0-9 ]/g, ' ')
+                        .replace(/\s+/g, ' ')
                         .trim();
-                    const dateMatch = headerNorm.match(/^data\s*pesagem\s*(\d+)$/);
-                    const weightMatch = headerNorm.match(/^peso\s*pesagem\s*(\d+)$/);
+                    const dateMatch = headerNorm.match(/^data\s*pesagem\s*(\d+)(?:\s.*)?$/);
+                    const weightMatch = headerNorm.match(/^peso\s*pesagem\s*(\d+)(?:\s.*)?$/);
                     if (dateMatch) {
                         const key = dateMatch[1];
                         const prev = grouped.get(key) ?? {};
@@ -1398,7 +1418,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     sexo: normalizeSexo(getValue(row, 'sexo')),
                     dataNascimento: dataNasc || undefined,
                     registro: getValue(row, 'registro') || undefined,
-                    ultimoPeso: ultimoPeso || undefined,
+                    ultimoPeso: ultimoPeso ?? undefined,
                     categoria: normalizeImportedCategory(getValue(row, 'categoria')) || undefined,
                     dataEntrada: dataEntrada || undefined,
                     valorCompra: valorCompra || undefined,
@@ -1603,8 +1623,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
             const pesoRaw = getValue(row, 'ultimoPeso');
             if (pesoRaw) {
-                const parsedPeso = parseFloat(pesoRaw.replace(',', '.'));
-                if (Number.isNaN(parsedPeso) || parsedPeso <= 0) {
+                const parsedPeso = parseImportNumber(pesoRaw);
+                if (parsedPeso === null || parsedPeso <= 0) {
                     errors.push(`Linha ${i + 2} (${brinco}): peso atual inválido.`);
                     failedRows.push(row);
                     continue;
@@ -1649,6 +1669,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             if (!row.values.raca.trim()) fieldErrors.raca = 'Raça obrigatória';
             if (row.values.dataNascimento.trim() && !parseBirthDateOrAge(row.values.dataNascimento.trim())) {
                 fieldErrors.dataNascimento = 'Data/idade inválida';
+            }
+            if (row.values.ultimoPeso.trim()) {
+                const parsedPeso = parseImportNumber(row.values.ultimoPeso.trim());
+                if (parsedPeso === null || parsedPeso <= 0) {
+                    fieldErrors.ultimoPeso = 'Peso inválido';
+                }
             }
             const isPoRow = resolvedMode === 'PO'
                 || Boolean(row.isPoCandidate)
@@ -1701,6 +1727,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 sisbov: getValue(row, 'sisbov'),
                 maeNome: getValue(row, 'mae'),
                 paiNome: getValue(row, 'pai'),
+                ultimoPeso: getValue(row, 'ultimoPeso'),
             },
             fieldErrors: {},
         }));
@@ -1751,6 +1778,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         return birth.toISOString().slice(0, 10);
     };
 
+    const parseImportWeight = (raw: string): number | undefined => {
+        if (!raw) return undefined;
+        const value = parseImportNumber(raw);
+        if (value === null || value <= 0) return undefined;
+        return importWeightUnit === 'arroba' ? Math.round(value * 15) : value;
+    };
+
     const handleImportCorrectedRows = async () => {
         if (!farmId || !importProgress) return;
         const normalized = validateCorrectionRows(importCorrectionRows);
@@ -1777,6 +1811,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 sisbov: row.values.sisbov.trim() || undefined,
                 maeNome: row.values.maeNome.trim() || undefined,
                 paiNome: row.values.paiNome.trim() || undefined,
+                ultimoPeso: parseImportWeight(row.values.ultimoPeso.trim()),
             });
 
             const readyItems = readyRows.map(toItem);
@@ -3752,6 +3787,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                             <th className="px-2 py-2 text-left">ID</th>
                                                                             <th className="px-2 py-2 text-left">Sexo</th>
                                                                             <th className="px-2 py-2 text-left">Raça</th>
+                                                                            <th className="px-2 py-2 text-left">Peso</th>
                                                                             <th className="px-2 py-2 text-left">Data/Idade (opcional)</th>
                                                                             <th className="px-2 py-2 text-left">Registro</th>
                                                                         </tr>
@@ -3789,6 +3825,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                                         value={row.values.raca}
                                                                                         onChange={(event) => setImportCorrectionRows((prev) => prev.map((item) => item.id === row.id ? { ...item, values: { ...item.values, raca: event.target.value } } : item))}
                                                                                         className={`w-full rounded-lg border px-2 py-1 ${row.fieldErrors.raca ? 'border-[#ef4444]' : 'border-[var(--eixo-border)]'}`}
+                                                                                    />
+                                                                                </td>
+                                                                                <td className="px-2 py-2">
+                                                                                    <input
+                                                                                        value={row.values.ultimoPeso}
+                                                                                        onChange={(event) => setImportCorrectionRows((prev) => prev.map((item) => item.id === row.id ? { ...item, values: { ...item.values, ultimoPeso: event.target.value } } : item))}
+                                                                                        className={`w-full rounded-lg border px-2 py-1 ${row.fieldErrors.ultimoPeso ? 'border-[#ef4444]' : 'border-[var(--eixo-border)]'}`}
                                                                                     />
                                                                                 </td>
                                                                                 <td className="px-2 py-2">
