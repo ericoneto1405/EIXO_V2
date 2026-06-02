@@ -40,6 +40,23 @@ const newRow = (racaPadrao = ''): AnimalRow => ({
 const inputCls =
     'w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:border-[var(--eixo-green)] focus:outline-none';
 
+const parseImportNumber = (raw: string): number | null => {
+    const cleaned = String(raw ?? '').trim().replace(/[^\d,.\-]/g, '');
+    if (!cleaned) return null;
+    const commaIndex = cleaned.lastIndexOf(',');
+    const dotIndex = cleaned.lastIndexOf('.');
+    let normalized = cleaned;
+    if (commaIndex >= 0 && dotIndex >= 0) {
+        normalized = commaIndex > dotIndex
+            ? cleaned.replace(/\./g, '').replace(',', '.')
+            : cleaned.replace(/,/g, '');
+    } else if (commaIndex >= 0) {
+        normalized = cleaned.replace(',', '.');
+    }
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
 const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
     isOpen,
     onClose,
@@ -113,11 +130,17 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
             setError('Há brincos duplicados na lista.'); return;
         }
 
+        const invalidWeightRow = validRows.find((r) => r.peso.trim() && ((parseImportNumber(r.peso) ?? 0) <= 0));
+        if (invalidWeightRow) {
+            setError(`Peso inválido para o animal ${invalidWeightRow.brinco.trim()}.`);
+            return;
+        }
+
         const animals = validRows.map((r) => ({
             brinco: r.brinco.trim(),
             raca: r.raca.trim() || racaPadrao.trim() || 'Indefinida',
             sexo: r.sexo,
-            ultimoPeso: r.peso ? parseFloat(r.peso.replace(',', '.')) || undefined : undefined,
+            ultimoPeso: r.peso ? parseImportNumber(r.peso) ?? undefined : undefined,
         }));
 
         setSaving(true);
@@ -132,7 +155,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                     lotId: lotId || undefined,
                     dataCompra,
                     valorPorCabeca: valorPorCabeca
-                        ? parseFloat(valorPorCabeca.replace(',', '.')) || undefined
+                        ? parseImportNumber(valorPorCabeca) ?? undefined
                         : undefined,
                     animals,
                 }),

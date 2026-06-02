@@ -8568,7 +8568,7 @@ app.post('/animals/batch', async (req, res) => {
     }
 
     const compraDate = dataCompra ? parseDateValue(dataCompra) : new Date();
-    const parsedValor = valorPorCabeca ? parseFloat(valorPorCabeca) : null;
+    const parsedValor = valorPorCabeca ? parseNumber(valorPorCabeca) : null;
     const catMap = HERD_EVENT_CATEGORY_MAP['COMPRA'];
 
     // Valida brincos duplicados no banco
@@ -8594,7 +8594,12 @@ app.post('/animals/batch', async (req, res) => {
                     throw new Error(`Linha ${index + 1}: campo inválido "pesoAtual". Use "ultimoPeso".`);
                 }
                 const sexoEnum = normalizeSexo(a.sexo || 'Macho');
-                const peso = a.ultimoPeso ? parseFloat(a.ultimoPeso) : null;
+                const peso = (a.ultimoPeso !== undefined && a.ultimoPeso !== null && a.ultimoPeso !== '')
+                    ? parseNumber(a.ultimoPeso)
+                    : null;
+                if (peso !== null && peso <= 0) {
+                    throw new Error(`Linha ${index + 1}: peso inválido.`);
+                }
 
                 const animal = await tx.animal.create({
                     data: {
@@ -8611,6 +8616,17 @@ app.post('/animals/batch', async (req, res) => {
                         currentPaddockId: paddockId,
                     },
                 });
+
+                if (peso && peso > 0) {
+                    await tx.weighing.create({
+                        data: {
+                            animalId: animal.id,
+                            data: compraDate,
+                            peso,
+                            gmd: 0,
+                        },
+                    });
+                }
 
                 await tx.paddockMove.create({
                     data: { farmId, paddockId, animalId: animal.id, startAt: compraDate },
