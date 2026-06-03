@@ -1232,8 +1232,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         event.target.value = '';
 
         const ext = file.name.toLowerCase();
-        if (!ext.endsWith('.xlsx')) {
-            setUploadError('Envie um arquivo .xlsx.');
+        if (!ext.endsWith('.xlsx') && !ext.endsWith('.xls') && !ext.endsWith('.csv')) {
+            setUploadError('Envie um arquivo .xlsx, .xls ou .csv.');
             return;
         }
         if (file.size > MAX_IMPORT_FILE_BYTES) {
@@ -2908,7 +2908,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             onClick={handleUploadClick}
                                         >
                                             <UploadIcon className="h-[18px] w-[18px]" />
-                                            <span className="ml-2 hidden sm:block">Importar planilha</span>
+                                            <span className="ml-2 hidden sm:block">Entrada por planilha</span>
                                         </button>
                                         <button
                                             className="flex h-10 items-center justify-center rounded-[10px] border border-dashed border-[var(--eixo-border)] bg-transparent px-[10px] text-[13px] font-semibold text-[var(--eixo-text-muted)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
@@ -3531,7 +3531,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
                             <div>
                                 <h3 className="text-lg font-bold text-[var(--eixo-text)]">
-                                    Importar Rebanho
+                                    Entrada de animais por planilha
                                 </h3>
                                 {(() => {
                                     const mappedCount = Object.values(importMapping).filter(Boolean).length;
@@ -3539,7 +3539,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     return (
                                         <p className="text-sm text-[var(--eixo-text-muted)]">
                                             {importRows.length} animais ·{' '}
-                                            {mappedCount} de {importHeaders.length} colunas mapeadas
+                                            {mappedCount} de {importHeaders.length} colunas reconhecidas
                                             {unmappedCount > 0 && (
                                                 <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
                                                     {unmappedCount} coluna{unmappedCount > 1 ? 's' : ''} serão ignoradas
@@ -3564,26 +3564,38 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 <>
                                     <div className="grid gap-3 lg:grid-cols-[300px_1fr] xl:grid-cols-[320px_1fr]">
                                         <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
-                                            <p className="text-[28px] font-extrabold leading-tight text-[var(--eixo-text)]">Importar Rebanho</p>
+                                            <p className="text-[28px] font-extrabold leading-tight text-[var(--eixo-text)]">Entrada por planilha</p>
+                                            <div className="mt-4 space-y-2">
+                                                {[
+                                                    ['1', 'Escolher arquivo'],
+                                                    ['2', 'Conferir colunas'],
+                                                    ['3', 'Confirmar entrada'],
+                                                ].map(([step, label]) => (
+                                                    <div key={step} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${step === '2' ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] font-semibold text-[var(--eixo-text)]' : 'border-[var(--eixo-border)] text-[var(--eixo-text-muted)]'}`}>
+                                                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-[var(--eixo-text)]">{step}</span>
+                                                        <span>{label}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
                                             <p className="mt-4 max-w-[29ch] text-sm text-[var(--eixo-text-muted)]">
-                                                Primeiramente selecione o arquivo <span className="font-semibold">xlsx</span> em seu computador.
+                                                O arquivo já foi carregado. Agora confira quais colunas serão usadas no cadastro dos animais.
                                             </p>
                                             <p className="mt-3 max-w-[29ch] text-sm text-[var(--eixo-text-muted)]">
-                                                Em seguida, selecione a coluna desejada ao lado e nos diga em qual categoria ela se encaixa.
+                                                As colunas sem uso serão ignoradas.
                                             </p>
-                                            <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">Valores que podem ser importados:</p>
+                                            <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">Dados principais:</p>
                                             <ul className="mt-2 list-disc pl-5 text-sm text-[var(--eixo-text-muted)]">
-                                                <li>ID</li>
-                                                <li>SEXO</li>
-                                                <li>RAÇA</li>
-                                                <li>PESO</li>
+                                                <li>ID do animal</li>
+                                                <li>Sexo</li>
+                                                <li>Raça</li>
+                                                <li>Peso</li>
                                             </ul>
                                         </div>
 
                                         <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
                                             {!Object.values(importMapping).includes('brinco') && (
                                                 <div className="mb-3 rounded-lg border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-2 text-xs text-[var(--eixo-graphite)]">
-                                                    Selecione a coluna que representa o <span className="font-semibold">ID</span> para continuar.
+                                                    Escolha qual coluna é o <span className="font-semibold">ID do animal</span> para continuar.
                                                 </div>
                                             )}
                                             <div className="overflow-x-auto">
@@ -3597,11 +3609,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                                         onChange={(e) => setImportMapping((prev) => ({ ...prev, [h]: e.target.value }))}
                                                                         className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                                                                     >
-                                                                        <option value="">Excluir campo</option>
-                                                                        <option value="brinco">ID</option>
-                                                                        <option value="sexo">SEXO</option>
-                                                                        <option value="raca">RAÇA</option>
-                                                                        <option value="ultimoPeso">PESO</option>
+                                                                        <option value="">Ignorar esta coluna</option>
+                                                                        <option value="brinco">Esta coluna é o ID do animal</option>
+                                                                        <option value="sexo">Esta coluna é o sexo</option>
+                                                                        <option value="raca">Esta coluna é a raça</option>
+                                                                        <option value="ultimoPeso">Esta coluna é o peso</option>
                                                                     </select>
                                                                 </th>
                                                             ))}
@@ -3630,6 +3642,38 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">
                                                 Apenas as 20 primeiras linhas são exibidas no preview.
                                             </p>
+                                            {(() => {
+                                                const mappedFields = Object.values(importMapping).filter(Boolean);
+                                                const getColumnValue = (row: Record<string, string>, field: string) => {
+                                                    const column = Object.entries(importMapping).find(([, value]) => value === field)?.[0];
+                                                    return column ? (row[column] || '').trim() : '';
+                                                };
+                                                const rowsWithIssue = importRows.filter((row) => {
+                                                    const missingRequired = !getColumnValue(row, 'brinco') || !getColumnValue(row, 'sexo') || !getColumnValue(row, 'raca');
+                                                    return missingRequired;
+                                                }).length;
+                                                const ignoredColumns = importHeaders.length - mappedFields.length;
+                                                return (
+                                                    <div className="mt-4 grid gap-2 sm:grid-cols-4">
+                                                        <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                                            <p className="text-[10px] font-semibold uppercase text-[var(--eixo-text-muted)]">Animais encontrados</p>
+                                                            <p className="text-lg font-bold text-[var(--eixo-text)]">{importRows.length}</p>
+                                                        </div>
+                                                        <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                                            <p className="text-[10px] font-semibold uppercase text-[var(--eixo-text-muted)]">Colunas reconhecidas</p>
+                                                            <p className="text-lg font-bold text-[var(--eixo-text)]">{mappedFields.length}</p>
+                                                        </div>
+                                                        <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                                            <p className="text-[10px] font-semibold uppercase text-[var(--eixo-text-muted)]">Colunas ignoradas</p>
+                                                            <p className="text-lg font-bold text-[var(--eixo-text)]">{ignoredColumns}</p>
+                                                        </div>
+                                                        <div className={`rounded-lg border px-3 py-2 ${rowsWithIssue > 0 ? 'border-[#efc2ba] bg-[#fff2ef]' : 'border-[#c8ddc4] bg-[var(--eixo-green-soft)]'}`}>
+                                                            <p className="text-[10px] font-semibold uppercase text-[var(--eixo-text-muted)]">Animais com erro</p>
+                                                            <p className="text-lg font-bold text-[var(--eixo-text)]">{rowsWithIssue}</p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </>
@@ -3638,25 +3682,34 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             {importProgress && (
                                 <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
                                     <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
-                                        <p className="text-[28px] font-extrabold leading-tight text-[var(--eixo-text)]">Importar Rebanho</p>
+                                        <p className="text-[28px] font-extrabold leading-tight text-[var(--eixo-text)]">Entrada por planilha</p>
+                                        <div className="mt-4 space-y-2">
+                                            {[
+                                                ['1', 'Escolher arquivo'],
+                                                ['2', 'Conferir colunas'],
+                                                ['3', importCorrectionOpen ? 'Corrigir pendências' : 'Confirmar entrada'],
+                                            ].map(([step, label]) => (
+                                                <div key={step} className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${step === '3' ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] font-semibold text-[var(--eixo-text)]' : 'border-[var(--eixo-border)] text-[var(--eixo-text-muted)]'}`}>
+                                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-[var(--eixo-text)]">{step}</span>
+                                                    <span>{label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                         <p className="mt-4 text-sm text-[var(--eixo-text-muted)]">
-                                            Agora você será encaminhado<br />
-                                            para o Editor de Correção,<br />
-                                            para que o sistema entregue<br />
-                                            as melhores informações.
+                                            Confira o resultado da entrada de animais. Se houver erro, corrija apenas as linhas indicadas.
                                         </p>
                                         <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">Campos esperados:</p>
                                         <ul className="mt-2 list-disc pl-5 text-sm text-[var(--eixo-text-muted)]">
-                                            <li>ID</li>
-                                            <li>SEXO</li>
-                                            <li>RAÇA</li>
-                                            <li>PESO (opcional)</li>
+                                            <li>ID do animal</li>
+                                            <li>Sexo</li>
+                                            <li>Raça</li>
+                                            <li>Peso (opcional)</li>
                                         </ul>
                                     </div>
                                     <div className="space-y-3">
                                     {importCorrectionOpen && (
                                         <div className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
-                                            <p className="text-xs font-semibold text-[var(--eixo-text)]">Passo 2</p>
+                                            <p className="text-xs font-semibold text-[var(--eixo-text)]">Corrigir pendências</p>
                                             <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">
                                                 Selecione os animais individualmente, ou todos com o botão <span className="font-semibold">Selecionar todas</span>. Complete a tabela do seu rebanho, com as informações obrigatórias e ao finalizar aperte <span className="font-semibold">Aplicar selecionadas</span>. Para finalizar, clique em <span className="font-semibold">Importar corrigidas</span>.
                                             </p>
@@ -3708,6 +3761,23 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             {/* Card de erros — só aparece se houver erros */}
                                             {importProgress.errors.length > 0 && (
                                                 <div className={`rounded-xl p-4 ${importCorrectionOpen ? 'border border-[var(--eixo-border)] bg-[var(--eixo-surface)]' : 'border border-[#efc2ba] bg-[#fff2ef]'}`}>
+                                                    {!importCorrectionOpen && (
+                                                        <div className="mb-3 rounded-xl border border-[#efc2ba] bg-white px-3.5 py-3">
+                                                            <p className="text-sm font-bold text-[var(--eixo-danger)]">
+                                                                Nenhum animal foi importado.
+                                                            </p>
+                                                            <p className="mt-1 text-sm font-semibold text-[#1a1a1a]">
+                                                                {importFailureReasons[0] || 'Existem erros na planilha que impedem a importação.'}
+                                                            </p>
+                                                            {importFailureReasons.length > 1 && (
+                                                                <ul className="mt-2 list-disc pl-5 text-xs text-[var(--eixo-text-muted)]">
+                                                                    {importFailureReasons.slice(1, 4).map((reason) => (
+                                                                        <li key={reason}>{reason}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                     {importProgress.failedRows.length > 0 && !importCorrectionOpen && (
                                                         <div className="mb-3 rounded-xl border-2 border-[#e39b8d] bg-white p-3.5 shadow-sm">
                                                             <p className="text-xs font-bold uppercase tracking-wide text-[#1a1a1a]">Passo 1 (1º ação de correção)</p>
@@ -3946,13 +4016,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </button>
                                     <div className="flex flex-col items-end gap-1">
                                         {!Object.values(importMapping).includes('brinco') && (
-                                            <p className="text-xs text-[var(--eixo-graphite)]">Mapeie o Brinco/ID para continuar</p>
+                                            <p className="text-xs text-[var(--eixo-graphite)]">Escolha a coluna do ID do animal para continuar</p>
                                         )}
                                         <button type="button"
                                             onClick={handleImportStart}
                                             disabled={!Object.values(importMapping).includes('brinco')}
                                             className="rounded-xl bg-[var(--eixo-green)] px-6 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-40">
-                                            Importar {importRows.length} animais
+                                            Confirmar entrada de {importRows.length} animais
                                         </button>
                                     </div>
                                 </>
