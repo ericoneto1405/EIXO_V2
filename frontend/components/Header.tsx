@@ -74,6 +74,48 @@ const getRainLevelStyle = (mm: number) => {
     return 'bg-[#d7ecff] text-[#1d4f74] border-[#93c7ec]';
 };
 
+const BR_STATE_NAMES: Record<string, string> = {
+    AC: 'Acre',
+    AL: 'Alagoas',
+    AP: 'Amapá',
+    AM: 'Amazonas',
+    BA: 'Bahia',
+    CE: 'Ceará',
+    DF: 'Distrito Federal',
+    ES: 'Espírito Santo',
+    GO: 'Goiás',
+    MA: 'Maranhão',
+    MT: 'Mato Grosso',
+    MS: 'Mato Grosso do Sul',
+    MG: 'Minas Gerais',
+    PA: 'Pará',
+    PB: 'Paraíba',
+    PR: 'Paraná',
+    PE: 'Pernambuco',
+    PI: 'Piauí',
+    RJ: 'Rio de Janeiro',
+    RN: 'Rio Grande do Norte',
+    RS: 'Rio Grande do Sul',
+    RO: 'Rondônia',
+    RR: 'Roraima',
+    SC: 'Santa Catarina',
+    SP: 'São Paulo',
+    SE: 'Sergipe',
+    TO: 'Tocantins',
+};
+
+const normalizeLocationText = (value: string) =>
+    value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+
+const parseFarmCity = (value: string) => {
+    const [cityName = '', stateRaw = ''] = value.split('/').map((part) => part.trim());
+    const stateCode = stateRaw.toUpperCase();
+    return {
+        cityName,
+        stateName: BR_STATE_NAMES[stateCode] || stateRaw,
+    };
+};
+
 // ---- RainWidget ----
 interface RainWidgetProps {
     lat?: number | null;
@@ -83,27 +125,37 @@ interface RainWidgetProps {
 
 const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
     const [rain, setRain] = useState<number[] | null>(null);
+    const [failed, setFailed] = useState(false);
 
     useEffect(() => {
         if ((lat == null || lng == null) && !city?.trim()) {
             setRain(null);
+            setFailed(false);
             return;
         }
         let active = true;
         const load = async () => {
             try {
+                if (active) setFailed(false);
                 let latitude = lat;
                 let longitude = lng;
 
                 if ((latitude == null || longitude == null) && city?.trim()) {
-                    const cityName = city.split('/')[0].trim();
+                    const { cityName, stateName } = parseFarmCity(city);
                     const geoRes = await fetch(
-                        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&country_code=BR&count=1&language=pt`
+                        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&country_code=BR&count=10&language=pt`
                     );
                     const geoData = await geoRes.json();
-                    const result = geoData?.results?.[0];
+                    const results = Array.isArray(geoData?.results) ? geoData.results : [];
+                    const normalizedState = normalizeLocationText(stateName);
+                    const result = normalizedState
+                        ? results.find((item) => normalizeLocationText(String(item?.admin1 || '')) === normalizedState) || results[0]
+                        : results[0];
                     if (!result) {
-                        if (active) setRain(null);
+                        if (active) {
+                            setRain(null);
+                            setFailed(true);
+                        }
                         return;
                     }
                     latitude = result.latitude;
@@ -111,7 +163,10 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
                 }
 
                 if (latitude == null || longitude == null) {
-                    if (active) setRain(null);
+                    if (active) {
+                        setRain(null);
+                        setFailed(true);
+                    }
                     return;
                 }
 
@@ -123,15 +178,33 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
                 }
                 if (active && !Array.isArray(data?.daily?.precipitation_sum)) {
                     setRain(null);
+                    setFailed(true);
                 }
             } catch {
-                // silently fail
-                if (active) setRain(null);
+                if (active) {
+                    setRain(null);
+                    setFailed(true);
+                }
             }
         };
         void load();
         return () => { active = false; };
     }, [lat, lng, city]);
+
+    if (!rain && failed) {
+        return (
+            <div className="min-w-0 rounded-2xl border border-[#f3dfb0] bg-[#fff8e8] px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-[#9a6b06]">
+                        <RainIcon />
+                    </span>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#9a6b06]">
+                        Previsão de chuva indisponível
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     if (!rain) return null;
     const totalRain = normalizeMm(rain.reduce((sum, mm) => sum + mm, 0));
@@ -143,7 +216,7 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
                     <RainIcon />
                 </span>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4e6a57]">
-                    Previsão de chuvas para os próximos 7 dias! {formatMm(totalRain)}
+                    Previsão de chuva de hoje aos próximos 6 dias: {formatMm(totalRain)}
                 </p>
             </div>
             <div className="flex max-w-[520px] items-center gap-1.5 overflow-x-auto pb-0.5">

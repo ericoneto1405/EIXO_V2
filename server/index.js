@@ -1300,6 +1300,8 @@ const corsOrigins = CORS_ORIGIN.split(',')
 const devOriginRegex = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
 const cspConnectSrc = [
     "'self'",
+    'https://api.open-meteo.com',
+    'https://geocoding-api.open-meteo.com',
     ...corsOrigins,
     ...(!IS_PROD
         ? [
