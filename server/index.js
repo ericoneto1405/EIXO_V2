@@ -1042,6 +1042,113 @@ const moveAnimalBetweenPaddocks = async ({ animalId, paddockId, startAt, notes, 
     }
 };
 
+const transferAnimalsToFarm = async ({ ids, targetFarmId, targetPaddockId, transferDate, notes, scopeFilter, farmScopeFilter, isPo }) => {
+    const normalizedIds = Array.isArray(ids) ? ids.map(String).filter(Boolean) : [];
+    if (!normalizedIds.length || !targetFarmId || !targetPaddockId) {
+        return { error: { status: 400, message: 'Informe animais, fazenda destino e pasto destino.' } };
+    }
+
+    const moveStartAt = transferDate ? parseDateValue(transferDate) : new Date();
+    if (transferDate && !moveStartAt) {
+        return { error: { status: 400, message: 'Data da transferência inválida.' } };
+    }
+    const trimmedNotes = typeof notes === 'string' && notes.trim() ? notes.trim() : null;
+    const animalModel = isPo ? prisma.poAnimal : prisma.animal;
+
+    const targetFarm = await prisma.farm.findFirst({
+        where: farmScopeFilter,
+    });
+    if (!targetFarm) {
+        return { error: { status: 404, message: 'Fazenda destino não encontrada.' } };
+    }
+
+    const targetPaddock = await prisma.paddock.findFirst({
+        where: { id: String(targetPaddockId), farmId: targetFarm.id },
+    });
+    if (!targetPaddock) {
+        return { error: { status: 400, message: 'Pasto destino inválido para esta fazenda.' } };
+    }
+
+    const animals = await animalModel.findMany({
+        where: { id: { in: normalizedIds }, farm: scopeFilter },
+        select: isPo
+            ? { id: true, farmId: true, brinco: true }
+            : { id: true, farmId: true, brinco: true, identityKey: true },
+    });
+    if (animals.length !== normalizedIds.length) {
+        return { error: { status: 403, message: isPo ? 'Um ou mais animais P.O. não pertencem a esta conta.' : 'Um ou mais animais não pertencem a esta conta.' } };
+    }
+
+    const sourceFarmIds = new Set(animals.map((animal) => animal.farmId));
+    if (sourceFarmIds.size !== 1) {
+        return { error: { status: 400, message: 'Selecione animais de apenas uma fazenda por transferência.' } };
+    }
+    const sourceFarmId = animals[0].farmId;
+    if (sourceFarmId === targetFarm.id) {
+        return { error: { status: 400, message: 'A fazenda destino deve ser diferente da fazenda atual.' } };
+    }
+
+    if (isPo) {
+        const brincos = animals.map((animal) => animal.brinco).filter(Boolean);
+        if (brincos.length) {
+            const duplicate = await prisma.poAnimal.findFirst({
+                where: { farmId: targetFarm.id, brinco: { in: brincos } },
+                select: { brinco: true },
+            });
+            if (duplicate) {
+                return { error: { status: 409, message: `Já existe animal P.O. com o brinco "${duplicate.brinco}" na fazenda destino.` } };
+            }
+        }
+    } else {
+        const duplicate = await prisma.animal.findFirst({
+            where: {
+                farmId: targetFarm.id,
+                OR: animals.flatMap((animal) => [
+                    { brinco: animal.brinco },
+                    { identityKey: animal.identityKey },
+                ]),
+            },
+            select: { brinco: true },
+        });
+        if (duplicate) {
+            return { error: { status: 409, message: `Já existe animal com o ID "${duplicate.brinco}" na fazenda destino.` } };
+        }
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+        const updateModel = isPo ? tx.poAnimal : tx.animal;
+        const moveWhere = isPo ? { poAnimalId: { in: normalizedIds } } : { animalId: { in: normalizedIds } };
+
+        await tx.paddockMove.updateMany({
+            where: { ...moveWhere, endAt: null },
+            data: { endAt: moveStartAt },
+        });
+
+        await updateModel.updateMany({
+            where: { id: { in: normalizedIds } },
+            data: {
+                farmId: targetFarm.id,
+                lotId: null,
+                currentPaddockId: targetPaddock.id,
+            },
+        });
+
+        await tx.paddockMove.createMany({
+            data: normalizedIds.map((animalId) => ({
+                farmId: targetFarm.id,
+                paddockId: targetPaddock.id,
+                ...(isPo ? { poAnimalId: animalId } : { animalId }),
+                startAt: moveStartAt,
+                notes: trimmedNotes,
+            })),
+        });
+
+        return { updated: normalizedIds.length, sourceFarmId, targetFarmId: targetFarm.id, targetPaddockId: targetPaddock.id };
+    });
+
+    return { result };
+};
+
 const calculateReproKpis = async ({ animalId, farmId, seasonId }) => {
     const partoEvents = await prisma.reproEvent.findMany({
         where: { animalId, farmId, type: 'PARTO' },
@@ -8766,6 +8873,29 @@ app.post('/animals/bulk-move-pasto', async (req, res) => {
     }
 });
 
+app.post('/animals/bulk-transfer-farm', async (req, res) => {
+    const { ids, targetFarmId, targetPaddockId, transferDate, notes } = req.body || {};
+    try {
+        const { error, result } = await transferAnimalsToFarm({
+            ids,
+            targetFarmId,
+            targetPaddockId,
+            transferDate,
+            notes,
+            scopeFilter: buildFarmRelationFilter(req),
+            farmScopeFilter: buildFarmScopeFilter(req, { id: String(targetFarmId || '') }),
+            isPo: false,
+        });
+        if (error) {
+            return res.status(error.status).json({ message: error.message });
+        }
+        return res.json(result);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao transferir animais para outra fazenda.' });
+    }
+});
+
 app.post('/po/animals/bulk-delete', async (req, res) => {
     const { ids } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) {
@@ -8846,6 +8976,29 @@ app.post('/po/animals/bulk-move-pasto', async (req, res) => {
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao mover animais P.O. para pasto.' });
+    }
+});
+
+app.post('/po/animals/bulk-transfer-farm', async (req, res) => {
+    const { ids, targetFarmId, targetPaddockId, transferDate, notes } = req.body || {};
+    try {
+        const { error, result } = await transferAnimalsToFarm({
+            ids,
+            targetFarmId,
+            targetPaddockId,
+            transferDate,
+            notes,
+            scopeFilter: buildFarmRelationFilter(req),
+            farmScopeFilter: buildFarmScopeFilter(req, { id: String(targetFarmId || '') }),
+            isPo: true,
+        });
+        if (error) {
+            return res.status(error.status).json({ message: error.message });
+        }
+        return res.json(result);
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao transferir animais P.O. para outra fazenda.' });
     }
 });
 

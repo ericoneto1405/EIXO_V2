@@ -22,6 +22,10 @@ import type { Paddock } from '../types';
 type TabKey = 'overview' | 'animals' | 'pastures' | 'lots' | 'weighings' | 'settings';
 type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'sem_categoria' | 'gmd_baixo';
 type AnimalHeaderFilterKey = 'identificacao' | 'registro' | 'raca' | 'sexo' | 'pasto' | 'lote' | 'categoria' | 'peso' | 'nutricao' | null;
+type TransferFarmOption = {
+    id: string;
+    name: string;
+};
 type ImportCorrectionRow = {
     id: string;
     selected: boolean;
@@ -556,8 +560,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
     const [bulkMoveToLotOpen, setBulkMoveToLotOpen] = useState(false);
     const [bulkMoveToPastoOpen, setBulkMoveToPastoOpen] = useState(false);
+    const [bulkTransferFarmOpen, setBulkTransferFarmOpen] = useState(false);
     const [bulkTargetLotId, setBulkTargetLotId] = useState('');
     const [bulkTargetPastoId, setBulkTargetPastoId] = useState('');
+    const [transferFarms, setTransferFarms] = useState<TransferFarmOption[]>([]);
+    const [transferPaddocks, setTransferPaddocks] = useState<Paddock[]>([]);
+    const [transferTargetFarmId, setTransferTargetFarmId] = useState('');
+    const [transferTargetPaddockId, setTransferTargetPaddockId] = useState('');
+    const [transferDate, setTransferDate] = useState(new Date().toISOString().slice(0, 10));
+    const [transferNotes, setTransferNotes] = useState('');
     const [bulkLoading, setBulkLoading] = useState(false);
     const [bulkError, setBulkError] = useState<string | null>(null);
     const [selectedAnimal, setSelectedAnimal] = useState<HerdAnimal | null>(null);
@@ -2090,6 +2101,79 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         }
     };
 
+    const openBulkTransferFarm = async () => {
+        setBulkError(null);
+        setTransferTargetFarmId('');
+        setTransferTargetPaddockId('');
+        setTransferPaddocks([]);
+        setTransferDate(new Date().toISOString().slice(0, 10));
+        setTransferNotes('');
+        setBulkTransferFarmOpen(true);
+        try {
+            const response = await fetch(buildApiUrl('/farms'), { credentials: 'include' });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload?.message || 'Erro ao carregar fazendas.');
+            setTransferFarms((payload.farms || []).map((farm: TransferFarmOption) => ({
+                id: farm.id,
+                name: farm.name,
+            })));
+        } catch (error: any) {
+            setBulkError(error?.message || 'Erro ao carregar fazendas.');
+        }
+    };
+
+    const handleTransferFarmChange = async (nextFarmId: string) => {
+        setTransferTargetFarmId(nextFarmId);
+        setTransferTargetPaddockId('');
+        setTransferPaddocks([]);
+        setBulkError(null);
+        if (!nextFarmId) return;
+        try {
+            const response = await fetch(buildApiUrl(`/pastos?farmId=${nextFarmId}`), { credentials: 'include' });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload?.message || 'Erro ao carregar pastos da fazenda destino.');
+            setTransferPaddocks(payload.items || payload.paddocks || []);
+        } catch (error: any) {
+            setBulkError(error?.message || 'Erro ao carregar pastos da fazenda destino.');
+        }
+    };
+
+    const handleBulkTransferFarm = async () => {
+        if (!transferTargetFarmId) { setBulkError('Selecione a fazenda destino.'); return; }
+        if (!transferTargetPaddockId) { setBulkError('Selecione o pasto destino.'); return; }
+        if (!transferDate) { setBulkError('Informe a data da transferência.'); return; }
+        setBulkLoading(true);
+        setBulkError(null);
+        try {
+            const endpoint = isPoMode ? '/po/animals/bulk-transfer-farm' : '/animals/bulk-transfer-farm';
+            const res = await fetch(buildApiUrl(endpoint), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    ids: Array.from(selectedAnimals),
+                    targetFarmId: transferTargetFarmId,
+                    targetPaddockId: transferTargetPaddockId,
+                    transferDate,
+                    notes: transferNotes,
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data?.message || 'Erro ao transferir animais.');
+            setSelectedAnimals(new Set());
+            setBulkTransferFarmOpen(false);
+            setTransferTargetFarmId('');
+            setTransferTargetPaddockId('');
+            setTransferPaddocks([]);
+            setTransferNotes('');
+            await loadData();
+        } catch (err: any) {
+            setBulkError(err?.message || 'Erro ao transferir animais.');
+        } finally {
+            setBulkLoading(false);
+        }
+    };
+
     const handleExportAnimals = async () => {
         const dateStr = new Date().toISOString().slice(0, 10);
         const fileName = `rebanho_${(farmName || 'fazenda').replace(/\s+/g, '_')}_${dateStr}.xlsx`;
@@ -2264,6 +2348,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
                         >
                             Mover para Pasto
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { void openBulkTransferFarm(); }}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                        >
+                            Transferir para Fazenda
                         </button>
                         <button
                             type="button"
@@ -3183,6 +3274,92 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             <button type="button" onClick={handleBulkMoveToPasto} disabled={bulkLoading}
                                 className="rounded-xl bg-[#B6E23A] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#a3d130] disabled:opacity-50">
                                 {bulkLoading ? 'Movendo...' : 'Confirmar'}
+                            </button>
+                        </footer>
+                    </div>
+                </div>
+            )}
+
+
+            {/* Modal: Transferir para Fazenda */}
+            {bulkTransferFarmOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                    <div className="w-full max-w-xl rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
+                        <header className="border-b border-[var(--eixo-border)] p-5">
+                            <h3 className="text-lg font-bold text-[var(--eixo-text)]">Transferir para Fazenda</h3>
+                            <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">
+                                Os animais sairão de {farmName || 'fazenda atual'} e entrarão na fazenda destino.
+                            </p>
+                        </header>
+                        <div className="space-y-4 p-5">
+                            <div className="rounded-xl border border-[#f3dfb0] bg-[#fff8e8] px-4 py-3 text-sm text-[#8a5f05]">
+                                {selectedAnimals.size} {selectedAnimals.size === 1 ? 'animal selecionado' : 'animais selecionados'}. O lote será limpo e o histórico do pasto atual será encerrado na data informada.
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-semibold text-[var(--eixo-text)]">Fazenda destino</label>
+                                <select
+                                    value={transferTargetFarmId}
+                                    onChange={(event) => { void handleTransferFarmChange(event.target.value); }}
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[#B6E23A]"
+                                >
+                                    <option value="">Selecione a fazenda</option>
+                                    {transferFarms
+                                        .filter((farm) => farm.id !== farmId)
+                                        .map((farm) => (
+                                            <option key={farm.id} value={farm.id}>{farm.name}</option>
+                                        ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-semibold text-[var(--eixo-text)]">Pasto destino</label>
+                                <select
+                                    value={transferTargetPaddockId}
+                                    onChange={(event) => setTransferTargetPaddockId(event.target.value)}
+                                    disabled={!transferTargetFarmId}
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[#B6E23A] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <option value="">Selecione o pasto</option>
+                                    {transferPaddocks.map((paddock) => (
+                                        <option key={paddock.id} value={paddock.id}>{paddock.name}</option>
+                                    ))}
+                                </select>
+                                {transferTargetFarmId && transferPaddocks.length === 0 && (
+                                    <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">A fazenda destino precisa ter pelo menos um pasto cadastrado.</p>
+                                )}
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-semibold text-[var(--eixo-text)]">Data da transferência</label>
+                                <input
+                                    type="date"
+                                    value={transferDate}
+                                    onChange={(event) => setTransferDate(event.target.value)}
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[#B6E23A]"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-sm font-semibold text-[var(--eixo-text)]">Observação</label>
+                                <textarea
+                                    value={transferNotes}
+                                    onChange={(event) => setTransferNotes(event.target.value)}
+                                    rows={3}
+                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[#B6E23A]"
+                                    placeholder="Ex.: transferência entre propriedades"
+                                />
+                            </div>
+                            {bulkError && <p className="text-sm text-[#8c2020]">{bulkError}</p>}
+                        </div>
+                        <footer className="flex justify-end gap-3 border-t border-[var(--eixo-border)] px-5 py-4">
+                            <button type="button" onClick={() => setBulkTransferFarmOpen(false)} disabled={bulkLoading}
+                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleBulkTransferFarm}
+                                disabled={bulkLoading || !transferTargetFarmId || !transferTargetPaddockId || !transferDate}
+                                className="rounded-xl bg-[#B6E23A] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#a3d130] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {bulkLoading ? 'Transferindo...' : 'Confirmar transferência'}
                             </button>
                         </footer>
                     </div>

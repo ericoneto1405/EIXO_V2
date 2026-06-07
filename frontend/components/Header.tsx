@@ -66,7 +66,11 @@ const getDayLabel = (offsetDays: number) => {
 };
 
 const normalizeMm = (mm: number) => Math.round(mm * 10) / 10;
-const formatMm = (mm: number) => `${normalizeMm(mm)}mm`;
+const formatMm = (mm: number) => {
+    const normalized = normalizeMm(mm);
+    if (normalized > 0 && normalized < 1) return '<1mm';
+    return `${normalized}mm`;
+};
 const getRainLevelStyle = (mm: number) => {
     if (mm <= 0) return 'bg-[#fffaf1] text-[#8a7a63] border-[#e7dcc8]';
     if (mm < 8) return 'bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]';
@@ -123,8 +127,13 @@ interface RainWidgetProps {
     city?: string | null;
 }
 
+interface RainForecastDay {
+    precipitation: number;
+    probability: number;
+}
+
 const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
-    const [rain, setRain] = useState<number[] | null>(null);
+    const [rain, setRain] = useState<RainForecastDay[] | null>(null);
     const [failed, setFailed] = useState(false);
 
     useEffect(() => {
@@ -170,11 +179,14 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
                     return;
                 }
 
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=precipitation_sum&forecast_days=7&timezone=America%2FSao_Paulo`;
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=precipitation_sum,precipitation_probability_max&forecast_days=7&timezone=auto`;
                 const res = await fetch(url);
                 const data = await res.json();
                 if (active && Array.isArray(data?.daily?.precipitation_sum)) {
-                    setRain(data.daily.precipitation_sum.slice(0, 7));
+                    setRain(data.daily.precipitation_sum.slice(0, 7).map((mm: number, index: number) => ({
+                        precipitation: mm,
+                        probability: Number(data.daily.precipitation_probability_max?.[index] ?? 0),
+                    })));
                 }
                 if (active && !Array.isArray(data?.daily?.precipitation_sum)) {
                     setRain(null);
@@ -207,7 +219,13 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
     }
 
     if (!rain) return null;
-    const totalRain = normalizeMm(rain.reduce((sum, mm) => sum + mm, 0));
+    const totalRain = normalizeMm(rain.reduce((sum, day) => sum + day.precipitation, 0));
+    const maxProbability = Math.max(...rain.map((day) => day.probability || 0), 0);
+    const rainHeadline = totalRain > 0
+        ? `Chuva prevista: ${formatMm(totalRain)}`
+        : maxProbability > 0
+            ? `Risco de chuva até ${maxProbability}%`
+            : 'Sem chuva prevista pelo modelo';
 
     return (
         <div className="min-w-0 rounded-2xl border border-[#b9dfc8] bg-[linear-gradient(135deg,#f8fbf4_0%,#eef8f1_50%,#e5f4ec_100%)] px-3 py-2.5">
@@ -216,17 +234,20 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
                     <RainIcon />
                 </span>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4e6a57]">
-                    Previsão de chuva de hoje aos próximos 6 dias: {formatMm(totalRain)}
+                    {rainHeadline} · hoje aos próximos 6 dias
                 </p>
             </div>
             <div className="flex max-w-[520px] items-center gap-1.5 overflow-x-auto pb-0.5">
-                {rain.map((mm, index) => (
+                {rain.map((day, index) => (
                     <div
-                        key={`${index}-${mm}`}
-                        className={`flex min-w-[64px] flex-col rounded-xl border px-2 py-1.5 text-center ${getRainLevelStyle(mm)}`}
+                        key={`${index}-${day.precipitation}-${day.probability}`}
+                        className={`flex min-w-[64px] flex-col rounded-xl border px-2 py-1.5 text-center ${getRainLevelStyle(day.precipitation)}`}
                     >
                         <span className="text-[10px] font-semibold leading-none">{getDayLabel(index)}</span>
-                        <span className="mt-1 text-xs font-bold leading-none">{formatMm(mm)}</span>
+                        <span className="mt-1 text-xs font-bold leading-none">{formatMm(day.precipitation)}</span>
+                        {day.probability > 0 && (
+                            <span className="mt-1 text-[10px] font-semibold leading-none opacity-80">{day.probability}%</span>
+                        )}
                     </div>
                 ))}
             </div>
