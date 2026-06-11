@@ -46,6 +46,11 @@ jobs:
 
             cd /var/www/eixo
 
+            echo "▶ Carregando variáveis de ambiente..."
+            set -a
+            [ -f .env.production ] && source .env.production
+            set +a
+
             echo "▶ Atualizando código..."
             git fetch origin main
             git reset --hard origin/main
