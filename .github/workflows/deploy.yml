@@ -46,14 +46,20 @@ jobs:
 
             cd /var/www/eixo
 
-            echo "▶ Carregando variáveis de ambiente..."
-            set -a
-            [ -f .env.production ] && source .env.production
-            set +a
+            echo "▶ Preservando .env.production..."
+            cp -f .env.production /tmp/.env.production.bak 2>/dev/null || true
 
             echo "▶ Atualizando código..."
             git fetch origin main
             git reset --hard origin/main
+
+            echo "▶ Restaurando .env.production..."
+            cp -f /tmp/.env.production.bak .env.production 2>/dev/null || true
+
+            echo "▶ Carregando variáveis de ambiente..."
+            set -a
+            source .env.production
+            set +a
 
             echo "▶ Instalando dependências..."
             npm ci --omit=dev 2>/dev/null || npm install --omit=dev
