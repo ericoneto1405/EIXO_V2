@@ -57,16 +57,27 @@ jobs:
             cp -f /tmp/.env.production.bak .env.production 2>/dev/null || true
 
             echo "▶ Carregando variáveis de ambiente..."
-            set -a
-            source .env.production
-            set +a
+            if [ -f .env.production ]; then
+              set -a; source .env.production; set +a
+              echo "  .env.production carregado."
+            elif [ -f .env ]; then
+              set -a; source .env; set +a
+              echo "  .env carregado."
+            else
+              echo "  AVISO: nenhum .env encontrado — tentando exportar do PM2..."
+              eval "$(pm2 env eixo-server 2>/dev/null | grep -E '^[A-Z_]+=' | sed 's/^/export /')" || true
+            fi
 
             echo "▶ Instalando dependências..."
             npm ci --omit=dev 2>/dev/null || npm install --omit=dev
 
             echo "▶ Aplicando migrações do banco..."
-            npx prisma migrate deploy --schema server/prisma/schema.prisma
-            npx prisma generate --schema server/prisma/schema.prisma
+            if [ -n "${DATABASE_URL:-}" ]; then
+              npx prisma migrate deploy --schema server/prisma/schema.prisma
+              npx prisma generate --schema server/prisma/schema.prisma
+            else
+              echo "  AVISO: DATABASE_URL não definida — pulando migração."
+            fi
 
             echo "▶ Build do frontend..."
             cd frontend
