@@ -14,6 +14,7 @@ import { upsertSystemAccountCategories } from './accountCategoryDefaults.js';
 import { runMarketCapture } from './market/services/marketCaptureService.js';
 import { publishNormalizedPrice, rejectNormalizedPrice } from './market/services/marketPublishService.js';
 import { resolveMarketTrends } from './market/services/marketTrendService.js';
+import { startMarketCron } from './market/jobs/marketCron.js';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import twilio from 'twilio';
 import { Resend } from 'resend';
@@ -11123,13 +11124,29 @@ const classifyReplacementMarketStatus = (replacementCostInFatArrobas) => {
     };
 };
 
-const buildFatCattleSignal = ({ fatCattlePricePerArroba }) => {
+const buildFatCattleSignal = ({ fatCattlePricePerArroba, fatCattleTrendPercent = null }) => {
     if (!fatCattlePricePerArroba || fatCattlePricePerArroba <= 0) {
         return {
             status: 'SEM_DADOS',
             signal: 'Sem dados',
             label: 'Sem dados da arroba',
             text: 'Ainda não há dados suficientes para avaliar o sinal do boi gordo.',
+        };
+    }
+    if (fatCattleTrendPercent !== null && fatCattleTrendPercent >= 2) {
+        return {
+            status: 'BOM',
+            signal: 'Bom',
+            label: 'Arroba em alta',
+            text: `A arroba está em alta (${formatNumberPtBr(fatCattleTrendPercent, 1)}% acima da cotação anterior). Boa oportunidade de venda.`,
+        };
+    }
+    if (fatCattleTrendPercent !== null && fatCattleTrendPercent <= -2) {
+        return {
+            status: 'RUIM',
+            signal: 'Ruim',
+            label: 'Arroba em queda',
+            text: `A arroba está em queda (${formatNumberPtBr(fatCattleTrendPercent, 1)}% abaixo da cotação anterior). Considere segurar a venda.`,
         };
     }
     return {
@@ -11346,7 +11363,10 @@ const buildPartialMarketReplacementSnapshot = ({
     };
     const metrics = calculateMarketReplacementMetrics(base);
     const statusMeta = classifyReplacementMarketStatus(metrics.replacementCostInFatArrobas);
-    const fatCattleSignal = buildFatCattleSignal(base);
+    const fatCattleSignal = buildFatCattleSignal({
+        fatCattlePricePerArroba: base.fatCattlePricePerArroba,
+        fatCattleTrendPercent: null,
+    });
     const replacementSignal = buildReplacementSignal({
         replacementCostInFatArrobas: metrics.replacementCostInFatArrobas,
     });
@@ -11629,7 +11649,6 @@ const buildMarketReplacementSnapshot = async ({ scope, farm }) => {
 
     const metrics = calculateMarketReplacementMetrics(base);
     const statusMeta = classifyReplacementMarketStatus(metrics.replacementCostInFatArrobas);
-    const fatCattleSignal = buildFatCattleSignal(base);
     const replacementSignal = buildReplacementSignal({
         replacementCostInFatArrobas: metrics.replacementCostInFatArrobas,
     });
@@ -11640,6 +11659,10 @@ const buildMarketReplacementSnapshot = async ({ scope, farm }) => {
         referenceDate: replacementPrice.referenceDate >= fatCattlePrice.referenceDate ? replacementPrice.referenceDate : fatCattlePrice.referenceDate,
         fatPrice: base.fatCattlePricePerArroba,
         replacementPrice: base.replacementAnimalPrice,
+    });
+    const fatCattleSignal = buildFatCattleSignal({
+        fatCattlePricePerArroba: base.fatCattlePricePerArroba,
+        fatCattleTrendPercent: trends.fatCattleTrendPercent,
     });
 
     return {
@@ -13320,6 +13343,11 @@ const startServer = (port) => {
     const server = app.listen(port, () => {
         activePort = port;
         console.log(`Eixo API rodando em http://localhost:${port}`);
+        try {
+            startMarketCron();
+        } catch (cronError) {
+            console.warn('[market-cron] Falha ao iniciar agendamento:', cronError?.message || cronError);
+        }
     });
 
     server.on('error', (error) => {

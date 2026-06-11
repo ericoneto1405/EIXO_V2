@@ -1,0 +1,92 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: CI — Build & Validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Generate Prisma Client
+        run: npm run generate
+      - name: TypeScript check (frontend)
+        run: npx tsc -p frontend/tsconfig.json --noEmit
+      - name: Build frontend
+        run: npm run build
+
+  deploy:
+    name: Deploy → Produção
+    needs: ci
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -euo pipefail
+
+            cd /var/www/eixo
+
+            echo "▶ Atualizando código..."
+            git fetch origin main
+            git pull --ff-only origin main
+
+            echo "▶ Instalando dependências..."
+            npm ci --omit=dev 2>/dev/null || npm install --omit=dev
+
+            echo "▶ Aplicando migrações do banco..."
+            npx prisma migrate deploy --schema server/prisma/schema.prisma
+            npx prisma generate --schema server/prisma/schema.prisma
+
+            echo "▶ Build do frontend..."
+            cd frontend
+            npm ci 2>/dev/null || npm install
+            npm run build
+            cd ..
+
+            echo "▶ Reiniciando servidor..."
+            if pm2 describe eixo-server >/dev/null 2>&1; then
+              pm2 reload eixo-server --update-env
+            else
+              pm2 start server/index.js --name eixo-server --update-env
+            fi
+            pm2 save --force
+
+            echo "▶ Health check..."
+            sleep 3
+            if curl -fsS --max-time 10 http://127.0.0.1:3001/health >/dev/null 2>&1; then
+              echo "Health OK"
+            else
+              echo "WARNING: Health check falhou — verifique pm2 logs"
+            fi
+
+            echo "Deploy concluído."
+
+      - name: Verificar uptime
+        run: |
+          sleep 5
+          HTTP_CODE=$(curl -L -s -o /dev/null -w "%{http_code}" https://eixo.agr.br || true)
+          if [[ "$HTTP_CODE" =~ ^2|3 ]]; then
+            echo "Site no ar: https://eixo.agr.br (HTTP $HTTP_CODE)"
+          else
+            echo "WARNING: Site retornou HTTP $HTTP_CODE"
+          fi

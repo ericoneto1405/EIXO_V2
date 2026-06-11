@@ -95,10 +95,18 @@ popd >/dev/null
 # ── 6. Reinicia o servidor via PM2 ────────────────────────────────────────────
 echo ""
 echo "▶ 6/6 Reiniciando servidor..."
-if "${PM2_CMD[@]}" describe eixo-server >/dev/null 2>&1; then
-    "${PM2_CMD[@]}" reload eixo-server --update-env
+if [ -f ecosystem.config.js ]; then
+    if "${PM2_CMD[@]}" describe eixo-server >/dev/null 2>&1; then
+        "${PM2_CMD[@]}" reload ecosystem.config.js
+    else
+        "${PM2_CMD[@]}" start ecosystem.config.js
+    fi
 else
-    "${PM2_CMD[@]}" start server/index.js --name eixo-server
+    if "${PM2_CMD[@]}" describe eixo-server >/dev/null 2>&1; then
+        "${PM2_CMD[@]}" reload eixo-server --update-env
+    else
+        "${PM2_CMD[@]}" start server/index.js --name eixo-server
+    fi
 fi
 "${PM2_CMD[@]}" save --force
 

@@ -11,16 +11,19 @@
     "prisma:studio": "prisma studio",
     "seed": "node prisma/seed.js",
     "seed:market": "node scripts/seed-market-prices.mjs",
-    "market:mock-national": "node market/jobs/runMarketCaptureJob.js",
+    "market:mock-national": "node market/jobs/runMarketCaptureJob.js mock-national",
+    "market:noticias-agricolas": "node market/jobs/runMarketCaptureJob.js noticias-agricolas",
     "market:publish-pending": "node market/jobs/publishPendingNormalized.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.19.3",
     "bcrypt": "^6.0.0",
+    "cheerio": "^1.2.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "express": "^4.22.1",
+    "node-cron": "^4.2.1",
     "prisma": "^6.19.3",
     "resend": "^6.12.2",
     "twilio": "^5.7.0"

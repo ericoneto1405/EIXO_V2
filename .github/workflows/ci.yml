@@ -19,5 +19,7 @@ jobs:
         run: npm ci
       - name: Generate Prisma Client
         run: npm run generate
+      - name: TypeScript check (frontend)
+        run: npx tsc -p frontend/tsconfig.json --noEmit
       - name: Build frontend
         run: npm run build

@@ -1,11 +1,13 @@
 import { MockNationalAdapter } from '../adapters/mockNationalAdapter.js';
 import { ManualImportAdapter } from '../adapters/manualImportAdapter.js';
+import { NoticiasAgricolasAdapter } from '../adapters/noticiasAgricolasAdapter.js';
 import { createNormalizedPricesFromCapture } from './marketNormalizationService.js';
 import { publishNormalizedPrice } from './marketPublishService.js';
 
 const ADAPTERS = {
   'mock-national': () => new MockNationalAdapter(),
   'manual-import': () => new ManualImportAdapter(),
+  'noticias-agricolas': () => new NoticiasAgricolasAdapter(),
 };
 
 export const getAdapterByName = (adapterName) => {
