@@ -61,6 +61,10 @@ export const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 export const TWILIO_VERIFY_SID = process.env.TWILIO_VERIFY_SID;
 export const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
+// ─── Constantes de Rate Limiting ────────────────────────────────────────────────
+export const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+export const LOGIN_MAX_ATTEMPTS = 10;
+
 // ─── Constantes de Negócio ─────────────────────────────────────────────────────
 export const PASSWORD_POLICY_MESSAGE = 'A senha deve ter pelo menos 8 caracteres, com ao menos 1 letra e 1 número.';
 export const REPRO_WINDOW_DAYS = 120;
