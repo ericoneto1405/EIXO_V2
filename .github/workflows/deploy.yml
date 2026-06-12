@@ -46,23 +46,23 @@ jobs:
 
             cd /var/www/eixo
 
-            echo "▶ Preservando .env.production..."
-            cp -f .env.production /tmp/.env.production.bak 2>/dev/null || true
+            echo "▶ Preservando server/.env.production..."
+            cp -f server/.env.production /tmp/.env.production.bak 2>/dev/null || true
 
             echo "▶ Atualizando código..."
             git fetch origin main
             git reset --hard origin/main
 
-            echo "▶ Restaurando .env.production..."
-            cp -f /tmp/.env.production.bak .env.production 2>/dev/null || true
+            echo "▶ Restaurando server/.env.production..."
+            cp -f /tmp/.env.production.bak server/.env.production 2>/dev/null || true
 
             echo "▶ Carregando variáveis de ambiente..."
-            if [ -f .env.production ]; then
-              set -a; source .env.production; set +a
-              echo "  .env.production carregado."
-            elif [ -f .env ]; then
-              set -a; source .env; set +a
-              echo "  .env carregado."
+            if [ -f server/.env.production ]; then
+              set -a; source server/.env.production; set +a
+              echo "  server/.env.production carregado."
+            elif [ -f server/.env ]; then
+              set -a; source server/.env; set +a
+              echo "  server/.env carregado."
             else
               echo "  AVISO: nenhum .env encontrado — tentando exportar do PM2..."
               eval "$(pm2 env eixo-server 2>/dev/null | grep -E '^[A-Z_]+=' | sed 's/^/export /')" || true
