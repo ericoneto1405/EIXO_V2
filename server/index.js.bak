@@ -19,42 +19,106 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import twilio from 'twilio';
 import { Resend } from 'resend';
 
-// ─── Módulos Extraídos (Fase 1) ────────────────────────────────────────────────
-import {
-    PORT, NODE_ENV, IS_PROD, SESSION_COOKIE_NAME, SESSION_TOKEN_SALT,
-    SESSION_LOGIN_TTL_MS, CORS_ORIGIN, ALLOW_X_USER_ID,
-    OTP_SEND_WINDOW_MS, OTP_SEND_MAX_PER_IP, OTP_SEND_MAX_PER_PHONE,
-    OTP_VERIFY_WINDOW_MS, OTP_VERIFY_MAX_PER_IP, OTP_VERIFY_MAX_PER_PHONE,
-    FORGOT_PASSWORD_WINDOW_MS, FORGOT_PASSWORD_MAX_ATTEMPTS,
-    CHAT_RATE_WINDOW_MS, CHAT_RATE_MAX_PER_USER,
-    CHAT_BURST_WINDOW_MS, CHAT_BURST_MAX_PER_USER,
-    APP_BASE_URL, RESEND_FROM_EMAIL, RESEND_API_KEY,
-    TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SID,
-    GOOGLE_API_KEY,
-    PASSWORD_POLICY_MESSAGE, REPRO_WINDOW_DAYS, DEFAULT_THRESHOLDS,
-    HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP,
-    FIELD_OCCURRENCE_UPLOAD_ROOT, AVATAR_UPLOAD_ROOT,
-    FIELD_WORKER_ROLE, FIELD_ADMIN_ROLE, FIELD_WORKER_DEFAULT_MODULES,
-    APP_ACTIVATION_CODE_TTL_MS, APP_ACTIVATION_CODE_ALPHABET,
-    FIELD_ATTACHMENT_MAX_FILES, FIELD_OCCURRENCE_TYPES, FIELD_OCCURRENCE_STATUSES,
-    FIELD_ATTACHMENT_ALLOWED_MIME_TYPES, PHONE_VERIFY_TTL_MS,
-} from './modules/config/env.js';
-import { createCorsMiddleware, createSecurityHeadersMiddleware } from './modules/config/cors.js';
-import { isPasswordStrongEnough, validateCNPJ, validateCPF, fetchCnpjData, parseCoordinate, validateCoordinatePair } from './modules/utils/validators.js';
-import { sanitizeUser, escapeHtml, parseNumber, parseDateValue, parseInteger, normalizeSexo, formatSexoLabel, normalizeReproMode, normalizeReproEventType, normalizePregStatus, normalizeEmbryoTechnique, normalizeSemenMoveType, normalizeEmbryoMoveType, normalizeSelectionDecision, normalizeAnimalTipoCadastro, normalizeEmailForLogin, isEmailValid } from './modules/utils/formatters.js';
-import { ensureActivityLogColumns, logActivity, recordActivityLog } from './modules/utils/activityLog.js';
-import { loginAttempts, otpSendAttempts, otpVerifyAttempts, chatRateAttempts, chatBurstAttempts, forgotPasswordAttempts, isWindowRateLimited, registerWindowAttempt, clearWindowAttempt, getWindowRetryAfterSeconds, isRateLimited, registerFailedLogin, clearLoginAttempts, isAnyLoginRateLimited, registerFailedLogins, clearLoginRateLimits, isAnyForgotPasswordRateLimited, registerForgotPasswordAttempts, clearForgotPasswordAttempts } from './modules/middlewares/rateLimiter.js';
-import { buildFarmScopeFilter, buildFarmRelationFilter } from './modules/middlewares/farmScope.js';
-import { serializeAnimal, serializePoAnimal, serializeSeason, serializeReproEvent, serializePaddockMove, serializeSemenBatch, serializeNutritionPlan, serializeNutritionAssignment, serializeEmbryoBatch, serializePaddock, serializeFieldOccurrenceAttachment, serializeFieldOccurrence, serializeFinancialTransaction, serializeHerdEvent, serializeSanitaryRecord, getOccurrenceAnimalLabel, getDaysSince, buildFieldOccurrenceAlert } from './modules/utils/serializers.js';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const FIELD_OCCURRENCE_UPLOAD_ROOT = path.join(__dirname, 'uploads', 'field-occurrences');
+const AVATAR_UPLOAD_ROOT = path.join(__dirname, 'uploads', 'avatars');
+const FIELD_WORKER_ROLE = 'field_worker';
+const FIELD_ADMIN_ROLE = 'field_admin';
+const FIELD_WORKER_DEFAULT_MODULES = ['Rebanho Comercial'];
+const APP_ACTIVATION_CODE_TTL_MS = 48 * 60 * 60 * 1000;
+const APP_ACTIVATION_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const FIELD_ATTACHMENT_MAX_FILES = 3;
+const FIELD_OCCURRENCE_TYPES = ['COCHO', 'AGUA', 'DOENTE', 'AVARIA', 'NASCEU', 'MORREU'];
+const FIELD_OCCURRENCE_STATUSES = ['PENDENTE', 'CONFIRMADO', 'CANCELADO'];
+const FIELD_ATTACHMENT_ALLOWED_MIME_TYPES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/heic',
+    'image/heif',
+]);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+dotenv.config({ path: path.join(__dirname, '.env.local'), override: true });
+
+const PORT = process.env.PORT || 3001;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+const IS_PROD = NODE_ENV === 'production';
+const SESSION_COOKIE_NAME = process.env.SESSION_COOKIE_NAME || 'session';
+const SESSION_TOKEN_SALT = process.env.SESSION_TOKEN_SALT || 'dev-session-salt';
+const SESSION_LOGIN_TTL_MS = Number(process.env.SESSION_LOGIN_TTL_MS) || 2 * 60 * 60 * 1000;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173';
+const ALLOW_X_USER_ID = process.env.ALLOW_X_USER_ID === 'true';
+const OTP_SEND_WINDOW_MS = Number(process.env.OTP_SEND_WINDOW_MS) || 10 * 60 * 1000;
+const OTP_SEND_MAX_PER_IP = Number(process.env.OTP_SEND_MAX_PER_IP) || 5;
+const OTP_SEND_MAX_PER_PHONE = Number(process.env.OTP_SEND_MAX_PER_PHONE) || 3;
+const OTP_VERIFY_WINDOW_MS = Number(process.env.OTP_VERIFY_WINDOW_MS) || 10 * 60 * 1000;
+const OTP_VERIFY_MAX_PER_IP = Number(process.env.OTP_VERIFY_MAX_PER_IP) || 10;
+const OTP_VERIFY_MAX_PER_PHONE = Number(process.env.OTP_VERIFY_MAX_PER_PHONE) || 5;
+const FORGOT_PASSWORD_WINDOW_MS = Number(process.env.FORGOT_PASSWORD_WINDOW_MS) || 15 * 60 * 1000;
+const FORGOT_PASSWORD_MAX_ATTEMPTS = Number(process.env.FORGOT_PASSWORD_MAX_ATTEMPTS) || 5;
+const CHAT_RATE_WINDOW_MS = Number(process.env.CHAT_RATE_WINDOW_MS) || 60 * 1000;
+const CHAT_RATE_MAX_PER_USER = Number(process.env.CHAT_RATE_MAX_PER_USER) || 30;
+const CHAT_BURST_WINDOW_MS = Number(process.env.CHAT_BURST_WINDOW_MS) || 10 * 1000;
+const CHAT_BURST_MAX_PER_USER = Number(process.env.CHAT_BURST_MAX_PER_USER) || 8;
+const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:5173';
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@eixo.ag';
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const resend = RESEND_API_KEY && RESEND_API_KEY !== 're_...' ? new Resend(RESEND_API_KEY) : null;
+
+// ─── Twilio Verify ────────────────────────────────────────────────────────────
+const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_AUTH_TOKEN  = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_VERIFY_SID  = process.env.TWILIO_VERIFY_SID;
+
+const twilioClient = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN
+    ? twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+    : null;
 
 // Map temporário: phone -> { verifiedAt: number }  (TTL 30 min, uso único)
 const verifiedPhones    = new Map();
+const otpSendAttempts   = new Map();
+const otpVerifyAttempts = new Map();
+const chatRateAttempts = new Map();
+const chatBurstAttempts = new Map();
+const forgotPasswordAttempts = new Map();
+const PHONE_VERIFY_TTL_MS = 30 * 60 * 1000;
 // ─────────────────────────────────────────────────────────────────────────────
 
+if (IS_PROD) {
+    const productionConfigErrors = [];
+    if (ALLOW_X_USER_ID) {
+        productionConfigErrors.push('ALLOW_X_USER_ID não pode estar ativo em produção.');
+    }
+    if (!process.env.SESSION_TOKEN_SALT || SESSION_TOKEN_SALT === 'dev-session-salt') {
+        productionConfigErrors.push('SESSION_TOKEN_SALT deve ser definido com um valor forte em produção.');
+    }
+    if (!process.env.CORS_ORIGIN || CORS_ORIGIN.includes('localhost') || CORS_ORIGIN.includes('127.0.0.1')) {
+        productionConfigErrors.push('CORS_ORIGIN deve apontar para as origens reais do frontend em produção.');
+    }
+    if (productionConfigErrors.length) {
+        for (const errorMessage of productionConfigErrors) {
+            console.error(`ERRO CRÍTICO: ${errorMessage}`);
+        }
+        process.exit(1);
+    }
+}
+
+function sanitizeUser(user) {
+    const { password, ...safeUser } = user;
+    return safeUser;
+}
+
+const escapeHtml = (value) =>
+    String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+const PASSWORD_POLICY_MESSAGE = 'A senha deve ter pelo menos 8 caracteres, com ao menos 1 letra e 1 número.';
 let systemAccountCategoriesReady = false;
 let systemAccountCategoriesPromise = null;
 
@@ -70,6 +134,134 @@ const ensureSystemAccountCategories = async () => {
             });
     }
     await systemAccountCategoriesPromise;
+};
+
+const isPasswordStrongEnough = (value) => {
+    const password = String(value || '');
+    return password.length >= 8 && /[A-Za-z]/.test(password) && /\d/.test(password);
+};
+
+const validateCNPJ = (cnpj) => {
+    const n = String(cnpj || '').replace(/\D/g, '');
+    if (n.length !== 14) return false;
+    if (/^(\d)\1+$/.test(n)) return false;
+    let sum = 0;
+    let weight = 5;
+    for (let index = 0; index < 12; index += 1) {
+        sum += Number.parseInt(n[index], 10) * weight;
+        weight = weight === 2 ? 9 : weight - 1;
+    }
+    const d1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (Number.parseInt(n[12], 10) !== d1) return false;
+    sum = 0;
+    weight = 6;
+    for (let index = 0; index < 13; index += 1) {
+        sum += Number.parseInt(n[index], 10) * weight;
+        weight = weight === 2 ? 9 : weight - 1;
+    }
+    const d2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    return Number.parseInt(n[13], 10) === d2;
+};
+
+const validateCPF = (cpf) => {
+    const n = String(cpf || '').replace(/\D/g, '');
+    if (n.length !== 11) return false;
+    if (/^(\d)\1+$/.test(n)) return false;
+    let sum = 0;
+    for (let index = 0; index < 9; index += 1) {
+        sum += Number.parseInt(n[index], 10) * (10 - index);
+    }
+    const d1 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (Number.parseInt(n[9], 10) !== d1) return false;
+    sum = 0;
+    for (let index = 0; index < 10; index += 1) {
+        sum += Number.parseInt(n[index], 10) * (11 - index);
+    }
+    const d2 = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    return Number.parseInt(n[10], 10) === d2;
+};
+
+// Normaliza resposta do CNPJ.ws para o formato padrão interno
+const normalizeCnpjWs = (data) => {
+    const est = data?.estabelecimento || {};
+    const telefone = [(est.ddd1 || ''), (est.telefone1 || '')].filter(Boolean).join('');
+    const logradouro = [
+        est.tipo_logradouro,
+        est.logradouro,
+        est.numero,
+        est.complemento,
+    ].filter(Boolean).join(' ');
+    return {
+        cnpj: est.cnpj || '',
+        razao_social: data.razao_social || '',
+        nome_fantasia: est.nome_fantasia || '',
+        descricao_situacao_cadastral: String(est.situacao_cadastral || '').toUpperCase(),
+        cnae_fiscal_descricao: est.atividade_principal?.descricao || '',
+        logradouro,
+        bairro: est.bairro || '',
+        cep: est.cep || '',
+        municipio: est.municipio?.nome || '',
+        uf: est.estado?.sigla || '',
+        telefone,
+        email: est.email || '',
+    };
+};
+
+// Normaliza resposta da Minha Receita para o formato padrão interno
+const normalizeMinhareceita = (data) => {
+    const logradouro = [
+        data.descricao_tipo_de_logradouro,
+        data.logradouro,
+        data.numero,
+        data.complemento,
+    ].filter(Boolean).join(' ');
+    return {
+        cnpj: data.cnpj || '',
+        razao_social: data.razao_social || '',
+        nome_fantasia: data.nome_fantasia || '',
+        descricao_situacao_cadastral: String(data.descricao_situacao_cadastral || '').toUpperCase(),
+        cnae_fiscal_descricao: data.cnae_fiscal_descricao || '',
+        logradouro,
+        bairro: data.bairro || '',
+        cep: data.cep || '',
+        municipio: data.municipio || '',
+        uf: data.uf || '',
+        telefone: data.ddd_telefone_1 || '',
+        email: data.email || '',
+    };
+};
+
+// Busca dados do CNPJ com fallback: CNPJ.ws → Minha Receita
+const fetchCnpjData = async (cnpj) => {
+    const n = String(cnpj || '').replace(/\D/g, '');
+
+    // 1ª tentativa: CNPJ.ws
+    try {
+        const res = await fetch(`https://publica.cnpj.ws/cnpj/${n}`);
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data?.razao_social) {
+            return normalizeCnpjWs(data);
+        }
+    } catch (e) {
+        console.warn('CNPJ.ws falhou, tentando Minha Receita...', e?.message);
+    }
+
+    // 2ª tentativa: Minha Receita
+    try {
+        const res = await fetch(`https://minhareceita.org/${n}`);
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data?.razao_social) {
+            return normalizeMinhareceita(data);
+        }
+        const error = new Error(data?.message || 'CNPJ não encontrado na Receita Federal.');
+        error.statusCode = res.status;
+        throw error;
+    } catch (e) {
+        if (e?.statusCode) throw e;
+        const error = new Error('Não foi possível consultar a Receita Federal. Tente novamente.');
+        error.statusCode = 503;
+        throw error;
+    }
 };
 
 const prisma = new PrismaClient();
@@ -111,6 +303,31 @@ const normalizeInternalEmailToken = (value) => {
 const generateInternalFieldUserEmail = (name) =>
     `${normalizeInternalEmailToken(name)}.${crypto.randomBytes(4).toString('hex')}@manejo.eixo.local`;
 
+const parseCoordinate = (value) => {
+    if (value === null || value === undefined) {
+        return null;
+    }
+    if (typeof value === 'string' && value.trim() === '') {
+        return null;
+    }
+    const normalizedValue = typeof value === 'string' ? value.trim().replace(',', '.') : value;
+    const parsed = Number(normalizedValue);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const validateCoordinatePair = (lat, lng) => {
+    if ((lat === null) !== (lng === null)) {
+        return 'Informe latitude e longitude juntas.';
+    }
+    if (lat !== null && (lat < -90 || lat > 90)) {
+        return 'Latitude inválida. Use um valor entre -90 e 90.';
+    }
+    if (lng !== null && (lng < -180 || lng > 180)) {
+        return 'Longitude inválida. Use um valor entre -180 e 180.';
+    }
+    return null;
+};
+
 const findFarmByCoordinates = async ({ lat, lng, excludeFarmId = null }) => {
     if (lat === null || lng === null) {
         return null;
@@ -123,6 +340,139 @@ const findFarmByCoordinates = async ({ lat, lng, excludeFarmId = null }) => {
         },
         select: { id: true },
     });
+};
+
+const parseNumber = (value) => {
+    const raw = String(value ?? '').trim().replace(/[^\d,.\-]/g, '');
+    if (!raw) return null;
+    const commaIndex = raw.lastIndexOf(',');
+    const dotIndex = raw.lastIndexOf('.');
+    let normalized = raw;
+    if (commaIndex >= 0 && dotIndex >= 0) {
+        normalized = commaIndex > dotIndex
+            ? raw.replace(/\./g, '').replace(',', '.')
+            : raw.replace(/,/g, '');
+    } else if (commaIndex >= 0) {
+        normalized = raw.replace(',', '.');
+    }
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+};
+
+const parseDateValue = (value) => {
+    if (!value) {
+        return null;
+    }
+    const date = value instanceof Date ? value : new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const normalizeSexo = (value) => {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'macho') {
+        return 'MACHO';
+    }
+    if (normalized === 'femea' || normalized === 'fêmea') {
+        return 'FEMEA';
+    }
+    return null;
+};
+
+const formatSexoLabel = (sexo) => (sexo === 'FEMEA' ? 'Fêmea' : 'Macho');
+
+const normalizeReproMode = (value) => {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const normalized = value.trim().toUpperCase();
+    return normalized === 'CONTINUO' || normalized === 'ESTACAO' ? normalized : null;
+};
+
+const normalizeReproEventType = (value) => {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const normalized = value.trim().toUpperCase();
+    const validTypes = ['COBERTURA', 'IATF', 'DIAGNOSTICO_PRENHEZ', 'PARTO', 'DESMAME'];
+    return validTypes.includes(normalized) ? normalized : null;
+};
+
+const normalizePregStatus = (value) => {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const normalized = value.trim().toUpperCase();
+    return normalized === 'PRENHE' || normalized === 'VACIA' ? normalized : null;
+};
+
+const normalizeEmbryoTechnique = (value) => {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const normalized = value.trim().toUpperCase();
+    return normalized === 'FIV' || normalized === 'TE' ? normalized : null;
+};
+
+const normalizeSemenMoveType = (value) => {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const normalized = value.trim().toUpperCase();
+    return ['IN', 'OUT', 'USE', 'ADJUST'].includes(normalized) ? normalized : null;
+};
+
+const normalizeEmbryoMoveType = (value) => {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const normalized = value.trim().toUpperCase();
+    return ['IN', 'OUT', 'TRANSFER', 'ADJUST'].includes(normalized) ? normalized : null;
+};
+
+const parseInteger = (value) => {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) ? parsed : null;
+};
+
+const REPRO_WINDOW_DAYS = 120;
+const DEFAULT_THRESHOLDS = {
+    openDays: {
+        greenMax: 120,
+        yellowMax: 180,
+        critical: 240,
+    },
+    iepDays: {
+        greenMax: 430,
+        yellowMax: 480,
+        critical: 540,
+    },
+};
+
+const normalizeSelectionDecision = (value) => {
+    if (typeof value !== 'string') {
+        return null;
+    }
+    const normalized = value.trim().toUpperCase();
+    return ['KEEP', 'WATCH', 'DISCARD'].includes(normalized) ? normalized : null;
+};
+
+const normalizeAnimalTipoCadastro = (value) => {
+    if (typeof value !== 'string') {
+        return 'MESTICO';
+    }
+    const normalized = value
+        .trim()
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Z0-9]/g, '');
+    if (['PO', 'PUROORIGEM', 'PURODEORIGEM'].includes(normalized)) {
+        return 'PO';
+    }
+    return 'MESTICO';
 };
 
 const findInventoryAnimal = async ({ id, farmId }) => {
@@ -143,6 +493,338 @@ const findLegacyPoAnimal = async ({ id, farmId }) => {
     });
 };
 
+const serializeAnimal = (animal) => ({
+    id: animal.id,
+    brinco: animal.brinco,
+    registro: animal.registro,
+    tipoCadastro: animal.tipoCadastro,
+    raca: animal.raca,
+    sexo: formatSexoLabel(animal.sexo),
+    categoria: animal.categoria,
+    dataNascimento: animal.dataNascimento ? animal.dataNascimento.toISOString() : null,
+    ultimoPeso: animal.pesagens?.[0]?.peso ?? animal.pesoAtual ?? null,
+    gmd: animal.gmd ?? null,
+    gmdLast: animal.gmd ?? null,
+    gmd30: animal.gmd30 ?? null,
+    dataUltimaPesagem: animal.pesagens?.[0]?.data?.toISOString?.() ?? null,
+    farmId: animal.farmId,
+    lotId: animal.lotId,
+    currentPaddockId: animal.currentPaddockId ?? null,
+    currentPaddockName: animal.currentPaddock?.name || null,
+    nutritionPlan: animal.currentNutritionPlan || null,
+    selectionDecision: animal.selectionDecision || null,
+    // Campos P.O.
+    tatuagem: animal.tatuagem || null,
+    sisbov: animal.sisbov || null,
+    maeId: animal.maeId || null,
+    maeNome: animal.maeNome || null,
+    paiId: animal.paiId || null,
+    paiNome: animal.paiNome || null,
+    createdAt: animal.createdAt.toISOString(),
+    updatedAt: animal.updatedAt.toISOString(),
+});
+
+const serializeSeason = (season) => ({
+    id: season.id,
+    farmId: season.farmId,
+    name: season.name,
+    startAt: season.startAt.toISOString(),
+    endAt: season.endAt.toISOString(),
+    createdAt: season.createdAt.toISOString(),
+    updatedAt: season.updatedAt.toISOString(),
+});
+
+const serializeReproEvent = (event) => ({
+    id: event.id,
+    farmId: event.farmId,
+    animalId: event.animalId,
+    type: event.type,
+    date: event.date.toISOString(),
+    seasonId: event.seasonId,
+    payload: event.payload || null,
+    notes: event.notes || null,
+    bullId: event.bullId || null,
+    protocol: event.protocol || null,
+    createdAt: event.createdAt.toISOString(),
+});
+
+const serializePoAnimal = (animal) => ({
+    id: animal.id,
+    farmId: animal.farmId,
+    brinco: animal.brinco,
+    nome: animal.nome,
+    raca: animal.raca,
+    sexo: animal.sexo,
+    dataNascimento: animal.dataNascimento ? animal.dataNascimento.toISOString() : null,
+    ultimoPeso: animal.pesagens?.[0]?.peso ?? animal.pesoAtual ?? null,
+    gmd: animal.gmd ?? null,
+    gmdLast: animal.gmd ?? null,
+    gmd30: animal.gmd30 ?? null,
+    lotId: animal.lotId || null,
+    currentPaddockId: animal.currentPaddockId,
+    currentPaddockName: animal.currentPaddock?.name || null,
+    nutritionPlan: animal.currentNutritionPlan || null,
+    registro: animal.registro,
+    categoria: animal.categoria,
+    observacoes: animal.observacoes,
+    createdAt: animal.createdAt.toISOString(),
+    updatedAt: animal.updatedAt.toISOString(),
+});
+
+const serializePaddockMove = (move) => ({
+    id: move.id,
+    farmId: move.farmId,
+    paddockId: move.paddockId,
+    paddockName: move.paddock?.name || null,
+    animalId: move.animalId || null,
+    poAnimalId: move.poAnimalId || null,
+    startAt: move.startAt.toISOString(),
+    endAt: move.endAt ? move.endAt.toISOString() : null,
+    notes: move.notes || null,
+    createdAt: move.createdAt.toISOString(),
+});
+
+const serializeSemenBatch = (batch) => ({
+    id: batch.id,
+    farmId: batch.farmId,
+    bullAnimalId: batch.bullAnimalId,
+    bullPoAnimalId: batch.bullPoAnimalId,
+    bullName: batch.bullName,
+    bullRegistry: batch.bullRegistry,
+    fornecedor: batch.fornecedor,
+    lote: batch.lote,
+    dataColeta: batch.dataColeta ? batch.dataColeta.toISOString() : null,
+    dosesTotal: batch.dosesTotal,
+    dosesDisponiveis: batch.dosesDisponiveis,
+    localArmazenamento: batch.localArmazenamento,
+    observacoes: batch.observacoes,
+    bullPoAnimal: batch.bullPoAnimal
+        ? {
+              id: batch.bullPoAnimal.id,
+              brinco: batch.bullPoAnimal.brinco,
+              nome: batch.bullPoAnimal.nome,
+              registro: batch.bullPoAnimal.registro,
+          }
+        : null,
+    bullAnimal: batch.bullAnimal
+        ? {
+              id: batch.bullAnimal.id,
+              brinco: batch.bullAnimal.brinco,
+              registro: batch.bullAnimal.registro,
+              tipoCadastro: batch.bullAnimal.tipoCadastro,
+          }
+        : null,
+    createdAt: batch.createdAt.toISOString(),
+    updatedAt: batch.updatedAt.toISOString(),
+});
+
+const serializeNutritionPlan = (plan) => ({
+    id: plan.id,
+    farmId: plan.farmId,
+    nome: plan.nome,
+    fase: plan.fase,
+    startAt: plan.startAt.toISOString(),
+    endAt: plan.endAt ? plan.endAt.toISOString() : null,
+    metaGmd: plan.metaGmd,
+    observacoes: plan.observacoes,
+    createdAt: plan.createdAt.toISOString(),
+    updatedAt: plan.updatedAt.toISOString(),
+});
+
+const serializeNutritionAssignment = (assignment) => ({
+    id: assignment.id,
+    farmId: assignment.farmId,
+    planId: assignment.planId,
+    lotId: assignment.lotId,
+    poLotId: assignment.poLotId,
+    animalId: assignment.animalId,
+    poAnimalId: assignment.poAnimalId,
+    startAt: assignment.startAt.toISOString(),
+    endAt: assignment.endAt ? assignment.endAt.toISOString() : null,
+    createdAt: assignment.createdAt.toISOString(),
+    updatedAt: assignment.updatedAt.toISOString(),
+});
+
+const serializeEmbryoBatch = (batch) => ({
+    id: batch.id,
+    farmId: batch.farmId,
+    donorAnimalId: batch.donorAnimalId,
+    donorPoAnimalId: batch.donorPoAnimalId,
+    donorName: batch.donorName,
+    donorRegistry: batch.donorRegistry,
+    sireAnimalId: batch.sireAnimalId,
+    sirePoAnimalId: batch.sirePoAnimalId,
+    sireName: batch.sireName,
+    sireRegistry: batch.sireRegistry,
+    tecnica: batch.tecnica,
+    estagio: batch.estagio,
+    qualidade: batch.qualidade,
+    lote: batch.lote,
+    quantidadeTotal: batch.quantidadeTotal,
+    quantidadeDisponivel: batch.quantidadeDisponivel,
+    localArmazenamento: batch.localArmazenamento,
+    observacoes: batch.observacoes,
+    donorPoAnimal: batch.donorPoAnimal
+        ? {
+              id: batch.donorPoAnimal.id,
+              brinco: batch.donorPoAnimal.brinco,
+              nome: batch.donorPoAnimal.nome,
+              registro: batch.donorPoAnimal.registro,
+          }
+        : null,
+    donorAnimal: batch.donorAnimal
+        ? {
+              id: batch.donorAnimal.id,
+              brinco: batch.donorAnimal.brinco,
+              registro: batch.donorAnimal.registro,
+              tipoCadastro: batch.donorAnimal.tipoCadastro,
+          }
+        : null,
+    sirePoAnimal: batch.sirePoAnimal
+        ? {
+              id: batch.sirePoAnimal.id,
+              brinco: batch.sirePoAnimal.brinco,
+              nome: batch.sirePoAnimal.nome,
+              registro: batch.sirePoAnimal.registro,
+          }
+        : null,
+    sireAnimal: batch.sireAnimal
+        ? {
+              id: batch.sireAnimal.id,
+              brinco: batch.sireAnimal.brinco,
+              registro: batch.sireAnimal.registro,
+              tipoCadastro: batch.sireAnimal.tipoCadastro,
+          }
+        : null,
+    createdAt: batch.createdAt.toISOString(),
+    updatedAt: batch.updatedAt.toISOString(),
+});
+
+const serializePaddock = (paddock) => ({
+    id: paddock.id,
+    farmId: paddock.farmId,
+    name: paddock.name,
+    areaHa: paddock.areaHa ?? null,
+    divisionType: paddock.divisionType ?? null,
+    forrageira: paddock.forrageira ?? null,
+    lotacaoUaHa: paddock.lotacaoUaHa ?? null,
+    capacity: paddock.capacity ?? null,
+    lat: paddock.lat ?? null,
+    lng: paddock.lng ?? null,
+    mapGeometry: paddock.mapGeometry ?? null,
+    active: paddock.active ?? true,
+    createdAt: paddock.createdAt?.toISOString?.() ?? null,
+    updatedAt: paddock.updatedAt?.toISOString?.() ?? null,
+});
+
+const serializeFieldOccurrenceAttachment = (attachment) => ({
+    id: attachment.id,
+    occurrenceId: attachment.occurrenceId,
+    fileName: attachment.fileName,
+    mimeType: attachment.mimeType,
+    storagePath: attachment.storagePath,
+    uploadedAt: attachment.uploadedAt?.toISOString?.() ?? null,
+    downloadUrl: `/field-occurrence-attachments/${attachment.id}/file`,
+});
+
+const serializeFieldOccurrence = (occurrence) => ({
+    id: occurrence.id,
+    organizationId: occurrence.organizationId,
+    farmId: occurrence.farmId,
+    createdById: occurrence.createdById,
+    type: occurrence.type,
+    status: occurrence.status,
+    description: occurrence.description ?? null,
+    animalId: occurrence.animalId ?? null,
+    paddockId: occurrence.paddockId ?? null,
+    occurredAt: occurrence.occurredAt?.toISOString?.() ?? null,
+    lat: occurrence.lat ?? null,
+    lng: occurrence.lng ?? null,
+    offlineCreatedAt: occurrence.offlineCreatedAt?.toISOString?.() ?? null,
+    syncSource: occurrence.syncSource ?? null,
+    createdAt: occurrence.createdAt?.toISOString?.() ?? null,
+    updatedAt: occurrence.updatedAt?.toISOString?.() ?? null,
+    createdByName: occurrence.createdBy?.name ?? null,
+    animal: occurrence.animal ? serializeAnimal(occurrence.animal) : null,
+    paddock: occurrence.paddock ? serializePaddock(occurrence.paddock) : null,
+    attachments: Array.isArray(occurrence.attachments)
+        ? occurrence.attachments.map(serializeFieldOccurrenceAttachment)
+        : [],
+});
+
+const getOccurrenceAnimalLabel = (occurrence) => {
+    const animal = occurrence?.animal;
+    if (!animal) {
+        return null;
+    }
+    return animal.brinco || animal.identificacao || animal.name || animal.id;
+};
+
+const getDaysSince = (date) => {
+    if (!date) {
+        return null;
+    }
+    return Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / (24 * 60 * 60 * 1000)));
+};
+
+const buildFieldOccurrenceAlert = (occurrence) => {
+    const animalLabel = getOccurrenceAnimalLabel(occurrence);
+    const paddockLabel = occurrence.paddock?.name || 'Local não informado';
+    const description = occurrence.description ? String(occurrence.description).trim() : '';
+    const createdAt = occurrence.occurredAt?.toISOString?.() ?? occurrence.createdAt?.toISOString?.() ?? null;
+    const workerName = occurrence.createdBy?.name ? String(occurrence.createdBy.name).trim() : '';
+    const workerPrefix = workerName ? `${workerName}, ` : '';
+
+    switch (occurrence.type) {
+        case 'NASCEU':
+            return {
+                id: `field-${occurrence.id}`,
+                type: 'info',
+                message: `NASCEU: ${workerPrefix}registrou nascimento${animalLabel ? ` da mãe ${animalLabel}` : ''}.`,
+                source: 'APP_MANEJO',
+                sourceType: occurrence.type,
+                sourceId: occurrence.id,
+                farmId: occurrence.farmId,
+                createdAt,
+            };
+        case 'MORREU':
+            return {
+                id: `field-${occurrence.id}`,
+                type: 'critical',
+                message: `MORREU: ${workerPrefix}registrou morte${animalLabel ? ` do animal ${animalLabel}` : ''}.`,
+                source: 'APP_MANEJO',
+                sourceType: occurrence.type,
+                sourceId: occurrence.id,
+                farmId: occurrence.farmId,
+                createdAt,
+            };
+        case 'DOENTE':
+            return {
+                id: `field-${occurrence.id}`,
+                type: 'critical',
+                message: `DOENTE: ${workerPrefix}registrou animal doente${animalLabel ? ` - ${animalLabel}` : ''}.`,
+                source: 'APP_MANEJO',
+                sourceType: occurrence.type,
+                sourceId: occurrence.id,
+                farmId: occurrence.farmId,
+                createdAt,
+            };
+        case 'AVARIA':
+            return {
+                id: `field-${occurrence.id}`,
+                type: 'critical',
+                message: `AVARIA: ${workerPrefix}registrou avaria em ${paddockLabel}${description ? ` - ${description}` : ''}.`,
+                source: 'APP_MANEJO',
+                sourceType: occurrence.type,
+                sourceId: occurrence.id,
+                farmId: occurrence.farmId,
+                createdAt,
+            };
+        default:
+            return null;
+    }
+};
+
 const sanitizeUploadFileName = (value) =>
     String(value || 'arquivo')
         .normalize('NFD')
@@ -161,10 +843,77 @@ const decodeBase64Payload = (value) => {
     return Buffer.from(normalized, 'base64');
 };
 
+function serializeFinancialTransaction(t) {
+    return {
+        id: t.id,
+        farmId: t.farmId,
+        type: t.type,
+        categoria: t.categoria,
+        accountCategoryId: t.accountCategoryId || null,
+        accountCategoryName: t.accountCategory?.name || null,
+        accountCategoryGroup: t.accountCategory?.group || null,
+        valor: parseFloat(t.valor.toString()),
+        data: t.data,
+        descricao: t.descricao || null,
+        vencimento: t.vencimento || null,
+        status: t.status || 'PAGO',
+        herdEventId: t.herdEventId || null,
+        sanitaryRecordId: t.sanitaryRecordId || null,
+        createdAt: t.createdAt,
+    };
+}
+
+// Mapeamento de tipo de HerdEvent → AccountCategory ID do sistema
+const HERD_EVENT_CATEGORY_MAP = {
+    COMPRA: { categoryId: 'sys-compra-animais', type: 'SAIDA', categoria: 'COMPRA_ANIMAIS' },
+    VENDA:  { categoryId: 'sys-venda-animais',  type: 'ENTRADA', categoria: 'VENDA_ANIMAIS' },
+};
+
+// Mapeamento de tipo sanitário → AccountCategory ID do sistema
+const SANITARY_CATEGORY_MAP = {
+    VACINA:     { categoryId: 'sys-vacinas',     categoria: 'MEDICAMENTOS' },
+    VERMIFUGO:  { categoryId: 'sys-vermifugos',  categoria: 'MEDICAMENTOS' },
+    TRATAMENTO: { categoryId: 'sys-tratamentos', categoria: 'MEDICAMENTOS' },
+};
+
 const diffDays = (later, earlier) => {
     const diffMs = later.getTime() - earlier.getTime();
     return Math.round(diffMs / (1000 * 60 * 60 * 24));
 };
+
+// ── Log de atividades ─────────────────────────────────────────────────────────
+
+async function ensureActivityLogColumns() {
+    const stmts = [
+        `ALTER TABLE "ActivityLog" ALTER COLUMN "method" DROP NOT NULL`,
+        `ALTER TABLE "ActivityLog" ALTER COLUMN "path"   DROP NOT NULL`,
+        `ALTER TABLE "ActivityLog" ADD COLUMN IF NOT EXISTS "action"      TEXT`,
+        `ALTER TABLE "ActivityLog" ADD COLUMN IF NOT EXISTS "entity"      TEXT`,
+        `ALTER TABLE "ActivityLog" ADD COLUMN IF NOT EXISTS "entityId"    TEXT`,
+        `ALTER TABLE "ActivityLog" ADD COLUMN IF NOT EXISTS "description" TEXT`,
+        `ALTER TABLE "ActivityLog" ADD COLUMN IF NOT EXISTS "farmId"      TEXT`,
+        `CREATE INDEX IF NOT EXISTS "ActivityLog_farmId_createdAt_idx" ON "ActivityLog"("farmId","createdAt")`,
+    ];
+    for (const sql of stmts) {
+        try { await prisma.$executeRawUnsafe(sql); } catch { /* já existe */ }
+    }
+}
+ensureActivityLogColumns().catch(() => {});
+
+async function logActivity(req, { action, entity, entityId, description, farmId } = {}) {
+    try {
+        const userId = req.user?.id;
+        const organizationId = req.saas?.organizationId || null;
+        if (!userId) return;
+        const id = crypto.randomUUID();
+        await prisma.$executeRawUnsafe(
+            `INSERT INTO "ActivityLog" (id,"userId","organizationId","farmId",action,entity,"entityId",description,"createdAt")
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,NOW())`,
+            id, userId, organizationId, farmId ?? null,
+            action ?? null, entity ?? null, entityId ?? null, description ?? null,
+        );
+    } catch { /* log nunca deve quebrar a operação principal */ }
+}
 
 const diffDaysFloat = (later, earlier) => {
     return (later.getTime() - earlier.getTime()) / (1000 * 60 * 60 * 24);
@@ -653,8 +1402,63 @@ const serializeAuthUser = (user, saasContext = null, accessContext = null) => ({
 
 const app = express();
 app.set('trust proxy', 1);
-app.use(createCorsMiddleware(IS_PROD, CORS_ORIGIN));
-app.use(createSecurityHeadersMiddleware(IS_PROD, CORS_ORIGIN));
+const corsOrigins = CORS_ORIGIN.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+const devOriginRegex = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/;
+const cspConnectSrc = [
+    "'self'",
+    'https://api.open-meteo.com',
+    'https://geocoding-api.open-meteo.com',
+    ...corsOrigins,
+    ...(!IS_PROD
+        ? [
+            'http://localhost:3001',
+            'http://localhost:5173',
+            'http://127.0.0.1:3001',
+            'http://127.0.0.1:5173',
+        ]
+        : []),
+];
+const contentSecurityPolicy = [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "img-src 'self' data: blob: https://unpkg.com https://server.arcgisonline.com",
+    `connect-src ${[...new Set(cspConnectSrc)].join(' ')}`,
+].join('; ');
+app.use(
+    cors({
+        origin: (origin, callback) => {
+            if (!origin) {
+                return callback(null, true);
+            }
+            if (corsOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+            if (!IS_PROD && devOriginRegex.test(origin)) {
+                return callback(null, true);
+            }
+            return callback(new Error('Not allowed by CORS'));
+        },
+        credentials: true,
+    }),
+);
+app.use((req, res, next) => {
+    res.setHeader('Content-Security-Policy', contentSecurityPolicy);
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (IS_PROD && req.secure) {
+        res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    }
+    next();
+});
 app.use(express.json());
 app.use(cookieParser());
 
@@ -667,6 +1471,7 @@ app.get('/health', (_req, res) => {
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_ATTEMPTS = 10;
+const loginAttempts = new Map();
 
 const allowXUserId = !IS_PROD && ALLOW_X_USER_ID;
 const BILLING_BLOCKED_STATES = new Set(['PAST_DUE', 'BLOCKED', 'CANCELED']);
@@ -852,6 +1657,32 @@ const normalizeOrganizationSlug = (value) =>
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '')
         .slice(0, 48) || 'org';
+
+const buildFarmScopeFilter = (req, extra = {}) => {
+    const clauses = [
+        req.saas?.organizationId ? { organizationId: req.saas.organizationId } : { userId: req.user.id },
+    ];
+    if (req.access?.restrictToFarmIds?.length) {
+        clauses.push({ id: { in: req.access.restrictToFarmIds } });
+    }
+    if (Object.keys(extra).length) {
+        clauses.push(extra);
+    }
+    return clauses.length === 1 ? clauses[0] : { AND: clauses };
+};
+
+const buildFarmRelationFilter = (req, extra = {}) => {
+    const clauses = [
+        req.saas?.organizationId ? { organizationId: req.saas.organizationId } : { userId: req.user.id },
+    ];
+    if (req.access?.restrictToFarmIds?.length) {
+        clauses.push({ id: { in: req.access.restrictToFarmIds } });
+    }
+    if (Object.keys(extra).length) {
+        clauses.push(extra);
+    }
+    return clauses.length === 1 ? clauses[0] : { AND: clauses };
+};
 
 const ensureFieldWorkerFarmAccess = async (user, saasContext = null) => {
     if (!isFieldAppUser(user)) {
@@ -1125,6 +1956,8 @@ const extractSessionTokenFromRequest = (req) => {
     return null;
 };
 
+const normalizeEmailForLogin = (value) => String(value || '').trim().toLowerCase();
+const isEmailValid = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 const hashPasswordResetToken = (token) =>
     crypto
         .createHash('sha256')
@@ -1148,6 +1981,120 @@ const buildForgotPasswordRateLimitKeys = (email, ip) => {
         keys.push(`forgot:email:${normalizedEmail}`);
     }
     return keys;
+};
+
+const isRateLimited = (key) => {
+    const entry = loginAttempts.get(key);
+    if (!entry) {
+        return false;
+    }
+    if (Date.now() - entry.firstAttemptAt > LOGIN_WINDOW_MS) {
+        loginAttempts.delete(key);
+        return false;
+    }
+    return entry.count >= LOGIN_MAX_ATTEMPTS;
+};
+
+const registerFailedLogin = (key) => {
+    const now = Date.now();
+    const entry = loginAttempts.get(key);
+    if (!entry || now - entry.firstAttemptAt > LOGIN_WINDOW_MS) {
+        loginAttempts.set(key, { count: 1, firstAttemptAt: now });
+        return;
+    }
+    entry.count += 1;
+    loginAttempts.set(key, entry);
+};
+
+const clearLoginAttempts = (key) => {
+    loginAttempts.delete(key);
+};
+
+const isAnyLoginRateLimited = (keys) => keys.some((key) => isRateLimited(key));
+
+const registerFailedLogins = (keys) => {
+    for (const key of keys) {
+        registerFailedLogin(key);
+    }
+};
+
+const clearLoginRateLimits = (keys) => {
+    for (const key of keys) {
+        clearLoginAttempts(key);
+    }
+};
+
+const isAnyForgotPasswordRateLimited = (keys) =>
+    keys.some((key) => isWindowRateLimited(forgotPasswordAttempts, key, FORGOT_PASSWORD_MAX_ATTEMPTS, FORGOT_PASSWORD_WINDOW_MS));
+
+const registerForgotPasswordAttempts = (keys) => {
+    for (const key of keys) {
+        registerWindowAttempt(forgotPasswordAttempts, key, FORGOT_PASSWORD_WINDOW_MS);
+    }
+};
+
+const clearForgotPasswordAttempts = (keys) => {
+    for (const key of keys) {
+        clearWindowAttempt(forgotPasswordAttempts, key);
+    }
+};
+
+const isWindowRateLimited = (store, key, limit, windowMs) => {
+    const entry = store.get(key);
+    if (!entry) {
+        return false;
+    }
+    if (Date.now() - entry.firstAttemptAt > windowMs) {
+        store.delete(key);
+        return false;
+    }
+    return entry.count >= limit;
+};
+
+const registerWindowAttempt = (store, key, windowMs) => {
+    const now = Date.now();
+    const entry = store.get(key);
+    if (!entry || now - entry.firstAttemptAt > windowMs) {
+        store.set(key, { count: 1, firstAttemptAt: now });
+        return;
+    }
+    entry.count += 1;
+    store.set(key, entry);
+};
+
+const clearWindowAttempt = (store, key) => {
+    store.delete(key);
+};
+
+const getWindowRetryAfterSeconds = (store, key, windowMs) => {
+    const entry = store.get(key);
+    if (!entry) return 1;
+    const elapsed = Date.now() - entry.firstAttemptAt;
+    const remainingMs = Math.max(1000, windowMs - elapsed);
+    return Math.ceil(remainingMs / 1000);
+};
+
+const recordActivityLog = async (req, { statusCode = null, requestMeta = null } = {}) => {
+    if (!req?.user?.id) {
+        return;
+    }
+    try {
+        await prisma.activityLog.create({
+            data: {
+                id: crypto.randomUUID(),
+                userId: req.user.id,
+                organizationId: req.saas?.organizationId || null,
+                method: req.method,
+                path: req.originalUrl || req.path || '',
+                statusCode,
+                ip: req.ip || null,
+                userAgent: req.get('user-agent') || null,
+                requestMeta,
+            },
+        });
+    } catch (error) {
+        console.error('Erro ao registrar ActivityLog:', error);
+    }
 };
 
 const WEB_DEVICE_MARKER = '::eixo-web-device:';
@@ -1345,6 +2292,8 @@ const requireSuperAdmin = (req, res, next) => {
     return next();
 };
 
+// Initialize Google Generative AI
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 if (!GOOGLE_API_KEY) {
     console.warn('GOOGLE_API_KEY is not set. Gemini API will not be available.');
 }
@@ -9266,6 +10215,35 @@ app.post('/po/animals/:id/move-pasto', async (req, res) => {
 
 const VALID_EVENT_TYPES = ['NASCIMENTO', 'COMPRA', 'VENDA', 'MORTE'];
 const VALID_SANITARY_TIPOS = ['VACINA', 'VERMIFUGO', 'TRATAMENTO'];
+
+const serializeHerdEvent = (event) => ({
+    id: event.id,
+    farmId: event.farmId,
+    animalId: event.animalId || null,
+    poAnimalId: event.poAnimalId || null,
+    type: event.type,
+    date: event.date.toISOString(),
+    peso: event.peso ?? null,
+    valor: event.valor ?? null,
+    origem: event.origem || null,
+    destino: event.destino || null,
+    observacoes: event.observacoes || null,
+    createdAt: event.createdAt.toISOString(),
+});
+
+const serializeSanitaryRecord = (record) => ({
+    id: record.id,
+    farmId: record.farmId,
+    animalId: record.animalId || null,
+    poAnimalId: record.poAnimalId || null,
+    tipo: record.tipo,
+    produto: record.produto,
+    date: record.date.toISOString(),
+    dose: record.dose || null,
+    proximaAplicacao: record.proximaAplicacao ? record.proximaAplicacao.toISOString() : null,
+    observacoes: record.observacoes || null,
+    createdAt: record.createdAt.toISOString(),
+});
 
 // =============================================
 // EVENTOS DE INVENTÁRIO — Rebanho Comercial
