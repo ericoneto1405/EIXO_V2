@@ -69,7 +69,7 @@ jobs:
             fi
 
             echo "▶ Instalando dependências..."
-            npm ci --omit=dev 2>/dev/null || npm install --omit=dev
+            npm ci || npm install
 
             echo "▶ Aplicando migrações do banco..."
             if [ -n "${DATABASE_URL:-}" ]; then
@@ -80,10 +80,7 @@ jobs:
             fi
 
             echo "▶ Build do frontend..."
-            cd frontend
-            npm ci 2>/dev/null || npm install
             npm run build
-            cd ..
 
             echo "▶ Reiniciando servidor..."
             if pm2 describe eixo-server >/dev/null 2>&1; then
