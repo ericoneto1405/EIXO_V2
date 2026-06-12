@@ -19,7 +19,7 @@ jobs:
           node-version: 20
           cache: npm
       - name: Install
-        run: npm ci
+        run: npm ci --include=dev
       - name: Generate Prisma Client
         run: npm run generate
       - name: TypeScript check (frontend)
@@ -60,16 +60,16 @@ jobs:
             if [ -f server/.env.production ]; then
               set -a; source server/.env.production; set +a
               echo "  server/.env.production carregado."
-            elif [ -f server/.env ]; then
-              set -a; source server/.env; set +a
-              echo "  server/.env carregado."
             else
-              echo "  AVISO: nenhum .env encontrado — tentando exportar do PM2..."
-              eval "$(pm2 env eixo-server 2>/dev/null | grep -E '^[A-Z_]+=' | sed 's/^/export /')" || true
+              echo "  AVISO: server/.env.production não encontrado."
             fi
 
             echo "▶ Instalando dependências..."
-            npm install
+            if [ -f package-lock.json ]; then
+              npm ci --include=dev
+            else
+              npm install --include=dev
+            fi
 
             echo "▶ Aplicando migrações do banco..."
             if [ -n "${DATABASE_URL:-}" ]; then
@@ -80,7 +80,14 @@ jobs:
             fi
 
             echo "▶ Build do frontend..."
+            cd frontend
+            if [ -f package-lock.json ]; then
+              npm ci --include=dev
+            else
+              npm install --include=dev
+            fi
             npm run build
+            cd ..
 
             echo "▶ Reiniciando servidor..."
             if pm2 describe eixo-server >/dev/null 2>&1; then
