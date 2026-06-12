@@ -57,37 +57,20 @@ jobs:
             cp -f /tmp/.env.production.bak server/.env.production 2>/dev/null || true
 
             echo "▶ Carregando variáveis de ambiente..."
-            if [ -f server/.env.production ]; then
-              set -a; source server/.env.production; set +a
-              echo "  server/.env.production carregado."
-            else
-              echo "  AVISO: server/.env.production não encontrado."
-            fi
+            set -a
+            source server/.env.production
+            set +a
 
-            echo "▶ Instalando dependências..."
-            if [ -f package-lock.json ]; then
-              npm ci --include=dev
-            else
-              npm install --include=dev
-            fi
+            echo "▶ Instalando dependências (root workspace)..."
+            rm -rf node_modules package-lock.json
+            npm install --include=dev
 
             echo "▶ Aplicando migrações do banco..."
-            if [ -n "${DATABASE_URL:-}" ]; then
-              npx prisma migrate deploy --schema server/prisma/schema.prisma
-              npx prisma generate --schema server/prisma/schema.prisma
-            else
-              echo "  AVISO: DATABASE_URL não definida — pulando migração."
-            fi
+            npx prisma migrate deploy --schema server/prisma/schema.prisma
+            npx prisma generate --schema server/prisma/schema.prisma
 
             echo "▶ Build do frontend..."
-            cd frontend
-            if [ -f package-lock.json ]; then
-              npm ci --include=dev
-            else
-              npm install --include=dev
-            fi
             npm run build
-            cd ..
 
             echo "▶ Reiniciando servidor..."
             if pm2 describe eixo-server >/dev/null 2>&1; then
@@ -99,7 +82,7 @@ jobs:
 
             echo "▶ Health check..."
             sleep 3
-            if curl -fsS --max-time 10 http://127.0.0.1:3001/health >/dev/null 2>&1; then
+            if curl -fsS --max-time 10 http://127.0.0.1:3000/health >/dev/null 2>&1; then
               echo "Health OK"
             else
               echo "WARNING: Health check falhou — verifique pm2 logs"
