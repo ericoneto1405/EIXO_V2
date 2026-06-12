@@ -81,6 +81,7 @@ jobs:
             fi
 
             echo "▶ Build do frontend..."
+            npm ci --workspace frontend --include=dev || npm install --workspace frontend
             npm run build
 
             echo "▶ Reiniciando servidor..."
