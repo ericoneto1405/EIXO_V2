@@ -69,8 +69,7 @@ jobs:
             fi
 
             echo "▶ Instalando dependências..."
-            rm -rf node_modules frontend/node_modules server/node_modules
-            npm ci || npm install
+            npm install
 
             echo "▶ Aplicando migrações do banco..."
             if [ -n "${DATABASE_URL:-}" ]; then
@@ -81,7 +80,6 @@ jobs:
             fi
 
             echo "▶ Build do frontend..."
-            npm ci --workspace frontend --include=dev || npm install --workspace frontend
             npm run build
 
             echo "▶ Reiniciando servidor..."
