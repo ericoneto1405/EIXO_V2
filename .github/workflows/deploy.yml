@@ -69,6 +69,7 @@ jobs:
             fi
 
             echo "▶ Instalando dependências..."
+            rm -rf node_modules frontend/node_modules server/node_modules
             npm ci || npm install
 
             echo "▶ Aplicando migrações do banco..."
@@ -80,7 +81,7 @@ jobs:
             fi
 
             echo "▶ Build do frontend..."
-            npx --workspace frontend vite build
+            npm run build
 
             echo "▶ Reiniciando servidor..."
             if pm2 describe eixo-server >/dev/null 2>&1; then
