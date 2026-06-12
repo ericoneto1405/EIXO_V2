@@ -80,7 +80,10 @@ jobs:
             fi
 
             echo "▶ Build do frontend..."
+            cd frontend
+            npm ci || npm install
             npm run build
+            cd ..
 
             echo "▶ Reiniciando servidor..."
             if pm2 describe eixo-server >/dev/null 2>&1; then
