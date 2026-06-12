@@ -16,7 +16,8 @@ import {
     FIELD_WORKER_ROLE, FIELD_ADMIN_ROLE, FIELD_WORKER_DEFAULT_MODULES,
 } from '../../config/env.js';
 import { isPasswordStrongEnough, validateCNPJ, validateCPF, fetchCnpjData } from '../../utils/validators.js';
-import { sanitizeUser, escapeHtml, normalizeEmailForLogin, isEmailValid, normalizeUserModules } from '../../utils/formatters.js';
+import { sanitizeUser, escapeHtml, normalizeEmailForLogin, isEmailValid } from '../../utils/formatters.js';
+import { normalizeUserModules, isSaasContextError } from '../../utils/saasContext.js';
 import { logActivity } from '../../utils/activityLog.js';
 import {
     otpSendAttempts, otpVerifyAttempts, forgotPasswordAttempts,
@@ -46,13 +47,13 @@ const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_T
 // Map temporário: phone -> { verifiedAt: number }  (TTL 30 min, uso único)
 const verifiedPhones    = new Map();
 
-const normalizeActivationCode = (value) =>
+export const normalizeActivationCode = (value) =>
     String(value || '')
         .trim()
         .toUpperCase()
         .replace(/[^A-Z0-9]/g, '');
 
-const hashActivationCode = (value) =>
+export const hashActivationCode = (value) =>
     crypto
         .createHash('sha256')
         .update(normalizeActivationCode(value))
@@ -60,7 +61,7 @@ const hashActivationCode = (value) =>
         .update(SESSION_TOKEN_SALT)
         .digest('hex');
 
-const generateActivationCode = () => {
+export const generateActivationCode = () => {
     let raw = '';
     for (let index = 0; index < 12; index += 1) {
         const randomIndex = crypto.randomInt(0, APP_ACTIVATION_CODE_ALPHABET.length);
@@ -80,7 +81,7 @@ const normalizeInternalEmailToken = (value) => {
     return normalized || 'colaborador';
 };
 
-const generateInternalFieldUserEmail = (name) =>
+export const generateInternalFieldUserEmail = (name) =>
     `${normalizeInternalEmailToken(name)}.${crypto.randomBytes(4).toString('hex')}@manejo.eixo.local`;
 
 const decodeBase64Payload = (value) => {

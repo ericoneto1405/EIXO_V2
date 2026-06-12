@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, requireSuperAdmin } from '../middlewares/requireAuth.js';
-import { PLAN_ENTITLEMENTS, PLAN_MODULES, FIELD_WORKER_ROLE, FIELD_ADMIN_ROLE } from '../utils/saasContext.js';
+import { PLAN_ENTITLEMENTS, PLAN_MODULES } from '../utils/saasContext.js';
+import { FIELD_WORKER_ROLE, FIELD_ADMIN_ROLE } from '../config/env.js';
 import { createSupportLog, getSupportConversationState, SUPPORT_ENTITY, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE, SUPPORT_ACTION_ADMIN } from '../chat/chatService.js';
 import { logActivity } from '../utils/activityLog.js';
 const prisma = new PrismaClient();

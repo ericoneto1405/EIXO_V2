@@ -41,7 +41,7 @@ const diffDays = (later, earlier) => {
     return Math.round(diffMs / (1000 * 60 * 60 * 24));
 };
 
-const diffDaysFloat = (later, earlier) => {
+export const diffDaysFloat = (later, earlier) => {
     return (later.getTime() - earlier.getTime()) / (1000 * 60 * 60 * 24);
 };
 
@@ -62,7 +62,7 @@ const normalizeWeighingsByDay = (weighings) => {
     return Array.from(byDay.values()).sort((a, b) => a.date.getTime() - b.date.getTime());
 };
 
-const calculateGmdMetrics = (weighings) => {
+export const calculateGmdMetrics = (weighings) => {
     const normalized = normalizeWeighingsByDay(weighings);
     if (normalized.length < 2) {
         return { gmdLast: null, gmd30: null };
@@ -87,7 +87,7 @@ const calculateGmdMetrics = (weighings) => {
     return { gmdLast, gmd30 };
 };
 
-const moveAnimalBetweenPaddocks = async ({ animalId, paddockId, startAt, notes, scopeFilter, isPo }) => {
+export const moveAnimalBetweenPaddocks = async ({ animalId, paddockId, startAt, notes, scopeFilter, isPo }) => {
     const animalModel = isPo ? prisma.poAnimal : prisma.animal;
     const moveWhere = isPo ? { poAnimalId: animalId } : { animalId };
 
@@ -169,7 +169,7 @@ const moveAnimalBetweenPaddocks = async ({ animalId, paddockId, startAt, notes, 
     }
 };
 
-const transferAnimalsToFarm = async ({ ids, targetFarmId, targetPaddockId, transferDate, notes, scopeFilter, farmScopeFilter, isPo }) => {
+export const transferAnimalsToFarm = async ({ ids, targetFarmId, targetPaddockId, transferDate, notes, scopeFilter, farmScopeFilter, isPo }) => {
     const normalizedIds = Array.isArray(ids) ? ids.map(String).filter(Boolean) : [];
     if (!normalizedIds.length || !targetFarmId || !targetPaddockId) {
         return { error: { status: 400, message: 'Informe animais, fazenda destino e pasto destino.' } };

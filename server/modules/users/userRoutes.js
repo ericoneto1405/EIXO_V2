@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth } from '../../middlewares/requireAuth.js';
-import { sanitizeUser, escapeHtml, normalizeUserModules, isEmailValid } from '../../utils/formatters.js';
+import { sanitizeUser, escapeHtml, isEmailValid } from '../../utils/formatters.js';
 import { isPasswordStrongEnough, validateCNPJ, validateCPF, fetchCnpjData } from '../../utils/validators.js';
 import { logActivity } from '../../utils/activityLog.js';
 import { buildFarmScopeFilter } from '../../middlewares/farmScope.js';

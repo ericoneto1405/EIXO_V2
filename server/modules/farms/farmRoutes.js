@@ -7,6 +7,8 @@ import { parseNumber, parseDateValue } from '../../utils/formatters.js';
 import { logActivity, recordActivityLog } from '../../utils/activityLog.js';
 import { serializePaddock, serializeSeason } from '../../utils/serializers.js';
 import { isSaasContextError } from '../../utils/saasContext.js';
+import { normalizeReproMode } from '../../utils/formatters.js';
+import { serializeAnimal } from '../../utils/serializers.js';
 import { REPRO_WINDOW_DAYS } from '../../config/env.js';
 const prisma = new PrismaClient();
 
