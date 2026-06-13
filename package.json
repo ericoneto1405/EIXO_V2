@@ -11,7 +11,7 @@
     "install:reset": "rm -rf node_modules frontend/node_modules server/node_modules package-lock.json && npm install",
     "studio": "npm run prisma:studio --workspace server",
     "migrate": "npm run prisma:migrate --workspace server",
-    "generate": "npm run prisma:generate --workspace server",
+    "generate": "npx prisma generate --schema server/prisma/schema.prisma",
     "seed": "npm run seed --workspace server",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:frontend\"",
     "dev:frontend": "npm run dev --workspace frontend",
