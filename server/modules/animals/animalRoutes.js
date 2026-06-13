@@ -16,6 +16,8 @@ import {
     serializeEmbryoBatch, serializePaddock, getOccurrenceAnimalLabel,
 } from '../utils/serializers.js';
 import { REPRO_WINDOW_DAYS, DEFAULT_THRESHOLDS } from '../config/env.js';
+import { registerNutritionModuleRoutes } from '../../nutritionModule.js';
+import { registerAcasalamentoRoutes } from '../../acasalamentoModule.js';
 const prisma = new PrismaClient();
 
 const findInventoryAnimal = async ({ id, farmId }) => {
