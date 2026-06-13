@@ -1,13 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import { requireAuth, requireNonFieldWorker } from '../../middlewares/requireAuth.js';
-import { buildFarmScopeFilter, buildFarmRelationFilter } from '../../middlewares/farmScope.js';
-import { parseNumber, parseDateValue, parseInteger, normalizeSexo, normalizeSemenMoveType, normalizeEmbryoMoveType } from '../../utils/formatters.js';
-import { logActivity } from '../../utils/activityLog.js';
+import { requireAuth, requireNonFieldWorker } from '../middlewares/requireAuth.js';
+import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
+import { parseNumber, parseDateValue, parseInteger, normalizeSexo, normalizeSemenMoveType, normalizeEmbryoMoveType } from '../utils/formatters.js';
+import { logActivity } from '../utils/activityLog.js';
 import {
     serializePoAnimal, serializeSemenBatch, serializeEmbryoBatch,
     serializePaddockMove, serializeNutritionPlan,
-} from '../../utils/serializers.js';
+} from '../utils/serializers.js';
 import { moveAnimalBetweenPaddocks, transferAnimalsToFarm, calculateGmdMetrics, diffDaysFloat } from '../animals/animalRoutes.js';
 const prisma = new PrismaClient();
 

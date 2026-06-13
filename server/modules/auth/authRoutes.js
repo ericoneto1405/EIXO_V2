@@ -14,31 +14,31 @@ import {
     PASSWORD_POLICY_MESSAGE, AVATAR_UPLOAD_ROOT,
     APP_ACTIVATION_CODE_TTL_MS, APP_ACTIVATION_CODE_ALPHABET, PHONE_VERIFY_TTL_MS,
     FIELD_WORKER_ROLE, FIELD_ADMIN_ROLE, FIELD_WORKER_DEFAULT_MODULES,
-} from '../../config/env.js';
-import { isPasswordStrongEnough, validateCNPJ, validateCPF, fetchCnpjData } from '../../utils/validators.js';
-import { sanitizeUser, escapeHtml, normalizeEmailForLogin, isEmailValid } from '../../utils/formatters.js';
-import { normalizeUserModules, isSaasContextError } from '../../utils/saasContext.js';
-import { logActivity } from '../../utils/activityLog.js';
+} from '../config/env.js';
+import { isPasswordStrongEnough, validateCNPJ, validateCPF, fetchCnpjData } from '../utils/validators.js';
+import { sanitizeUser, escapeHtml, normalizeEmailForLogin, isEmailValid } from '../utils/formatters.js';
+import { normalizeUserModules, isSaasContextError } from '../utils/saasContext.js';
+import { logActivity } from '../utils/activityLog.js';
 import {
     otpSendAttempts, otpVerifyAttempts, forgotPasswordAttempts,
     isWindowRateLimited, registerWindowAttempt, clearWindowAttempt, getWindowRetryAfterSeconds,
     isAnyLoginRateLimited, registerFailedLogin, clearLoginAttempts,
     registerFailedLogins, clearLoginRateLimits,
     isAnyForgotPasswordRateLimited, registerForgotPasswordAttempts, clearForgotPasswordAttempts,
-} from '../../middlewares/rateLimiter.js';
+} from '../middlewares/rateLimiter.js';
 import {
     hashSessionToken, generateSessionToken, buildCookieOptions,
     extractSessionTokenFromRequest, hashPasswordResetToken,
     buildLoginRateLimitKeys, buildForgotPasswordRateLimitKeys,
     sanitizeWebDeviceKey, buildSessionUserAgent,
     createSessionForUser, buildAppAuthPayload, getSessionFromRequest,
-} from '../../middlewares/session.js';
+} from '../middlewares/session.js';
 import {
     ensureSaasContextForUser, ensureFieldWorkerFarmAccess,
     serializeAuthUser, serializeAuthUserWithContext,
     buildAllowedModulesFromPlan,
-} from '../../utils/saasContext.js';
-import { requireAuth } from '../../middlewares/requireAuth.js';
+} from '../utils/saasContext.js';
+import { requireAuth } from '../middlewares/requireAuth.js';
 
 const prisma = new PrismaClient();
 const resend = process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_...' ? new Resend(process.env.RESEND_API_KEY) : null;

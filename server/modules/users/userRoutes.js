@@ -1,17 +1,17 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
-import { requireAuth } from '../../middlewares/requireAuth.js';
-import { sanitizeUser, escapeHtml, isEmailValid } from '../../utils/formatters.js';
-import { isPasswordStrongEnough, validateCNPJ, validateCPF, fetchCnpjData } from '../../utils/validators.js';
-import { logActivity } from '../../utils/activityLog.js';
-import { buildFarmScopeFilter } from '../../middlewares/farmScope.js';
+import { requireAuth } from '../middlewares/requireAuth.js';
+import { sanitizeUser, escapeHtml, isEmailValid } from '../utils/formatters.js';
+import { isPasswordStrongEnough, validateCNPJ, validateCPF, fetchCnpjData } from '../utils/validators.js';
+import { logActivity } from '../utils/activityLog.js';
+import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
 import {
     canManageOrganizationUsers, serializeManagedUser,
     isFieldAppUser, hasUserRole,
     ensureSaasContextForUser, ensureFieldWorkerFarmAccess,
     normalizeUserModules as normalizeUserModulesFn,
-} from '../../utils/saasContext.js';
+} from '../utils/saasContext.js';
 import {
     generateActivationCode, hashActivationCode, normalizeActivationCode,
     generateInternalFieldUserEmail,
@@ -21,17 +21,17 @@ import {
     APP_BASE_URL, RESEND_FROM_EMAIL,
     FIELD_WORKER_ROLE, FIELD_ADMIN_ROLE, FIELD_WORKER_DEFAULT_MODULES,
     PASSWORD_POLICY_MESSAGE,
-} from '../../config/env.js';
+} from '../config/env.js';
 import { Resend } from 'resend';
 import {
     buildAppPermissions, buildAppAuthPayload,
     createSessionForUser, buildCookieOptions, getSessionFromRequest,
-} from '../../middlewares/session.js';
-import { buildFarmRelationFilter } from '../../middlewares/farmScope.js';
+} from '../middlewares/session.js';
+import { buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import {
     normalizeOrganizationSlug, ensureSaasContextForUser as ensureSaas,
     isSaasContextError,
-} from '../../utils/saasContext.js';
+} from '../utils/saasContext.js';
 
 const prisma = new PrismaClient();
 const resend = process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_...' ? new Resend(process.env.RESEND_API_KEY) : null;

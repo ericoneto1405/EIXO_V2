@@ -1,21 +1,21 @@
 import { PrismaClient } from '@prisma/client';
-import { requireAuth, requireNonFieldWorker } from '../../middlewares/requireAuth.js';
-import { buildFarmScopeFilter, buildFarmRelationFilter } from '../../middlewares/farmScope.js';
+import { requireAuth, requireNonFieldWorker } from '../middlewares/requireAuth.js';
+import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import {
     parseNumber, parseDateValue, parseInteger,
     normalizeSexo, formatSexoLabel,
     normalizeReproMode, normalizeReproEventType, normalizePregStatus,
     normalizeEmbryoTechnique, normalizeSemenMoveType, normalizeEmbryoMoveType,
     normalizeSelectionDecision, normalizeAnimalTipoCadastro,
-} from '../../utils/formatters.js';
-import { logActivity } from '../../utils/activityLog.js';
+} from '../utils/formatters.js';
+import { logActivity } from '../utils/activityLog.js';
 import {
     serializeAnimal, serializePoAnimal, serializeSeason,
     serializeReproEvent, serializePaddockMove,
     serializeSemenBatch, serializeNutritionPlan, serializeNutritionAssignment,
     serializeEmbryoBatch, serializePaddock, getOccurrenceAnimalLabel,
-} from '../../utils/serializers.js';
-import { REPRO_WINDOW_DAYS, DEFAULT_THRESHOLDS } from '../../config/env.js';
+} from '../utils/serializers.js';
+import { REPRO_WINDOW_DAYS, DEFAULT_THRESHOLDS } from '../config/env.js';
 const prisma = new PrismaClient();
 
 const findInventoryAnimal = async ({ id, farmId }) => {

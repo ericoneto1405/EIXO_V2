@@ -1,10 +1,10 @@
 import { PrismaClient } from '@prisma/client';
-import { requireAuth } from '../../middlewares/requireAuth.js';
-import { buildFarmScopeFilter, buildFarmRelationFilter } from '../../middlewares/farmScope.js';
-import { parseNumber, parseDateValue } from '../../utils/formatters.js';
-import { logActivity } from '../../utils/activityLog.js';
-import { serializeHerdEvent, serializeSanitaryRecord } from '../../utils/serializers.js';
-import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../../config/env.js';
+import { requireAuth } from '../middlewares/requireAuth.js';
+import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
+import { parseNumber, parseDateValue } from '../utils/formatters.js';
+import { logActivity } from '../utils/activityLog.js';
+import { serializeHerdEvent, serializeSanitaryRecord } from '../utils/serializers.js';
+import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../config/env.js';
 const prisma = new PrismaClient();
 
 const VALID_EVENT_TYPES = ['NASCIMENTO', 'COMPRA', 'VENDA', 'MORTE'];
