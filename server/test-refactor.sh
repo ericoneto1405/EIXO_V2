@@ -1,7 +1,7 @@
 #!/bin/bash
 # Teste automático pós-refatoração do server/index.js
 
-BASE_URL="http://localhost:3001"
+BASE_URL="http://localhost:${PORT:-3001}"
 PASS=0
 FAIL=0
 TOTAL=0
