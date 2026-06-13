@@ -13,7 +13,8 @@
     "seed:market": "node scripts/seed-market-prices.mjs",
     "market:mock-national": "node market/jobs/runMarketCaptureJob.js mock-national",
     "market:noticias-agricolas": "node market/jobs/runMarketCaptureJob.js noticias-agricolas",
-    "market:publish-pending": "node market/jobs/publishPendingNormalized.js"
+    "market:publish-pending": "node market/jobs/publishPendingNormalized.js",
+    "postinstall": "npx prisma generate || true"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
