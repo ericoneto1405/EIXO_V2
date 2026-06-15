@@ -164,52 +164,6 @@ export const createAnimal = async (
     return normalizeAnimal(data.animal);
 };
 
-export interface ImportBatchWeighingInput {
-    data: string;
-    peso: number;
-}
-
-export interface ImportBatchAnimalInput {
-    sourceIndex?: number;
-    rowLabel: string;
-    brinco?: string;
-    nome?: string;
-    raca?: string;
-    sexo?: string;
-    dataNascimento?: string;
-    ultimoPeso?: number;
-    categoria?: string;
-    observacoes?: string;
-    dataEntrada?: string;
-    valorCompra?: number;
-    tipoCadastro?: string;
-    tatuagem?: string;
-    sisbov?: string;
-    maeNome?: string;
-    paiNome?: string;
-    lotId?: string;
-    paddockId?: string;
-    paddockStartAt?: string;
-    weighings?: ImportBatchWeighingInput[];
-}
-
-export interface ImportBatchRowResult {
-    index: number;
-    success: boolean;
-    animalId?: string;
-    brinco?: string;
-    nome?: string;
-    message?: string;
-    warnings?: string[];
-}
-
-export interface ImportBatchResponse {
-    total: number;
-    success: number;
-    failures: number;
-    results: ImportBatchRowResult[];
-}
-
 export interface BirthAnimalPayload {
     farmId: string;
     sexo: string;
@@ -225,25 +179,6 @@ export interface BirthAnimalResponse {
     brincoProvisorio?: boolean;
     message?: string;
 }
-
-export const importAnimalsBatch = async (
-    farmId: string,
-    herdType: HerdType,
-    items: ImportBatchAnimalInput[],
-): Promise<ImportBatchResponse> => {
-    const endpoint = `${getAnimalsBasePath(herdType)}/import-batch`;
-    const response = await fetch(buildApiUrl(endpoint), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ farmId, items }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) {
-        throw new Error(data?.message || 'Erro ao importar em lote.');
-    }
-    return data as ImportBatchResponse;
-};
 
 export const createBirthAnimal = async (
     payload: BirthAnimalPayload,
