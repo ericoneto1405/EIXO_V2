@@ -72,12 +72,9 @@ jobs:
             echo "▶ Build do frontend..."
             npm run build
 
-            echo "▶ Reiniciando servidor..."
-            if pm2 describe eixo-server >/dev/null 2>&1; then
-              pm2 reload eixo-server --update-env
-            else
-              pm2 start server/index.js --name eixo-server --update-env
-            fi
+            echo "▶ Reiniciando servidor (delete + start para garantir reload do .env.production)..."
+            pm2 delete eixo-server >/dev/null 2>&1 || true
+            pm2 start ecosystem.config.cjs
             pm2 save --force
 
             echo "▶ Health check..."
