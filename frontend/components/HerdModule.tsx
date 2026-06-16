@@ -1089,6 +1089,18 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         await downloadWorkbook(fileName, 'Rebanho', rows);
     };
 
+    const handleDownloadImportTemplate = async () => {
+        const url = buildApiUrl('/herd/import/template');
+        const res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) throw new Error('Erro ao baixar planilha modelo');
+        const blob = await res.blob();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'modelo_rebanho.xlsx';
+        link.click();
+        URL.revokeObjectURL(link.href);
+    };
+
     const handleSort = (column: SortColumn) => {
         if (sortColumn === column) {
             setSortDirection((direction) => (direction === 'asc' ? 'desc' : 'asc'));
@@ -1994,7 +2006,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] py-2 pl-9 pr-3 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
                         <button
                             type="button"
                             onClick={clearAllFilters}
@@ -2013,6 +2025,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
                             Exportar ({sortedAnimals.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleDownloadImportTemplate}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                        >
+                            <DownloadIcon className="h-4 w-4" />
+                            <span className="ml-1 hidden sm:block">Planilha modelo</span>
                         </button>
                     </div>
                 </div>

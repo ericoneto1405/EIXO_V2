@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import ExcelJS from 'exceljs';
 import { requireAuth } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import { parseNumber, parseDateValue } from '../utils/formatters.js';
@@ -182,6 +183,117 @@ app.post('/animals/:id/sanitario', async (req, res) => {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar registro sanitário.' });
     }
+});
+
+// =============================================
+// PLANILHA MODELO — Template de Importação
+// =============================================
+
+const TEMPLATE_COLUMNS = [
+  { header: 'identificacao',              db: 'brinco',                     example: 'BR001',               required: true,  description: 'Brinco / identificação do animal (obrigatório)' },
+  { header: 'brinco_eletronico',          db: 'brincoEletronico',           example: 'E001',                required: false, description: 'Brinco eletrônico (RFID)' },
+  { header: 'nome',                       db: 'nome',                       example: 'Touro Imperial',      required: false, description: 'Nome do animal' },
+  { header: 'sexo',                       db: 'sexo',                       example: 'MACHO',               required: false, description: 'MACHO ou FEMEA' },
+  { header: 'categoria',                  db: 'categoria',                  example: 'Reprodução',          required: false, description: 'Categoria do animal' },
+  { header: 'possui_registro',            db: 'tipoCadastro',               example: 'RBT',                 required: false, description: 'RBT, REGISTRO ou MESTICO' },
+  { header: 'raca',                       db: 'raca',                       example: 'Nelore',              required: false, description: 'Raça do animal' },
+  { header: 'padrao_racial',             db: 'padraoRacial',               example: 'Puro',                required: false, description: 'Padrão racial' },
+  { header: 'ultimo_peso_kg',            db: 'pesoAtual',                  example: '520',                 required: false, description: 'Último peso registrado (kg)' },
+  { header: 'data_pesagem_atual',        db: 'Weighing.data',              example: '2026-06-01',          required: false, description: 'Data da última pesagem (AAAA-MM-DD)' },
+  { header: 'data_nascimento',           db: 'dataNascimento',             example: '2020-03-15',          required: false, description: 'Data de nascimento (AAAA-MM-DD)' },
+  { header: 'idade_estimada_meses',      db: '(calculado)',                example: '72',                  required: false, description: 'Idade em meses (calculado automaticamente)' },
+  { header: 'funcao_reprodutiva',        db: 'funcaoReprodutiva',          example: 'Reprodutor',          required: false, description: 'Função reprodutiva do animal' },
+  { header: 'status_reprodutivo',        db: 'statusReprodutivo',          example: 'Vaca de ciclo',       required: false, description: 'Status reprodutivo atual' },
+  { header: 'data_ultimo_servico',       db: 'ReproEvent.date',            example: '2026-04-10',          required: false, description: 'Data do último serviço (cobertura/IA)' },
+  { header: 'tipo_servico_reprodutivo',  db: 'ReproEvent.type',            example: 'COBERTURA',           required: false, description: 'COBERTURA, IATF, PARTO, DIAGNOSTICO_PRENHEZ' },
+  { header: 'touro_ou_semen',            db: 'ReproEvent.notes',           example: 'Touro Nelore 55',     required: false, description: 'Nome do touro ou lote de semen' },
+  { header: 'registro_touro_ou_semen',   db: 'ReproEvent.notes',           example: 'RBT-1234',            required: false, description: 'Registro do touro ou semen' },
+  { header: 'data_diagnostico_prenhez',  db: 'ReproEvent.date',            example: '2026-05-15',          required: false, description: 'Data do diagnóstico de prenhez' },
+  { header: 'resultado_prenhez',         db: 'ReproEvent.notes',           example: 'Prenhe',              required: false, description: 'Resultado do diagnóstico' },
+  { header: 'previsao_parto',            db: 'previsaoParto',              example: '2027-01-15',          required: false, description: 'Previsão de parto (AAAA-MM-DD)' },
+  { header: 'data_ultimo_parto',         db: 'ReproEvent.date',            example: '2026-02-20',          required: false, description: 'Data do último parto' },
+  { header: 'quantidade_partos',         db: '(calculado)',                example: '3',                   required: false, description: 'Quantidade de partos (calculado)' },
+  { header: 'registro_rgn',             db: 'registro',                   example: 'RGN-5678',            required: false, description: 'Registro RGN' },
+  { header: 'registro_rgd',             db: 'registro',                   example: 'RGD-9012',            required: false, description: 'Registro RGD' },
+  { header: 'pai_nome',                  db: 'paiNome',                    example: 'Imperial',            required: false, description: 'Nome do pai' },
+  { header: 'pai_registro',             db: 'paiId (lookup)',              example: 'RBT-1234',            required: false, description: 'Registro do pai (busca automática)' },
+  { header: 'mae_nome',                  db: 'maeNome',                    example: 'Princesa',            required: false, description: 'Nome da mãe' },
+  { header: 'mae_registro',             db: 'maeId (lookup)',              example: 'BR050',               required: false, description: 'Registro da mãe (busca automática)' },
+  { header: 'forma_entrada',             db: 'HerdEvent.type',             example: 'COMPRA',              required: false, description: 'COMPRA, NASCIMENTO, etc.' },
+  { header: 'origem_animal',             db: 'HerdEvent.origem',           example: 'Fazenda São Jorge',   required: false, description: 'Origem do animal' },
+  { header: 'fornecedor',                db: 'HerdEvent.origem',           example: 'João da Silva',       required: false, description: 'Fornecedor / criador' },
+  { header: 'valor_compra',             db: 'HerdEvent.valor',            example: '8500',                required: false, description: 'Valor da compra (R$)' },
+  { header: 'data_compra',              db: 'HerdEvent.date',             example: '2020-06-01',          required: false, description: 'Data da compra (AAAA-MM-DD)' },
+  { header: 'peso_compra',              db: 'HerdEvent.peso',             example: '450',                 required: false, description: 'Peso na compra (kg)' },
+  { header: 'status_sanitario',         db: '(calculado)',                 example: '',                    required: false, description: 'Status sanitário (calculado)' },
+  { header: 'ultima_vacina',            db: 'SanitaryRecord.produto',     example: 'Febre Aftosa',        required: false, description: 'Nome da última vacina' },
+  { header: 'data_ultima_vacina',       db: 'SanitaryRecord.date',        example: '2026-01-15',          required: false, description: 'Data da última vacina (AAAA-MM-DD)' },
+  { header: 'ultimo_tratamento',        db: 'SanitaryRecord.produto',     example: 'Ivermectina',         required: false, description: 'Nome do último tratamento' },
+  { header: 'data_ultimo_tratamento',   db: 'SanitaryRecord.date',        example: '2026-03-10',          required: false, description: 'Data do último tratamento (AAAA-MM-DD)' },
+  { header: 'carencia_ate',             db: 'SanitaryRecord.observacoes', example: '2026-07-10',          required: false, description: 'Data de carência até (AAAA-MM-DD)' },
+  { header: 'observacao_geral',         db: 'observacoes',                example: 'Animal de alta genética', required: false, description: 'Observações gerais' },
+];
+
+app.get('/herd/import/template', async (_req, res) => {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'EIXO';
+    workbook.created = new Date();
+
+    const instrucoes = workbook.addWorksheet('Instruções', { properties: { tabColor: { argb: '2F8A3E' } } });
+
+    instrucoes.columns = [
+      { header: 'Coluna na planilha', key: 'header', width: 30 },
+      { header: 'Campo no banco', key: 'db', width: 28 },
+      { header: 'Obrigatório', key: 'required', width: 14 },
+      { header: 'Exemplo', key: 'example', width: 25 },
+      { header: 'Descrição', key: 'description', width: 55 },
+    ];
+
+    instrucoes.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
+    instrucoes.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2F8A3E' } };
+
+    TEMPLATE_COLUMNS.forEach((col) => {
+      instrucoes.addRow({
+        header: col.header,
+        db: col.db,
+        required: col.required ? 'Sim' : 'Não',
+        example: col.example,
+        description: col.description,
+      });
+    });
+
+    const dados = workbook.addWorksheet('Dados', { properties: { tabColor: { argb: '3B82F6' } } });
+
+    const headers = TEMPLATE_COLUMNS.map((c) => c.header);
+    dados.addRow(headers);
+
+    const sampleRow = TEMPLATE_COLUMNS.map((c) => c.example);
+    dados.addRow(sampleRow);
+
+    headers.forEach((h, idx) => {
+      const cell = dados.getRow(1).getCell(idx + 1);
+      cell.font = { bold: true, color: { argb: 'FFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } };
+
+      const col = TEMPLATE_COLUMNS[idx];
+      cell.comment = {
+        texts: [
+          { text: col.description, font: { size: 10 } },
+        ],
+      };
+    });
+
+    dados.getRow(2).font = { italic: true, color: { argb: '9CA3AF' } };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="modelo_rebanho.xlsx"');
+    return res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('Erro ao gerar planilha modelo:', error);
+    return res.status(500).json({ message: 'Erro ao gerar planilha modelo.' });
+  }
 });
 
 // =============================================
