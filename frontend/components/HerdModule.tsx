@@ -5,6 +5,7 @@ import LotePurchaseModal from './LotePurchaseModal';
 import WeighingsTab from './WeighingsTab';
 import HerdSettingsTab from './HerdSettingsTab';
 import OnboardingSpotlight from './OnboardingSpotlight';
+import ImportHerdModal from './ImportHerdModal';
 import {
     HerdAnimal,
     HerdLot,
@@ -197,6 +198,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     void mode;
     const resolvedMode: HerdType = herdType ?? 'COMMERCIAL';
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
+    const [showImportModal, setShowImportModal] = useState(false);
     const [animals, setAnimals] = useState<HerdAnimal[]>([]);
     const [lots, setLots] = useState<HerdLot[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -2028,11 +2030,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         </button>
                         <button
                             type="button"
-                            onClick={handleDownloadImportTemplate}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                            onClick={() => setShowImportModal(true)}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--eixo-green)]/40 bg-[var(--eixo-green)]/10 px-3 py-2 text-sm font-medium text-[var(--eixo-green)] transition-colors hover:bg-[var(--eixo-green)]/20"
                         >
-                            <DownloadIcon className="h-4 w-4" />
-                            <span className="ml-1 hidden sm:block">Planilha modelo</span>
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                            </svg>
+                            <span className="ml-1 hidden sm:block">Importar Rebanho</span>
                         </button>
                     </div>
                 </div>
@@ -2597,6 +2601,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 paddocks={paddocks}
                 lots={lots}
                 onSuccess={loadData}
+            />
+
+            <ImportHerdModal
+                open={showImportModal}
+                onClose={() => setShowImportModal(false)}
+                onDownloadTemplate={handleDownloadImportTemplate}
             />
 
             {/* ── Modal de Nascimento ─────────────────────────────────────── */}
