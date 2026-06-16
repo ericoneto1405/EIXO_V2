@@ -1876,6 +1876,16 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </button>
                                     <button
                                         type="button"
+                                        onClick={() => setShowImportModal(true)}
+                                        className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                                    >
+                                        <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                                        </svg>
+                                        <span className="ml-2 hidden sm:block">Importar Rebanho</span>
+                                    </button>
+                                    <button
+                                        type="button"
                                         onClick={() => setNascimentoModalOpen(true)}
                                         className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-border)] bg-white px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
                                     >
@@ -2008,7 +2018,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] py-2 pl-9 pr-3 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
                         />
                     </div>
-                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
+                    <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
                         <button
                             type="button"
                             onClick={clearAllFilters}
@@ -2027,16 +2037,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
                             Exportar ({sortedAnimals.length})
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setShowImportModal(true)}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--eixo-green)]/40 bg-[var(--eixo-green)]/10 px-3 py-2 text-sm font-medium text-[var(--eixo-green)] transition-colors hover:bg-[var(--eixo-green)]/20"
-                        >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
-                            </svg>
-                            <span className="ml-1 hidden sm:block">Importar Rebanho</span>
                         </button>
                     </div>
                 </div>
