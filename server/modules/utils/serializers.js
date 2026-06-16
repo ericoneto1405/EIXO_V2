@@ -30,6 +30,14 @@ export function serializeAnimal(animal) {
         maeNome: animal.maeNome || null,
         paiId: animal.paiId || null,
         paiNome: animal.paiNome || null,
+        // Campos estendidos
+        nome: animal.nome || null,
+        brincoEletronico: animal.brincoEletronico || null,
+        padraoRacial: animal.padraoRacial || null,
+        funcaoReprodutiva: animal.funcaoReprodutiva || null,
+        statusReprodutivo: animal.statusReprodutivo || null,
+        previsaoParto: animal.previsaoParto ? animal.previsaoParto.toISOString() : null,
+        observacoes: animal.observacoes || null,
         createdAt: animal.createdAt.toISOString(),
         updatedAt: animal.updatedAt.toISOString(),
     };

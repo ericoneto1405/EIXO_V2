@@ -330,9 +330,16 @@ model Animal {
   maeNome              String?
   paiId                String?
   paiNome              String?
-  sisbov               String?
-  tatuagem             String?
-  currentPaddock       Paddock?              @relation("AnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
+   sisbov               String?
+   tatuagem             String?
+   nome                 String?
+   brincoEletronico     String?
+   padraoRacial         String?
+   funcaoReprodutiva    String?
+   statusReprodutivo    String?
+   previsaoParto        DateTime?
+   observacoes          String?
+   currentPaddock       Paddock?              @relation("AnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
   farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
   lot                  Lot?                  @relation(fields: [lotId], references: [id])
   mae                  Animal?               @relation("AnimalMae", fields: [maeId], references: [id])

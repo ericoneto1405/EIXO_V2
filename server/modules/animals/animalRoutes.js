@@ -497,7 +497,8 @@ const computeSelectionKpis = ({ events, animalId, seasonId, exposuresSet }) => {
 export function registerAnimalRoutes(app) {
 app.patch('/animals/:id', async (req, res) => {
     const { id } = req.params;
-    const { lotId, brinco, raca, sexo, categoria, dataNascimento, registro } = req.body || {};
+    const { lotId, brinco, raca, sexo, categoria, dataNascimento, registro,
+            nome, brincoEletronico, padraoRacial, funcaoReprodutiva, statusReprodutivo, previsaoParto, observacoes } = req.body || {};
     try {
         const animal = await prisma.animal.findFirst({
             where: { id, farm: buildFarmRelationFilter(req) },
@@ -541,6 +542,13 @@ app.patch('/animals/:id', async (req, res) => {
             updateData.dataNascimento = dataNascimento ? new Date(dataNascimento) : null;
         }
         if (registro !== undefined) updateData.registro = registro ? String(registro).trim() : null;
+        if (nome !== undefined) updateData.nome = nome ? String(nome).trim() : null;
+        if (brincoEletronico !== undefined) updateData.brincoEletronico = brincoEletronico ? String(brincoEletronico).trim() : null;
+        if (padraoRacial !== undefined) updateData.padraoRacial = padraoRacial ? String(padraoRacial).trim() : null;
+        if (funcaoReprodutiva !== undefined) updateData.funcaoReprodutiva = funcaoReprodutiva ? String(funcaoReprodutiva).trim() : null;
+        if (statusReprodutivo !== undefined) updateData.statusReprodutivo = statusReprodutivo ? String(statusReprodutivo).trim() : null;
+        if (previsaoParto !== undefined) updateData.previsaoParto = previsaoParto ? new Date(previsaoParto) : null;
+        if (observacoes !== undefined) updateData.observacoes = observacoes ? String(observacoes).trim() : null;
 
         const updated = await prisma.animal.update({
             where: { id },
@@ -1633,7 +1641,8 @@ app.get('/animals', requireAuth, async (req, res) => {
 
 app.post('/animals', requireAuth, async (req, res) => {
     const { farmId, lotId, brinco, raca, sexo, dataNascimento, ultimoPeso, paddockId, paddockStartAt, valorCompra, dataCompra, tipoCadastro,
-            tatuagem, sisbov, maeId, maeNome, paiId, paiNome } = req.body || {};
+            tatuagem, sisbov, maeId, maeNome, paiId, paiNome,
+            nome, brincoEletronico, padraoRacial, funcaoReprodutiva, statusReprodutivo, previsaoParto, observacoes } = req.body || {};
     if (Object.prototype.hasOwnProperty.call(req.body || {}, 'pesoAtual')) {
         return res.status(400).json({ message: 'Campo inválido: use "ultimoPeso" no lugar de "pesoAtual".' });
     }
@@ -1731,6 +1740,13 @@ app.post('/animals', requireAuth, async (req, res) => {
                     maeNome: resolvedMaeId ? null : (maeNome?.trim() || null),
                     paiId: resolvedPaiId,
                     paiNome: resolvedPaiId ? null : (paiNome?.trim() || null),
+                    nome: nome?.trim() || null,
+                    brincoEletronico: brincoEletronico?.trim() || null,
+                    padraoRacial: padraoRacial?.trim() || null,
+                    funcaoReprodutiva: funcaoReprodutiva?.trim() || null,
+                    statusReprodutivo: statusReprodutivo?.trim() || null,
+                    previsaoParto: previsaoParto ? parseDateValue(previsaoParto) : null,
+                    observacoes: observacoes?.trim() || null,
                 },
             });
             if (validPaddockId && moveStartAt) {
