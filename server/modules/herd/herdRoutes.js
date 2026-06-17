@@ -189,50 +189,70 @@ app.post('/animals/:id/sanitario', async (req, res) => {
 // PLANILHA MODELO — Template de Importação
 // =============================================
 
-const TEMPLATE_COLUMNS = [
-  { header: 'identificacao',              db: 'brinco',                     example: 'BR001',               required: true,  description: 'Brinco / identificação do animal (obrigatório)' },
-  { header: 'brinco_eletronico',          db: 'brincoEletronico',           example: 'E001',                required: false, description: 'Brinco eletrônico (RFID)' },
-  { header: 'nome',                       db: 'nome',                       example: 'Touro Imperial',      required: false, description: 'Nome do animal' },
-  { header: 'sexo',                       db: 'sexo',                       example: 'MACHO',               required: false, description: 'MACHO ou FEMEA' },
-  { header: 'categoria',                  db: 'categoria',                  example: 'Reprodução',          required: false, description: 'Categoria do animal' },
-  { header: 'possui_registro',            db: 'tipoCadastro',               example: 'RBT',                 required: false, description: 'RBT, REGISTRO ou MESTICO' },
-  { header: 'raca',                       db: 'raca',                       example: 'Nelore',              required: false, description: 'Raça do animal' },
-  { header: 'padrao_racial',             db: 'padraoRacial',               example: 'Puro',                required: false, description: 'Padrão racial' },
-  { header: 'ultimo_peso_kg',            db: 'pesoAtual',                  example: '520',                 required: false, description: 'Último peso registrado (kg)' },
-  { header: 'data_pesagem_atual',        db: 'Weighing.data',              example: '2026-06-01',          required: false, description: 'Data da última pesagem (AAAA-MM-DD)' },
-  { header: 'data_nascimento',           db: 'dataNascimento',             example: '2020-03-15',          required: false, description: 'Data de nascimento (AAAA-MM-DD)' },
-  { header: 'idade_estimada_meses',      db: '(calculado)',                example: '72',                  required: false, description: 'Idade em meses (calculado automaticamente)' },
-  { header: 'funcao_reprodutiva',        db: 'funcaoReprodutiva',          example: 'Reprodutor',          required: false, description: 'Função reprodutiva do animal' },
-  { header: 'status_reprodutivo',        db: 'statusReprodutivo',          example: 'Vaca de ciclo',       required: false, description: 'Status reprodutivo atual' },
-  { header: 'data_ultimo_servico',       db: 'ReproEvent.date',            example: '2026-04-10',          required: false, description: 'Data do último serviço (cobertura/IA)' },
-  { header: 'tipo_servico_reprodutivo',  db: 'ReproEvent.type',            example: 'COBERTURA',           required: false, description: 'COBERTURA, IATF, PARTO, DIAGNOSTICO_PRENHEZ' },
-  { header: 'touro_ou_semen',            db: 'ReproEvent.notes',           example: 'Touro Nelore 55',     required: false, description: 'Nome do touro ou lote de semen' },
-  { header: 'registro_touro_ou_semen',   db: 'ReproEvent.notes',           example: 'RBT-1234',            required: false, description: 'Registro do touro ou semen' },
-  { header: 'data_diagnostico_prenhez',  db: 'ReproEvent.date',            example: '2026-05-15',          required: false, description: 'Data do diagnóstico de prenhez' },
-  { header: 'resultado_prenhez',         db: 'ReproEvent.notes',           example: 'Prenhe',              required: false, description: 'Resultado do diagnóstico' },
-  { header: 'previsao_parto',            db: 'previsaoParto',              example: '2027-01-15',          required: false, description: 'Previsão de parto (AAAA-MM-DD)' },
-  { header: 'data_ultimo_parto',         db: 'ReproEvent.date',            example: '2026-02-20',          required: false, description: 'Data do último parto' },
-  { header: 'quantidade_partos',         db: '(calculado)',                example: '3',                   required: false, description: 'Quantidade de partos (calculado)' },
-  { header: 'registro_rgn',             db: 'registro',                   example: 'RGN-5678',            required: false, description: 'Registro RGN' },
-  { header: 'registro_rgd',             db: 'registro',                   example: 'RGD-9012',            required: false, description: 'Registro RGD' },
-  { header: 'pai_nome',                  db: 'paiNome',                    example: 'Imperial',            required: false, description: 'Nome do pai' },
-  { header: 'pai_registro',             db: 'paiId (lookup)',              example: 'RBT-1234',            required: false, description: 'Registro do pai (busca automática)' },
-  { header: 'mae_nome',                  db: 'maeNome',                    example: 'Princesa',            required: false, description: 'Nome da mãe' },
-  { header: 'mae_registro',             db: 'maeId (lookup)',              example: 'BR050',               required: false, description: 'Registro da mãe (busca automática)' },
-  { header: 'forma_entrada',             db: 'HerdEvent.type',             example: 'COMPRA',              required: false, description: 'COMPRA, NASCIMENTO, etc.' },
-  { header: 'origem_animal',             db: 'HerdEvent.origem',           example: 'Fazenda São Jorge',   required: false, description: 'Origem do animal' },
-  { header: 'fornecedor',                db: 'HerdEvent.origem',           example: 'João da Silva',       required: false, description: 'Fornecedor / criador' },
-  { header: 'valor_compra',             db: 'HerdEvent.valor',            example: '8500',                required: false, description: 'Valor da compra (R$)' },
-  { header: 'data_compra',              db: 'HerdEvent.date',             example: '2020-06-01',          required: false, description: 'Data da compra (AAAA-MM-DD)' },
-  { header: 'peso_compra',              db: 'HerdEvent.peso',             example: '450',                 required: false, description: 'Peso na compra (kg)' },
-  { header: 'status_sanitario',         db: '(calculado)',                 example: '',                    required: false, description: 'Status sanitário (calculado)' },
-  { header: 'ultima_vacina',            db: 'SanitaryRecord.produto',     example: 'Febre Aftosa',        required: false, description: 'Nome da última vacina' },
-  { header: 'data_ultima_vacina',       db: 'SanitaryRecord.date',        example: '2026-01-15',          required: false, description: 'Data da última vacina (AAAA-MM-DD)' },
-  { header: 'ultimo_tratamento',        db: 'SanitaryRecord.produto',     example: 'Ivermectina',         required: false, description: 'Nome do último tratamento' },
-  { header: 'data_ultimo_tratamento',   db: 'SanitaryRecord.date',        example: '2026-03-10',          required: false, description: 'Data do último tratamento (AAAA-MM-DD)' },
-  { header: 'carencia_ate',             db: 'SanitaryRecord.observacoes', example: '2026-07-10',          required: false, description: 'Data de carência até (AAAA-MM-DD)' },
-  { header: 'observacao_geral',         db: 'observacoes',                example: 'Animal de alta genética', required: false, description: 'Observações gerais' },
+// ─── Listas controladas (dropdowns) ────────────────────────────────────────
+const RACAS_PURAS = [
+  // Zebuínos
+  'Nelore', 'Nelore Mocho', 'Brahman', 'Gir', 'Guzerá', 'Tabapuã', 'Sindi', 'Indubrasil',
+  // Taurinos europeus
+  'Aberdeen Angus', 'Red Angus', 'Hereford', 'Charolês', 'Limousin', 'Simental', 'Devon', 'Wagyu',
+  // Adaptados ao trópico
+  'Senepol', 'Caracu', 'Bonsmara',
+  // Sintéticas
+  'Brangus', 'Canchim', 'Braford', 'Simbrasil',
 ];
+
+const COMPOSICOES_MESTICAS = [
+  'F1 (50/50)',
+  '3/4 ou 5/8 sangue',
+  'Anelorado',
+  'Cruzado europeu × zebu',
+  'Comercial / Sem definição',
+];
+
+const STATUS_REPRODUTIVOS = ['PRENHE', 'VAZIA', 'CICLANDO', 'RECRIA'];
+
+// ─── Estrutura do template (18 colunas) ────────────────────────────────────
+// tier: required | conditional | recommended | optional
+const TEMPLATE_COLUMNS = [
+  { key: 'identificacao',      label: 'Identificação',        tier: 'required',     type: 'text',   example: 'BR001',          description: 'Brinco, tatuagem ou número que identifica o animal de forma única.' },
+  { key: 'sexo',               label: 'Sexo',                 tier: 'required',     type: 'list',   options: ['MACHO', 'FEMEA'], example: 'MACHO', description: 'MACHO ou FEMEA.' },
+  { key: 'tipo_raca',          label: 'Tipo de Raça',         tier: 'required',     type: 'list',   options: ['Pura', 'Mestiça'], example: 'Pura', description: 'Pura = animal de uma raça só. Mestiça = cruzamento entre raças.' },
+  { key: 'raca',               label: 'Raça',                 tier: 'conditional',  type: 'list',   options: RACAS_PURAS,      example: 'Nelore',          description: 'Obrigatório se Tipo de Raça = Pura. Escolha a raça do animal.' },
+  { key: 'composicao_mestica', label: 'Composição Mestiça',   tier: 'conditional',  type: 'list',   options: COMPOSICOES_MESTICAS, example: 'F1 (50/50)', description: 'Obrigatório se Tipo de Raça = Mestiça. Como é a mistura do animal.' },
+  { key: 'data_nascimento',    label: 'Data de Nascimento',   tier: 'recommended',  type: 'date',   example: '2020-03-15',     description: 'Data de nascimento (AAAA-MM-DD). Pode ser estimativa.' },
+  { key: 'ultimo_peso_kg',     label: 'Último Peso (kg)',     tier: 'recommended',  type: 'number', example: '520',            description: 'Peso registrado mais recente, em kg.' },
+  { key: 'data_pesagem',       label: 'Data da Pesagem',      tier: 'recommended',  type: 'date',   example: '2026-06-01',     description: 'Data da pesagem informada acima (AAAA-MM-DD).' },
+  { key: 'padrao_racial',      label: 'Padrão Racial',        tier: 'optional',     type: 'list',   options: ['PO', 'PSR'],    example: 'PO',             description: 'PO = Puro de Origem (com registro). PSR = Puro Sem Registro.' },
+  { key: 'registro',           label: 'Registro',             tier: 'optional',     type: 'text',   example: 'RGN-5678',       description: 'Número do registro genealógico, se for PO.' },
+  { key: 'raca_predominante',  label: 'Raça Predominante',    tier: 'optional',     type: 'list',   options: RACAS_PURAS,      example: 'Nelore',         description: 'Para mestiços: raça que mais aparece no animal.' },
+  { key: 'nome',               label: 'Nome',                 tier: 'optional',     type: 'text',   example: 'Touro Imperial', description: 'Nome do animal (comum em PO ou animal de destaque).' },
+  { key: 'brinco_eletronico',  label: 'Brinco Eletrônico',    tier: 'optional',     type: 'text',   example: 'E001',           description: 'Identificador eletrônico (RFID), se houver.' },
+  { key: 'pai_nome',           label: 'Nome do Pai',          tier: 'optional',     type: 'text',   example: 'Imperial',       description: 'Nome do pai do animal (texto livre).' },
+  { key: 'mae_nome',           label: 'Nome da Mãe',          tier: 'optional',     type: 'text',   example: 'Princesa',       description: 'Nome da mãe do animal (texto livre).' },
+  { key: 'status_reprodutivo', label: 'Status Reprodutivo',   tier: 'optional',     type: 'list',   options: STATUS_REPRODUTIVOS, example: 'CICLANDO',    description: 'Só para fêmeas. PRENHE, VAZIA, CICLANDO ou RECRIA.' },
+  { key: 'previsao_parto',     label: 'Previsão de Parto',    tier: 'optional',     type: 'date',   example: '2027-01-15',     description: 'Só preencher se Status Reprodutivo = PRENHE.' },
+  { key: 'observacoes',        label: 'Observações',          tier: 'optional',     type: 'text',   example: 'Genética alta.', description: 'Qualquer informação adicional sobre o animal.' },
+];
+
+// Cores por tier (para cabeçalhos e legenda)
+const TIER_COLORS = {
+  required:    { argb: '2F8A3E' }, // verde escuro
+  conditional: { argb: '2F8A3E' }, // verde escuro (também obrigatório, mas condicional)
+  recommended: { argb: '7BB661' }, // verde médio
+  optional:    { argb: 'D1D5DB' }, // cinza claro
+};
+const TIER_FONT_COLORS = {
+  required:    { argb: 'FFFFFF' },
+  conditional: { argb: 'FFFFFF' },
+  recommended: { argb: 'FFFFFF' },
+  optional:    { argb: '1F2937' },
+};
+const TIER_LABELS = {
+  required:    'Obrigatório',
+  conditional: 'Obrigatório (condicional)',
+  recommended: 'Recomendado',
+  optional:    'Opcional',
+};
 
 app.get('/herd/import/template', async (_req, res) => {
   try {
@@ -240,55 +260,170 @@ app.get('/herd/import/template', async (_req, res) => {
     workbook.creator = 'EIXO';
     workbook.created = new Date();
 
+    // =============================================
+    // ABA 1 — INSTRUÇÕES
+    // =============================================
     const instrucoes = workbook.addWorksheet('Instruções', { properties: { tabColor: { argb: '2F8A3E' } } });
 
-    instrucoes.columns = [
-      { header: 'Coluna na planilha', key: 'header', width: 30 },
-      { header: 'Campo no banco', key: 'db', width: 28 },
-      { header: 'Obrigatório', key: 'required', width: 14 },
-      { header: 'Exemplo', key: 'example', width: 25 },
-      { header: 'Descrição', key: 'description', width: 55 },
+    // Título
+    instrucoes.mergeCells('A1:E1');
+    const titulo = instrucoes.getCell('A1');
+    titulo.value = 'EIXO — Planilha de Importação do Rebanho';
+    titulo.font = { bold: true, size: 16, color: { argb: '1F2937' }, name: 'Arial' };
+    titulo.alignment = { vertical: 'middle', horizontal: 'left' };
+    instrucoes.getRow(1).height = 28;
+
+    // Subtítulo
+    instrucoes.mergeCells('A2:E2');
+    instrucoes.getCell('A2').value = 'Preencha os animais na aba "Dados". Use o cabeçalho com * para identificar campos obrigatórios.';
+    instrucoes.getCell('A2').font = { size: 10, color: { argb: '6B7280' }, name: 'Arial' };
+    instrucoes.getRow(2).height = 18;
+
+    // Legenda de cores
+    instrucoes.getCell('A4').value = 'Legenda';
+    instrucoes.getCell('A4').font = { bold: true, size: 11, name: 'Arial' };
+
+    const legendaItens = [
+      { row: 5, cor: TIER_COLORS.required,    txt: '* Obrigatório — sem isso o animal não pode ser cadastrado.' },
+      { row: 6, cor: TIER_COLORS.conditional, txt: '* Obrigatório condicional — depende de outro campo (ver descrição).' },
+      { row: 7, cor: TIER_COLORS.recommended, txt: 'Recomendado — sistema funciona melhor com esse dado.' },
+      { row: 8, cor: TIER_COLORS.optional,    txt: 'Opcional — preencha se tiver à mão.' },
     ];
-
-    instrucoes.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
-    instrucoes.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2F8A3E' } };
-
-    TEMPLATE_COLUMNS.forEach((col) => {
-      instrucoes.addRow({
-        header: col.header,
-        db: col.db,
-        required: col.required ? 'Sim' : 'Não',
-        example: col.example,
-        description: col.description,
-      });
+    legendaItens.forEach(({ row, cor, txt }) => {
+      const c = instrucoes.getCell(`A${row}`);
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: cor };
+      c.value = '';
+      instrucoes.getCell(`B${row}`).value = txt;
+      instrucoes.getCell(`B${row}`).font = { size: 10, name: 'Arial' };
     });
 
+    // Tabela detalhada (linha 10 em diante)
+    const tabelaHeaderRow = 10;
+    const tabHeaders = ['Coluna', 'Tipo', 'Exemplo', 'Descrição'];
+    tabHeaders.forEach((h, idx) => {
+      const c = instrucoes.getCell(tabelaHeaderRow, idx + 1);
+      c.value = h;
+      c.font = { bold: true, color: { argb: 'FFFFFF' }, name: 'Arial' };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2F8A3E' } };
+      c.alignment = { vertical: 'middle' };
+    });
+    instrucoes.getRow(tabelaHeaderRow).height = 22;
+
+    TEMPLATE_COLUMNS.forEach((col, idx) => {
+      const rowNum = tabelaHeaderRow + 1 + idx;
+      const label = (col.tier === 'required' || col.tier === 'conditional') ? `${col.label} *` : col.label;
+      instrucoes.getCell(rowNum, 1).value = label;
+      instrucoes.getCell(rowNum, 2).value = TIER_LABELS[col.tier];
+      instrucoes.getCell(rowNum, 3).value = col.example;
+      instrucoes.getCell(rowNum, 4).value = col.description;
+      for (let i = 1; i <= 4; i++) {
+        instrucoes.getCell(rowNum, i).font = { size: 10, name: 'Arial' };
+        instrucoes.getCell(rowNum, i).alignment = { vertical: 'middle', wrapText: true };
+      }
+      instrucoes.getCell(rowNum, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: TIER_COLORS[col.tier] };
+      instrucoes.getCell(rowNum, 1).font = { size: 10, bold: true, color: TIER_FONT_COLORS[col.tier], name: 'Arial' };
+    });
+
+    instrucoes.getColumn(1).width = 28;
+    instrucoes.getColumn(2).width = 24;
+    instrucoes.getColumn(3).width = 22;
+    instrucoes.getColumn(4).width = 70;
+
+    // =============================================
+    // ABA 2 — DADOS (onde o produtor preenche)
+    // =============================================
     const dados = workbook.addWorksheet('Dados', { properties: { tabColor: { argb: '3B82F6' } } });
 
-    const headers = TEMPLATE_COLUMNS.map((c) => c.header);
-    dados.addRow(headers);
-
-    const sampleRow = TEMPLATE_COLUMNS.map((c) => c.example);
-    dados.addRow(sampleRow);
-
-    headers.forEach((h, idx) => {
-      const cell = dados.getRow(1).getCell(idx + 1);
-      cell.font = { bold: true, color: { argb: 'FFFFFF' } };
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '3B82F6' } };
-
-      const col = TEMPLATE_COLUMNS[idx];
-      cell.comment = {
-        texts: [
-          { text: col.description, font: { size: 10 } },
-        ],
+    // Cabeçalhos
+    TEMPLATE_COLUMNS.forEach((col, idx) => {
+      const cell = dados.getCell(1, idx + 1);
+      const label = (col.tier === 'required' || col.tier === 'conditional') ? `${col.label} *` : col.label;
+      cell.value = label;
+      cell.font = {
+        bold: true,
+        color: TIER_FONT_COLORS[col.tier],
+        size: 11,
+        name: 'Arial',
       };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: TIER_COLORS[col.tier] };
+      cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'E5E7EB' } },
+        bottom: { style: 'thin', color: { argb: 'E5E7EB' } },
+        left: { style: 'thin', color: { argb: 'E5E7EB' } },
+        right: { style: 'thin', color: { argb: 'E5E7EB' } },
+      };
+      cell.comment = { texts: [{ text: col.description, font: { size: 10, name: 'Arial' } }] };
+
+      // Largura da coluna baseada no tipo
+      const widthByType = { date: 16, number: 14, list: 22, text: 22 };
+      dados.getColumn(idx + 1).width = widthByType[col.type] || 20;
+    });
+    dados.getRow(1).height = 36;
+
+    // Linha 2 — exemplo (italico, cinza, sinalizando que é referência)
+    TEMPLATE_COLUMNS.forEach((col, idx) => {
+      const cell = dados.getCell(2, idx + 1);
+      cell.value = col.example;
+      cell.font = { italic: true, color: { argb: '9CA3AF' }, size: 10, name: 'Arial' };
+      cell.alignment = { vertical: 'middle' };
     });
 
-    dados.getRow(2).font = { italic: true, color: { argb: '9CA3AF' } };
+    // Freeze pane na linha 1
+    dados.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+
+    // =============================================
+    // ABA 3 — LISTAS (oculta, usada pelos dropdowns)
+    // =============================================
+    const listas = workbook.addWorksheet('Listas', { state: 'hidden' });
+    const listColumnsMap = {};
+    let colLetter = 1;
+    TEMPLATE_COLUMNS.forEach((col) => {
+      if (col.type === 'list' && Array.isArray(col.options)) {
+        const colChar = String.fromCharCode(64 + colLetter); // A, B, C...
+        listas.getCell(1, colLetter).value = col.label;
+        listas.getCell(1, colLetter).font = { bold: true, size: 10 };
+        col.options.forEach((opt, i) => {
+          listas.getCell(2 + i, colLetter).value = opt;
+        });
+        listColumnsMap[col.key] = `Listas!$${colChar}$2:$${colChar}$${1 + col.options.length}`;
+        colLetter++;
+      }
+    });
+
+    // Aplica validação de dados (dropdowns) nas colunas tipo 'list' da aba Dados
+    TEMPLATE_COLUMNS.forEach((col, idx) => {
+      if (col.type === 'list' && listColumnsMap[col.key]) {
+        const colChar = String.fromCharCode(64 + idx + 1);
+        for (let row = 2; row <= 1001; row++) { // permite até 1000 linhas
+          dados.getCell(`${colChar}${row}`).dataValidation = {
+            type: 'list',
+            allowBlank: true,
+            formulae: [`=${listColumnsMap[col.key]}`],
+            showErrorMessage: true,
+            errorStyle: 'warning',
+            errorTitle: 'Valor inválido',
+            error: `Use um valor da lista para ${col.label}.`,
+          };
+        }
+      }
+      if (col.type === 'date') {
+        const colChar = String.fromCharCode(64 + idx + 1);
+        for (let row = 2; row <= 1001; row++) {
+          dados.getCell(`${colChar}${row}`).numFmt = 'yyyy-mm-dd';
+        }
+      }
+      if (col.type === 'number') {
+        const colChar = String.fromCharCode(64 + idx + 1);
+        for (let row = 2; row <= 1001; row++) {
+          dados.getCell(`${colChar}${row}`).numFmt = '0.##';
+        }
+      }
+    });
 
     const buffer = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="modelo_rebanho.xlsx"');
+    res.setHeader('Content-Disposition', 'attachment; filename="modelo_rebanho_eixo.xlsx"');
     return res.send(Buffer.from(buffer));
   } catch (error) {
     console.error('Erro ao gerar planilha modelo:', error);
