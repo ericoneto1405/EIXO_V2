@@ -550,7 +550,10 @@ function validateUploadRow(row, line) {
     errs.push('Composição Mestiça é obrigatória quando Tipo de Raça = Mestiça');
   }
 
-  return errs.length > 0 ? { line, motivos: errs, identificacao: row.identificacao || null } : null;
+  // Inclui dados originais para permitir geração de planilha de correção
+  return errs.length > 0
+    ? { line, motivos: errs, identificacao: row.identificacao || null, dados: { ...row } }
+    : null;
 }
 
 app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async (req, res) => {
@@ -661,6 +664,89 @@ app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async 
   } catch (error) {
     console.error('Erro no upload de rebanho:', error);
     return res.status(500).json({ message: 'Erro interno ao processar planilha.' });
+  }
+});
+
+// =============================================
+// PLANILHA DE ERROS — Para o cliente corrigir e reenviar
+// =============================================
+app.post('/herd/import/erros-xlsx', requireAuth, async (req, res) => {
+  try {
+    const { erros } = req.body || {};
+    if (!Array.isArray(erros) || erros.length === 0) {
+      return res.status(400).json({ message: 'Nenhum erro informado.' });
+    }
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'EIXO';
+    wb.created = new Date();
+    const ws = wb.addWorksheet('Erros para corrigir', { properties: { tabColor: { argb: 'A32D2D' } } });
+
+    const totalCols = TEMPLATE_COLUMNS.length;
+    const lastColLetter = String.fromCharCode(64 + totalCols + 1); // +1 = coluna de Motivo
+
+    // Banner
+    ws.mergeCells(`A1:${lastColLetter}1`);
+    const banner = ws.getCell('A1');
+    banner.value = '⚠  Corrija as linhas abaixo e reenvie a planilha em "Importar Rebanho → Enviar planilha preenchida". O motivo do erro está na última coluna (em vermelho).';
+    banner.font = { bold: true, color: { argb: '7F1D1D' }, size: 11, name: 'Arial' };
+    banner.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEE2E2' } };
+    banner.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 };
+    banner.border = { bottom: { style: 'medium', color: { argb: 'A32D2D' } } };
+    ws.getRow(1).height = 32;
+
+    // Cabeçalhos (linha 2)
+    TEMPLATE_COLUMNS.forEach((col, idx) => {
+      const cell = ws.getCell(2, idx + 1);
+      const label = (col.tier === 'required' || col.tier === 'conditional') ? `${col.label} *` : col.label;
+      cell.value = label;
+      cell.font = { bold: true, color: TIER_FONT_COLORS[col.tier], size: 11, name: 'Arial' };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: TIER_COLORS[col.tier] };
+      cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+      const widthByType = { date: 16, number: 14, list: 22, text: 22 };
+      ws.getColumn(idx + 1).width = widthByType[col.type] || 20;
+    });
+    // Coluna extra "Motivo do erro"
+    const motivoCol = ws.getCell(2, totalCols + 1);
+    motivoCol.value = 'Motivo do erro';
+    motivoCol.font = { bold: true, color: { argb: 'FFFFFF' }, size: 11, name: 'Arial' };
+    motivoCol.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'A32D2D' } };
+    motivoCol.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+    ws.getColumn(totalCols + 1).width = 50;
+    ws.getRow(2).height = 36;
+
+    // Linhas com dados pré-preenchidos
+    erros.forEach((err, idx) => {
+      const rowNum = 3 + idx;
+      const dados = err?.dados || {};
+      TEMPLATE_COLUMNS.forEach((col, colIdx) => {
+        const cell = ws.getCell(rowNum, colIdx + 1);
+        const val = dados[col.key];
+        if (val !== undefined && val !== null && val !== '') {
+          cell.value = val;
+        }
+        cell.font = { size: 10, name: 'Arial' };
+        cell.alignment = { vertical: 'middle' };
+        if (col.type === 'date') cell.numFmt = 'yyyy-mm-dd';
+        if (col.type === 'number') cell.numFmt = '0.##';
+      });
+      const motivoCell = ws.getCell(rowNum, totalCols + 1);
+      motivoCell.value = (err?.motivos || []).join(' · ');
+      motivoCell.font = { size: 10, color: { argb: 'A32D2D' }, bold: true, name: 'Arial' };
+      motivoCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEE2E2' } };
+      motivoCell.alignment = { vertical: 'middle', wrapText: true };
+    });
+
+    // Freeze pane na linha 2
+    ws.views = [{ state: 'frozen', xSplit: 0, ySplit: 2 }];
+
+    const buffer = await wb.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="EIXO - Linhas com erro.xlsx"');
+    return res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('Erro ao gerar planilha de erros:', error);
+    return res.status(500).json({ message: 'Erro ao gerar planilha de erros.' });
   }
 });
 
