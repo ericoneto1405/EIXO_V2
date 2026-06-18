@@ -220,11 +220,11 @@ const TEMPLATE_COLUMNS = [
   { key: 'identificacao',      label: 'Identificação',        tier: 'required',     type: 'text',   example: 'BR001',          description: 'Brinco, tatuagem ou número que identifica o animal de forma única.' },
   { key: 'sexo',               label: 'Sexo',                 tier: 'required',     type: 'list',   options: ['MACHO', 'FEMEA'], example: 'MACHO', description: 'MACHO ou FEMEA.' },
   { key: 'tipo_raca',          label: 'Tipo de Raça',         tier: 'required',     type: 'list',   options: ['Pura', 'Mestiça'], example: 'Pura', description: 'Pura = animal de uma raça só. Mestiça = cruzamento entre raças.' },
-  { key: 'raca',               label: 'Raça',                 tier: 'conditional',  type: 'list',   options: RACAS_PURAS,      example: 'Nelore',          description: 'Obrigatório se Tipo de Raça = Pura. Escolha a raça do animal.' },
-  { key: 'composicao_mestica', label: 'Composição Mestiça',   tier: 'conditional',  type: 'list',   options: COMPOSICOES_MESTICAS, example: 'F1 (50/50)', description: 'Obrigatório se Tipo de Raça = Mestiça. Como é a mistura do animal.' },
-  { key: 'data_nascimento',    label: 'Data de Nascimento',   tier: 'recommended',  type: 'date',   example: '2020-03-15',     description: 'Data de nascimento (AAAA-MM-DD). Pode ser estimativa.' },
+  { key: 'raca',               label: 'Raça (se Pura)',       tier: 'optional',     type: 'list',   options: RACAS_PURAS,      example: 'Nelore',          description: 'Preencha se Tipo de Raça = Pura. Escolha a raça do animal.' },
+  { key: 'composicao_mestica', label: 'Composição (se Mestiça)', tier: 'optional',  type: 'list',   options: COMPOSICOES_MESTICAS, example: 'F1 (50/50)', description: 'Preencha se Tipo de Raça = Mestiça. Como é a mistura do animal.' },
+  { key: 'data_nascimento',    label: 'Data de Nascimento',   tier: 'recommended',  type: 'date',   example: '15/03/2020',     description: 'Data de nascimento (DD/MM/AAAA). Pode ser estimativa.' },
   { key: 'ultimo_peso_kg',     label: 'Último Peso (kg)',     tier: 'recommended',  type: 'number', example: '520',            description: 'Peso registrado mais recente, em kg.' },
-  { key: 'data_pesagem',       label: 'Data da Pesagem',      tier: 'recommended',  type: 'date',   example: '2026-06-01',     description: 'Data da pesagem informada acima (AAAA-MM-DD).' },
+  { key: 'data_pesagem',       label: 'Data da Pesagem',      tier: 'recommended',  type: 'date',   example: '01/06/2026',     description: 'Data da pesagem informada acima (DD/MM/AAAA).' },
   { key: 'padrao_racial',      label: 'Padrão Racial',        tier: 'optional',     type: 'list',   options: ['PO', 'PSR'],    example: 'PO',             description: 'PO = Puro de Origem (com registro). PSR = Puro Sem Registro.' },
   { key: 'registro',           label: 'Registro',             tier: 'optional',     type: 'text',   example: 'RGN-5678',       description: 'Número do registro genealógico, se for PO.' },
   { key: 'raca_predominante',  label: 'Raça Predominante',    tier: 'optional',     type: 'list',   options: RACAS_PURAS,      example: 'Nelore',         description: 'Para mestiços: raça que mais aparece no animal.' },
@@ -233,7 +233,7 @@ const TEMPLATE_COLUMNS = [
   { key: 'pai_nome',           label: 'Nome do Pai',          tier: 'optional',     type: 'text',   example: 'Imperial',       description: 'Nome do pai do animal (texto livre).' },
   { key: 'mae_nome',           label: 'Nome da Mãe',          tier: 'optional',     type: 'text',   example: 'Princesa',       description: 'Nome da mãe do animal (texto livre).' },
   { key: 'status_reprodutivo', label: 'Status Reprodutivo',   tier: 'optional',     type: 'list',   options: STATUS_REPRODUTIVOS, example: 'CICLANDO',    description: 'Só para fêmeas. PRENHE, VAZIA, CICLANDO ou RECRIA.' },
-  { key: 'previsao_parto',     label: 'Previsão de Parto',    tier: 'optional',     type: 'date',   example: '2027-01-15',     description: 'Só preencher se Status Reprodutivo = PRENHE.' },
+  { key: 'previsao_parto',     label: 'Previsão de Parto',    tier: 'optional',     type: 'date',   example: '15/01/2027',     description: 'Só preencher se Status Reprodutivo = PRENHE.' },
   { key: 'observacoes',        label: 'Observações',          tier: 'optional',     type: 'text',   example: 'Genética alta.', description: 'Qualquer informação adicional sobre o animal.' },
 ];
 
@@ -429,7 +429,7 @@ app.get('/herd/import/template', async (_req, res) => {
       if (col.type === 'date') {
         const colChar = String.fromCharCode(64 + idx + 1);
         for (let row = 3; row <= 1002; row++) {
-          dados.getCell(`${colChar}${row}`).numFmt = 'yyyy-mm-dd';
+          dados.getCell(`${colChar}${row}`).numFmt = 'dd/mm/yyyy';
         }
       }
       if (col.type === 'number') {
@@ -472,11 +472,16 @@ const uploadMemory = multer({
 const LABEL_TO_KEY = (() => {
   const map = {};
   TEMPLATE_COLUMNS.forEach((col) => {
-    // Aceita label exata, com asterisco, e key técnica
+    // Aceita label atual, com asterisco, e key técnica
     map[normalizeHeader(col.label)] = col.key;
     map[normalizeHeader(`${col.label} *`)] = col.key;
     map[normalizeHeader(col.key)] = col.key;
   });
+  // Labels antigos (compatibilidade com planilhas baixadas em versões anteriores)
+  map[normalizeHeader('Raça')] = 'raca';
+  map[normalizeHeader('Raça *')] = 'raca';
+  map[normalizeHeader('Composição Mestiça')] = 'composicao_mestica';
+  map[normalizeHeader('Composição Mestiça *')] = 'composicao_mestica';
   return map;
 })();
 
@@ -541,14 +546,22 @@ function validateUploadRow(row, line) {
   if (!sexo) errs.push('Sexo é obrigatório (MACHO ou FEMEA)');
 
   const tipoRaca = String(row.tipo_raca || '').trim().toLowerCase();
+  const racaPreenchida = String(row.raca || '').trim();
+  const composicaoPreenchida = String(row.composicao_mestica || '').trim();
+
   if (!tipoRaca) {
     errs.push('Tipo de Raça é obrigatório (Pura ou Mestiça)');
   } else if (!['pura', 'mestica', 'mestiça'].includes(tipoRaca)) {
     errs.push('Tipo de Raça deve ser "Pura" ou "Mestiça"');
-  } else if (tipoRaca === 'pura' && !String(row.raca || '').trim()) {
-    errs.push('Raça é obrigatória quando Tipo de Raça = Pura');
-  } else if ((tipoRaca === 'mestica' || tipoRaca === 'mestiça') && !String(row.composicao_mestica || '').trim()) {
-    errs.push('Composição Mestiça é obrigatória quando Tipo de Raça = Mestiça');
+  } else if (tipoRaca === 'pura' && !racaPreenchida) {
+    errs.push('Raça (se Pura) precisa ser preenchida');
+  } else if (
+    (tipoRaca === 'mestica' || tipoRaca === 'mestiça')
+    && !composicaoPreenchida
+    && !racaPreenchida
+  ) {
+    // Tolerante: aceita se houver Raça OU Composição preenchida
+    errs.push('Preencha Composição (se Mestiça) ou Raça quando Tipo = Mestiça');
   }
 
   // Inclui dados originais para permitir geração de planilha de correção
@@ -612,6 +625,18 @@ app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async 
         const isPura = tipoRacaRaw === 'pura';
         const tipoRacaNormalizado = isPura ? 'Pura' : (tipoRacaRaw ? 'Mestiça' : null);
 
+        // Tolerância: se Mestiça e só Raça foi preenchida (sem Composição),
+        // marca Composição como "Comercial / Sem definição" e usa Raça como predominante
+        const racaInput = String(row.raca || '').trim();
+        const composicaoInput = String(row.composicao_mestica || '').trim();
+        const racaPredominanteInput = String(row.raca_predominante || '').trim();
+        let composicaoFinal = composicaoInput;
+        let racaPredominanteFinal = racaPredominanteInput;
+        if (!isPura && !composicaoInput && racaInput) {
+          composicaoFinal = 'Comercial / Sem definição';
+          racaPredominanteFinal = racaPredominanteFinal || racaInput;
+        }
+
         const dataNascimento = parseImportDate(row.data_nascimento);
         const previsaoParto = parseImportDate(row.previsao_parto);
         const dataPesagem = parseImportDate(row.data_pesagem);
@@ -625,10 +650,10 @@ app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async 
             nome: String(row.nome || '').trim() || null,
             brincoEletronico: String(row.brinco_eletronico || '').trim() || null,
             tipoRaca: tipoRacaNormalizado,
-            raca: isPura ? (String(row.raca || '').trim() || null) : null,
+            raca: isPura ? (racaInput || null) : null,
             padraoRacial: isPura ? (String(row.padrao_racial || '').trim() || null) : null,
-            composicaoMestica: !isPura ? (String(row.composicao_mestica || '').trim() || null) : null,
-            racaPredominante: !isPura ? (String(row.raca_predominante || '').trim() || null) : null,
+            composicaoMestica: !isPura ? (composicaoFinal || null) : null,
+            racaPredominante: !isPura ? (racaPredominanteFinal || null) : null,
             tipoCadastro: 'MESTICO', // refinado depois pela tela de animal
             sexo,
             dataNascimento,
@@ -728,7 +753,7 @@ app.post('/herd/import/erros-xlsx', requireAuth, async (req, res) => {
         }
         cell.font = { size: 10, name: 'Arial' };
         cell.alignment = { vertical: 'middle' };
-        if (col.type === 'date') cell.numFmt = 'yyyy-mm-dd';
+        if (col.type === 'date') cell.numFmt = 'dd/mm/yyyy';
         if (col.type === 'number') cell.numFmt = '0.##';
       });
       const motivoCell = ws.getCell(rowNum, totalCols + 1);
@@ -806,7 +831,19 @@ function parseImportDate(value) {
     const d = new Date(excelEpoch.getTime() + value * 86400000);
     return Number.isNaN(d.getTime()) ? null : d;
   }
-  const d = new Date(value);
+  const s = String(value).trim();
+  // Formato brasileiro DD/MM/AAAA (ou DD-MM-AAAA)
+  const brMatch = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (brMatch) {
+    const day = parseInt(brMatch[1], 10);
+    const month = parseInt(brMatch[2], 10) - 1;
+    let year = parseInt(brMatch[3], 10);
+    if (year < 100) year += year < 50 ? 2000 : 1900; // 26→2026, 99→1999
+    const d = new Date(year, month, day);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  // Fallback: tenta ISO (AAAA-MM-DD) ou qualquer outro formato reconhecido
+  const d = new Date(s);
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
