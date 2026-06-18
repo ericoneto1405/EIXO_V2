@@ -335,6 +335,9 @@ model Animal {
    nome                 String?
    brincoEletronico     String?
    padraoRacial         String?
+   tipoRaca             String?
+   composicaoMestica    String?
+   racaPredominante     String?
    funcaoReprodutiva    String?
    statusReprodutivo    String?
    previsaoParto        DateTime?

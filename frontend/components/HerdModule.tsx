@@ -108,6 +108,20 @@ const LayersIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' })
     </svg>
 );
 
+const formatRacaDisplay = (animal: { raca?: string | null; tipoRaca?: string | null; composicaoMestica?: string | null; racaPredominante?: string | null; padraoRacial?: string | null }): string => {
+    const tipo = (animal.tipoRaca || '').toLowerCase();
+    if (tipo === 'pura' && animal.raca) {
+        return animal.padraoRacial ? `${animal.raca} · ${animal.padraoRacial}` : animal.raca;
+    }
+    if ((tipo === 'mestiça' || tipo === 'mestica') && (animal.composicaoMestica || animal.racaPredominante)) {
+        if (animal.composicaoMestica && animal.racaPredominante) {
+            return `${animal.composicaoMestica} · ${animal.racaPredominante}`;
+        }
+        return animal.composicaoMestica || animal.racaPredominante || animal.raca || '—';
+    }
+    return animal.raca || '—';
+};
+
 const calculateAge = (birthDateString?: string | null): string => {
     if (!birthDateString) {
         return '—';
@@ -262,7 +276,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [animalForm, setAnimalForm] = useState({
         brinco: '',
         nome: '',
+        tipoRaca: 'Pura',
         raca: '',
+        padraoRacial: '',
+        composicaoMestica: '',
+        racaPredominante: '',
         sexo: 'Macho',
         dataNascimento: '',
         ultimoPeso: '',
@@ -854,8 +872,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             setAnimalFormError('Selecione uma fazenda para criar animal.');
             return;
         }
-        if (!animalForm.brinco.trim() || !animalForm.raca.trim() || !animalForm.dataNascimento) {
-            setAnimalFormError('Preencha brinco, raça e data de nascimento.');
+        const isPura = animalForm.tipoRaca === 'Pura';
+        const racaEffetiva = isPura ? animalForm.raca.trim() : animalForm.composicaoMestica.trim();
+        if (!animalForm.brinco.trim() || !racaEffetiva || !animalForm.dataNascimento) {
+            setAnimalFormError(
+                isPura
+                    ? 'Preencha brinco, raça e data de nascimento.'
+                    : 'Preencha brinco, composição mestiça e data de nascimento.',
+            );
             return;
         }
 
@@ -869,7 +893,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             setAnimalFormError(null);
             const payload = {
                 brinco: animalForm.brinco.trim(),
-                raca: animalForm.raca.trim(),
+                raca: isPura ? animalForm.raca.trim() : (animalForm.racaPredominante.trim() || animalForm.composicaoMestica.trim()),
+                tipoRaca: animalForm.tipoRaca,
+                padraoRacial: isPura ? (animalForm.padraoRacial.trim() || undefined) : undefined,
+                composicaoMestica: !isPura ? animalForm.composicaoMestica.trim() : undefined,
+                racaPredominante: !isPura ? (animalForm.racaPredominante.trim() || undefined) : undefined,
                 sexo: animalForm.sexo,
                 dataNascimento: animalForm.dataNascimento,
                 ultimoPeso: parsedPeso ?? undefined,
@@ -1458,7 +1486,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                 : <span className="text-[var(--eixo-text-muted)]">—</span>
                                             }
                                         </td>
-                                        <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={animal.raca}>{animal.raca}</td>
+                                        <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={formatRacaDisplay(animal)}>{formatRacaDisplay(animal)}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.sexo}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{calculateAge(animal.dataNascimento)}</td>
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
@@ -2290,24 +2318,80 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Raça</label>
-                                <input
-                                    type="text"
-                                    list="breed-suggestions"
-                                    value={animalForm.raca}
-                                    onChange={(event) => setAnimalForm((prev) => ({ ...prev, raca: event.target.value }))}
+                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Tipo de Raça</label>
+                                <select
+                                    value={animalForm.tipoRaca}
+                                    onChange={(event) => setAnimalForm((prev) => ({ ...prev, tipoRaca: event.target.value }))}
                                     className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                    placeholder="Digite ou selecione a raça"
-                                    required
-                                />
-                                {farmBreeds.length > 0 && (
-                                    <datalist id="breed-suggestions">
-                                        {farmBreeds.map((name) => (
-                                            <option key={name} value={name} />
-                                        ))}
-                                    </datalist>
-                                )}
+                                >
+                                    <option value="Pura">Pura</option>
+                                    <option value="Mestiça">Mestiça</option>
+                                </select>
                             </div>
+                            {animalForm.tipoRaca === 'Pura' ? (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Raça</label>
+                                        <input
+                                            type="text"
+                                            list="breed-suggestions"
+                                            value={animalForm.raca}
+                                            onChange={(event) => setAnimalForm((prev) => ({ ...prev, raca: event.target.value }))}
+                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                            placeholder="Nelore, Angus, Brahman..."
+                                            required
+                                        />
+                                        {farmBreeds.length > 0 && (
+                                            <datalist id="breed-suggestions">
+                                                {farmBreeds.map((name) => (
+                                                    <option key={name} value={name} />
+                                                ))}
+                                            </datalist>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Padrão Racial <span className="text-[var(--eixo-text-muted)] font-normal">(opcional)</span></label>
+                                        <select
+                                            value={animalForm.padraoRacial}
+                                            onChange={(event) => setAnimalForm((prev) => ({ ...prev, padraoRacial: event.target.value }))}
+                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                        >
+                                            <option value="">—</option>
+                                            <option value="PO">PO — Puro de Origem (com registro)</option>
+                                            <option value="PSR">PSR — Puro Sem Registro</option>
+                                        </select>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Composição Mestiça</label>
+                                        <select
+                                            value={animalForm.composicaoMestica}
+                                            onChange={(event) => setAnimalForm((prev) => ({ ...prev, composicaoMestica: event.target.value }))}
+                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                            required
+                                        >
+                                            <option value="">Selecione...</option>
+                                            <option value="F1 (50/50)">F1 (50/50)</option>
+                                            <option value="3/4 ou 5/8 sangue">3/4 ou 5/8 sangue</option>
+                                            <option value="Anelorado">Anelorado</option>
+                                            <option value="Cruzado europeu × zebu">Cruzado europeu × zebu</option>
+                                            <option value="Comercial / Sem definição">Comercial / Sem definição</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Raça Predominante <span className="text-[var(--eixo-text-muted)] font-normal">(opcional)</span></label>
+                                        <input
+                                            type="text"
+                                            value={animalForm.racaPredominante}
+                                            onChange={(event) => setAnimalForm((prev) => ({ ...prev, racaPredominante: event.target.value }))}
+                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
+                                            placeholder="Nelore, Angus..."
+                                        />
+                                    </div>
+                                </>
+                            )}
                             <div>
                                 <label className="block text-sm font-medium text-[var(--eixo-text)]">Sexo</label>
                                 <select

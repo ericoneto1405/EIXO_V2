@@ -83,6 +83,10 @@ export interface AnimalUI {
     tipoCadastro?: 'PO' | 'MESTICO' | string | null;
     identificacao: string;
     raca: string;
+    tipoRaca?: string | null;
+    composicaoMestica?: string | null;
+    racaPredominante?: string | null;
+    padraoRacial?: string | null;
     sexo: string;
     dataNascimento?: string | null;
     ultimoPeso: number | null;

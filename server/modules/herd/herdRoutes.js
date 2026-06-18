@@ -607,12 +607,9 @@ app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async 
         }
 
         const sexo = normalizeSexoImport(row.sexo);
-        const tipoRaca = String(row.tipo_raca || '').trim().toLowerCase();
-        const isPura = tipoRaca === 'pura';
-        const racaFinal = isPura ? String(row.raca || '').trim() : String(row.raca_predominante || row.composicao_mestica || '').trim();
-        const padraoRacial = isPura
-          ? String(row.padrao_racial || '').trim() || null
-          : String(row.composicao_mestica || '').trim() || null;
+        const tipoRacaRaw = String(row.tipo_raca || '').trim().toLowerCase();
+        const isPura = tipoRacaRaw === 'pura';
+        const tipoRacaNormalizado = isPura ? 'Pura' : (tipoRacaRaw ? 'Mestiça' : null);
 
         const dataNascimento = parseImportDate(row.data_nascimento);
         const previsaoParto = parseImportDate(row.previsao_parto);
@@ -626,8 +623,11 @@ app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async 
             identityKey,
             nome: String(row.nome || '').trim() || null,
             brincoEletronico: String(row.brinco_eletronico || '').trim() || null,
-            raca: racaFinal || null,
-            padraoRacial,
+            tipoRaca: tipoRacaNormalizado,
+            raca: isPura ? (String(row.raca || '').trim() || null) : null,
+            padraoRacial: isPura ? (String(row.padrao_racial || '').trim() || null) : null,
+            composicaoMestica: !isPura ? (String(row.composicao_mestica || '').trim() || null) : null,
+            racaPredominante: !isPura ? (String(row.raca_predominante || '').trim() || null) : null,
             tipoCadastro: 'MESTICO', // refinado depois pela tela de animal
             sexo,
             dataNascimento,
