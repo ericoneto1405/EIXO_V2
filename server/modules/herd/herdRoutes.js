@@ -1,5 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import ExcelJS from 'exceljs';
+import multer from 'multer';
+import * as XLSX from 'xlsx';
 import { requireAuth } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import { parseNumber, parseDateValue } from '../utils/formatters.js';
@@ -448,7 +450,222 @@ app.get('/herd/import/template', async (_req, res) => {
 });
 
 // =============================================
-// IMPORTAÇÃO DE PLANILHA — Rebanho Comercial
+// UPLOAD DE PLANILHA — Importação simplificada (novo template)
+// =============================================
+
+// Multer em memória, limite 5MB, extensões permitidas
+const uploadMemory = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter: (_req, file, cb) => {
+    const name = (file.originalname || '').toLowerCase();
+    if (name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Formato não suportado. Use .xlsx, .xls ou .csv.'));
+    }
+  },
+});
+
+// Mapa: label da planilha (com ou sem "*") → key técnica
+const LABEL_TO_KEY = (() => {
+  const map = {};
+  TEMPLATE_COLUMNS.forEach((col) => {
+    // Aceita label exata, com asterisco, e key técnica
+    map[normalizeHeader(col.label)] = col.key;
+    map[normalizeHeader(`${col.label} *`)] = col.key;
+    map[normalizeHeader(col.key)] = col.key;
+  });
+  return map;
+})();
+
+function normalizeHeader(s) {
+  return String(s || '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // remove acentos
+    .replace(/\s+/g, ' ')
+    .replace(/\*/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function parseSpreadsheet(buffer, originalName) {
+  // SheetJS lê .xlsx, .xls e .csv direto do buffer
+  const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  // Procura a aba "Dados" (case-insensitive); se não achar, usa a primeira
+  const sheetName = wb.SheetNames.find((n) => n.toLowerCase() === 'dados') || wb.SheetNames[0];
+  const sheet = wb.Sheets[sheetName];
+  if (!sheet) throw new Error('Planilha vazia ou sem abas.');
+
+  const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false });
+  if (!Array.isArray(rawRows) || rawRows.length === 0) return [];
+
+  // Detectar linha de cabeçalho: primeira linha que tenha "Identificação" (com ou sem *)
+  let headerRowIdx = -1;
+  for (let i = 0; i < Math.min(rawRows.length, 5); i++) {
+    const row = rawRows[i] || [];
+    if (row.some((cell) => normalizeHeader(cell).includes('identificacao'))) {
+      headerRowIdx = i;
+      break;
+    }
+  }
+  if (headerRowIdx < 0) throw new Error('Cabeçalho não encontrado. A primeira coluna deve ser "Identificação".');
+
+  const headers = (rawRows[headerRowIdx] || []).map(normalizeHeader);
+  const keys = headers.map((h) => LABEL_TO_KEY[h] || null);
+
+  const rows = [];
+  for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
+    const row = rawRows[i];
+    if (!Array.isArray(row)) continue;
+    // Pular linha de exemplo (italico cinza) — se for IGUAL aos exemplos, ignora
+    const obj = {};
+    keys.forEach((k, j) => {
+      if (k && row[j] !== undefined && row[j] !== null && row[j] !== '') {
+        obj[k] = row[j];
+      }
+    });
+    // Linha completamente vazia? pula
+    if (Object.keys(obj).length === 0) continue;
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function validateUploadRow(row, line) {
+  const errs = [];
+  if (!row.identificacao || !String(row.identificacao).trim()) {
+    errs.push('Identificação é obrigatória');
+  }
+  const sexo = normalizeSexoImport(row.sexo);
+  if (!sexo) errs.push('Sexo é obrigatório (MACHO ou FEMEA)');
+
+  const tipoRaca = String(row.tipo_raca || '').trim().toLowerCase();
+  if (!tipoRaca) {
+    errs.push('Tipo de Raça é obrigatório (Pura ou Mestiça)');
+  } else if (!['pura', 'mestica', 'mestiça'].includes(tipoRaca)) {
+    errs.push('Tipo de Raça deve ser "Pura" ou "Mestiça"');
+  } else if (tipoRaca === 'pura' && !String(row.raca || '').trim()) {
+    errs.push('Raça é obrigatória quando Tipo de Raça = Pura');
+  } else if ((tipoRaca === 'mestica' || tipoRaca === 'mestiça') && !String(row.composicao_mestica || '').trim()) {
+    errs.push('Composição Mestiça é obrigatória quando Tipo de Raça = Mestiça');
+  }
+
+  return errs.length > 0 ? { line, motivos: errs, identificacao: row.identificacao || null } : null;
+}
+
+app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async (req, res) => {
+  try {
+    const { farmId } = req.body || {};
+    if (!farmId) {
+      return res.status(400).json({ message: 'farmId é obrigatório.' });
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: 'Arquivo não enviado.' });
+    }
+
+    let rows;
+    try {
+      rows = parseSpreadsheet(req.file.buffer, req.file.originalname);
+    } catch (err) {
+      return res.status(400).json({ message: err.message || 'Erro ao ler a planilha.' });
+    }
+
+    if (!rows.length) {
+      return res.status(400).json({ message: 'Planilha sem linhas para importar.' });
+    }
+    if (rows.length > 1000) {
+      return res.status(400).json({ message: `Limite de 1000 linhas por importação. Sua planilha tem ${rows.length}.` });
+    }
+
+    const farm = await prisma.farm.findUnique({ where: { id: farmId } });
+    if (!farm) {
+      return res.status(404).json({ message: 'Fazenda não encontrada.' });
+    }
+
+    const erros = [];
+    const criados = [];
+    const ignorados = [];
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const line = i + 1; // linha 1 = primeiro animal (já excluímos cabeçalho)
+      const err = validateUploadRow(row, line);
+      if (err) { erros.push(err); continue; }
+
+      const brinco = String(row.identificacao).trim();
+      const brincoNum = parseNumber(brinco);
+      const identityKey = brincoNum ? String(brincoNum) : brinco;
+
+      try {
+        const existing = await prisma.animal.findFirst({ where: { farmId, identityKey } });
+        if (existing) {
+          ignorados.push({ line, identificacao: brinco, motivo: 'Animal já existe' });
+          continue;
+        }
+
+        const sexo = normalizeSexoImport(row.sexo);
+        const tipoRaca = String(row.tipo_raca || '').trim().toLowerCase();
+        const isPura = tipoRaca === 'pura';
+        const racaFinal = isPura ? String(row.raca || '').trim() : String(row.raca_predominante || row.composicao_mestica || '').trim();
+        const padraoRacial = isPura
+          ? String(row.padrao_racial || '').trim() || null
+          : String(row.composicao_mestica || '').trim() || null;
+
+        const dataNascimento = parseImportDate(row.data_nascimento);
+        const previsaoParto = parseImportDate(row.previsao_parto);
+        const dataPesagem = parseImportDate(row.data_pesagem);
+        const pesoAtual = parseNumber(row.ultimo_peso_kg);
+
+        const animal = await prisma.animal.create({
+          data: {
+            farmId,
+            brinco,
+            identityKey,
+            nome: String(row.nome || '').trim() || null,
+            brincoEletronico: String(row.brinco_eletronico || '').trim() || null,
+            raca: racaFinal || null,
+            padraoRacial,
+            tipoCadastro: 'MESTICO', // refinado depois pela tela de animal
+            sexo,
+            dataNascimento,
+            pesoAtual,
+            statusReprodutivo: String(row.status_reprodutivo || '').trim() || null,
+            previsaoParto,
+            registro: String(row.registro || '').trim() || null,
+            paiNome: String(row.pai_nome || '').trim() || null,
+            maeNome: String(row.mae_nome || '').trim() || null,
+            observacoes: String(row.observacoes || '').trim() || null,
+          },
+        });
+
+        // Pesagem inicial, se informada
+        if (dataPesagem && pesoAtual) {
+          await prisma.weighing.create({
+            data: { animalId: animal.id, data: dataPesagem, peso: pesoAtual, gmd: 0, source: 'MANUAL' },
+          }).catch(() => null);
+        }
+
+        criados.push({ line, id: animal.id, identificacao: brinco });
+      } catch (err) {
+        erros.push({ line, identificacao: brinco, motivos: [err?.message || 'Erro ao criar animal'] });
+      }
+    }
+
+    return res.json({
+      total: rows.length,
+      criados: criados.length,
+      ignorados: ignorados.length,
+      erros: erros.length,
+      detalhes: { criados, ignorados, erros },
+    });
+  } catch (error) {
+    console.error('Erro no upload de rebanho:', error);
+    return res.status(500).json({ message: 'Erro interno ao processar planilha.' });
+  }
+});
+
+// =============================================
+// IMPORTAÇÃO DE PLANILHA — Rebanho Comercial (rota antiga em JSON, mantida)
 // =============================================
 
 const REQUIRED_COLUMNS = ['identificacao'];
