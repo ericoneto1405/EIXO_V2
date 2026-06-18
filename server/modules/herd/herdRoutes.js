@@ -261,9 +261,14 @@ app.get('/herd/import/template', async (_req, res) => {
     workbook.created = new Date();
 
     // =============================================
-    // ABA 1 — INSTRUÇÕES
+    // ABA 1 — DADOS (onde o produtor preenche)
     // =============================================
-    const instrucoes = workbook.addWorksheet('Instruções', { properties: { tabColor: { argb: '2F8A3E' } } });
+    const dados = workbook.addWorksheet('Dados', { properties: { tabColor: { argb: '2F8A3E' } } });
+
+    // =============================================
+    // ABA 2 — INSTRUÇÕES (referência consultiva)
+    // =============================================
+    const instrucoes = workbook.addWorksheet('Instruções', { properties: { tabColor: { argb: '7BB661' } } });
 
     // Título
     instrucoes.mergeCells('A1:E1');
@@ -329,14 +334,25 @@ app.get('/herd/import/template', async (_req, res) => {
     instrucoes.getColumn(3).width = 22;
     instrucoes.getColumn(4).width = 70;
 
-    // =============================================
-    // ABA 2 — DADOS (onde o produtor preenche)
-    // =============================================
-    const dados = workbook.addWorksheet('Dados', { properties: { tabColor: { argb: '3B82F6' } } });
+    // Preenche a aba Dados (definida no topo)
+    const totalCols = TEMPLATE_COLUMNS.length;
+    const lastColLetter = String.fromCharCode(64 + totalCols);
 
-    // Cabeçalhos
+    // Linha 1 — Banner de aviso (mesclado em todas as colunas)
+    dados.mergeCells(`A1:${lastColLetter}1`);
+    const banner = dados.getCell('A1');
+    banner.value = '💡  Legenda e descrição de cada coluna na aba "Instruções".   |   Dúvidas? Clique no balão de suporte EIXO no canto inferior direito do sistema.';
+    banner.font = { bold: true, color: { argb: '1F2937' }, size: 11, name: 'Arial' };
+    banner.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'ECFDF5' } };
+    banner.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 };
+    banner.border = {
+      bottom: { style: 'medium', color: { argb: '2F8A3E' } },
+    };
+    dados.getRow(1).height = 32;
+
+    // Linha 2 — Cabeçalhos
     TEMPLATE_COLUMNS.forEach((col, idx) => {
-      const cell = dados.getCell(1, idx + 1);
+      const cell = dados.getCell(2, idx + 1);
       const label = (col.tier === 'required' || col.tier === 'conditional') ? `${col.label} *` : col.label;
       cell.value = label;
       cell.font = {
@@ -359,18 +375,18 @@ app.get('/herd/import/template', async (_req, res) => {
       const widthByType = { date: 16, number: 14, list: 22, text: 22 };
       dados.getColumn(idx + 1).width = widthByType[col.type] || 20;
     });
-    dados.getRow(1).height = 36;
+    dados.getRow(2).height = 36;
 
-    // Linha 2 — exemplo (italico, cinza, sinalizando que é referência)
+    // Linha 3 — exemplo (italico, cinza, sinalizando que é referência)
     TEMPLATE_COLUMNS.forEach((col, idx) => {
-      const cell = dados.getCell(2, idx + 1);
+      const cell = dados.getCell(3, idx + 1);
       cell.value = col.example;
       cell.font = { italic: true, color: { argb: '9CA3AF' }, size: 10, name: 'Arial' };
       cell.alignment = { vertical: 'middle' };
     });
 
-    // Freeze pane na linha 1
-    dados.views = [{ state: 'frozen', xSplit: 0, ySplit: 1 }];
+    // Freeze pane na linha 2 (banner + cabeçalho fixos)
+    dados.views = [{ state: 'frozen', xSplit: 0, ySplit: 2 }];
 
     // =============================================
     // ABA 3 — LISTAS (oculta, usada pelos dropdowns)
@@ -395,7 +411,7 @@ app.get('/herd/import/template', async (_req, res) => {
     TEMPLATE_COLUMNS.forEach((col, idx) => {
       if (col.type === 'list' && listColumnsMap[col.key]) {
         const colChar = String.fromCharCode(64 + idx + 1);
-        for (let row = 2; row <= 1001; row++) { // permite até 1000 linhas
+        for (let row = 3; row <= 1002; row++) { // permite até 1000 linhas (linha 3 = exemplo)
           dados.getCell(`${colChar}${row}`).dataValidation = {
             type: 'list',
             allowBlank: true,
@@ -409,13 +425,13 @@ app.get('/herd/import/template', async (_req, res) => {
       }
       if (col.type === 'date') {
         const colChar = String.fromCharCode(64 + idx + 1);
-        for (let row = 2; row <= 1001; row++) {
+        for (let row = 3; row <= 1002; row++) {
           dados.getCell(`${colChar}${row}`).numFmt = 'yyyy-mm-dd';
         }
       }
       if (col.type === 'number') {
         const colChar = String.fromCharCode(64 + idx + 1);
-        for (let row = 2; row <= 1001; row++) {
+        for (let row = 3; row <= 1002; row++) {
           dados.getCell(`${colChar}${row}`).numFmt = '0.##';
         }
       }
@@ -423,7 +439,7 @@ app.get('/herd/import/template', async (_req, res) => {
 
     const buffer = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="modelo_rebanho_eixo.xlsx"');
+    res.setHeader('Content-Disposition', 'attachment; filename="EIXO - Cadastro de Rebanho.xlsx"');
     return res.send(Buffer.from(buffer));
   } catch (error) {
     console.error('Erro ao gerar planilha modelo:', error);
