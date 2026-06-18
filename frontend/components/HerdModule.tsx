@@ -2377,6 +2377,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             <option value="3/4 ou 5/8 sangue">3/4 ou 5/8 sangue</option>
                                             <option value="Anelorado">Anelorado</option>
                                             <option value="Cruzado europeu × zebu">Cruzado europeu × zebu</option>
+                                            <option value="Mestiça de raça leiteira">Mestiça de raça leiteira</option>
                                             <option value="Comercial / Sem definição">Comercial / Sem definição</option>
                                         </select>
                                     </div>

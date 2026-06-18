@@ -208,6 +208,7 @@ const COMPOSICOES_MESTICAS = [
   '3/4 ou 5/8 sangue',
   'Anelorado',
   'Cruzado europeu × zebu',
+  'Mestiça de raça leiteira',
   'Comercial / Sem definição',
 ];
 
