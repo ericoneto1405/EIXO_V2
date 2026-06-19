@@ -23,6 +23,7 @@ interface StepState {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const dismissedKey = (userId: string) => `eixo_onboarding_dismissed_${userId}`;
+const permanentDoneKey = (userId: string) => `eixo_onboarding_done_${userId}`;
 const DISMISS_TTL_MS = 24 * 60 * 60 * 1000; // 24h
 
 const isDismissedTemporarily = (userId: string) => {
@@ -39,6 +40,14 @@ const isDismissedTemporarily = (userId: string) => {
     } catch {
         return false;
     }
+};
+
+const isPermanentlyDone = (userId: string) => {
+    try { return localStorage.getItem(permanentDoneKey(userId)) === '1'; } catch { return false; }
+};
+
+const markPermanentlyDone = (userId: string) => {
+    try { localStorage.setItem(permanentDoneKey(userId), '1'); } catch { /* silencioso */ }
 };
 
 const dismissTemporarily = (userId: string) => {
@@ -64,7 +73,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
 
     useEffect(() => {
         // Guards dentro do effect — hooks sempre chamados, early return só no callback
-        if (!visible || !!onboardingCompletedAt) return;
+        if (!visible || !!onboardingCompletedAt || isPermanentlyDone(userId)) return;
         if (isDismissedTemporarily(userId)) { setVisible(false); return; }
 
         const check = async () => {
@@ -109,6 +118,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
 
             // Persistência global no backend só quando os 4 passos estiverem completos
             if (next.farm && next.paddocks && next.animals && next.weighings) {
+                markPermanentlyDone(userId);
                 fetch(buildApiUrl('/auth/me/onboarding'), {
                     method: 'PATCH',
                     credentials: 'include',
@@ -119,7 +129,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
         check();
     }, [userId, farmId, farms, visible, onboardingCompletedAt, contextView]);
 
-    if (!visible || !!onboardingCompletedAt) return null;
+    if (!visible || !!onboardingCompletedAt || isPermanentlyDone(userId)) return null;
 
     const handleDismiss = () => {
         dismissTemporarily(userId);

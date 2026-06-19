@@ -20,6 +20,11 @@ interface StepItem {
     done: boolean;
 }
 
+// ─── Persistência de módulos concluídos ───────────────────────────────────────
+const moduleDoneKey = (farmId: string, view: string) => `eixo_module_done_${farmId}_${view.replace(/\s/g, '_')}`;
+const isModuleDone = (farmId: string, view: string) => { try { return localStorage.getItem(moduleDoneKey(farmId, view)) === '1'; } catch { return false; } };
+const markModuleDone = (farmId: string, view: string) => { try { localStorage.setItem(moduleDoneKey(farmId, view), '1'); } catch { /* silencioso */ } };
+
 // ─── Cache de métricas (30s TTL por farmId+view) ──────────────────────────────
 const metricsCache = new Map<string, { data: MetricsState; ts: number }>();
 const CACHE_TTL_MS = 30_000;
@@ -123,10 +128,12 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
     const [refreshTick, setRefreshTick] = useState(0);
 
     useEffect(() => {
-        // Resetar visibilidade ao trocar de módulo
+        // Resetar visibilidade ao trocar de módulo (exceto se já concluído)
         if (prevViewRef.current !== activeView) {
             prevViewRef.current = activeView;
-            setVisible(true);
+            if (!farmId || !isModuleDone(farmId, activeView)) {
+                setVisible(true);
+            }
         }
 
         if (!config || !farmId) return;
@@ -194,7 +201,7 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
         const completedCount = config.steps.filter((step) => step.done).length;
         const doneNow = completedCount === config.steps.length;
         if (!doneNow) return;
-        const timeoutId = window.setTimeout(() => setVisible(false), 1500);
+        const timeoutId = window.setTimeout(() => { if (farmId) markModuleDone(farmId, activeView); setVisible(false); }, 1500);
         return () => window.clearTimeout(timeoutId);
     }, [config, visible]);
 
