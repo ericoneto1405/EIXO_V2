@@ -143,6 +143,86 @@ export function registerFieldRoutes(app) {
                     .forEach((alert) => alerts.push(alert));
             }
 
+            // ── Alertas financeiros ───────────────────────────────────────────
+            try {
+                const todayStart = new Date();
+                todayStart.setHours(0, 0, 0, 0);
+                const firstOfMonth = new Date(todayStart.getFullYear(), todayStart.getMonth(), 1);
+
+                const [overduePayables, overdueReceivables, currentMonthTx] = await Promise.all([
+                    prisma.financialTransaction.groupBy({
+                        by: ['farmId'],
+                        where: { farmId: { in: farmIds }, type: 'SAIDA', status: 'PENDENTE', vencimento: { lt: todayStart } },
+                        _count: { id: true },
+                        _sum: { valor: true },
+                    }),
+                    prisma.financialTransaction.groupBy({
+                        by: ['farmId'],
+                        where: { farmId: { in: farmIds }, type: 'ENTRADA', status: 'PENDENTE', vencimento: { lt: todayStart } },
+                        _count: { id: true },
+                        _sum: { valor: true },
+                    }),
+                    prisma.financialTransaction.groupBy({
+                        by: ['farmId', 'type'],
+                        where: { farmId: { in: farmIds }, status: 'PAGO', data: { gte: firstOfMonth } },
+                        _sum: { valor: true },
+                    }),
+                ]);
+
+                overduePayables.forEach(row => {
+                    const count = row._count.id;
+                    const total = Number(row._sum.valor ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+                    alerts.push({
+                        id: `fin-pagar-vencido-${row.farmId}`,
+                        type: 'critical',
+                        message: `${count} conta(s) a pagar vencida(s) — total R$ ${total}`,
+                        source: 'FINANCEIRO',
+                        sourceType: 'FINANCEIRO_VENCIDO_PAGAR',
+                        sourceId: null,
+                        farmId: row.farmId,
+                        createdAt: new Date().toISOString(),
+                    });
+                });
+
+                overdueReceivables.forEach(row => {
+                    const count = row._count.id;
+                    alerts.push({
+                        id: `fin-receber-vencido-${row.farmId}`,
+                        type: 'warning',
+                        message: `${count} conta(s) a receber vencida(s) — revise no módulo Financeiro`,
+                        source: 'FINANCEIRO',
+                        sourceType: 'FINANCEIRO_VENCIDO_RECEBER',
+                        sourceId: null,
+                        farmId: row.farmId,
+                        createdAt: new Date().toISOString(),
+                    });
+                });
+
+                const balanceByFarm = new Map();
+                currentMonthTx.forEach(row => {
+                    const prev = balanceByFarm.get(row.farmId) || { entrada: 0, saida: 0 };
+                    if (row.type === 'ENTRADA') prev.entrada += Number(row._sum.valor ?? 0);
+                    else prev.saida += Number(row._sum.valor ?? 0);
+                    balanceByFarm.set(row.farmId, prev);
+                });
+                balanceByFarm.forEach((bal, fId) => {
+                    if (bal.saida > 0 && bal.entrada - bal.saida < 0) {
+                        alerts.push({
+                            id: `fin-saldo-negativo-${fId}`,
+                            type: 'warning',
+                            message: 'Saldo do mês atual negativo — entradas menores que saídas',
+                            source: 'FINANCEIRO',
+                            sourceType: 'FINANCEIRO_SALDO_NEGATIVO',
+                            sourceId: null,
+                            farmId: fId,
+                            createdAt: new Date().toISOString(),
+                        });
+                    }
+                });
+            } catch (finErr) {
+                console.error('[alerts] erro ao gerar alertas financeiros:', finErr);
+            }
+
             const severityOrder = { critical: 0, warning: 1, info: 2 };
             alerts.sort((a, b) => {
                 const severityDiff = (severityOrder[a.type] ?? 3) - (severityOrder[b.type] ?? 3);
