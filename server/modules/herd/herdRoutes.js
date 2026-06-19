@@ -204,37 +204,43 @@ const RACAS_PURAS = [
 ];
 
 const COMPOSICOES_MESTICAS = [
-  'F1 (50/50)',
-  '3/4 ou 5/8 sangue',
-  'Anelorado',
-  'Cruzado europeu × zebu',
+  'Anelorado (predominância zebu)',
+  'Guzerá (predominância zebu)',
+  'Nelore × Angus',
+  'Nelore × Senepol',
   'Mestiça de raça leiteira',
   'Comercial / Sem definição',
 ];
 
 const STATUS_REPRODUTIVOS = ['PRENHE', 'VAZIA', 'CICLANDO', 'RECRIA'];
 
-// ─── Estrutura do template (18 colunas) ────────────────────────────────────
+const CATEGORIAS = ['Bezerro', 'Bezerra', 'Novilho', 'Novilha', 'Boi', 'Vaca', 'Touro', 'Reprodutora'];
+
+// ─── Estrutura do template (19 colunas) ────────────────────────────────────
 // tier: required | conditional | recommended | optional
 const TEMPLATE_COLUMNS = [
-  { key: 'identificacao',      label: 'Identificação',        tier: 'required',     type: 'text',   example: 'BR001',          description: 'Brinco, tatuagem ou número que identifica o animal de forma única.' },
-  { key: 'sexo',               label: 'Sexo',                 tier: 'required',     type: 'list',   options: ['MACHO', 'FEMEA'], example: 'MACHO', description: 'MACHO ou FEMEA.' },
-  { key: 'tipo_raca',          label: 'Tipo de Raça',         tier: 'required',     type: 'list',   options: ['Pura', 'Mestiça'], example: 'Pura', description: 'Pura = animal de uma raça só. Mestiça = cruzamento entre raças.' },
-  { key: 'raca',               label: 'Raça (se Pura)',       tier: 'optional',     type: 'list',   options: RACAS_PURAS,      example: 'Nelore',          description: 'Preencha se Tipo de Raça = Pura. Escolha a raça do animal.' },
-  { key: 'composicao_mestica', label: 'Composição (se Mestiça)', tier: 'optional',  type: 'list',   options: COMPOSICOES_MESTICAS, example: 'F1 (50/50)', description: 'Preencha se Tipo de Raça = Mestiça. Como é a mistura do animal.' },
-  { key: 'data_nascimento',    label: 'Data de Nascimento',   tier: 'recommended',  type: 'date',   example: '15/03/2020',     description: 'Data de nascimento (DD/MM/AAAA). Pode ser estimativa.' },
-  { key: 'ultimo_peso_kg',     label: 'Último Peso (kg)',     tier: 'recommended',  type: 'number', example: '520',            description: 'Peso registrado mais recente, em kg.' },
-  { key: 'data_pesagem',       label: 'Data da Pesagem',      tier: 'recommended',  type: 'date',   example: '01/06/2026',     description: 'Data da pesagem informada acima (DD/MM/AAAA).' },
-  { key: 'padrao_racial',      label: 'Padrão Racial',        tier: 'optional',     type: 'list',   options: ['PO', 'PSR'],    example: 'PO',             description: 'PO = Puro de Origem (com registro). PSR = Puro Sem Registro.' },
-  { key: 'registro',           label: 'Registro',             tier: 'optional',     type: 'text',   example: 'RGN-5678',       description: 'Número do registro genealógico, se for PO.' },
-  { key: 'raca_predominante',  label: 'Raça Predominante',    tier: 'optional',     type: 'list',   options: RACAS_PURAS,      example: 'Nelore',         description: 'Para mestiços: raça que mais aparece no animal.' },
-  { key: 'nome',               label: 'Nome',                 tier: 'optional',     type: 'text',   example: 'Touro Imperial', description: 'Nome do animal (comum em PO ou animal de destaque).' },
-  { key: 'brinco_eletronico',  label: 'Brinco Eletrônico',    tier: 'optional',     type: 'text',   example: 'E001',           description: 'Identificador eletrônico (RFID), se houver.' },
-  { key: 'pai_nome',           label: 'Nome do Pai',          tier: 'optional',     type: 'text',   example: 'Imperial',       description: 'Nome do pai do animal (texto livre).' },
-  { key: 'mae_nome',           label: 'Nome da Mãe',          tier: 'optional',     type: 'text',   example: 'Princesa',       description: 'Nome da mãe do animal (texto livre).' },
-  { key: 'status_reprodutivo', label: 'Status Reprodutivo',   tier: 'optional',     type: 'list',   options: STATUS_REPRODUTIVOS, example: 'CICLANDO',    description: 'Só para fêmeas. PRENHE, VAZIA, CICLANDO ou RECRIA.' },
-  { key: 'previsao_parto',     label: 'Previsão de Parto',    tier: 'optional',     type: 'date',   example: '15/01/2027',     description: 'Só preencher se Status Reprodutivo = PRENHE.' },
-  { key: 'observacoes',        label: 'Observações',          tier: 'optional',     type: 'text',   example: 'Genética alta.', description: 'Qualquer informação adicional sobre o animal.' },
+  // --- Identidade ---
+  { key: 'identificacao',      label: 'Identificação',           tier: 'required',     type: 'text',   example: 'BR001',                      description: 'Brinco, tatuagem ou número que identifica o animal de forma única.' },
+  { key: 'sexo',               label: 'Sexo',                    tier: 'required',     type: 'list',   options: ['MACHO', 'FEMEA'],            example: 'MACHO',                      description: 'MACHO ou FEMEA.' },
+  // --- Raça ---
+  { key: 'tipo_raca',          label: 'Tipo de Raça',            tier: 'required',     type: 'list',   options: ['Pura', 'Mestiça'],           example: 'Pura',                       description: 'Pura = animal de uma raça só. Mestiça = cruzamento entre raças.' },
+  { key: 'raca',               label: 'Raça (se Pura)',          tier: 'conditional',  type: 'list',   options: RACAS_PURAS,                   example: 'Nelore',                     description: 'Preencha se Tipo de Raça = Pura. Deixe em branco se Tipo = Mestiça.' },
+  { key: 'composicao_mestica', label: 'Composição (se Mestiça)', tier: 'conditional',  type: 'list',   options: COMPOSICOES_MESTICAS,          example: 'Anelorado (predominância zebu)', description: 'Preencha se Tipo de Raça = Mestiça. Deixe em branco se Tipo = Pura.' },
+  { key: 'padrao_racial',      label: 'Padrão Racial',           tier: 'optional',     type: 'list',   options: ['PO', 'PSR'],                 example: 'PO',                         description: 'PO = Puro de Origem (com registro). PSR = Puro Sem Registro.' },
+  { key: 'registro',           label: 'Registro',                tier: 'optional',     type: 'text',   example: 'RGN-5678',                   description: 'Número do registro genealógico, se for PO.' },
+  // --- Dados de campo ---
+  { key: 'data_nascimento',    label: 'Data de Nascimento',      tier: 'recommended',  type: 'date',   example: '15/03/2020',                 description: 'Data de nascimento (DD/MM/AAAA). Pode ser estimativa.' },
+  { key: 'ultimo_peso_kg',     label: 'Último Peso (kg)',        tier: 'recommended',  type: 'number', example: '520',                        description: 'Peso registrado mais recente, em kg.' },
+  { key: 'data_pesagem',       label: 'Data da Pesagem',         tier: 'recommended',  type: 'date',   example: '01/06/2026',                 description: 'Data da pesagem informada acima (DD/MM/AAAA).' },
+  { key: 'categoria',          label: 'Categoria',               tier: 'optional',     type: 'list',   options: CATEGORIAS,                    example: 'Touro',                      description: 'Categoria do animal no ciclo produtivo (Bezerro, Novilho, Boi, Vaca, etc.).' },
+  // --- Reprodução ---
+  { key: 'status_reprodutivo', label: 'Status Reprodutivo',      tier: 'optional',     type: 'list',   options: STATUS_REPRODUTIVOS,           example: 'CICLANDO',                   description: 'Só para fêmeas. PRENHE, VAZIA, CICLANDO ou RECRIA.' },
+  { key: 'previsao_parto',     label: 'Previsão de Parto',       tier: 'optional',     type: 'date',   example: '15/01/2027',                 description: 'Só preencher se Status Reprodutivo = PRENHE.' },
+  // --- Identificação adicional e genealogia ---
+  { key: 'nome',               label: 'Nome',                    tier: 'optional',     type: 'text',   example: 'Touro Imperial',             description: 'Nome do animal (comum em PO ou animal de destaque).' },
+  { key: 'pai_nome',           label: 'Nome do Pai',             tier: 'optional',     type: 'text',   example: 'Imperial',                   description: 'Nome do pai do animal (texto livre).' },
+  { key: 'mae_nome',           label: 'Nome da Mãe',             tier: 'optional',     type: 'text',   example: 'Princesa',                   description: 'Nome da mãe do animal (texto livre).' },
+  { key: 'observacoes',        label: 'Observações',             tier: 'optional',     type: 'text',   example: 'Genética alta.',             description: 'Qualquer informação adicional sobre o animal.' },
 ];
 
 // Cores por tier (para cabeçalhos e legenda)
@@ -380,15 +386,38 @@ app.get('/herd/import/template', async (_req, res) => {
     });
     dados.getRow(2).height = 36;
 
-    // Linha 3 — exemplo (italico, cinza, sinalizando que é referência)
-    TEMPLATE_COLUMNS.forEach((col, idx) => {
-      const cell = dados.getCell(3, idx + 1);
-      cell.value = col.example;
-      cell.font = { italic: true, color: { argb: '9CA3AF' }, size: 10, name: 'Arial' };
-      cell.alignment = { vertical: 'middle' };
+    // Exemplos de referência (linhas 3 e 4) — itálico cinza
+    const exemplos = [
+      // Nelore macho puro, PO, Touro
+      {
+        identificacao: 'BR001', sexo: 'MACHO', tipo_raca: 'Pura', raca: 'Nelore',
+        composicao_mestica: '', raca_predominante: '', padrao_racial: 'PO', registro: 'RGN-5678',
+        data_nascimento: '10/03/2021', ultimo_peso_kg: '620', data_pesagem: '01/06/2026',
+        categoria: 'Touro', status_reprodutivo: '', previsao_parto: '',
+        nome: 'Touro Imperial', pai_nome: 'Imperial', mae_nome: 'Princesa',
+        observacoes: 'PO registrado ABCZ',
+      },
+      // Anelorado fêmea prenhe, Vaca de Cria
+      {
+        identificacao: 'BR002', sexo: 'FEMEA', tipo_raca: 'Mestiça', raca: '',
+        composicao_mestica: 'Anelorado (predominância zebu)', padrao_racial: '', registro: '',
+        data_nascimento: '05/07/2019', ultimo_peso_kg: '480', data_pesagem: '01/06/2026',
+        categoria: 'Vaca', status_reprodutivo: 'PRENHE', previsao_parto: '15/01/2027',
+        nome: '', pai_nome: '', mae_nome: '',
+        observacoes: '',
+      },
+    ];
+
+    exemplos.forEach((ex, rowOffset) => {
+      TEMPLATE_COLUMNS.forEach((col, idx) => {
+        const cell = dados.getCell(3 + rowOffset, idx + 1);
+        cell.value = ex[col.key] ?? col.example;
+        cell.font = { italic: true, color: { argb: '9CA3AF' }, size: 10, name: 'Arial' };
+        cell.alignment = { vertical: 'middle' };
+      });
     });
 
-    // Freeze pane na linha 2 (banner + cabeçalho fixos)
+    // Freeze pane: banner + cabeçalho fixos (linhas 1–2)
     dados.views = [{ state: 'frozen', xSplit: 0, ySplit: 2 }];
 
     // =============================================
@@ -664,6 +693,7 @@ app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async 
             paiNome: String(row.pai_nome || '').trim() || null,
             maeNome: String(row.mae_nome || '').trim() || null,
             observacoes: String(row.observacoes || '').trim() || null,
+            categoria: String(row.categoria || '').trim() || null,
           },
         });
 
