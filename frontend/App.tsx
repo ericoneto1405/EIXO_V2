@@ -27,8 +27,8 @@ import PlansPage from './components/PlansPage';
 import OnboardingChecklist from './components/OnboardingChecklist';
 import ModuleProgressCard from './components/ModuleProgressCard';
 import UserRegisterModal from './components/UserRegisterModal';
-import TeamPermissions from './components/TeamPermissions';
 import UpgradeScreen from './components/UpgradeScreen';
+import TeamPermissions from './components/TeamPermissions';
 import ProfileModal from './components/ProfileModal';
 import OnboardingSpotlight from './components/OnboardingSpotlight';
 import AlertsBar from './components/AlertsBar';
@@ -1024,6 +1024,24 @@ const AppContent: React.FC = () => {
                         onFormClosed={() => updateFarmFormQuery(false)}
                     />
                 );
+            case 'Usuários e Permissões':
+                return (
+                    <TeamPermissions
+                        farms={farms}
+                        canManageUsers={canManageUsers}
+                        currentUserId={currentUser?.id || null}
+                        isFreePlan={isFreePlan}
+                        moduleCategories={registerModuleCategories}
+                        onOpenUserRegister={() => {
+                            if (isFreePlan) {
+                                setUpgradeModal('Múltiplos usuários');
+                                return;
+                            }
+                            setIsRegisterModalOpen(true);
+                        }}
+                        refreshKey={usersRefreshKey}
+                    />
+                );
             case 'Rebanho Comercial':
                 if (!hasSelectedFarm) {
                     return (
@@ -1091,24 +1109,6 @@ const AppContent: React.FC = () => {
                 return <SemenTankModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
             case 'Configurações':
                 return <Settings />;
-            case 'Usuários e Permissões':
-                return (
-                    <TeamPermissions
-                        farms={farms}
-                        canManageUsers={canManageUsers}
-                        currentUserId={currentUser?.id || null}
-                        isFreePlan={isFreePlan}
-                        moduleCategories={registerModuleCategories}
-                        onOpenUserRegister={() => {
-                            if (isFreePlan) {
-                                setUpgradeModal('Múltiplos usuários');
-                                return;
-                            }
-                            setIsRegisterModalOpen(true);
-                        }}
-                        refreshKey={usersRefreshKey}
-                    />
-                );
             case 'EIXO HQ':
                 return <HQPage />;
             case 'EIXO Mercado':

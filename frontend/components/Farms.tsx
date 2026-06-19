@@ -18,7 +18,25 @@ interface FarmsProps {
     isFreePlan?: boolean;
 }
 
-const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFarmDeleted, openForm, onFormOpened, onFormClosed, isFreePlan }) => {
+const TABS: { key: string; label: string; comingSoon?: boolean }[] = [
+    { key: 'farms', label: 'Fazendas e Pastos' },
+    { key: 'map', label: 'Mapa da Fazenda', comingSoon: true },
+    { key: 'pharmacy', label: 'Farmácia', comingSoon: true },
+    { key: 'supplies', label: 'Galpão de Suprimentos', comingSoon: true },
+    { key: 'machinery', label: 'Maquinários', comingSoon: true },
+];
+
+const Farms: React.FC<FarmsProps> = ({
+    farms,
+    onFarmCreated,
+    onFarmUpdated,
+    onFarmDeleted,
+    openForm,
+    onFormOpened,
+    onFormClosed,
+    isFreePlan,
+}) => {
+    const [activeTab, setActiveTab] = useState('farms');
     const [showForm, setShowForm] = useState(false);
     const [focusOnForm, setFocusOnForm] = useState(false);
     const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
@@ -41,15 +59,13 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
     useEffect(() => {
         const freeLimitHit = isFreePlan && farms.length >= 1;
         if (openForm && !freeLimitHit) {
+            setActiveTab('farms');
             setShowForm(true);
             setFocusOnForm(true);
             onFormOpened?.();
         }
     }, [openForm, onFormOpened, isFreePlan, farms.length]);
 
-    // Guarda definitiva: fecha o formulário se estiver em modo criação
-    // e o limite do plano grátis for atingido — independente de como chegou aqui.
-    // Cobre race conditions de timing (farms carregam depois do form abrir).
     useEffect(() => {
         const isCreateMode = editingFarm === null;
         const freeLimitHit = isFreePlan && farms.length >= 1;
@@ -200,6 +216,7 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                 </div>
             )}
 
+            {/* Cabeçalho do módulo */}
             <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
@@ -207,8 +224,12 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             Estrutura da Fazenda
                         </div>
-                        <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Fazendas e Pastos</h1>
-                        <p className="mt-1 text-sm leading-relaxed text-[var(--eixo-text-muted)]">Gerencie as fazendas cadastradas e a base territorial da operação.</p>
+                        <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">
+                            Fazendas e Pastos
+                        </h1>
+                        <p className="mt-1 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
+                            Gerencie as fazendas cadastradas e a base territorial da operação.
+                        </p>
                     </div>
                     {!showForm && (() => {
                         const freeLimitHit = isFreePlan && farms.length >= 1;
@@ -254,264 +275,294 @@ const Farms: React.FC<FarmsProps> = ({ farms, onFarmCreated, onFarmUpdated, onFa
                         );
                     })()}
                 </div>
+
+                {/* Barra de abas */}
+                <div className="mt-5 flex gap-1 overflow-x-auto border-t border-[var(--eixo-border)] pt-4">
+                    {TABS.map((tab) => (
+                        <button
+                            key={tab.key}
+                            type="button"
+                            disabled={tab.comingSoon}
+                            onClick={() => !tab.comingSoon && setActiveTab(tab.key)}
+                            className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold transition-all duration-150 ${
+                                tab.comingSoon
+                                    ? 'cursor-default border border-dashed border-[var(--eixo-border)] text-[var(--eixo-text-muted)] opacity-60'
+                                    : activeTab === tab.key
+                                        ? 'bg-[var(--eixo-green)] text-[#1a1a1a]'
+                                        : 'text-[var(--eixo-text-soft)] hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]'
+                            }`}
+                        >
+                            {tab.label}
+                            {tab.comingSoon && (
+                                <span className="rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.12em]">
+                                    Em breve
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
             </div>
 
-            {showForm && (
-                <div className="mb-6" ref={formRef}>
-                    <FarmRegistrationForm
-                        onFarmCreated={handleFarmCreated}
-                        onFarmUpdated={handleFarmUpdated}
-                        autoFocusName={focusOnForm}
-                        initialFarm={editingFarm}
-                        onSaveAndReturn={() => {
-                            setEditingFarm(null);
-                            setShowForm(false);
-                            onFormClosed?.();
-                        }}
-                        onCancelEdit={() => {
-                            setEditingFarm(null);
-                            setShowForm(false);
-                            onFormClosed?.();
-                        }}
-                    />
-                </div>
-            )}
+            {/* Conteúdo: Fazendas e Pastos */}
+            <>
+                    {showForm && (
+                        <div className="mb-6" ref={formRef}>
+                            <FarmRegistrationForm
+                                onFarmCreated={handleFarmCreated}
+                                onFarmUpdated={handleFarmUpdated}
+                                autoFocusName={focusOnForm}
+                                initialFarm={editingFarm}
+                                onSaveAndReturn={() => {
+                                    setEditingFarm(null);
+                                    setShowForm(false);
+                                    onFormClosed?.();
+                                }}
+                                onCancelEdit={() => {
+                                    setEditingFarm(null);
+                                    setShowForm(false);
+                                    onFormClosed?.();
+                                }}
+                            />
+                        </div>
+                    )}
 
-            {!showForm && farms.length === 0 && !(isFreePlan && farms.length >= 1) && (
-                <div className="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-16 text-center">
-                    <svg className="mb-4 h-10 w-10 text-[var(--eixo-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                    </svg>
-                    <p className="text-base font-bold text-[var(--eixo-text)]">Nenhuma fazenda cadastrada</p>
-                    <p className="mt-2 max-w-xs text-sm text-[var(--eixo-text-muted)]">Cadastre sua fazenda para organizar pastos, rebanho e operação no mesmo lugar.</p>
-                    <button
-                        type="button"
-                        onClick={handleToggleForm}
-                        className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[var(--eixo-green)] px-6 py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
-                    >
-                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                        Cadastrar minha primeira fazenda
-                    </button>
-                </div>
-            )}
-
-            {!showForm && farms.length > 0 && (
-                <div className="grid gap-4">
-                    {farms.map((farm) => {
-                        const paddocks = farm.paddocks ?? [];
-                        const paddocksCount = paddocks.length;
-                        const totalPaddockArea = paddocks.reduce((sum, paddock) => sum + (paddock.areaHa ?? 0), 0);
-                        const totalCapacityUa = paddocks.reduce((sum, paddock) => {
-                            if (typeof paddock.capacity === 'number') return sum + paddock.capacity;
-                            if (typeof paddock.areaHa === 'number' && typeof paddock.lotacaoUaHa === 'number') {
-                                return sum + (paddock.areaHa * paddock.lotacaoUaHa);
-                            }
-                            return sum;
-                        }, 0);
-                        const areaCoverage = farm.size > 0 ? (totalPaddockArea / farm.size) * 100 : 0;
-                        const GRAZING_TYPES = ['pasto', 'piquete de maternidade'];
-                        const INFRA_TYPES = ['curral de manejo', 'curral de engorda'];
-                        const NON_PRODUCTIVE_TYPES = ['aguada / reservatório', 'área de preservação', 'área de plantio'];
-
-                        const areaGrazing = paddocks
-                            .filter(p => GRAZING_TYPES.includes(p.divisionType ?? ''))
-                            .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
-                        const areaInfra = paddocks
-                            .filter(p => INFRA_TYPES.includes(p.divisionType ?? ''))
-                            .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
-                        const areaNonProd = paddocks
-                            .filter(p => NON_PRODUCTIVE_TYPES.includes(p.divisionType ?? ''))
-                            .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
-                        const areaUncovered = Math.max(0, (farm.size ?? 0) - totalPaddockArea);
-                        const farmSizeForCalc = (farm.size ?? 0) > 0 ? farm.size : 1;
-                        const pctGrazing = (areaGrazing / farmSizeForCalc) * 100;
-                        const pctInfra = (areaInfra / farmSizeForCalc) * 100;
-                        const pctNonProd = (areaNonProd / farmSizeForCalc) * 100;
-                        const pctUncovered = (areaUncovered / farmSizeForCalc) * 100;
-                        const animalsCount = typeof (farm as Farm & { animalsCount?: number }).animalsCount === 'number'
-                            ? (farm as Farm & { animalsCount?: number }).animalsCount
-                            : null;
-
-                        return (
-                            <div
-                                key={farm.id}
-                                className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5"
-                                onMouseEnter={() => setHoveredFarmId(farm.id)}
-                                onMouseLeave={() => setHoveredFarmId(null)}
+                    {!showForm && farms.length === 0 && !(isFreePlan && farms.length >= 1) && (
+                        <div className="flex flex-col items-center justify-center rounded-[24px] border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-16 text-center">
+                            <svg className="mb-4 h-10 w-10 text-[var(--eixo-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            <p className="text-base font-bold text-[var(--eixo-text)]">Nenhuma fazenda cadastrada</p>
+                            <p className="mt-2 max-w-xs text-sm text-[var(--eixo-text-muted)]">Cadastre sua fazenda para organizar pastos, rebanho e operação no mesmo lugar.</p>
+                            <button
+                                type="button"
+                                onClick={handleToggleForm}
+                                className="mt-6 inline-flex items-center gap-2 rounded-2xl bg-[var(--eixo-green)] px-6 py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
                             >
-                                <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h2 className="text-lg font-bold text-[var(--eixo-text)]">{farm.name}</h2>
-                                            {farm.lat && farm.lng ? (
-                                                <a
-                                                    href={`https://maps.google.com/?q=${farm.lat},${farm.lng}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    title="Ver no mapa"
-                                                    className="text-[var(--eixo-success)] transition-opacity hover:opacity-70"
-                                                >
-                                                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                                                </a>
-                                            ) : (
-                                                <span title="Localização não cadastrada" className="text-[#c4b8a5]">
-                                                    <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-                                                </span>
-                                            )}
-                                        </div>
-                                        <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{farm.city || 'Localização não informada'}</p>
-                                    </div>
-                                    <div className={`flex items-center gap-2 transition-opacity duration-150 ${hoveredFarmId === farm.id ? 'sm:opacity-100' : 'sm:opacity-0'}`}>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleEdit(farm)}
-                                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
-                                        >
-                                            Editar
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleDeleteRequest(farm)}
-                                            className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f7ddd7]"
-                                        >
-                                            Excluir
-                                        </button>
-                                    </div>
-                                </div>
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                Cadastrar minha primeira fazenda
+                            </button>
+                        </div>
+                    )}
 
-                                <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Tamanho total</p>
-                                        <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(farm.size)} ha</p>
-                                    </div>
-                                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Capacidade total</p>
-                                        <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(totalCapacityUa)} UA</p>
-                                    </div>
-                                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Animais atuais</p>
-                                        <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{animalsCount ?? '—'}</p>
-                                    </div>
-                                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Área distribuída</p>
-                                        <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(areaCoverage)}%</p>
-                                    </div>
-                                </div>
+                    {!showForm && farms.length > 0 && (
+                        <div className="grid gap-4">
+                            {farms.map((farm) => {
+                                const paddocks = farm.paddocks ?? [];
+                                const paddocksCount = paddocks.length;
+                                const totalPaddockArea = paddocks.reduce((sum, paddock) => sum + (paddock.areaHa ?? 0), 0);
+                                const totalCapacityUa = paddocks.reduce((sum, paddock) => {
+                                    if (typeof paddock.capacity === 'number') return sum + paddock.capacity;
+                                    if (typeof paddock.areaHa === 'number' && typeof paddock.lotacaoUaHa === 'number') {
+                                        return sum + (paddock.areaHa * paddock.lotacaoUaHa);
+                                    }
+                                    return sum;
+                                }, 0);
+                                const areaCoverage = farm.size > 0 ? (totalPaddockArea / farm.size) * 100 : 0;
+                                const GRAZING_TYPES = ['pasto', 'piquete de maternidade'];
+                                const INFRA_TYPES = ['curral de manejo', 'curral de engorda'];
+                                const NON_PRODUCTIVE_TYPES = ['aguada / reservatório', 'área de preservação', 'área de plantio'];
 
-                                {farm.size > 0 && totalPaddockArea > 0 && (
-                                    <div className="mt-3 space-y-1">
-                                        <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-[#EDEDED]">
-                                            {pctGrazing > 0 && (
-                                                <div
-                                                    className="h-full bg-[#B6E23A] transition-all duration-300"
-                                                    style={{ width: `${pctGrazing}%` }}
-                                                    title={`Pastagem: ${formatNumber(areaGrazing)} ha`}
-                                                />
-                                            )}
-                                            {pctNonProd > 0 && (
-                                                <div
-                                                    className="h-full bg-[#d1cdc8] transition-all duration-300"
-                                                    style={{ width: `${pctNonProd}%` }}
-                                                    title={`Não produtiva: ${formatNumber(areaNonProd)} ha`}
-                                                />
-                                            )}
-                                            {pctInfra > 0 && (
-                                                <div
-                                                    className="h-full bg-[#fdba74] transition-all duration-300"
-                                                    style={{ width: `${pctInfra}%` }}
-                                                    title={`Instalações: ${formatNumber(areaInfra)} ha`}
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                                            {areaGrazing > 0 && (
-                                                <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
-                                                    <span className="inline-block h-2 w-2 rounded-sm bg-[#B6E23A]" />
-                                                    Pastagem {formatNumber(areaGrazing)} ha
-                                                </span>
-                                            )}
-                                            {areaNonProd > 0 && (
-                                                <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
-                                                    <span className="inline-block h-2 w-2 rounded-sm bg-[#d1cdc8]" />
-                                                    APP/Aguada {formatNumber(areaNonProd)} ha
-                                                </span>
-                                            )}
-                                            {areaInfra > 0 && (
-                                                <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
-                                                    <span className="inline-block h-2 w-2 rounded-sm bg-[#fdba74]" />
-                                                    Instalações {formatNumber(areaInfra)} ha
-                                                </span>
-                                            )}
-                                            {areaUncovered > 0.01 && (
-                                                <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
-                                                    <span className="inline-block h-2 w-2 rounded-sm border border-dashed border-[#d1cdc8]" />
-                                                    Não cadastrado {formatNumber(areaUncovered)} ha
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
+                                const areaGrazing = paddocks
+                                    .filter(p => GRAZING_TYPES.includes(p.divisionType ?? ''))
+                                    .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
+                                const areaInfra = paddocks
+                                    .filter(p => INFRA_TYPES.includes(p.divisionType ?? ''))
+                                    .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
+                                const areaNonProd = paddocks
+                                    .filter(p => NON_PRODUCTIVE_TYPES.includes(p.divisionType ?? ''))
+                                    .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
+                                const areaUncovered = Math.max(0, (farm.size ?? 0) - totalPaddockArea);
+                                const farmSizeForCalc = (farm.size ?? 0) > 0 ? farm.size : 1;
+                                const pctGrazing = (areaGrazing / farmSizeForCalc) * 100;
+                                const pctInfra = (areaInfra / farmSizeForCalc) * 100;
+                                const pctNonProd = (areaNonProd / farmSizeForCalc) * 100;
+                                const pctUncovered = (areaUncovered / farmSizeForCalc) * 100;
+                                const animalsCount = typeof (farm as Farm & { animalsCount?: number }).animalsCount === 'number'
+                                    ? (farm as Farm & { animalsCount?: number }).animalsCount
+                                    : null;
 
-                                <div className="mt-4 flex flex-wrap items-center gap-2">
-                                    {paddocksCount === 0 ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleEdit(farm)}
-                                            className="inline-flex items-center gap-1.5 rounded-full bg-[#fffbeb] px-2.5 py-1 text-xs font-semibold text-[#92400e] transition-colors hover:bg-[#fef3c7]"
-                                        >
-                                            Adicionar pastos →
-                                        </button>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={() => togglePaddocks(farm.id)}
-                                            className="inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--eixo-graphite)] transition-colors hover:bg-[#d4eda0]"
-                                        >
-                                            {paddocksCount} {paddocksCount === 1 ? 'pasto' : 'pastos'}
-                                            <svg className={`h-3 w-3 transition-transform duration-200 ${expandedFarmId === farm.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </button>
-                                    )}
-                                </div>
-
-                                {expandedFarmId === farm.id && paddocksCount > 0 && (
-                                    <div className="mt-4 space-y-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-                                        {paddocks.map((paddock) => (
-                                            <div key={paddock.id} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2">
-                                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{paddock.name}</p>
-                                                    <p className="text-xs text-[var(--eixo-text-muted)]">
-                                                        {typeof paddock.areaHa === 'number' ? `${formatNumber(paddock.areaHa)} ha` : 'Área não informada'}
-                                                    </p>
+                                return (
+                                    <div
+                                        key={farm.id}
+                                        className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5"
+                                        onMouseEnter={() => setHoveredFarmId(farm.id)}
+                                        onMouseLeave={() => setHoveredFarmId(null)}
+                                    >
+                                        <div className="flex flex-wrap items-start justify-between gap-3">
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <h2 className="text-lg font-bold text-[var(--eixo-text)]">{farm.name}</h2>
+                                                    {farm.lat && farm.lng ? (
+                                                        <a
+                                                            href={`https://maps.google.com/?q=${farm.lat},${farm.lng}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            title="Ver no mapa"
+                                                            className="text-[var(--eixo-success)] transition-opacity hover:opacity-70"
+                                                        >
+                                                            <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                                        </a>
+                                                    ) : (
+                                                        <span title="Localização não cadastrada" className="text-[#c4b8a5]">
+                                                            <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                                                        </span>
+                                                    )}
                                                 </div>
-                                                <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
-                                                    {paddock.divisionType || 'Tipo não informado'} · {paddock.forrageira || 'Forrageira não informada'}
-                                                </p>
+                                                <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{farm.city || 'Localização não informada'}</p>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
+                                            <div className={`flex items-center gap-2 transition-opacity duration-150 ${hoveredFarmId === farm.id ? 'sm:opacity-100' : 'sm:opacity-0'}`}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEdit(farm)}
+                                                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
+                                                >
+                                                    Editar
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleDeleteRequest(farm)}
+                                                    className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f7ddd7]"
+                                                >
+                                                    Excluir
+                                                </button>
+                                            </div>
+                                        </div>
 
-            {/* Estado vazio de pastos — prioriza a base operacional da fazenda */}
-            {!showForm && firstFarmWithoutPaddocks && (
-                <div className="mt-4 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
-                    <OnboardingSpotlight
-                        step={2}
-                        totalSteps={3}
-                        title="Cadastre os pastos da fazenda"
-                        description={`Organize lotação, manejo e pesagens. Fazenda: ${firstFarmWithoutPaddocks.name}`}
-                        actionLabel="Cadastrar pasto"
-                        onAction={handleRegisterPaddock}
-                        iconPath="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                    />
-                </div>
-            )}
+                                        <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                                            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Tamanho total</p>
+                                                <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(farm.size)} ha</p>
+                                            </div>
+                                            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Capacidade total</p>
+                                                <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(totalCapacityUa)} UA</p>
+                                            </div>
+                                            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Animais atuais</p>
+                                                <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{animalsCount ?? '—'}</p>
+                                            </div>
+                                            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
+                                                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Área distribuída</p>
+                                                <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(areaCoverage)}%</p>
+                                            </div>
+                                        </div>
+
+                                        {farm.size > 0 && totalPaddockArea > 0 && (
+                                            <div className="mt-3 space-y-1">
+                                                <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-[#EDEDED]">
+                                                    {pctGrazing > 0 && (
+                                                        <div
+                                                            className="h-full bg-[#B6E23A] transition-all duration-300"
+                                                            style={{ width: `${pctGrazing}%` }}
+                                                            title={`Pastagem: ${formatNumber(areaGrazing)} ha`}
+                                                        />
+                                                    )}
+                                                    {pctNonProd > 0 && (
+                                                        <div
+                                                            className="h-full bg-[#d1cdc8] transition-all duration-300"
+                                                            style={{ width: `${pctNonProd}%` }}
+                                                            title={`Não produtiva: ${formatNumber(areaNonProd)} ha`}
+                                                        />
+                                                    )}
+                                                    {pctInfra > 0 && (
+                                                        <div
+                                                            className="h-full bg-[#fdba74] transition-all duration-300"
+                                                            style={{ width: `${pctInfra}%` }}
+                                                            title={`Instalações: ${formatNumber(areaInfra)} ha`}
+                                                        />
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                                                    {areaGrazing > 0 && (
+                                                        <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
+                                                            <span className="inline-block h-2 w-2 rounded-sm bg-[#B6E23A]" />
+                                                            Pastagem {formatNumber(areaGrazing)} ha
+                                                        </span>
+                                                    )}
+                                                    {areaNonProd > 0 && (
+                                                        <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
+                                                            <span className="inline-block h-2 w-2 rounded-sm bg-[#d1cdc8]" />
+                                                            APP/Aguada {formatNumber(areaNonProd)} ha
+                                                        </span>
+                                                    )}
+                                                    {areaInfra > 0 && (
+                                                        <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
+                                                            <span className="inline-block h-2 w-2 rounded-sm bg-[#fdba74]" />
+                                                            Instalações {formatNumber(areaInfra)} ha
+                                                        </span>
+                                                    )}
+                                                    {areaUncovered > 0.01 && (
+                                                        <span className="flex items-center gap-1 text-[10px] text-[var(--eixo-text-muted)]">
+                                                            <span className="inline-block h-2 w-2 rounded-sm border border-dashed border-[#d1cdc8]" />
+                                                            Não cadastrado {formatNumber(areaUncovered)} ha
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                                            {paddocksCount === 0 ? (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEdit(farm)}
+                                                    className="inline-flex items-center gap-1.5 rounded-full bg-[#fffbeb] px-2.5 py-1 text-xs font-semibold text-[#92400e] transition-colors hover:bg-[#fef3c7]"
+                                                >
+                                                    Adicionar pastos →
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => togglePaddocks(farm.id)}
+                                                    className="inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--eixo-graphite)] transition-colors hover:bg-[#d4eda0]"
+                                                >
+                                                    {paddocksCount} {paddocksCount === 1 ? 'pasto' : 'pastos'}
+                                                    <svg className={`h-3 w-3 transition-transform duration-200 ${expandedFarmId === farm.id ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {expandedFarmId === farm.id && paddocksCount > 0 && (
+                                            <div className="mt-4 space-y-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
+                                                {paddocks.map((paddock) => (
+                                                    <div key={paddock.id} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2">
+                                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                                            <p className="text-sm font-semibold text-[var(--eixo-text)]">{paddock.name}</p>
+                                                            <p className="text-xs text-[var(--eixo-text-muted)]">
+                                                                {typeof paddock.areaHa === 'number' ? `${formatNumber(paddock.areaHa)} ha` : 'Área não informada'}
+                                                            </p>
+                                                        </div>
+                                                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                                                            {paddock.divisionType || 'Tipo não informado'} · {paddock.forrageira || 'Forrageira não informada'}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Estado vazio de pastos */}
+                    {!showForm && firstFarmWithoutPaddocks && (
+                        <div className="mt-4 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
+                            <OnboardingSpotlight
+                                step={2}
+                                totalSteps={3}
+                                title="Cadastre os pastos da fazenda"
+                                description={`Organize lotação, manejo e pesagens. Fazenda: ${firstFarmWithoutPaddocks.name}`}
+                                actionLabel="Cadastrar pasto"
+                                onAction={handleRegisterPaddock}
+                                iconPath="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
+                            />
+                        </div>
+                    )}
+            </>
+
         </div>
     );
 };

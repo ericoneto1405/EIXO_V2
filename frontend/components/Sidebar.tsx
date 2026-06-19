@@ -285,6 +285,15 @@ const SuppliersIcon: React.FC = () => (
     </svg>
 );
 
+const UsersIcon: React.FC = () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+        <circle cx="9" cy="7" r="4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M23 21v-2a4 4 0 00-3-3.87" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 3.13a4 4 0 010 7.75" />
+    </svg>
+);
+
 const NutritionIcon: React.FC = () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 4h8" />
@@ -383,28 +392,12 @@ const navSections: NavSection[] = [
             { label: 'Registro de Atividades', icon: <ReportIcon />, value: 'Registro de Atividades', status: 'coming_soon' },
             { label: 'Ocorrências do EIXO Campo', icon: <ReportIcon />, value: 'Ocorrências do EIXO Campo', allowedLabels: ['Operações'] },
             { label: 'Botijão de Sêmen', icon: <SuppliersIcon />, value: 'Estoque e Equipamentos' },
+            { label: 'Usuários e Permissões', icon: <UsersIcon />, value: 'Usuários e Permissões', allowedLabels: ['Fazendas'] },
         ],
     },
 ];
 
-const navSectionsWithSubItems: NavSection[] = navSections.map((section) => ({
-    ...section,
-    items: section.items.map((item) =>
-        item.label === 'Estrutura da Fazenda'
-            ? {
-                  ...item,
-                  subItems: [
-                      { label: 'Fazendas e Pastos', value: 'Fazendas', allowedLabels: ['Fazendas'] },
-                      { label: 'Mapa da Fazenda', value: 'Mapa da Fazenda', badge: 'Em breve', status: 'coming_soon' as const },
-                      { label: 'Farmácia', value: 'Farmácia', badge: 'Em breve', status: 'coming_soon' as const },
-                      { label: 'Galpão de Suprimentos', value: 'Galpão de Suprimentos', badge: 'Em breve', status: 'coming_soon' as const },
-                      { label: 'Maquinários', value: 'Maquinários', badge: 'Em breve', status: 'coming_soon' as const },
-                      { label: 'Usuários e Permissões', value: 'Usuários e Permissões', allowedLabels: ['Fazendas'] },
-                  ],
-              }
-            : item,
-    ),
-}));
+const navSectionsWithSubItems: NavSection[] = navSections;
 
 // ─── SidebarButton ───────────────────────────────────────────────────────────
 
