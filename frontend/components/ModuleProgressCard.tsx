@@ -60,7 +60,7 @@ const cardConfig = (activeView: string, hasFarm: boolean, metrics: MetricsState)
                 steps: [
                     { title: 'Selecionar fazenda', description: 'Ative a fazenda para controlar as movimentações.', done: hasFarm },
                     { title: 'Lançar primeira transação', description: 'Registre ao menos uma entrada ou saída.', done: metrics.transactions > 0 },
-                    { title: 'Consolidar fluxo do mês', description: 'Com lançamentos, o saldo mensal fica disponível.', done: metrics.transactions > 0 },
+                    { title: 'Registrar ao menos 3 lançamentos', description: 'Com 3 ou mais lançamentos, o fluxo do mês fica representativo.', done: metrics.transactions >= 3 },
                 ],
             };
         case 'Ocorrências do EIXO Campo':
@@ -99,7 +99,7 @@ const getNextCta = (activeView: string, steps: StepItem[]): string | null => {
         'Ter animais cadastrados': 'Acesse Rebanho Comercial e cadastre ou importe animais.',
         'Registrar a primeira pesagem': 'Acesse Rebanho Comercial → Pesagens para registrar.',
         'Lançar primeira transação': 'Registre uma entrada ou saída no módulo Financeiro.',
-        'Consolidar fluxo do mês': 'Lance ao menos uma transação para liberar o fluxo.',
+        'Registrar ao menos 3 lançamentos': 'Lance mais lançamentos para o fluxo do mês ficar representativo.',
         'Receber a primeira ocorrência': 'Abra o EIXO Campo no celular e registre uma ocorrência.',
         'Iniciar rotina de análise': 'Classifique as ocorrências recebidas nesta tela.',
         'Cadastrar rebanho': 'Acesse Manejo do Rebanho e cadastre ou importe os animais.',
@@ -149,13 +149,10 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
         const run = async () => {
             setLoading(true);
             try {
-                const now = new Date();
-                const mes = now.getMonth() + 1;
-                const ano = now.getFullYear();
                 const [animalsRes, weighingsRes, transactionsRes, occurrencesRes] = await Promise.all([
                     fetch(buildApiUrl(`/animals?farmId=${farmId}`), { credentials: 'include' }),
                     fetch(buildApiUrl(`/farms/${farmId}/weighings?limit=1`), { credentials: 'include' }),
-                    fetch(buildApiUrl(`/financial/transactions?farmId=${farmId}&mes=${mes}&ano=${ano}&limit=1`), { credentials: 'include' }),
+                    fetch(buildApiUrl(`/financial/transactions?farmId=${farmId}&limit=3`), { credentials: 'include' }),
                     fetch(buildApiUrl(`/field-occurrences?farmId=${farmId}&limit=1`), { credentials: 'include' }),
                 ]);
                 const [animalsData, weighingsData, transactionsData, occurrencesData] = await Promise.all([
@@ -231,7 +228,7 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
                     )}
                 </div>
                 <button
-                    onClick={() => setVisible(false)}
+                    onClick={() => { if (farmId) markModuleDone(farmId, activeView); setVisible(false); }}
                     className="flex h-7 w-7 items-center justify-center rounded-full text-[#a8a29e] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text-muted)]"
                     aria-label="Fechar"
                 >

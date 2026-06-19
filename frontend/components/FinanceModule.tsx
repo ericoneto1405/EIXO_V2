@@ -133,7 +133,7 @@ function isVencida(t: FinancialTransaction): boolean {
 function statusBadge(t: FinancialTransaction) {
     if (t.status === 'PAGO') return { label: 'Pago', cls: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' };
     if (isVencida(t)) return { label: 'Vencido', cls: 'bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]' };
-    return { label: 'Pendente', cls: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' };
+    return { label: 'Pendente', cls: 'bg-[rgba(197,138,32,0.10)] text-[var(--eixo-warning)]' };
 }
 
 // ── Componente principal ──────────────────────────────────────────────────────
@@ -150,6 +150,8 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterTipo, setFilterTipo] = useState<'' | TransactionType>('');
 
     // ── Contas a Pagar / Receber ──
     const [pendingAll, setPendingAll] = useState<FinancialTransaction[]>([]);
@@ -178,6 +180,9 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     const [formVencimento, setFormVencimento] = useState('');
     const [formError, setFormError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+
+    // ── Edição de lançamento ──
+    const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | null>(null);
 
     // ── Delete transação ──
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -265,6 +270,17 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         const saidas = transactions.filter(t => t.type === 'SAIDA').reduce((s, t) => s + t.valor, 0);
         return { entradas, saidas, saldo: entradas - saidas };
     }, [transactions]);
+
+    const filteredTransactions = useMemo(() => {
+        return transactions.filter(t => {
+            if (filterTipo && t.type !== filterTipo) return false;
+            const q = normalizeSearchText(searchQuery.trim());
+            if (!q) return true;
+            return normalizeSearchText(t.descricao ?? '').includes(q)
+                || normalizeSearchText(t.accountCategoryName ?? '').includes(q)
+                || normalizeSearchText(t.accountCategoryGroup ?? '').includes(q);
+        });
+    }, [transactions, filterTipo, searchQuery]);
 
     const monthlyAnswers = useMemo(() => {
         const soldThisMonth = transactions
@@ -418,6 +434,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     // ── Handlers: lançamentos ─────────────────────────────────────────────────
 
     const resetForm = () => {
+        setEditingTransaction(null);
         setFormType('ENTRADA');
         setFormValor('');
         setFormData(new Date().toISOString().slice(0, 10));
@@ -425,6 +442,19 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         setFormStatus('PAGO');
         setFormVencimento('');
         setFormError(null);
+    };
+
+    const openEditModal = (t: FinancialTransaction) => {
+        setEditingTransaction(t);
+        setFormType(t.type);
+        setFormValor(String(t.valor));
+        setFormData(t.data.slice(0, 10));
+        setFormDescricao(t.descricao ?? '');
+        setFormStatus(t.status === 'VENCIDO' ? 'PENDENTE' : t.status);
+        setFormVencimento(t.vencimento ? t.vencimento.slice(0, 10) : '');
+        setFormCategoryId(t.accountCategoryId ?? '');
+        setFormError(null);
+        setModalOpen(true);
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -435,17 +465,28 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         if (!formCategoryId) { setFormError('Selecione uma categoria.'); return; }
         setIsSaving(true);
         try {
-            await createTransaction({
-                farmId,
-                type: formType,
-                categoria: 'OUTROS' as TransactionCategoria,
-                accountCategoryId: formCategoryId,
-                valor: valorNum,
-                data: formData,
-                descricao: formDescricao || undefined,
-                status: formStatus,
-                vencimento: formVencimento || undefined,
-            });
+            if (editingTransaction) {
+                await updateTransaction(editingTransaction.id, {
+                    accountCategoryId: formCategoryId,
+                    valor: valorNum,
+                    data: formData,
+                    descricao: formDescricao || null,
+                    status: formStatus,
+                    vencimento: formVencimento || null,
+                });
+            } else {
+                await createTransaction({
+                    farmId,
+                    type: formType,
+                    categoria: 'OUTROS' as TransactionCategoria,
+                    accountCategoryId: formCategoryId,
+                    valor: valorNum,
+                    data: formData,
+                    descricao: formDescricao || undefined,
+                    status: formStatus,
+                    vencimento: formVencimento || undefined,
+                });
+            }
             setModalOpen(false);
             resetForm();
             await loadTransactions();
@@ -759,7 +800,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             {/* ── Aba: Lançamentos ──────────────────────────────────────────────── */}
             {activeTab === 'lancamentos' && (
                 <>
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                         <select value={selectedMes} onChange={e => setSelectedMes(Number(e.target.value))}
                             className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
                             {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
@@ -768,6 +809,29 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
                             {anos.map(a => <option key={a} value={a}>{a}</option>)}
                         </select>
+                        <input
+                            type="text"
+                            placeholder="Buscar por descrição ou categoria…"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            className="min-w-[220px] flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-muted)] focus:border-[var(--eixo-green)] focus:outline-none"
+                        />
+                        <div className="flex gap-1">
+                            {(['', 'ENTRADA', 'SAIDA'] as const).map(tipo => (
+                                <button
+                                    key={tipo || 'todos'}
+                                    type="button"
+                                    onClick={() => setFilterTipo(tipo)}
+                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                                        filterTipo === tipo
+                                            ? 'bg-[var(--eixo-graphite)] text-white'
+                                            : 'border border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'
+                                    }`}
+                                >
+                                    {tipo === '' ? 'Todos' : tipo === 'ENTRADA' ? 'Entrada' : 'Saída'}
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
@@ -814,23 +878,52 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                         <th className="px-4 py-2.5">Categoria</th>
                                         <th className="px-4 py-2.5">Grupo</th>
                                         <th className="px-4 py-2.5">Descrição</th>
+                                        <th className="px-4 py-2.5">Status</th>
                                         <th className="px-4 py-2.5 text-right">Valor</th>
                                         <th className="px-4 py-2.5 text-center">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {isLoading ? (
-                                        <tr><td colSpan={7} className="px-4 py-10 text-center text-sm text-[var(--eixo-text-muted)]">Carregando...</td></tr>
-                                    ) : transactions.length === 0 ? (
+                                        <>
+                                            {[1, 2, 3, 4].map(i => (
+                                                <tr key={i} className="border-b border-[var(--eixo-border)]">
+                                                    {[7, 4, 5, 6, 8, 4, 4, 3].map((w, j) => (
+                                                        <td key={j} className="px-4 py-3">
+                                                            <div className={`h-3 w-${w * 4} animate-pulse rounded bg-[var(--eixo-surface-soft)]`} />
+                                                        </td>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </>
+                                    ) : filteredTransactions.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-4 py-10 text-center">
-                                                <p className="text-base font-semibold text-[var(--eixo-text)]">Nenhum lançamento neste período</p>
-                                                <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Use o botão "Novo lançamento" para começar.</p>
+                                            <td colSpan={8} className="px-4 py-12 text-center">
+                                                <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--eixo-surface-soft)]">
+                                                    <svg className="h-6 w-6 text-[var(--eixo-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                </div>
+                                                {transactions.length === 0 ? (
+                                                    <>
+                                                        <p className="text-sm font-semibold text-[var(--eixo-text)]">Nenhum lançamento em {MESES[selectedMes - 1]} {selectedAno}</p>
+                                                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Registre entradas e saídas para ver o saldo do mês.</p>
+                                                        <button type="button" onClick={() => setModalOpen(true)} className="mt-4 rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:opacity-90">
+                                                            Novo lançamento
+                                                        </button>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <p className="text-sm font-semibold text-[var(--eixo-text)]">Nenhum lançamento encontrado</p>
+                                                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Tente ajustar o filtro ou o termo de busca.</p>
+                                                    </>
+                                                )}
                                             </td>
                                         </tr>
                                     ) : (
-                                        transactions.map(t => (
-                                            <tr key={t.id} className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface)]">
+                                        filteredTransactions.map(t => {
+                                            const vencida = isVencida(t);
+                                            const badge = statusBadge(t);
+                                            return (
+                                            <tr key={t.id} className={`border-b border-[var(--eixo-border)] ${vencida ? 'border-l-2 border-l-[var(--eixo-danger)] bg-[rgba(184,66,50,0.04)]' : 'bg-[var(--eixo-surface)]'} hover:opacity-90`}>
                                                 <td className="px-4 py-3">{formatDate(t.data)}</td>
                                                 <td className="px-4 py-3">
                                                     <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${t.type === 'ENTRADA' ? 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' : 'bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]'}`}>
@@ -840,6 +933,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                                 <td className="px-4 py-3 font-medium text-[var(--eixo-text)]">{getCatLabel(t)}</td>
                                                 <td className="px-4 py-3 text-[var(--eixo-text-muted)]">{t.accountCategoryGroup || '—'}</td>
                                                 <td className="px-4 py-3 text-[var(--eixo-text-muted)]">{t.descricao || '—'}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${badge.cls}`}>
+                                                        {badge.label}
+                                                    </span>
+                                                </td>
                                                 <td className={`px-4 py-3 text-right font-semibold ${t.type === 'ENTRADA' ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                                                     {t.type === 'SAIDA' ? '− ' : '+ '}{formatCurrency(t.valor)}
                                                 </td>
@@ -847,15 +945,24 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                                     {(t.herdEventId || t.sanitaryRecordId) ? (
                                                         <span className="inline-flex items-center gap-1 text-xs text-[var(--eixo-text-muted)]"><LockIcon /> auto</span>
                                                     ) : (
-                                                        <button type="button"
-                                                            onClick={() => { setDeleteError(null); setDeleteConfirmId(t.id); }}
-                                                            className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)]">
-                                                            Excluir
-                                                        </button>
+                                                        <div className="inline-flex items-center gap-2">
+                                                            <button type="button"
+                                                                onClick={() => openEditModal(t)}
+                                                                title="Editar lançamento"
+                                                                className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-2 py-1 text-xs font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface)]">
+                                                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828A2 2 0 0110 16.414H8v-2a2 2 0 01.586-1.414z" /></svg>
+                                                            </button>
+                                                            <button type="button"
+                                                                onClick={() => { setDeleteError(null); setDeleteConfirmId(t.id); }}
+                                                                className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)]">
+                                                                Excluir
+                                                            </button>
+                                                        </div>
                                                     )}
                                                 </td>
                                             </tr>
-                                        ))
+                                            );
+                                        })
                                     )}
                                 </tbody>
                             </table>
@@ -1238,22 +1345,30 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                 </div>
             )}
 
-            {/* ── Modal: Novo lançamento ────────────────────────────────────────── */}
+            {/* ── Modal: Novo / Editar lançamento ──────────────────────────────── */}
             {modalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setModalOpen(false)}>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => { setModalOpen(false); resetForm(); }}>
                     <div className="w-full max-w-md rounded-2xl bg-[var(--eixo-surface)] shadow-2xl" onClick={e => e.stopPropagation()}>
                         <header className="flex items-center justify-between border-b border-[var(--eixo-border)] p-5">
-                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Novo lançamento</h3>
-                            <button type="button" onClick={() => setModalOpen(false)} className="rounded-full p-2 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">✕</button>
+                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">
+                                {editingTransaction ? 'Editar lançamento' : 'Novo lançamento'}
+                            </h3>
+                            <button type="button" onClick={() => { setModalOpen(false); resetForm(); }} className="rounded-full p-2 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">✕</button>
                         </header>
                         <form onSubmit={handleSave} className="space-y-4 p-6">
                             {/* Tipo */}
                             <div>
                                 <label className={labelCls}>Tipo</label>
-                                <select value={formType} onChange={e => setFormType(e.target.value as TransactionType)} className={inputCls}>
-                                    <option value="ENTRADA">Entrada</option>
-                                    <option value="SAIDA">Saída</option>
-                                </select>
+                                {editingTransaction ? (
+                                    <p className={`${inputCls} bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]`}>
+                                        {formType === 'ENTRADA' ? 'Entrada' : 'Saída'} <span className="text-xs">(não editável)</span>
+                                    </p>
+                                ) : (
+                                    <select value={formType} onChange={e => setFormType(e.target.value as TransactionType)} className={inputCls}>
+                                        <option value="ENTRADA">Entrada</option>
+                                        <option value="SAIDA">Saída</option>
+                                    </select>
+                                )}
                             </div>
                             {/* Categoria */}
                             <div>
@@ -1304,13 +1419,13 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             </div>
                             {formError && <p className="text-sm text-[var(--eixo-danger)]">{formError}</p>}
                             <div className="flex justify-end gap-3">
-                                <button type="button" onClick={() => setModalOpen(false)}
+                                <button type="button" onClick={() => { setModalOpen(false); resetForm(); }}
                                     className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
                                     Cancelar
                                 </button>
                                 <button type="submit" disabled={isSaving || filteredCategories.length === 0}
                                     className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">
-                                    {isSaving ? 'Salvando...' : 'Salvar'}
+                                    {isSaving ? 'Salvando...' : editingTransaction ? 'Salvar alterações' : 'Lançar'}
                                 </button>
                             </div>
                         </form>
