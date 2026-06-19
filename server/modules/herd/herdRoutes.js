@@ -220,7 +220,7 @@ const CATEGORIAS = ['Bezerro', 'Bezerra', 'Novilho', 'Novilha', 'Boi', 'Vaca', '
 // tier: required | conditional | recommended | optional
 const TEMPLATE_COLUMNS = [
   // --- Identidade ---
-  { key: 'identificacao',      label: 'Identificação',           tier: 'required',     type: 'text',   example: 'BR001',                      description: 'Brinco, tatuagem ou número que identifica o animal de forma única.' },
+  { key: 'identificacao',      label: 'Identificação',           tier: 'required',     type: 'text',   example: 'EXEMPLO-1',                  description: 'Brinco, tatuagem ou número que identifica o animal de forma única.' },
   { key: 'sexo',               label: 'Sexo',                    tier: 'required',     type: 'list',   options: ['MACHO', 'FEMEA'],            example: 'MACHO',                      description: 'MACHO ou FEMEA.' },
   // --- Raça ---
   { key: 'tipo_raca',          label: 'Tipo de Raça',            tier: 'required',     type: 'list',   options: ['Pura', 'Mestiça'],           example: 'Pura',                       description: 'Pura = animal de uma raça só. Mestiça = cruzamento entre raças.' },
@@ -394,7 +394,7 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
     const exemplos = [
       // Nelore macho puro, PO, Touro
       {
-        identificacao: 'BR001', sexo: 'MACHO', tipo_raca: 'Pura', raca: 'Nelore',
+        identificacao: 'EXEMPLO-1', sexo: 'MACHO', tipo_raca: 'Pura', raca: 'Nelore',
         composicao_mestica: '', raca_predominante: '', padrao_racial: 'PO', registro: 'RGN-5678',
         data_nascimento: '10/03/2021', ultimo_peso_kg: '620', data_pesagem: '01/06/2026',
         categoria: 'Touro', status_reprodutivo: '', previsao_parto: '',
@@ -403,7 +403,7 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
       },
       // Anelorado fêmea prenhe, Vaca de Cria
       {
-        identificacao: 'BR002', sexo: 'FEMEA', tipo_raca: 'Mestiça', raca: '',
+        identificacao: 'EXEMPLO-2', sexo: 'FEMEA', tipo_raca: 'Mestiça', raca: '',
         composicao_mestica: 'Anelorado (predominância zebu)', padrao_racial: '', registro: '',
         data_nascimento: '05/07/2019', ultimo_peso_kg: '480', data_pesagem: '01/06/2026',
         categoria: 'Vaca', status_reprodutivo: 'PRENHE', previsao_parto: '15/01/2027',
@@ -553,7 +553,7 @@ function parseSpreadsheet(buffer, originalName) {
   const headers = (rawRows[headerRowIdx] || []).map(normalizeHeader);
   const keys = headers.map((h) => LABEL_TO_KEY[h] || null);
 
-  const EXAMPLE_IDS = new Set(['BR001', 'BR002']);
+  const EXAMPLE_IDS = new Set(['EXEMPLO-1', 'EXEMPLO-2']);
 
   const rows = [];
   for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
@@ -804,7 +804,7 @@ app.post('/herd/import/erros-xlsx', requireAuth, async (req, res) => {
 
     const buffer = await wb.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="EIXO - Linhas com erro.xlsx"');
+    res.setHeader('Content-Disposition', 'attachment; filename="[EIXO] Linhas com erro.xlsx"');
     return res.send(Buffer.from(buffer));
   } catch (error) {
     console.error('Erro ao gerar planilha de erros:', error);
