@@ -553,19 +553,20 @@ function parseSpreadsheet(buffer, originalName) {
   const headers = (rawRows[headerRowIdx] || []).map(normalizeHeader);
   const keys = headers.map((h) => LABEL_TO_KEY[h] || null);
 
+  const EXAMPLE_IDS = new Set(['BR001', 'BR002']);
+
   const rows = [];
   for (let i = headerRowIdx + 1; i < rawRows.length; i++) {
     const row = rawRows[i];
     if (!Array.isArray(row)) continue;
-    // Pular linha de exemplo (italico cinza) — se for IGUAL aos exemplos, ignora
     const obj = {};
     keys.forEach((k, j) => {
       if (k && row[j] !== undefined && row[j] !== null && row[j] !== '') {
         obj[k] = row[j];
       }
     });
-    // Linha completamente vazia? pula
     if (Object.keys(obj).length === 0) continue;
+    if (EXAMPLE_IDS.has(String(obj.identificacao || '').trim())) continue;
     rows.push(obj);
   }
   return rows;
