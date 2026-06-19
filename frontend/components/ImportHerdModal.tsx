@@ -31,6 +31,7 @@ interface ImportHerdModalProps {
     onClose: () => void;
     onDownloadTemplate: () => void | Promise<void>;
     farmId?: string | null;
+    farmName?: string | null;
     onSuccess?: () => void;
 }
 
@@ -39,6 +40,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
     onClose,
     onDownloadTemplate,
     farmId,
+    farmName,
     onSuccess,
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -128,7 +130,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
             const blob = await res.blob();
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'EIXO - Linhas com erro.xlsx';
+            link.download = `[EIXO] ${farmName || 'Fazenda'} - Linhas com erro.xlsx`;
             link.click();
             URL.revokeObjectURL(link.href);
         } catch (err) {

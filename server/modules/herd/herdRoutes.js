@@ -263,8 +263,12 @@ const TIER_LABELS = {
   optional:    'Opcional',
 };
 
-app.get('/herd/import/template', async (_req, res) => {
+app.get('/herd/import/template', requireAuth, async (req, res) => {
   try {
+    const farmId = req.saas?.farmId;
+    const farm = farmId ? await prisma.farm.findUnique({ where: { id: farmId }, select: { name: true } }) : null;
+    const farmName = farm?.name || 'Minha Fazenda';
+
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'EIXO';
     workbook.created = new Date();
@@ -471,7 +475,8 @@ app.get('/herd/import/template', async (_req, res) => {
 
     const buffer = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="EIXO - Cadastro de Rebanho.xlsx"');
+    const filename = `[EIXO] ${farmName} - Cadastro de Rebanho.xlsx`;
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
     return res.send(Buffer.from(buffer));
   } catch (error) {
     console.error('Erro ao gerar planilha modelo:', error);

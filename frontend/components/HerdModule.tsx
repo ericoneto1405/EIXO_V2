@@ -2693,6 +2693,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 onClose={() => setShowImportModal(false)}
                 onDownloadTemplate={handleDownloadImportTemplate}
                 farmId={farmId}
+                farmName={farmName}
                 onSuccess={loadData}
             />
 

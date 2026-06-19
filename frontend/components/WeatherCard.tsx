@@ -45,6 +45,9 @@ interface DayForecast {
     tempMin: number;
     precipitation: number;
     precipProb: number;
+    humidity: number;
+    windMax: number;
+    isYesterday: boolean;
 }
 
 interface WeatherCardProps {
@@ -91,14 +94,15 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
 
                 const wRes = await fetch(
                     `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}` +
-                    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max` +
-                    `&timezone=America%2FSao_Paulo&forecast_days=7`,
+                    `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,relative_humidity_2m_max,wind_speed_10m_max` +
+                    `&timezone=America%2FSao_Paulo&forecast_days=7&past_days=1&models=ecmwf_ifs025`,
                     { signal: AbortSignal.timeout(15000) }
                 );
                 const wData = await wRes.json();
                 const d = wData?.daily;
                 if (!d?.time?.length) throw new Error('Sem dados');
 
+                const today = new Date().toISOString().slice(0, 10);
                 const days: DayForecast[] = d.time.map((date: string, i: number) => ({
                     date,
                     weatherCode: d.weather_code?.[i] ?? d.weathercode?.[i] ?? 0,
@@ -106,6 +110,9 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
                     tempMin: Math.round(d.temperature_2m_min[i] ?? 0),
                     precipitation: Math.round((d.precipitation_sum[i] ?? 0) * 10) / 10,
                     precipProb: Math.round(d.precipitation_probability_max?.[i] ?? 0),
+                    humidity: Math.round(d.relative_humidity_2m_max?.[i] ?? 0),
+                    windMax: Math.round(d.wind_speed_10m_max?.[i] ?? 0),
+                    isYesterday: date < today,
                 }));
 
                 if (!active) return;
@@ -150,7 +157,8 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
     }
 
     // ── Totais semanais ───────────────────────────────────────────────────────
-    const totalRain = Math.round(forecast.reduce((sum, d) => sum + d.precipitation, 0) * 10) / 10;
+    const futureDays = forecast.filter(d => !d.isYesterday);
+    const totalRain = Math.round(futureDays.reduce((sum, d) => sum + d.precipitation, 0) * 10) / 10;
 
     return (
         <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
@@ -185,20 +193,21 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
                 <p className="px-5 py-4 text-sm text-[#a8a29e]">Não foi possível carregar a previsão.</p>
             ) : (
                 <div className="flex gap-1 overflow-x-auto px-4 py-4">
-                    {forecast.map((day, i) => {
+                    {forecast.map((day) => {
                         const d = new Date(day.date + 'T12:00:00');
-                        const isToday = i === 0;
+                        const todayStr = new Date().toISOString().slice(0, 10);
+                        const isToday = day.date === todayStr;
                         const isRainy = day.precipitation >= 5;
                         return (
                             <div
                                 key={day.date}
-                                className={`flex min-w-[72px] flex-1 flex-col items-center gap-1 rounded-xl px-2 py-3 ${
-                                    isToday ? 'bg-[var(--eixo-green-soft)]' : isRainy ? 'bg-[#eff6ff]' : 'hover:bg-[var(--eixo-surface-soft)]'
+                                className={`flex min-w-[76px] flex-1 flex-col items-center gap-1 rounded-xl px-2 py-3 ${
+                                    day.isYesterday ? 'bg-[#f5f5f4] opacity-70' : isToday ? 'bg-[var(--eixo-green-soft)]' : isRainy ? 'bg-[#eff6ff]' : 'hover:bg-[var(--eixo-surface-soft)]'
                                 }`}
                             >
                                 {/* Dia */}
-                                <p className={`text-[11px] font-semibold ${isToday ? 'text-[var(--eixo-graphite)]' : 'text-[var(--eixo-text-muted)]'}`}>
-                                    {isToday ? 'Hoje' : DAYS[d.getDay()]}
+                                <p className={`text-[11px] font-semibold ${day.isYesterday ? 'text-[#78716c]' : isToday ? 'text-[var(--eixo-graphite)]' : 'text-[var(--eixo-text-muted)]'}`}>
+                                    {day.isYesterday ? 'Ontem' : isToday ? 'Hoje' : DAYS[d.getDay()]}
                                 </p>
 
                                 {/* Chuva — destaque principal */}
@@ -208,7 +217,7 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
 
                                 {/* Probabilidade */}
                                 {day.precipProb > 0 && (
-                                    <p className="text-[10px] font-semibold text-[#60a5fa]">{day.precipProb}%</p>
+                                    <p className="text-xs font-bold text-[#3b82f6]">{day.precipProb}%</p>
                                 )}
 
                                 {/* Ícone de condição */}
@@ -216,10 +225,20 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
                                     {wmoIcon(day.weatherCode)}
                                 </span>
 
-                                {/* Temperatura — secundária */}
+                                {/* Temperatura */}
                                 <p className="text-[11px] text-[var(--eixo-text-muted)]">
                                     {day.tempMax}° <span className="text-[10px]">{day.tempMin}°</span>
                                 </p>
+
+                                {/* Umidade e vento */}
+                                <div className="flex flex-col items-center gap-0.5 pt-1 border-t border-[var(--eixo-border)]">
+                                    {day.humidity > 0 && (
+                                        <p className="text-[10px] text-[#78716c]" title="Umidade máxima">💧{day.humidity}%</p>
+                                    )}
+                                    {day.windMax > 0 && (
+                                        <p className="text-[10px] text-[#78716c]" title="Vento máximo">💨{day.windMax}km/h</p>
+                                    )}
+                                </div>
                             </div>
                         );
                     })}
