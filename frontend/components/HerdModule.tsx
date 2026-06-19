@@ -1126,7 +1126,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         const blob = await res.blob();
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = 'EIXO - Cadastro de Rebanho.xlsx';
+        link.download = `[EIXO] ${farmName || 'Fazenda'} - Cadastro de Rebanho.xlsx`;
         link.click();
         URL.revokeObjectURL(link.href);
     };
