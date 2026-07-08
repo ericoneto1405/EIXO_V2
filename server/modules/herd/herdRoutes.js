@@ -502,6 +502,20 @@ const uploadMemory = multer({
   },
 });
 
+const uploadHerdImportFile = (req, res, next) => {
+  uploadMemory.single('file')(req, res, (error) => {
+    if (!error) return next();
+
+    if (error?.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'Arquivo maior que 5MB. Envie uma planilha menor.' });
+    }
+
+    return res.status(400).json({
+      message: error?.message || 'Erro ao receber arquivo. Use .xlsx, .xls ou .csv.',
+    });
+  });
+};
+
 // Mapa: label da planilha (com ou sem "*") → key técnica
 const LABEL_TO_KEY = (() => {
   const map = {};
@@ -567,6 +581,7 @@ function parseSpreadsheet(buffer, originalName) {
     });
     if (Object.keys(obj).length === 0) continue;
     if (EXAMPLE_IDS.has(String(obj.identificacao || '').trim())) continue;
+    obj.__line = i + 1;
     rows.push(obj);
   }
   return rows;
@@ -605,7 +620,7 @@ function validateUploadRow(row, line) {
     : null;
 }
 
-app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async (req, res) => {
+app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, res) => {
   try {
     const { farmId } = req.body || {};
     if (!farmId) {
@@ -629,9 +644,9 @@ app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async 
       return res.status(400).json({ message: `Limite de 1000 linhas por importação. Sua planilha tem ${rows.length}.` });
     }
 
-    const farm = await prisma.farm.findUnique({ where: { id: farmId } });
+    const farm = await prisma.farm.findFirst({ where: buildFarmScopeFilter(req, { id: String(farmId) }) });
     if (!farm) {
-      return res.status(404).json({ message: 'Fazenda não encontrada.' });
+      return res.status(404).json({ message: 'Fazenda não encontrada ou sem acesso.' });
     }
 
     const erros = [];
@@ -640,7 +655,7 @@ app.post('/herd/import/upload', requireAuth, uploadMemory.single('file'), async 
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const line = i + 1; // linha 1 = primeiro animal (já excluímos cabeçalho)
+      const line = row.__line || i + 1;
       const err = validateUploadRow(row, line);
       if (err) { erros.push(err); continue; }
 
@@ -911,7 +926,7 @@ function validateImportRows(rows) {
   return errors;
 }
 
-app.post('/herd/import', async (req, res) => {
+app.post('/herd/import', requireAuth, async (req, res) => {
   const { farmId, rows } = req.body || {};
 
   if (!farmId) {
@@ -926,9 +941,9 @@ app.post('/herd/import', async (req, res) => {
     return res.status(400).json({ message: 'Erros de validação.', errors: validationErrors });
   }
 
-  const farm = await prisma.farm.findUnique({ where: { id: farmId } });
+  const farm = await prisma.farm.findFirst({ where: buildFarmScopeFilter(req, { id: String(farmId) }) });
   if (!farm) {
-    return res.status(404).json({ message: 'Fazenda não encontrada.' });
+    return res.status(404).json({ message: 'Fazenda não encontrada ou sem acesso.' });
   }
 
   const results = [];
