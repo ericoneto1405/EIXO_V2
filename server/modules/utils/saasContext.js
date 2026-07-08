@@ -404,6 +404,7 @@ export const serializeAuthUser = (user, saasContext = null, accessContext = null
     onboardingCompletedAt: user.onboardingCompletedAt || null,
     phone: user.phone || null,
     avatarUrl: user.avatarUrl || null,
+    herdTableColumns: user.herdTableColumns || null,
 });
 
 export const serializeAuthUserWithContext = async (userId, options) => {

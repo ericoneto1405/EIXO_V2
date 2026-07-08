@@ -119,6 +119,31 @@ export const updateUser = async (userId: string, payload: WebUserUpdatePayload):
   return responsePayload.user;
 };
 
+export const getMyHerdColumns = async (): Promise<string[] | null> => {
+  const response = await fetch(buildApiUrl('/auth/me/herd-columns'), {
+    credentials: 'include',
+  });
+  const payload = await readJson(response);
+  if (!response.ok) {
+    throw new Error(payload?.message || 'Erro ao carregar colunas.');
+  }
+  return payload.herdTableColumns || null;
+};
+
+export const updateMyHerdColumns = async (columns: string[]): Promise<string[]> => {
+  const response = await fetch(buildApiUrl('/auth/me/herd-columns'), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ columns }),
+  });
+  const payload = await readJson(response);
+  if (!response.ok) {
+    throw new Error(payload?.message || 'Erro ao salvar colunas.');
+  }
+  return payload.herdTableColumns || [];
+};
+
 export const deleteUser = async (userId: string): Promise<void> => {
   const response = await fetch(buildApiUrl(`/users/${userId}`), {
     method: 'DELETE',

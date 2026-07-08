@@ -867,4 +867,34 @@ app.patch('/auth/me/onboarding', requireAuth, async (req, res) => {
         return res.status(500).json({ message: 'Erro ao salvar onboarding.' });
     }
 });
+
+// GET /auth/me/herd-columns — lê as colunas visíveis salvas na tela de Animais
+const HERD_TABLE_COLUMN_KEYS = ['registro', 'raca', 'sexo', 'idade', 'pasto', 'lote', 'categoria', 'peso', 'gmd', 'nutricao'];
+app.get('/auth/me/herd-columns', requireAuth, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { herdTableColumns: true } });
+        return res.json({ herdTableColumns: user?.herdTableColumns || null });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar preferência de colunas.' });
+    }
+});
+
+// PATCH /auth/me/herd-columns — salva as colunas visíveis na tela de Animais
+app.patch('/auth/me/herd-columns', requireAuth, async (req, res) => {
+    try {
+        const { columns } = req.body || {};
+        if (!Array.isArray(columns) || columns.some((c) => typeof c !== 'string' || !HERD_TABLE_COLUMN_KEYS.includes(c))) {
+            return res.status(400).json({ message: 'Lista de colunas inválida.' });
+        }
+        const updated = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { herdTableColumns: columns },
+        });
+        return res.json({ herdTableColumns: updated.herdTableColumns });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar preferência de colunas.' });
+    }
+});
 }

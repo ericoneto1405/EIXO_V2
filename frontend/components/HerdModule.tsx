@@ -16,8 +16,23 @@ import {
     listAnimals,
     listLots,
 } from '../adapters/herdApi';
+import { getMyHerdColumns, updateMyHerdColumns } from '../adapters/usersApi';
 import { buildApiUrl } from '../api';
 import type { Paddock } from '../types';
+
+const HERD_TABLE_COLUMNS: { key: string; label: string }[] = [
+    { key: 'registro', label: 'Registro' },
+    { key: 'raca', label: 'Raça' },
+    { key: 'sexo', label: 'Sexo' },
+    { key: 'idade', label: 'Idade' },
+    { key: 'pasto', label: 'Pasto' },
+    { key: 'lote', label: 'Lote' },
+    { key: 'categoria', label: 'Categoria' },
+    { key: 'peso', label: 'Peso' },
+    { key: 'gmd', label: 'GMD' },
+    { key: 'nutricao', label: 'Nutrição' },
+];
+const HERD_TABLE_COLUMN_KEYS = HERD_TABLE_COLUMNS.map((c) => c.key);
 
 type TabKey = 'overview' | 'animals' | 'pastures' | 'lots' | 'weighings' | 'settings';
 type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'sem_categoria' | 'gmd_baixo';
@@ -231,6 +246,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [filterNutrition, setFilterNutrition] = useState('');
     const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
     const [activeHeaderFilter, setActiveHeaderFilter] = useState<AnimalHeaderFilterKey>(null);
+    const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(HERD_TABLE_COLUMN_KEYS));
+    const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
+    const columnsMenuRef = useRef<HTMLDivElement | null>(null);
     const [healthQuickFilter, setHealthQuickFilter] = useState<HealthQuickFilter>('none');
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
@@ -491,6 +509,41 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             document.removeEventListener('mousedown', handleOutside);
         };
     }, [activeHeaderFilter]);
+
+    useEffect(() => {
+        getMyHerdColumns()
+            .then((saved) => {
+                if (saved && saved.length > 0) {
+                    setVisibleColumns(new Set(saved.filter((k) => HERD_TABLE_COLUMN_KEYS.includes(k))));
+                }
+            })
+            .catch(() => {});
+    }, []);
+
+    useEffect(() => {
+        const handleOutsideColumns = (event: MouseEvent) => {
+            if (!columnsMenuRef.current) return;
+            if (!columnsMenuRef.current.contains(event.target as Node)) {
+                setColumnsMenuOpen(false);
+            }
+        };
+        if (columnsMenuOpen) {
+            document.addEventListener('mousedown', handleOutsideColumns);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleOutsideColumns);
+        };
+    }, [columnsMenuOpen]);
+
+    const toggleHerdColumn = (key: string) => {
+        setVisibleColumns((prev) => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key);
+            else next.add(key);
+            updateMyHerdColumns(HERD_TABLE_COLUMN_KEYS.filter((k) => next.has(k))).catch(() => {});
+            return next;
+        });
+    };
 
     const filteredAnimals = useMemo(() => {
         const term = searchTerm.trim().toLowerCase();
@@ -1346,6 +1399,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     {renderHeaderFilter('identificacao')}
                                 </th>
+                                {visibleColumns.has('registro') && (
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'registro' ? null : 'registro')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('registro') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
                                     <div className="flex items-center justify-between gap-1">
                                         <span>Registro</span>
@@ -1355,6 +1409,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     {renderHeaderFilter('registro')}
                                 </th>
+                                )}
+                                {visibleColumns.has('raca') && (
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'raca' ? null : 'raca')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('raca') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
                                     <div className="flex items-center justify-between gap-1">
                                         <span>Raça</span>
@@ -1364,6 +1420,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     {renderHeaderFilter('raca')}
                                 </th>
+                                )}
+                                {visibleColumns.has('sexo') && (
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'sexo' ? null : 'sexo')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('sexo') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
                                     <div className="flex items-center justify-between gap-1">
                                         <span>Sexo</span>
@@ -1373,12 +1431,16 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     {renderHeaderFilter('sexo')}
                                 </th>
+                                )}
+                                {visibleColumns.has('idade') && (
                                 <th scope="col" className="whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('idade')} className="flex w-full items-center justify-between gap-1">
                                         <span>IDADE</span>
                                         <span className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)]">{getSortIndicator('idade')}</span>
                                     </button>
                                 </th>
+                                )}
+                                {visibleColumns.has('pasto') && (
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'pasto' ? null : 'pasto')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('pasto') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
                                     <div className="flex items-center justify-between gap-1">
                                         <span>Pasto</span>
@@ -1388,6 +1450,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     {renderHeaderFilter('pasto')}
                                 </th>
+                                )}
+                                {visibleColumns.has('lote') && (
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'lote' ? null : 'lote')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('lote') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
                                     <div className="flex items-center justify-between gap-1">
                                         <span>Lote</span>
@@ -1397,6 +1461,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     {renderHeaderFilter('lote')}
                                 </th>
+                                )}
+                                {visibleColumns.has('categoria') && (
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'categoria' ? null : 'categoria')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('categoria') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
                                     <div className="flex items-center justify-between gap-1">
                                         <span>Categoria</span>
@@ -1406,6 +1472,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     {renderHeaderFilter('categoria')}
                                 </th>
+                                )}
+                                {visibleColumns.has('peso') && (
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'peso' ? null : 'peso')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('peso') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
                                     <div className="flex items-center justify-between gap-1">
                                         <span>Peso</span>
@@ -1415,12 +1483,16 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     {renderHeaderFilter('peso')}
                                 </th>
+                                )}
+                                {visibleColumns.has('gmd') && (
                                 <th scope="col" className="whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)]">
                                     <button type="button" onClick={() => handleSort('gmd')} className="flex w-full items-center justify-between gap-1">
                                         <span>GMD</span>
                                         <span className="rounded-md border border-[var(--eixo-border)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--eixo-text)]">{getSortIndicator('gmd')}</span>
                                     </button>
                                 </th>
+                                )}
+                                {visibleColumns.has('nutricao') && (
                                 <th scope="col" onClick={() => setActiveHeaderFilter((prev) => prev === 'nutricao' ? null : 'nutricao')} className={`relative cursor-pointer whitespace-nowrap px-4 py-2.5 border-r border-[var(--eixo-border)] ${isHeaderFiltered('nutricao') ? 'bg-[#e8f5c9] text-[#3a5c10]' : ''}`}>
                                     <div className="flex items-center justify-between gap-1">
                                         <span>Nutrição</span>
@@ -1430,6 +1502,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     {renderHeaderFilter('nutricao')}
                                 </th>
+                                )}
                             </tr>
                         </thead>
                         <tbody>
@@ -1480,15 +1553,24 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         <th scope="row" className="whitespace-nowrap border-r border-[var(--eixo-border)] !pl-2.5 px-4 py-3 font-bold text-[var(--eixo-text)]">
                                             <div className="truncate" title={animal.identificacao}>{animal.identificacao}</div>
                                         </th>
+                                        {visibleColumns.has('registro') && (
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {animal.registro
                                                 ? <span className="inline-flex max-w-full items-center truncate rounded-full border border-[#B6E23A] bg-[#f0f9d4] px-2 py-0.5 text-[11px] font-semibold text-[#3a5c10]" title={animal.registro}>{animal.registro}</span>
                                                 : <span className="text-[var(--eixo-text-muted)]">—</span>
                                             }
                                         </td>
+                                        )}
+                                        {visibleColumns.has('raca') && (
                                         <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={formatRacaDisplay(animal)}>{formatRacaDisplay(animal)}</td>
+                                        )}
+                                        {visibleColumns.has('sexo') && (
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.sexo}</td>
+                                        )}
+                                        {visibleColumns.has('idade') && (
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{calculateAge(animal.dataNascimento)}</td>
+                                        )}
+                                        {visibleColumns.has('pasto') && (
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {animal.currentPaddockName ? (
                                                 <span className="block truncate text-[#2f3a2d]" title={animal.currentPaddockName}>{animal.currentPaddockName}</span>
@@ -1511,8 +1593,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                 </div>
                                             )}
                                         </td>
+                                        )}
+                                        {visibleColumns.has('lote') && (
                                         <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={lots.find((l) => l.id === animal.lotId)?.name || ''}>{lots.find((l) => l.id === animal.lotId)?.name || '—'}</td>
+                                        )}
+                                        {visibleColumns.has('categoria') && (
                                         <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={animal.categoria || ''}>{animal.categoria || '—'}</td>
+                                        )}
+                                        {visibleColumns.has('peso') && (
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
                                             {(() => {
                                                 const diasDesdePesagem = animal.dataUltimaPesagem
@@ -1538,6 +1626,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                 );
                                             })()}
                                         </td>
+                                        )}
+                                        {visibleColumns.has('gmd') && (
                                         <td className="border-r border-[var(--eixo-border)] px-6 py-4">
                                             {(() => {
                                                 const g30 = animal.gmd30 ?? null;
@@ -1581,9 +1671,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                 );
                                             })()}
                                         </td>
+                                        )}
+                                        {visibleColumns.has('nutricao') && (
                                         <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={animal.nutritionPlan?.nome || ''}>
                                             {animal.nutritionPlan?.nome || '—'}
                                         </td>
+                                        )}
                                     </tr>
                                 ))
                             )}
@@ -1912,6 +2005,50 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         </svg>
                                         <span className="ml-2 hidden sm:block">Importar Rebanho</span>
                                     </button>
+                                    <div className="relative" ref={columnsMenuRef}>
+                                        <button
+                                            type="button"
+                                            onClick={() => setColumnsMenuOpen((prev) => !prev)}
+                                            className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-border)] bg-white px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
+                                        >
+                                            <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 6a2 2 0 100-4 2 2 0 000 4zm0 12a2 2 0 100-4 2 2 0 000 4zm0 0h16M9 12h11M4 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            </svg>
+                                            <span className="ml-2 hidden sm:block">Colunas</span>
+                                        </button>
+                                        {columnsMenuOpen && (
+                                            <div className="absolute right-0 top-12 z-20 w-56 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-2 shadow-lg">
+                                                <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Mostrar colunas</p>
+                                                <label className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--eixo-text-muted)] opacity-60">
+                                                    <input type="checkbox" checked disabled className="h-4 w-4 rounded border-[var(--eixo-border)]" />
+                                                    ID <span className="ml-auto text-[10px]">fixo</span>
+                                                </label>
+                                                <div className="my-1 border-t border-[var(--eixo-border)]" />
+                                                {HERD_TABLE_COLUMNS.map((col) => (
+                                                    <label key={col.key} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)] cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={visibleColumns.has(col.key)}
+                                                            onChange={() => toggleHerdColumn(col.key)}
+                                                            className="h-4 w-4 rounded border-[var(--eixo-border)] accent-[#B6E23A] cursor-pointer"
+                                                        />
+                                                        {col.label}
+                                                    </label>
+                                                ))}
+                                                <div className="my-1 border-t border-[var(--eixo-border)]" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setVisibleColumns(new Set(HERD_TABLE_COLUMN_KEYS));
+                                                        updateMyHerdColumns(HERD_TABLE_COLUMN_KEYS).catch(() => {});
+                                                    }}
+                                                    className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                                                >
+                                                    Restaurar padrão
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={() => setNascimentoModalOpen(true)}
