@@ -41,6 +41,19 @@ export interface ReproKpis {
     pregRate: number | null;
     repeatEmptyCount: number;
     discardCandidateCount: number;
+    births: number;
+    birthRate: number | null;
+}
+
+export interface ReproParto {
+    id: string;
+    farmId: string;
+    animalId: string;
+    animal?: { id: string; brinco?: string | null; nome?: string | null };
+    date: string;
+    calfSex?: string | null;
+    notes?: string | null;
+    createdAt: string;
 }
 
 export interface ReproFarol {
@@ -125,6 +138,48 @@ export const deleteCheckup = async (id: string): Promise<void> => {
     if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data?.message || 'Erro ao apagar avaliação.');
+    }
+};
+
+export const listPartos = async (farmId: string): Promise<ReproParto[]> => {
+    const response = await fetch(buildApiUrl(withQuery('/repro/partos', { farmId })), {
+        credentials: 'include',
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload?.message || 'Erro ao carregar partos.');
+    }
+    return Array.isArray(payload?.partos) ? payload.partos : [];
+};
+
+export const createParto = async (payload: {
+    farmId: string;
+    animalId: string;
+    date: string;
+    calfSex?: string | null;
+    notes?: string | null;
+}): Promise<ReproParto> => {
+    const response = await fetch(buildApiUrl('/repro/partos'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao registrar parto.');
+    }
+    return data.parto;
+};
+
+export const deleteParto = async (id: string): Promise<void> => {
+    const response = await fetch(buildApiUrl(`/repro/partos/${id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+    });
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.message || 'Erro ao apagar parto.');
     }
 };
 

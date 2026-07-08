@@ -8,13 +8,17 @@ import {
     deleteCheckup,
     getReproKpis,
     getReproFarol,
+    listPartos,
+    createParto,
+    deleteParto,
     ReproCheckupSession,
     ReproKpis,
     ReproFarol,
+    ReproParto,
     NewCheckupRecord,
 } from '../adapters/reproApi';
 
-type TabKey = 'indicadores' | 'avaliacoes' | 'nova';
+type TabKey = 'indicadores' | 'avaliacoes' | 'nova' | 'partos';
 
 interface Season {
     id: string;
@@ -67,6 +71,13 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [editingId, setEditingId] = useState<string | null>(null);
 
+    // Partos
+    const [partos, setPartos] = useState<ReproParto[]>([]);
+    const [partoForm, setPartoForm] = useState({ animalId: '', date: todayISO(), calfSex: '', notes: '' });
+    const [partoError, setPartoError] = useState<string | null>(null);
+    const [partoOk, setPartoOk] = useState<string | null>(null);
+    const [savingParto, setSavingParto] = useState(false);
+
     const femaleAnimals = useMemo(
         () => animals.filter((animal) => animal.sexo === AnimalSexo.FEMEA),
         [animals],
@@ -112,6 +123,18 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
         }
     }, [farmId]);
 
+    const loadPartos = useCallback(async () => {
+        if (!farmId) {
+            setPartos([]);
+            return;
+        }
+        try {
+            setPartos(await listPartos(farmId));
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erro ao carregar partos.');
+        }
+    }, [farmId]);
+
     const loadKpis = useCallback(async () => {
         if (!farmId) {
             setKpis(null);
@@ -132,8 +155,8 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
 
     useEffect(() => {
         setLoading(true);
-        Promise.all([loadAnimals(), loadSeasons(), loadSessions()]).finally(() => setLoading(false));
-    }, [loadAnimals, loadSeasons, loadSessions]);
+        Promise.all([loadAnimals(), loadSeasons(), loadSessions(), loadPartos()]).finally(() => setLoading(false));
+    }, [loadAnimals, loadSeasons, loadSessions, loadPartos]);
 
     useEffect(() => {
         loadKpis();
@@ -244,13 +267,54 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
         }
     };
 
+    const handleSaveParto = async () => {
+        setPartoError(null);
+        setPartoOk(null);
+        if (!farmId) return;
+        if (!partoForm.animalId) {
+            setPartoError('Escolha a vaca.');
+            return;
+        }
+        if (!partoForm.date) {
+            setPartoError('Informe a data do parto.');
+            return;
+        }
+        setSavingParto(true);
+        try {
+            await createParto({
+                farmId,
+                animalId: partoForm.animalId,
+                date: partoForm.date,
+                calfSex: partoForm.calfSex || null,
+                notes: partoForm.notes || null,
+            });
+            setPartoOk('Parto registrado. A vaca foi atualizada no Rebanho.');
+            setPartoForm({ animalId: '', date: todayISO(), calfSex: '', notes: '' });
+            await Promise.all([loadPartos(), loadKpis()]);
+        } catch (err) {
+            setPartoError(err instanceof Error ? err.message : 'Erro ao registrar parto.');
+        } finally {
+            setSavingParto(false);
+        }
+    };
+
+    const handleDeleteParto = async (id: string) => {
+        try {
+            await deleteParto(id);
+            await Promise.all([loadPartos(), loadKpis()]);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erro ao apagar parto.');
+        }
+    };
+
     const tabs: { key: TabKey; label: string }[] = [
         { key: 'indicadores', label: 'Indicadores' },
         { key: 'avaliacoes', label: 'Avaliações' },
         { key: 'nova', label: 'Nova avaliação' },
+        { key: 'partos', label: 'Partos' },
     ];
 
-    const kpiCards = kpis
+    const kpiCards: { label: string; value: string; strong?: boolean; hint?: string }[] = kpis
         ? [
               { label: 'Taxa de prenhez', value: kpis.pregRate === null ? '—' : `${kpis.pregRate}%`, strong: true },
               { label: 'Avaliadas', value: String(kpis.evaluated) },
@@ -258,6 +322,11 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
               { label: 'Vazias', value: String(kpis.empty) },
               { label: 'Vazias repetidas', value: String(kpis.repeatEmptyCount) },
               { label: 'Candidatas a descarte', value: String(kpis.discardCandidateCount) },
+              {
+                  label: 'Taxa de natalidade',
+                  value: kpis.birthRate === null ? '—' : `${kpis.birthRate}%`,
+                  hint: 'meta: 82%',
+              },
           ]
         : [];
 
@@ -337,6 +406,9 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                                     >
                                         {card.value}
                                     </p>
+                                    {card.hint && (
+                                        <p className="text-[11px] text-[var(--eixo-text-muted)]">{card.hint}</p>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -614,6 +686,107 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                             ? 'Salvando…'
                             : `${editingId ? 'Salvar alterações' : 'Salvar avaliação'} (${markedCount} vaca(s))`}
                     </button>
+                </div>
+            )}
+
+            {/* ── Partos ── */}
+            {activeTab === 'partos' && (
+                <div className={cardClass}>
+                    <h3 className="text-sm font-semibold text-[var(--eixo-text)]">Registrar parto</h3>
+
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                            <label className={labelClass}>Vaca</label>
+                            <select
+                                value={partoForm.animalId}
+                                onChange={(e) => setPartoForm({ ...partoForm, animalId: e.target.value })}
+                                className={inputClass}
+                            >
+                                <option value="">Selecione</option>
+                                {femaleAnimals.map((animal) => (
+                                    <option key={animal.id} value={animal.id}>
+                                        {animal.brinco || animal.id}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className={labelClass}>Data do parto</label>
+                            <input
+                                type="date"
+                                value={partoForm.date}
+                                onChange={(e) => setPartoForm({ ...partoForm, date: e.target.value })}
+                                className={inputClass}
+                            />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Sexo do bezerro</label>
+                            <select
+                                value={partoForm.calfSex}
+                                onChange={(e) => setPartoForm({ ...partoForm, calfSex: e.target.value })}
+                                className={inputClass}
+                            >
+                                <option value="">Opcional</option>
+                                <option value="Macho">Macho</option>
+                                <option value="Fêmea">Fêmea</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className={labelClass}>Observações</label>
+                            <input
+                                type="text"
+                                value={partoForm.notes}
+                                onChange={(e) => setPartoForm({ ...partoForm, notes: e.target.value })}
+                                placeholder="Opcional"
+                                className={inputClass}
+                            />
+                        </div>
+                    </div>
+
+                    {partoError && <p className="text-sm text-[var(--eixo-danger)]">{partoError}</p>}
+                    {partoOk && <p className="text-sm text-[var(--eixo-green)]">{partoOk}</p>}
+
+                    <button
+                        type="button"
+                        onClick={handleSaveParto}
+                        disabled={savingParto || !partoForm.animalId}
+                        className="w-full rounded-xl bg-primary text-[#1a1a1a] font-semibold py-2 transition-colors hover:bg-primary-dark disabled:opacity-50"
+                    >
+                        {savingParto ? 'Salvando…' : 'Registrar parto'}
+                    </button>
+
+                    <div className="border-t border-[var(--eixo-border)] pt-4">
+                        <h3 className="text-sm font-semibold text-[var(--eixo-text)]">Partos registrados</h3>
+                        {partos.length === 0 ? (
+                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Nenhum parto registrado ainda.</p>
+                        ) : (
+                            <ul className="mt-3 space-y-2">
+                                {partos.map((parto) => (
+                                    <li
+                                        key={parto.id}
+                                        className="flex items-center justify-between rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                                    >
+                                        <span>
+                                            <span className="font-medium">
+                                                {parto.animal?.brinco || parto.animal?.nome || parto.animalId}
+                                            </span>
+                                            <span className="text-[var(--eixo-text-muted)]">
+                                                {' '}· {formatDate(parto.date)}
+                                                {parto.calfSex ? ` · bezerro: ${parto.calfSex}` : ''}
+                                            </span>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteParto(parto.id)}
+                                            className="rounded-lg border border-[var(--eixo-danger)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)]"
+                                        >
+                                            Apagar
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

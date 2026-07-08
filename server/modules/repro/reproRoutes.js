@@ -380,6 +380,13 @@ export function registerReproRoutes(app) {
             const evaluated = pregnant + empty;
             const pregRate = evaluated > 0 ? Number(((pregnant / evaluated) * 100).toFixed(1)) : null;
 
+            // Taxa de natalidade: partos registrados ÷ fêmeas do rebanho
+            const [birthCount, femaleCount] = await Promise.all([
+                prisma.reproEvent.count({ where: { farmId: String(farmId), type: 'PARTO' } }),
+                prisma.animal.count({ where: { farmId: String(farmId), sexo: 'FEMEA' } }),
+            ]);
+            const birthRate = femaleCount > 0 ? Number(((birthCount / femaleCount) * 100).toFixed(1)) : null;
+
             return res.json({
                 kpis: {
                     evaluated,
@@ -388,6 +395,8 @@ export function registerReproRoutes(app) {
                     pregRate,
                     repeatEmptyCount: repeatEmpty.length,
                     discardCandidateCount: discardCandidates.size,
+                    births: birthCount,
+                    birthRate,
                 },
             });
         } catch (error) {
@@ -466,6 +475,118 @@ export function registerReproRoutes(app) {
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Erro ao calcular o farol.' });
+        }
+    });
+
+    // ── Partos ──────────────────────────────────────────────────────────────
+    const serializeParto = (event) => ({
+        id: event.id,
+        farmId: event.farmId,
+        animalId: event.animalId,
+        animal: event.animal
+            ? { id: event.animal.id, brinco: event.animal.brinco || null, nome: event.animal.nome || null }
+            : undefined,
+        date: event.date.toISOString(),
+        calfSex: event.payload?.calfSex || null,
+        notes: event.notes || null,
+        createdAt: event.createdAt.toISOString(),
+    });
+
+    // Registrar parto (grava como ReproEvent PARTO e atualiza a vaca no Rebanho)
+    app.post('/repro/partos', async (req, res) => {
+        const { farmId, animalId, date, calfSex, notes } = req.body || {};
+        if (!farmId || !animalId || !date) {
+            return res.status(400).json({ message: 'Informe fazenda, vaca e data do parto.' });
+        }
+        const partoDate = parseDateValue(date);
+        if (!partoDate) {
+            return res.status(400).json({ message: 'Data do parto inválida.' });
+        }
+
+        try {
+            const farm = await prisma.farm.findFirst({
+                where: buildFarmScopeFilter(req, { id: String(farmId) }),
+            });
+            if (!farm) {
+                return res.status(404).json({ message: 'Fazenda não encontrada.' });
+            }
+            const animal = await prisma.animal.findFirst({
+                where: { id: String(animalId), farmId: String(farmId), farm: buildFarmRelationFilter(req) },
+                select: { id: true, sexo: true },
+            });
+            if (!animal) {
+                return res.status(404).json({ message: 'Animal não encontrado.' });
+            }
+            if (animal.sexo !== 'FEMEA') {
+                return res.status(400).json({ message: 'Parto é registrado apenas para fêmeas.' });
+            }
+
+            const cleanCalfSex = cleanText(calfSex);
+            const [event] = await prisma.$transaction([
+                prisma.reproEvent.create({
+                    data: {
+                        farmId: String(farmId),
+                        animalId: String(animalId),
+                        type: 'PARTO',
+                        date: partoDate,
+                        payload: cleanCalfSex ? { calfSex: cleanCalfSex } : undefined,
+                        notes: cleanText(notes),
+                    },
+                    include: { animal: { select: { id: true, brinco: true, nome: true } } },
+                }),
+                prisma.animal.update({
+                    where: { id: String(animalId) },
+                    data: { statusReprodutivo: 'VAZIA', previsaoParto: null },
+                }),
+            ]);
+
+            return res.status(201).json({ parto: serializeParto(event) });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao registrar parto.' });
+        }
+    });
+
+    // Listar partos da fazenda
+    app.get('/repro/partos', async (req, res) => {
+        const { farmId } = req.query || {};
+        if (!farmId) {
+            return res.status(400).json({ message: 'Informe a fazenda.' });
+        }
+        try {
+            const farm = await prisma.farm.findFirst({
+                where: buildFarmScopeFilter(req, { id: String(farmId) }),
+            });
+            if (!farm) {
+                return res.status(404).json({ message: 'Fazenda não encontrada.' });
+            }
+            const partos = await prisma.reproEvent.findMany({
+                where: { farmId: String(farmId), type: 'PARTO' },
+                orderBy: { date: 'desc' },
+                include: { animal: { select: { id: true, brinco: true, nome: true } } },
+            });
+            return res.json({ partos: partos.map(serializeParto) });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao listar partos.' });
+        }
+    });
+
+    // Apagar um parto (não reverte o status já gravado na vaca)
+    app.delete('/repro/partos/:id', async (req, res) => {
+        const { id } = req.params;
+        try {
+            const event = await prisma.reproEvent.findFirst({
+                where: { id, type: 'PARTO', farm: buildFarmRelationFilter(req) },
+            });
+            if (!event) {
+                return res.status(404).json({ message: 'Parto não encontrado.' });
+            }
+            await prisma.reproEvent.delete({ where: { id } });
+            return res.json({ ok: true });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao apagar parto.' });
         }
     });
 }
