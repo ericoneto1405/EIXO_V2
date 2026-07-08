@@ -273,6 +273,7 @@ const AppContent: React.FC = () => {
     const [usersRefreshKey, setUsersRefreshKey] = useState(0);
     const [currentUser, setCurrentUser] = useState<User | null>(null);
     const [farms, setFarms] = useState<Farm[]>([]);
+    const [farmsLoaded, setFarmsLoaded] = useState(false);
     const [selectedFarmId, setSelectedFarmId] = useState<string | null>(null);
     const [paddocksRefreshNonce, setPaddocksRefreshNonce] = useState(0);
     const isSuperAdmin = React.useMemo(() => currentUser?.roles?.includes('SUPER_ADMIN') ?? false, [currentUser]);
@@ -421,7 +422,7 @@ const AppContent: React.FC = () => {
         [farms, selectedFarmId],
     );
     const hasSelectedFarm = Boolean(selectedFarmId);
-    const hasNoFarms = isAuthenticated && !isAuthLoading && farms.length === 0;
+    const hasNoFarms = isAuthenticated && !isAuthLoading && farmsLoaded && farms.length === 0;
     const FarmRequiredPanel: React.FC<{
         title: string;
         actionLabel?: string;
@@ -494,6 +495,7 @@ const AppContent: React.FC = () => {
     }, [hasFarmFormQuery]);
 
     const loadFarms = React.useCallback(async (preferredFarmId?: string | null) => {
+        setFarmsLoaded(false);
         try {
             const response = await fetch(buildApiUrl('/farms'), {
                 credentials: 'include',
@@ -524,6 +526,8 @@ const AppContent: React.FC = () => {
             console.error(error);
             setFarms([]);
             setSelectedFarmId(null);
+        } finally {
+            setFarmsLoaded(true);
         }
     }, [currentUser?.defaultFarmId]);
 
@@ -718,6 +722,7 @@ const AppContent: React.FC = () => {
         setCurrentUser(null);
         setAuthScreen('landing');
         setFarms([]);
+        setFarmsLoaded(false);
         setSelectedFarmId(null);
         setOpenFarmForm(false);
         updateFarmFormQuery(false);
@@ -747,6 +752,7 @@ const AppContent: React.FC = () => {
             setCurrentUser(null);
             setAuthScreen('login');
             setFarms([]);
+            setFarmsLoaded(false);
             setSelectedFarmId(null);
             setOpenFarmForm(false);
             updateFarmFormQuery(false);
