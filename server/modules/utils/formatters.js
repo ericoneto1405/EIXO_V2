@@ -84,6 +84,23 @@ export function normalizePregStatus(value) {
     return normalized === 'PRENHE' || normalized === 'VACIA' ? normalized : null;
 }
 
+export function normalizePregnant(value) {
+    if (value === true || value === false) {
+        return value;
+    }
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+    const normalized = String(value).trim().toUpperCase();
+    if (['TRUE', 'SIM', 'PRENHE', 'P', '1'].includes(normalized)) {
+        return true;
+    }
+    if (['FALSE', 'NAO', 'NÃO', 'VAZIA', 'VACIA', 'VAZIO', 'V', '0'].includes(normalized)) {
+        return false;
+    }
+    return null;
+}
+
 export function normalizeEmbryoTechnique(value) {
     if (typeof value !== 'string') {
         return null;

@@ -32,6 +32,7 @@ import { registerFarmRoutes } from "./modules/farms/farmRoutes.js";
 import { registerAnimalRoutes } from "./modules/animals/animalRoutes.js";
 import { registerPORoutes } from "./modules/po/poRoutes.js";
 import { registerHerdRoutes } from "./modules/herd/herdRoutes.js";
+import { registerReproRoutes } from "./modules/repro/reproRoutes.js";
 
 // ─── Módulos Extraídos (Fase 1) ────────────────────────────────────────────────
 import {
@@ -151,6 +152,7 @@ registerFarmRoutes(app);
 registerAnimalRoutes(app);
 registerPORoutes(app);
 registerHerdRoutes(app);
+registerReproRoutes(app);
 
 registerMarketRoutes(app);
 registerChatRoutes(app);

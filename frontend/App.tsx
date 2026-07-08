@@ -38,7 +38,7 @@ import { createWebUser } from './adapters/usersApi';
 const HerdModule = React.lazy(() => import('./components/HerdModule'));
 const FinanceModule = React.lazy(() => import('./components/FinanceModule'));
 const FarmMap = React.lazy(() => import('./components/FarmMap'));
-const GeneticsReproducao = React.lazy(() => import('./components/GeneticsReproducao'));
+const GeneticsReproducao = React.lazy(() => import('./components/ReproModule'));
 const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'));
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
 const HQPage = React.lazy(() => import('./components/HQPage'));

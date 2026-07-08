@@ -386,7 +386,7 @@ app.use(
 );
 
 app.use(
-    ['/users', '/seasons', '/repro-events'],
+    ['/users', '/seasons', '/repro-events', '/repro'],
     requireAuth,
     requireBillingAccess,
 );

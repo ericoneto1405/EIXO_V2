@@ -74,6 +74,47 @@ export function serializeReproEvent(event) {
     };
 }
 
+export function serializeCheckupRecord(record) {
+    return {
+        id: record.id,
+        sessionId: record.sessionId,
+        farmId: record.farmId,
+        animalId: record.animalId,
+        animal: record.animal
+            ? { id: record.animal.id, brinco: record.animal.brinco || null, nome: record.animal.nome || null }
+            : undefined,
+        aptitude: record.aptitude,
+        diagnosis: record.diagnosis || null,
+        pregnant: typeof record.pregnant === 'boolean' ? record.pregnant : null,
+        previsaoParto: record.previsaoParto ? record.previsaoParto.toISOString() : null,
+        discardLight: record.discardLight || null,
+        discardReason: record.discardReason || null,
+        calfQuality: record.calfQuality || null,
+        veterinarianDecision: record.veterinarianDecision || null,
+        iatfCount: record.iatfCount ?? 0,
+        bullId: record.bullId || null,
+        protocol: record.protocol || null,
+        notes: record.notes || null,
+        createdAt: record.createdAt.toISOString(),
+    };
+}
+
+export function serializeCheckupSession(session) {
+    const records = Array.isArray(session.records) ? session.records : [];
+    return {
+        id: session.id,
+        farmId: session.farmId,
+        createdById: session.createdById,
+        occurredAt: session.occurredAt.toISOString(),
+        responsibleName: session.responsibleName || null,
+        seasonId: session.seasonId || null,
+        notes: session.notes || null,
+        createdAt: session.createdAt.toISOString(),
+        recordsCount: session._count?.records ?? records.length,
+        records: records.map(serializeCheckupRecord),
+    };
+}
+
 export function serializePoAnimal(animal) {
     return {
         id: animal.id,
