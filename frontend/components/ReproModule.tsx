@@ -21,6 +21,7 @@ import {
     ReproDesmama,
     NewCheckupRecord,
 } from '../adapters/reproApi';
+import { createBirthAnimal } from '../adapters/herdApi';
 
 type TabKey = 'indicadores' | 'avaliacoes' | 'nova' | 'partos' | 'desmama';
 
@@ -84,7 +85,17 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
 
     // Desmamas
     const [desmamas, setDesmamas] = useState<ReproDesmama[]>([]);
-    const [desmamaForm, setDesmamaForm] = useState({ animalId: '', date: todayISO(), weightKg: '', notes: '' });
+    const [desmamaForm, setDesmamaForm] = useState({
+        animalId: '',
+        date: todayISO(),
+        weightKg: '',
+        notes: '',
+        createCalf: false,
+        calfBrinco: '',
+        calfSex: 'Macho',
+        calfBirthDate: '',
+    });
+    const [calfBirthSource, setCalfBirthSource] = useState<'parto' | 'estimativa' | null>(null);
     const [desmamaError, setDesmamaError] = useState<string | null>(null);
     const [desmamaOk, setDesmamaOk] = useState<string | null>(null);
     const [savingDesmama, setSavingDesmama] = useState(false);
@@ -332,6 +343,42 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
         }
     };
 
+    // Nascimento do bezerro: puxa do parto registrado; senão estima (desmama − 205 dias)
+    const resolveCalfBirth = (animalId: string, desmamaDate: string): { date: string; source: 'parto' | 'estimativa' } => {
+        const parto = partos.find((p) => p.animalId === animalId);
+        if (parto) {
+            return { date: parto.date.slice(0, 10), source: 'parto' };
+        }
+        const base = desmamaDate ? new Date(desmamaDate) : new Date();
+        base.setDate(base.getDate() - 205);
+        return { date: base.toISOString().slice(0, 10), source: 'estimativa' };
+    };
+
+    const toggleCreateCalf = (checked: boolean) => {
+        if (checked) {
+            const { date, source } = resolveCalfBirth(desmamaForm.animalId, desmamaForm.date);
+            setCalfBirthSource(source);
+            setDesmamaForm((prev) => ({ ...prev, createCalf: true, calfBirthDate: date }));
+        } else {
+            setCalfBirthSource(null);
+            setDesmamaForm((prev) => ({ ...prev, createCalf: false }));
+        }
+    };
+
+    const resetDesmamaForm = () => {
+        setDesmamaForm({
+            animalId: '',
+            date: todayISO(),
+            weightKg: '',
+            notes: '',
+            createCalf: false,
+            calfBrinco: '',
+            calfSex: 'Macho',
+            calfBirthDate: '',
+        });
+        setCalfBirthSource(null);
+    };
+
     const handleSaveDesmama = async () => {
         setDesmamaError(null);
         setDesmamaOk(null);
@@ -353,8 +400,24 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                 weightKg: desmamaForm.weightKg ? Number(desmamaForm.weightKg) : null,
                 notes: desmamaForm.notes || null,
             });
-            setDesmamaOk('Desmama registrada.');
-            setDesmamaForm({ animalId: '', date: todayISO(), weightKg: '', notes: '' });
+
+            let calfMsg = '';
+            if (desmamaForm.createCalf) {
+                const birth = desmamaForm.calfBirthDate || resolveCalfBirth(desmamaForm.animalId, desmamaForm.date).date;
+                await createBirthAnimal({
+                    farmId,
+                    maeId: desmamaForm.animalId,
+                    sexo: desmamaForm.calfSex,
+                    dataNascimento: birth,
+                    pesoNascimento: desmamaForm.weightKg ? Number(desmamaForm.weightKg) : undefined,
+                    brinco: desmamaForm.calfBrinco || undefined,
+                });
+                calfMsg = ' Bezerro criado no rebanho.';
+                await loadAnimals();
+            }
+
+            setDesmamaOk(`Desmama registrada.${calfMsg}`);
+            resetDesmamaForm();
             await Promise.all([loadDesmamas(), loadKpis()]);
         } catch (err) {
             setDesmamaError(err instanceof Error ? err.message : 'Erro ao registrar desmama.');
@@ -916,6 +979,63 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                                 className={inputClass}
                             />
                         </div>
+                    </div>
+
+                    <div className="rounded-xl border border-[var(--eixo-border)] p-3 space-y-3">
+                        <label className="flex items-center gap-2 text-sm font-medium text-[var(--eixo-text)]">
+                            <input
+                                type="checkbox"
+                                checked={desmamaForm.createCalf}
+                                onChange={(e) => toggleCreateCalf(e.target.checked)}
+                            />
+                            Criar o bezerro no rebanho (entra na recria, ligado à mãe)
+                        </label>
+                        {desmamaForm.createCalf && (
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                <div>
+                                    <label className={labelClass}>Brinco do bezerro</label>
+                                    <input
+                                        type="text"
+                                        value={desmamaForm.calfBrinco}
+                                        onChange={(e) => setDesmamaForm({ ...desmamaForm, calfBrinco: e.target.value })}
+                                        placeholder="Opcional (gera provisório)"
+                                        className={inputClass}
+                                    />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Sexo do bezerro</label>
+                                    <select
+                                        value={desmamaForm.calfSex}
+                                        onChange={(e) => setDesmamaForm({ ...desmamaForm, calfSex: e.target.value })}
+                                        className={inputClass}
+                                    >
+                                        <option value="Macho">Macho</option>
+                                        <option value="Fêmea">Fêmea</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className={labelClass}>
+                                        Nascimento{' '}
+                                        {calfBirthSource === 'parto'
+                                            ? '(do parto)'
+                                            : calfBirthSource === 'estimativa'
+                                              ? '(estimado)'
+                                              : ''}
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={desmamaForm.calfBirthDate}
+                                        onChange={(e) => setDesmamaForm({ ...desmamaForm, calfBirthDate: e.target.value })}
+                                        className={inputClass}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        {desmamaForm.createCalf && (
+                            <p className="text-[11px] text-[var(--eixo-text-muted)]">
+                                O peso à desmama vira o peso atual do bezerro. Pasto e raça são herdados da mãe.
+                            </p>
+                        )}
                     </div>
 
                     {desmamaError && <p className="text-sm text-[var(--eixo-danger)]">{desmamaError}</p>}
