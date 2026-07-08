@@ -443,6 +443,14 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
       }
     });
 
+    // Estilo único para as linhas onde o usuário digita (evita herdar itálico/cinza dos exemplos)
+    TEMPLATE_COLUMNS.forEach((col, idx) => {
+      const colChar = String.fromCharCode(64 + idx + 1);
+      for (let row = 5; row <= 1002; row++) {
+        dados.getCell(`${colChar}${row}`).font = { name: 'Arial', size: 10, color: { argb: '1F2937' }, italic: false };
+      }
+    });
+
     // Aplica validação de dados (dropdowns) nas colunas tipo 'list' da aba Dados
     TEMPLATE_COLUMNS.forEach((col, idx) => {
       if (col.type === 'list' && listColumnsMap[col.key]) {
@@ -544,7 +552,7 @@ function normalizeHeader(s) {
 
 function parseSpreadsheet(buffer, originalName) {
   // SheetJS lê .xlsx, .xls e .csv direto do buffer
-  const wb = XLSX.read(buffer, { type: 'buffer', cellDates: true });
+  const wb = XLSX.read(buffer, { type: 'buffer' });
   // Procura a aba "Dados" (case-insensitive); se não achar, usa a primeira
   const sheetName = wb.SheetNames.find((n) => n.toLowerCase() === 'dados') || wb.SheetNames[0];
   const sheet = wb.Sheets[sheetName];
