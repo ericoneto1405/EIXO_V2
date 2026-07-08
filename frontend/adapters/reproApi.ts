@@ -43,6 +43,9 @@ export interface ReproKpis {
     discardCandidateCount: number;
     births: number;
     birthRate: number | null;
+    weanings: number;
+    weaningRate: number | null;
+    avgWeaningWeight: number | null;
 }
 
 export interface ReproParto {
@@ -59,6 +62,17 @@ export interface ReproParto {
 export interface ReproFarol {
     farol: { green: number; yellow: number; red: number };
     redAnimals: { animalId: string; label: string; reason: string }[];
+}
+
+export interface ReproDesmama {
+    id: string;
+    farmId: string;
+    animalId: string;
+    animal?: { id: string; brinco?: string | null; nome?: string | null };
+    date: string;
+    weightKg?: number | null;
+    notes?: string | null;
+    createdAt: string;
 }
 
 export interface NewCheckupRecord {
@@ -180,6 +194,48 @@ export const deleteParto = async (id: string): Promise<void> => {
     if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data?.message || 'Erro ao apagar parto.');
+    }
+};
+
+export const listDesmamas = async (farmId: string): Promise<ReproDesmama[]> => {
+    const response = await fetch(buildApiUrl(withQuery('/repro/desmamas', { farmId })), {
+        credentials: 'include',
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload?.message || 'Erro ao carregar desmamas.');
+    }
+    return Array.isArray(payload?.desmamas) ? payload.desmamas : [];
+};
+
+export const createDesmama = async (payload: {
+    farmId: string;
+    animalId: string;
+    date: string;
+    weightKg?: number | null;
+    notes?: string | null;
+}): Promise<ReproDesmama> => {
+    const response = await fetch(buildApiUrl('/repro/desmamas'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao registrar desmama.');
+    }
+    return data.desmama;
+};
+
+export const deleteDesmama = async (id: string): Promise<void> => {
+    const response = await fetch(buildApiUrl(`/repro/desmamas/${id}`), {
+        method: 'DELETE',
+        credentials: 'include',
+    });
+    if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.message || 'Erro ao apagar desmama.');
     }
 };
 

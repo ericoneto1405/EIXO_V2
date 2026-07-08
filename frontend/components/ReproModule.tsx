@@ -11,14 +11,18 @@ import {
     listPartos,
     createParto,
     deleteParto,
+    listDesmamas,
+    createDesmama,
+    deleteDesmama,
     ReproCheckupSession,
     ReproKpis,
     ReproFarol,
     ReproParto,
+    ReproDesmama,
     NewCheckupRecord,
 } from '../adapters/reproApi';
 
-type TabKey = 'indicadores' | 'avaliacoes' | 'nova' | 'partos';
+type TabKey = 'indicadores' | 'avaliacoes' | 'nova' | 'partos' | 'desmama';
 
 interface Season {
     id: string;
@@ -78,6 +82,13 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
     const [partoOk, setPartoOk] = useState<string | null>(null);
     const [savingParto, setSavingParto] = useState(false);
 
+    // Desmamas
+    const [desmamas, setDesmamas] = useState<ReproDesmama[]>([]);
+    const [desmamaForm, setDesmamaForm] = useState({ animalId: '', date: todayISO(), weightKg: '', notes: '' });
+    const [desmamaError, setDesmamaError] = useState<string | null>(null);
+    const [desmamaOk, setDesmamaOk] = useState<string | null>(null);
+    const [savingDesmama, setSavingDesmama] = useState(false);
+
     const femaleAnimals = useMemo(
         () => animals.filter((animal) => animal.sexo === AnimalSexo.FEMEA),
         [animals],
@@ -135,6 +146,18 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
         }
     }, [farmId]);
 
+    const loadDesmamas = useCallback(async () => {
+        if (!farmId) {
+            setDesmamas([]);
+            return;
+        }
+        try {
+            setDesmamas(await listDesmamas(farmId));
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erro ao carregar desmamas.');
+        }
+    }, [farmId]);
+
     const loadKpis = useCallback(async () => {
         if (!farmId) {
             setKpis(null);
@@ -155,8 +178,10 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
 
     useEffect(() => {
         setLoading(true);
-        Promise.all([loadAnimals(), loadSeasons(), loadSessions(), loadPartos()]).finally(() => setLoading(false));
-    }, [loadAnimals, loadSeasons, loadSessions, loadPartos]);
+        Promise.all([loadAnimals(), loadSeasons(), loadSessions(), loadPartos(), loadDesmamas()]).finally(() =>
+            setLoading(false),
+        );
+    }, [loadAnimals, loadSeasons, loadSessions, loadPartos, loadDesmamas]);
 
     useEffect(() => {
         loadKpis();
@@ -307,11 +332,52 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
         }
     };
 
+    const handleSaveDesmama = async () => {
+        setDesmamaError(null);
+        setDesmamaOk(null);
+        if (!farmId) return;
+        if (!desmamaForm.animalId) {
+            setDesmamaError('Escolha a vaca.');
+            return;
+        }
+        if (!desmamaForm.date) {
+            setDesmamaError('Informe a data da desmama.');
+            return;
+        }
+        setSavingDesmama(true);
+        try {
+            await createDesmama({
+                farmId,
+                animalId: desmamaForm.animalId,
+                date: desmamaForm.date,
+                weightKg: desmamaForm.weightKg ? Number(desmamaForm.weightKg) : null,
+                notes: desmamaForm.notes || null,
+            });
+            setDesmamaOk('Desmama registrada.');
+            setDesmamaForm({ animalId: '', date: todayISO(), weightKg: '', notes: '' });
+            await Promise.all([loadDesmamas(), loadKpis()]);
+        } catch (err) {
+            setDesmamaError(err instanceof Error ? err.message : 'Erro ao registrar desmama.');
+        } finally {
+            setSavingDesmama(false);
+        }
+    };
+
+    const handleDeleteDesmama = async (id: string) => {
+        try {
+            await deleteDesmama(id);
+            await Promise.all([loadDesmamas(), loadKpis()]);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Erro ao apagar desmama.');
+        }
+    };
+
     const tabs: { key: TabKey; label: string }[] = [
         { key: 'indicadores', label: 'Indicadores' },
         { key: 'avaliacoes', label: 'Avaliações' },
         { key: 'nova', label: 'Nova avaliação' },
         { key: 'partos', label: 'Partos' },
+        { key: 'desmama', label: 'Desmama' },
     ];
 
     const kpiCards: { label: string; value: string; strong?: boolean; hint?: string }[] = kpis
@@ -326,6 +392,15 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                   label: 'Taxa de natalidade',
                   value: kpis.birthRate === null ? '—' : `${kpis.birthRate}%`,
                   hint: 'meta: 82%',
+              },
+              {
+                  label: 'Taxa de desmama',
+                  value: kpis.weaningRate === null ? '—' : `${kpis.weaningRate}%`,
+                  hint: 'meta: 78%',
+              },
+              {
+                  label: 'Peso médio à desmama',
+                  value: kpis.avgWeaningWeight === null ? '—' : `${kpis.avgWeaningWeight} kg`,
               },
           ]
         : [];
@@ -778,6 +853,106 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                                         <button
                                             type="button"
                                             onClick={() => handleDeleteParto(parto.id)}
+                                            className="rounded-lg border border-[var(--eixo-danger)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)]"
+                                        >
+                                            Apagar
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ── Desmama ── */}
+            {activeTab === 'desmama' && (
+                <div className={cardClass}>
+                    <h3 className="text-sm font-semibold text-[var(--eixo-text)]">Registrar desmama</h3>
+
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                            <label className={labelClass}>Vaca (matriz)</label>
+                            <select
+                                value={desmamaForm.animalId}
+                                onChange={(e) => setDesmamaForm({ ...desmamaForm, animalId: e.target.value })}
+                                className={inputClass}
+                            >
+                                <option value="">Selecione</option>
+                                {femaleAnimals.map((animal) => (
+                                    <option key={animal.id} value={animal.id}>
+                                        {animal.brinco || animal.id}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className={labelClass}>Data da desmama</label>
+                            <input
+                                type="date"
+                                value={desmamaForm.date}
+                                onChange={(e) => setDesmamaForm({ ...desmamaForm, date: e.target.value })}
+                                className={inputClass}
+                            />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Peso à desmama (kg)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                value={desmamaForm.weightKg}
+                                onChange={(e) => setDesmamaForm({ ...desmamaForm, weightKg: e.target.value })}
+                                placeholder="Opcional"
+                                className={inputClass}
+                            />
+                        </div>
+                        <div>
+                            <label className={labelClass}>Observações</label>
+                            <input
+                                type="text"
+                                value={desmamaForm.notes}
+                                onChange={(e) => setDesmamaForm({ ...desmamaForm, notes: e.target.value })}
+                                placeholder="Opcional"
+                                className={inputClass}
+                            />
+                        </div>
+                    </div>
+
+                    {desmamaError && <p className="text-sm text-[var(--eixo-danger)]">{desmamaError}</p>}
+                    {desmamaOk && <p className="text-sm text-[var(--eixo-green)]">{desmamaOk}</p>}
+
+                    <button
+                        type="button"
+                        onClick={handleSaveDesmama}
+                        disabled={savingDesmama || !desmamaForm.animalId}
+                        className="w-full rounded-xl bg-primary text-[#1a1a1a] font-semibold py-2 transition-colors hover:bg-primary-dark disabled:opacity-50"
+                    >
+                        {savingDesmama ? 'Salvando…' : 'Registrar desmama'}
+                    </button>
+
+                    <div className="border-t border-[var(--eixo-border)] pt-4">
+                        <h3 className="text-sm font-semibold text-[var(--eixo-text)]">Desmamas registradas</h3>
+                        {desmamas.length === 0 ? (
+                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Nenhuma desmama registrada ainda.</p>
+                        ) : (
+                            <ul className="mt-3 space-y-2">
+                                {desmamas.map((d) => (
+                                    <li
+                                        key={d.id}
+                                        className="flex items-center justify-between rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                                    >
+                                        <span>
+                                            <span className="font-medium">
+                                                {d.animal?.brinco || d.animal?.nome || d.animalId}
+                                            </span>
+                                            <span className="text-[var(--eixo-text-muted)]">
+                                                {' '}· {formatDate(d.date)}
+                                                {d.weightKg ? ` · ${d.weightKg} kg` : ''}
+                                            </span>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteDesmama(d.id)}
                                             className="rounded-lg border border-[var(--eixo-danger)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)]"
                                         >
                                             Apagar

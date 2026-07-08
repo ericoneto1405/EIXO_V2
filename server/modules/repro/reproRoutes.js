@@ -380,12 +380,25 @@ export function registerReproRoutes(app) {
             const evaluated = pregnant + empty;
             const pregRate = evaluated > 0 ? Number(((pregnant / evaluated) * 100).toFixed(1)) : null;
 
-            // Taxa de natalidade: partos registrados ÷ fêmeas do rebanho
-            const [birthCount, femaleCount] = await Promise.all([
+            // Natalidade e desmama: partos/desmamas ÷ fêmeas do rebanho
+            const [birthCount, femaleCount, weanings] = await Promise.all([
                 prisma.reproEvent.count({ where: { farmId: String(farmId), type: 'PARTO' } }),
                 prisma.animal.count({ where: { farmId: String(farmId), sexo: 'FEMEA' } }),
+                prisma.reproEvent.findMany({
+                    where: { farmId: String(farmId), type: 'DESMAME' },
+                    select: { payload: true },
+                }),
             ]);
             const birthRate = femaleCount > 0 ? Number(((birthCount / femaleCount) * 100).toFixed(1)) : null;
+
+            const weaningCount = weanings.length;
+            const weaningRate = femaleCount > 0 ? Number(((weaningCount / femaleCount) * 100).toFixed(1)) : null;
+            const weaningWeights = weanings
+                .map((w) => Number(w.payload?.weightKg))
+                .filter((n) => Number.isFinite(n) && n > 0);
+            const avgWeaningWeight = weaningWeights.length
+                ? Number((weaningWeights.reduce((a, b) => a + b, 0) / weaningWeights.length).toFixed(1))
+                : null;
 
             return res.json({
                 kpis: {
@@ -397,6 +410,9 @@ export function registerReproRoutes(app) {
                     discardCandidateCount: discardCandidates.size,
                     births: birthCount,
                     birthRate,
+                    weanings: weaningCount,
+                    weaningRate,
+                    avgWeaningWeight,
                 },
             });
         } catch (error) {
@@ -587,6 +603,113 @@ export function registerReproRoutes(app) {
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Erro ao apagar parto.' });
+        }
+    });
+
+    // ── Desmamas ────────────────────────────────────────────────────────────
+    const serializeDesmama = (event) => ({
+        id: event.id,
+        farmId: event.farmId,
+        animalId: event.animalId,
+        animal: event.animal
+            ? { id: event.animal.id, brinco: event.animal.brinco || null, nome: event.animal.nome || null }
+            : undefined,
+        date: event.date.toISOString(),
+        weightKg: Number.isFinite(Number(event.payload?.weightKg)) ? Number(event.payload.weightKg) : null,
+        notes: event.notes || null,
+        createdAt: event.createdAt.toISOString(),
+    });
+
+    // Registrar desmama (ReproEvent DESMAME, com peso à desmama opcional)
+    app.post('/repro/desmamas', async (req, res) => {
+        const { farmId, animalId, date, weightKg, notes } = req.body || {};
+        if (!farmId || !animalId || !date) {
+            return res.status(400).json({ message: 'Informe fazenda, vaca e data da desmama.' });
+        }
+        const desmamaDate = parseDateValue(date);
+        if (!desmamaDate) {
+            return res.status(400).json({ message: 'Data da desmama inválida.' });
+        }
+        const weight = Number(weightKg);
+        const validWeight = Number.isFinite(weight) && weight > 0 ? weight : null;
+
+        try {
+            const farm = await prisma.farm.findFirst({
+                where: buildFarmScopeFilter(req, { id: String(farmId) }),
+            });
+            if (!farm) {
+                return res.status(404).json({ message: 'Fazenda não encontrada.' });
+            }
+            const animal = await prisma.animal.findFirst({
+                where: { id: String(animalId), farmId: String(farmId), farm: buildFarmRelationFilter(req) },
+                select: { id: true, sexo: true },
+            });
+            if (!animal) {
+                return res.status(404).json({ message: 'Animal não encontrado.' });
+            }
+            if (animal.sexo !== 'FEMEA') {
+                return res.status(400).json({ message: 'Desmama é registrada na matriz (fêmea).' });
+            }
+
+            const event = await prisma.reproEvent.create({
+                data: {
+                    farmId: String(farmId),
+                    animalId: String(animalId),
+                    type: 'DESMAME',
+                    date: desmamaDate,
+                    payload: validWeight ? { weightKg: validWeight } : undefined,
+                    notes: cleanText(notes),
+                },
+                include: { animal: { select: { id: true, brinco: true, nome: true } } },
+            });
+
+            return res.status(201).json({ desmama: serializeDesmama(event) });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao registrar desmama.' });
+        }
+    });
+
+    // Listar desmamas da fazenda
+    app.get('/repro/desmamas', async (req, res) => {
+        const { farmId } = req.query || {};
+        if (!farmId) {
+            return res.status(400).json({ message: 'Informe a fazenda.' });
+        }
+        try {
+            const farm = await prisma.farm.findFirst({
+                where: buildFarmScopeFilter(req, { id: String(farmId) }),
+            });
+            if (!farm) {
+                return res.status(404).json({ message: 'Fazenda não encontrada.' });
+            }
+            const desmamas = await prisma.reproEvent.findMany({
+                where: { farmId: String(farmId), type: 'DESMAME' },
+                orderBy: { date: 'desc' },
+                include: { animal: { select: { id: true, brinco: true, nome: true } } },
+            });
+            return res.json({ desmamas: desmamas.map(serializeDesmama) });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao listar desmamas.' });
+        }
+    });
+
+    // Apagar uma desmama
+    app.delete('/repro/desmamas/:id', async (req, res) => {
+        const { id } = req.params;
+        try {
+            const event = await prisma.reproEvent.findFirst({
+                where: { id, type: 'DESMAME', farm: buildFarmRelationFilter(req) },
+            });
+            if (!event) {
+                return res.status(404).json({ message: 'Desmama não encontrada.' });
+            }
+            await prisma.reproEvent.delete({ where: { id } });
+            return res.json({ ok: true });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao apagar desmama.' });
         }
     });
 }
