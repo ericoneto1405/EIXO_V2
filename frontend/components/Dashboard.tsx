@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import WeatherCard from './WeatherCard';
 import CattleNewsCard from './CattleNewsCard';
 import { buildApiUrl } from '../api';
+import { getReproKpis, getReproFarol, ReproKpis, ReproFarol } from '../adapters/reproApi';
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -204,6 +205,8 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
         gmdMedio: null, entradas: null, saidas: null, saldoMes: null, animaisSemPesagem: 0, areaTotalHa: null,
     });
     const [marketReplacement, setMarketReplacement] = useState<ReplacementMarketSnapshot | null>(null);
+    const [reproKpis, setReproKpis] = useState<ReproKpis | null>(null);
+    const [reproFarol, setReproFarol] = useState<ReproFarol | null>(null);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -249,6 +252,28 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                     areaTotalHa: payload.areaTotalHa ?? null,
                 });
                 setMarketReplacement(marketPayload);
+
+                // Camada de decisão: reprodução (só por fazenda selecionada)
+                if (scope === 'farm' && farmId) {
+                    try {
+                        const [rk, rf] = await Promise.all([
+                            getReproKpis(farmId),
+                            getReproFarol(farmId),
+                        ]);
+                        if (active) {
+                            setReproKpis(rk);
+                            setReproFarol(rf);
+                        }
+                    } catch {
+                        if (active) {
+                            setReproKpis(null);
+                            setReproFarol(null);
+                        }
+                    }
+                } else if (active) {
+                    setReproKpis(null);
+                    setReproFarol(null);
+                }
             } catch (err) {
                 console.error('Dashboard load error', err);
                 if (active) setLoadError('Não foi possível carregar os dados. Verifique sua conexão.');
@@ -390,12 +415,69 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
 
             </div>
 
+            {/* Reprodução & decisão (por fazenda) */}
+            {scope === 'farm' && reproKpis && reproKpis.evaluated > 0 && (
+                <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+                    <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">
+                        Reprodução &amp; decisão
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        <div className="rounded-xl border border-[var(--eixo-border)] px-4 py-3">
+                            <p className="text-xs text-[var(--eixo-text-muted)]">Taxa de prenhez</p>
+                            <p className="mt-1 text-2xl font-bold text-[var(--eixo-text)]">
+                                {reproKpis.pregRate === null ? '—' : `${reproKpis.pregRate}%`}
+                            </p>
+                        </div>
+                        <div className="rounded-xl border border-[var(--eixo-border)] px-4 py-3">
+                            <p className="text-xs text-[var(--eixo-text-muted)]">Natalidade</p>
+                            <p className="mt-1 text-2xl font-bold text-[var(--eixo-text)]">
+                                {reproKpis.birthRate === null ? '—' : `${reproKpis.birthRate}%`}
+                            </p>
+                        </div>
+                        <div className="rounded-xl border border-[var(--eixo-border)] px-4 py-3">
+                            <p className="text-xs text-[var(--eixo-text-muted)]">Desmama</p>
+                            <p className="mt-1 text-2xl font-bold text-[var(--eixo-text)]">
+                                {reproKpis.weaningRate === null ? '—' : `${reproKpis.weaningRate}%`}
+                            </p>
+                        </div>
+                        <div className="rounded-xl border border-[var(--eixo-border)] px-4 py-3">
+                            <p className="text-xs text-[var(--eixo-text-muted)]">Candidatas a descarte</p>
+                            <p className="mt-1 text-2xl font-bold text-[var(--eixo-danger)]">
+                                {reproKpis.discardCandidateCount}
+                            </p>
+                        </div>
+                    </div>
+                    {reproFarol && reproFarol.redAnimals.length > 0 && (
+                        <div className="mt-3">
+                            <p className="text-xs font-semibold text-[var(--eixo-text-muted)]">Precisa de ação — descarte sugerido</p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                                {reproFarol.redAnimals.slice(0, 12).map((a) => (
+                                    <span
+                                        key={a.animalId}
+                                        className="rounded-full border border-[var(--eixo-danger)] px-3 py-1 text-xs font-medium text-[var(--eixo-danger)]"
+                                        title={a.reason}
+                                    >
+                                        {a.label}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Raio-X da Fazenda */}
             {!loading && (() => {
                 const alertas: { tipo: 'aviso' | 'atencao' | 'ok'; texto: string }[] = [];
 
                 if (kpis.taxaOcupacao !== null && kpis.taxaOcupacao > 1.5) {
                     alertas.push({ tipo: 'aviso', texto: `Taxa de ocupação sobrecarregada — ${fmt(kpis.taxaOcupacao, 2)} cab/ha` });
+                }
+                if (scope === 'farm' && reproFarol && reproFarol.farol.red > 0) {
+                    alertas.push({ tipo: 'aviso', texto: `${reproFarol.farol.red} ${reproFarol.farol.red === 1 ? 'vaca candidata' : 'vacas candidatas'} a descarte` });
+                }
+                if (scope === 'farm' && reproKpis && reproKpis.evaluated > 0 && reproKpis.pregRate !== null && reproKpis.pregRate < 60) {
+                    alertas.push({ tipo: 'atencao', texto: `Taxa de prenhez baixa — ${reproKpis.pregRate}% (meta 82%)` });
                 }
                 if (kpis.gmdMedio !== null && kpis.gmdMedio < 0.5) {
                     alertas.push({ tipo: 'aviso', texto: `GMD médio baixo — ${fmt(kpis.gmdMedio)} kg/dia (abaixo de 0,5 kg/dia)` });

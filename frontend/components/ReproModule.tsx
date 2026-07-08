@@ -454,12 +454,12 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
               {
                   label: 'Taxa de natalidade',
                   value: kpis.birthRate === null ? '—' : `${kpis.birthRate}%`,
-                  hint: 'meta: 82%',
+                  hint: '12 meses · meta 82%',
               },
               {
                   label: 'Taxa de desmama',
                   value: kpis.weaningRate === null ? '—' : `${kpis.weaningRate}%`,
-                  hint: 'meta: 78%',
+                  hint: '12 meses · meta 78%',
               },
               {
                   label: 'Peso médio à desmama',

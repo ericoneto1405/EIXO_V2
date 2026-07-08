@@ -351,41 +351,43 @@ export function registerReproRoutes(app) {
                 orderBy: { createdAt: 'asc' },
             });
 
-            let pregnant = 0;
-            let empty = 0;
-            const emptyByAnimal = new Map();
-            const discardCandidates = new Set();
-
+            // Consolida por vaca: vale o ÚLTIMO diagnóstico de cada uma (não cada registro)
+            const byAnimal = new Map();
             for (const r of records) {
-                if (r.pregnant === true) pregnant += 1;
-                if (r.pregnant === false) {
-                    empty += 1;
-                    emptyByAnimal.set(r.animalId, (emptyByAnimal.get(r.animalId) || 0) + 1);
+                if (!byAnimal.has(r.animalId)) {
+                    byAnimal.set(r.animalId, { latest: null, emptyCount: 0, discard: false });
                 }
+                const info = byAnimal.get(r.animalId);
+                if (r.pregnant === false) info.emptyCount += 1;
                 const decision = (r.veterinarianDecision || '').toUpperCase();
-                if (r.discardLight || decision.includes('DESCART')) {
-                    discardCandidates.add(r.animalId);
-                }
+                if (r.discardLight || decision.includes('DESCART')) info.discard = true;
+                if (r.pregnant === true || r.pregnant === false) info.latest = r.pregnant;
             }
 
-            // Vazias repetidas: fêmea com 2+ diagnósticos vazios → candidata a descarte
+            let pregnant = 0;
+            let empty = 0;
+            const discardCandidates = new Set();
             const repeatEmpty = [];
-            for (const [animalId, count] of emptyByAnimal.entries()) {
-                if (count >= 2) {
-                    repeatEmpty.push(animalId);
-                    discardCandidates.add(animalId);
-                }
+            for (const [animalId, info] of byAnimal.entries()) {
+                if (info.latest === true) pregnant += 1;
+                else if (info.latest === false) empty += 1;
+                if (info.emptyCount >= 2) repeatEmpty.push(animalId);
+                if (info.discard || info.emptyCount >= 2) discardCandidates.add(animalId);
             }
 
             const evaluated = pregnant + empty;
             const pregRate = evaluated > 0 ? Number(((pregnant / evaluated) * 100).toFixed(1)) : null;
 
-            // Natalidade e desmama: partos/desmamas ÷ fêmeas do rebanho
+            // Natalidade e desmama: partos/desmamas dos ÚLTIMOS 12 MESES ÷ fêmeas do rebanho
+            const twelveMonthsAgo = new Date();
+            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
             const [birthCount, femaleCount, weanings] = await Promise.all([
-                prisma.reproEvent.count({ where: { farmId: String(farmId), type: 'PARTO' } }),
+                prisma.reproEvent.count({
+                    where: { farmId: String(farmId), type: 'PARTO', date: { gte: twelveMonthsAgo } },
+                }),
                 prisma.animal.count({ where: { farmId: String(farmId), sexo: 'FEMEA' } }),
                 prisma.reproEvent.findMany({
-                    where: { farmId: String(farmId), type: 'DESMAME' },
+                    where: { farmId: String(farmId), type: 'DESMAME', date: { gte: twelveMonthsAgo } },
                     select: { payload: true },
                 }),
             ]);
