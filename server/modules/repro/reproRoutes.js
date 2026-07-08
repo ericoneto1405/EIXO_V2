@@ -395,4 +395,77 @@ export function registerReproRoutes(app) {
             return res.status(500).json({ message: 'Erro ao calcular indicadores.' });
         }
     });
+
+    // Farol: classifica cada fêmea avaliada em verde / amarelo / vermelho
+    app.get('/repro/farol', async (req, res) => {
+        const { farmId, seasonId } = req.query || {};
+        if (!farmId) {
+            return res.status(400).json({ message: 'Informe a fazenda.' });
+        }
+
+        try {
+            const farm = await prisma.farm.findFirst({
+                where: buildFarmScopeFilter(req, { id: String(farmId) }),
+            });
+            if (!farm) {
+                return res.status(404).json({ message: 'Fazenda não encontrada.' });
+            }
+
+            const records = await prisma.reproCheckupRecord.findMany({
+                where: {
+                    farmId: String(farmId),
+                    ...(seasonId ? { session: { seasonId: String(seasonId) } } : {}),
+                },
+                select: {
+                    animalId: true,
+                    pregnant: true,
+                    discardLight: true,
+                    veterinarianDecision: true,
+                    createdAt: true,
+                    animal: { select: { id: true, brinco: true, nome: true } },
+                },
+                orderBy: { createdAt: 'asc' },
+            });
+
+            // Agrupa por animal para olhar o histórico e o último resultado
+            const byAnimal = new Map();
+            for (const r of records) {
+                if (!byAnimal.has(r.animalId)) {
+                    byAnimal.set(r.animalId, { animal: r.animal, emptyCount: 0, discard: false, latest: null });
+                }
+                const info = byAnimal.get(r.animalId);
+                if (r.pregnant === false) info.emptyCount += 1;
+                const decision = (r.veterinarianDecision || '').toUpperCase();
+                if (r.discardLight || decision.includes('DESCART')) info.discard = true;
+                if (r.pregnant === true || r.pregnant === false) info.latest = r.pregnant;
+            }
+
+            let green = 0;
+            let yellow = 0;
+            let red = 0;
+            const redAnimals = [];
+
+            for (const [animalId, info] of byAnimal.entries()) {
+                if (info.latest === null) continue; // nunca avaliada de fato
+                const label = info.animal?.brinco || info.animal?.nome || animalId;
+                if (info.latest === true) {
+                    green += 1;
+                } else if (info.discard || info.emptyCount >= 2) {
+                    red += 1;
+                    redAnimals.push({
+                        animalId,
+                        label,
+                        reason: info.discard ? 'Marcada para descarte' : 'Vazia repetida',
+                    });
+                } else {
+                    yellow += 1;
+                }
+            }
+
+            return res.json({ farol: { green, yellow, red }, redAnimals });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao calcular o farol.' });
+        }
+    });
 }

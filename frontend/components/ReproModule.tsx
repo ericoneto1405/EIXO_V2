@@ -7,8 +7,10 @@ import {
     updateCheckup,
     deleteCheckup,
     getReproKpis,
+    getReproFarol,
     ReproCheckupSession,
     ReproKpis,
+    ReproFarol,
     NewCheckupRecord,
 } from '../adapters/reproApi';
 
@@ -48,6 +50,7 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
     const [seasons, setSeasons] = useState<Season[]>([]);
     const [sessions, setSessions] = useState<ReproCheckupSession[]>([]);
     const [kpis, setKpis] = useState<ReproKpis | null>(null);
+    const [farol, setFarol] = useState<ReproFarol | null>(null);
     const [kpiSeasonId, setKpiSeasonId] = useState<string>('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -112,10 +115,16 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
     const loadKpis = useCallback(async () => {
         if (!farmId) {
             setKpis(null);
+            setFarol(null);
             return;
         }
         try {
-            setKpis(await getReproKpis(farmId, kpiSeasonId || null));
+            const [kpiData, farolData] = await Promise.all([
+                getReproKpis(farmId, kpiSeasonId || null),
+                getReproFarol(farmId, kpiSeasonId || null),
+            ]);
+            setKpis(kpiData);
+            setFarol(farolData);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Erro ao carregar indicadores.');
         }
@@ -330,6 +339,44 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                                     </p>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {farol && kpis && kpis.evaluated > 0 && (
+                        <div className="space-y-3 border-t border-[var(--eixo-border)] pt-4">
+                            <h3 className="text-sm font-semibold text-[var(--eixo-text)]">Farol do rebanho</h3>
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                <div className="rounded-2xl border border-[var(--eixo-border)] px-4 py-3">
+                                    <p className="text-xs text-[var(--eixo-text-muted)]">🟢 Produtivas (prenhes)</p>
+                                    <p className="mt-1 text-2xl font-bold text-[var(--eixo-green)]">{farol.farol.green}</p>
+                                </div>
+                                <div className="rounded-2xl border border-[var(--eixo-border)] px-4 py-3">
+                                    <p className="text-xs text-[var(--eixo-text-muted)]">🟡 Observação (vazia 1ª vez)</p>
+                                    <p className="mt-1 text-2xl font-bold text-[#c9a227]">{farol.farol.yellow}</p>
+                                </div>
+                                <div className="rounded-2xl border border-[var(--eixo-border)] px-4 py-3">
+                                    <p className="text-xs text-[var(--eixo-text-muted)]">🔴 Sugestão de descarte</p>
+                                    <p className="mt-1 text-2xl font-bold text-[var(--eixo-danger)]">{farol.farol.red}</p>
+                                </div>
+                            </div>
+                            {farol.redAnimals.length > 0 && (
+                                <div>
+                                    <p className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                        Vacas sugeridas para descarte
+                                    </p>
+                                    <ul className="mt-2 space-y-1">
+                                        {farol.redAnimals.map((a) => (
+                                            <li
+                                                key={a.animalId}
+                                                className="flex items-center justify-between rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                                            >
+                                                <span className="font-medium">{a.label}</span>
+                                                <span className="text-xs text-[var(--eixo-danger)]">{a.reason}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

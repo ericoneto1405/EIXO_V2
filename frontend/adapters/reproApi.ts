@@ -43,6 +43,11 @@ export interface ReproKpis {
     discardCandidateCount: number;
 }
 
+export interface ReproFarol {
+    farol: { green: number; yellow: number; red: number };
+    redAnimals: { animalId: string; label: string; reason: string }[];
+}
+
 export interface NewCheckupRecord {
     animalId: string;
     pregnant: boolean | null;
@@ -121,6 +126,23 @@ export const deleteCheckup = async (id: string): Promise<void> => {
         const data = await response.json().catch(() => ({}));
         throw new Error(data?.message || 'Erro ao apagar avaliação.');
     }
+};
+
+export const getReproFarol = async (
+    farmId: string,
+    seasonId?: string | null,
+): Promise<ReproFarol> => {
+    const response = await fetch(buildApiUrl(withQuery('/repro/farol', { farmId, seasonId })), {
+        credentials: 'include',
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(payload?.message || 'Erro ao carregar o farol.');
+    }
+    return {
+        farol: payload?.farol || { green: 0, yellow: 0, red: 0 },
+        redAnimals: Array.isArray(payload?.redAnimals) ? payload.redAnimals : [],
+    };
 };
 
 export const getReproKpis = async (
