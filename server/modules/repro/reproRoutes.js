@@ -207,6 +207,120 @@ export function registerReproRoutes(app) {
         }
     });
 
+    // Editar uma sessão: refaz as fichas e recalcula o status no Rebanho
+    app.put('/repro/checkups/:id', async (req, res) => {
+        const { id } = req.params;
+        const { occurredAt, responsibleName, seasonId, notes, records } = req.body || {};
+
+        if (!occurredAt) {
+            return res.status(400).json({ message: 'Informe a data da avaliação.' });
+        }
+        if (!Array.isArray(records) || records.length === 0) {
+            return res.status(400).json({ message: 'Inclua ao menos uma vaca avaliada.' });
+        }
+        const occurredDate = parseDateValue(occurredAt);
+        if (!occurredDate) {
+            return res.status(400).json({ message: 'Data da avaliação inválida.' });
+        }
+
+        try {
+            const existing = await prisma.reproCheckupSession.findFirst({
+                where: { id, farm: buildFarmRelationFilter(req) },
+            });
+            if (!existing) {
+                return res.status(404).json({ message: 'Avaliação não encontrada.' });
+            }
+            const farmId = existing.farmId;
+
+            let validSeasonId = null;
+            if (seasonId) {
+                const season = await prisma.breedingSeason.findFirst({
+                    where: { id: String(seasonId), farmId, farm: buildFarmRelationFilter(req) },
+                });
+                if (!season) {
+                    return res.status(404).json({ message: 'Estação não encontrada.' });
+                }
+                validSeasonId = season.id;
+            }
+
+            const animalIds = [...new Set(records.map((r) => r?.animalId).filter(Boolean))];
+            if (animalIds.length === 0) {
+                return res.status(400).json({ message: 'Fichas sem animal informado.' });
+            }
+            const animals = await prisma.animal.findMany({
+                where: { id: { in: animalIds }, farmId, farm: buildFarmRelationFilter(req) },
+                select: { id: true, sexo: true },
+            });
+            const animalById = new Map(animals.map((a) => [a.id, a]));
+
+            for (const r of records) {
+                const animal = animalById.get(r?.animalId);
+                if (!animal) {
+                    return res.status(404).json({ message: `Animal não encontrado: ${r?.animalId}` });
+                }
+                if (animal.sexo !== 'FEMEA') {
+                    return res.status(400).json({ message: 'Avaliação reprodutiva é apenas para fêmeas.' });
+                }
+            }
+
+            const recordsData = records.map((r) => {
+                const pregnant = normalizePregnant(r?.pregnant);
+                const previsaoParto = r?.previsaoParto ? parseDateValue(r.previsaoParto) : null;
+                return {
+                    id: randomUUID(),
+                    farmId,
+                    animalId: r.animalId,
+                    aptitude: cleanText(r?.aptitude) || 'NAO_AVALIADA',
+                    diagnosis: cleanText(r?.diagnosis),
+                    pregnant,
+                    previsaoParto: previsaoParto || null,
+                    discardLight: cleanText(r?.discardLight),
+                    discardReason: cleanText(r?.discardReason),
+                    calfQuality: cleanText(r?.calfQuality),
+                    veterinarianDecision: cleanText(r?.veterinarianDecision),
+                    iatfCount: Number.isFinite(Number(r?.iatfCount)) ? Number(r.iatfCount) : 0,
+                    bullId: cleanText(r?.bullId),
+                    protocol: cleanText(r?.protocol),
+                    notes: cleanText(r?.notes),
+                };
+            });
+
+            const statusByAnimal = new Map();
+            for (const r of recordsData) {
+                if (r.pregnant === true) {
+                    statusByAnimal.set(r.animalId, {
+                        statusReprodutivo: 'PRENHE',
+                        ...(r.previsaoParto ? { previsaoParto: r.previsaoParto } : {}),
+                    });
+                } else if (r.pregnant === false) {
+                    statusByAnimal.set(r.animalId, { statusReprodutivo: 'VAZIA', previsaoParto: null });
+                }
+            }
+
+            const results = await prisma.$transaction([
+                prisma.reproCheckupRecord.deleteMany({ where: { sessionId: id } }),
+                prisma.reproCheckupSession.update({
+                    where: { id },
+                    data: {
+                        occurredAt: occurredDate,
+                        responsibleName: cleanText(responsibleName),
+                        seasonId: validSeasonId,
+                        notes: cleanText(notes),
+                        records: { create: recordsData },
+                    },
+                    include: { records: { include: { animal: ANIMAL_SELECT } } },
+                }),
+                ...[...statusByAnimal.entries()].map(([animalId, data]) =>
+                    prisma.animal.update({ where: { id: animalId }, data })),
+            ]);
+
+            return res.json({ session: serializeCheckupSession(results[1]) });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao editar avaliação.' });
+        }
+    });
+
     // KPIs de decisão do rebanho (opcionalmente por estação)
     app.get('/repro/kpis', async (req, res) => {
         const { farmId, seasonId } = req.query || {};

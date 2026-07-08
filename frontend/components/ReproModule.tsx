@@ -4,6 +4,7 @@ import { buildApiUrl } from '../api';
 import {
     listCheckups,
     createCheckup,
+    updateCheckup,
     deleteCheckup,
     getReproKpis,
     ReproCheckupSession,
@@ -61,6 +62,7 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
     const [formError, setFormError] = useState<string | null>(null);
     const [formOk, setFormOk] = useState<string | null>(null);
     const [expandedId, setExpandedId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
 
     const femaleAnimals = useMemo(
         () => animals.filter((animal) => animal.sexo === AnimalSexo.FEMEA),
@@ -148,6 +150,7 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
     );
 
     const resetForm = () => {
+        setEditingId(null);
         setOccurredAt(todayISO());
         setResponsibleName('');
         setFormSeasonId('');
@@ -178,15 +181,21 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
 
         setSaving(true);
         try {
-            await createCheckup({
+            const payload = {
                 farmId,
                 occurredAt,
                 responsibleName: responsibleName || null,
                 seasonId: formSeasonId || null,
                 notes: formNotes || null,
                 records,
-            });
-            setFormOk('Avaliação salva. O status das vacas foi atualizado no Rebanho.');
+            };
+            if (editingId) {
+                await updateCheckup(editingId, payload);
+                setFormOk('Avaliação atualizada. O status das vacas foi recalculado no Rebanho.');
+            } else {
+                await createCheckup(payload);
+                setFormOk('Avaliação salva. O status das vacas foi atualizado no Rebanho.');
+            }
             resetForm();
             await Promise.all([loadSessions(), loadKpis()]);
             setActiveTab('avaliacoes');
@@ -195,6 +204,26 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
         } finally {
             setSaving(false);
         }
+    };
+
+    const startEdit = (session: ReproCheckupSession) => {
+        setEditingId(session.id);
+        setOccurredAt(session.occurredAt.slice(0, 10));
+        setResponsibleName(session.responsibleName || '');
+        setFormSeasonId(session.seasonId || '');
+        setFormNotes(session.notes || '');
+        const next: Record<string, ChoiceState> = {};
+        session.records.forEach((rec) => {
+            if (rec.pregnant === true) {
+                next[rec.animalId] = { choice: 'PRENHE', previsaoParto: rec.previsaoParto ? rec.previsaoParto.slice(0, 10) : '' };
+            } else if (rec.pregnant === false) {
+                next[rec.animalId] = { choice: 'VAZIA', previsaoParto: '' };
+            }
+        });
+        setChoices(next);
+        setFormError(null);
+        setFormOk(null);
+        setActiveTab('nova');
     };
 
     const handleDelete = async (id: string) => {
@@ -339,6 +368,13 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                                             </button>
                                             <button
                                                 type="button"
+                                                onClick={() => startEdit(session)}
+                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text-muted)]"
+                                            >
+                                                Editar
+                                            </button>
+                                            <button
+                                                type="button"
                                                 onClick={() => handleDelete(session.id)}
                                                 className="rounded-lg border border-[var(--eixo-danger)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)]"
                                             >
@@ -383,7 +419,20 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
             {/* ── Nova avaliação ── */}
             {activeTab === 'nova' && (
                 <div className={cardClass}>
-                    <h3 className="text-sm font-semibold text-[var(--eixo-text)]">Nova avaliação</h3>
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-[var(--eixo-text)]">
+                            {editingId ? 'Editar avaliação' : 'Nova avaliação'}
+                        </h3>
+                        {editingId && (
+                            <button
+                                type="button"
+                                onClick={resetForm}
+                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text-muted)]"
+                            >
+                                Cancelar edição
+                            </button>
+                        )}
+                    </div>
 
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <div>
@@ -514,7 +563,9 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                         disabled={saving || markedCount === 0}
                         className="w-full rounded-xl bg-primary text-[#1a1a1a] font-semibold py-2 transition-colors hover:bg-primary-dark disabled:opacity-50"
                     >
-                        {saving ? 'Salvando…' : `Salvar avaliação (${markedCount} vaca(s))`}
+                        {saving
+                            ? 'Salvando…'
+                            : `${editingId ? 'Salvar alterações' : 'Salvar avaliação'} (${markedCount} vaca(s))`}
                     </button>
                 </div>
             )}

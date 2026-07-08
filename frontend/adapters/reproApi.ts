@@ -98,6 +98,20 @@ export const createCheckup = async (payload: NewCheckupPayload): Promise<ReproCh
     return data.session;
 };
 
+export const updateCheckup = async (id: string, payload: NewCheckupPayload): Promise<ReproCheckupSession> => {
+    const response = await fetch(buildApiUrl(`/repro/checkups/${id}`), {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        throw new Error(data?.message || 'Erro ao editar avaliação.');
+    }
+    return data.session;
+};
+
 export const deleteCheckup = async (id: string): Promise<void> => {
     const response = await fetch(buildApiUrl(`/repro/checkups/${id}`), {
         method: 'DELETE',
