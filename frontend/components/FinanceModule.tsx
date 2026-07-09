@@ -148,26 +148,26 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     const [selectedMes, setSelectedMes] = useState(hoje.getMonth() + 1);
     const [selectedAno, setSelectedAno] = useState(hoje.getFullYear());
     const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterTipo, setFilterTipo] = useState<'' | TransactionType>('');
 
     // ── Contas a Pagar / Receber ──
     const [pendingAll, setPendingAll] = useState<FinancialTransaction[]>([]);
-    const [pendingLoading, setPendingLoading] = useState(false);
+    const [pendingLoading, setPendingLoading] = useState(true);
     const [cpFilter, setCpFilter] = useState<'todos' | 'pendente' | 'vencido'>('todos');
     const [crFilter, setCrFilter] = useState<'todos' | 'pendente' | 'vencido'>('todos');
     const [markingPaid, setMarkingPaid] = useState<string | null>(null);
 
     // ── Fluxo de Caixa / DRE (anual) ──
     const [annualTransactions, setAnnualTransactions] = useState<FinancialTransaction[]>([]);
-    const [annualLoading, setAnnualLoading] = useState(false);
+    const [annualLoading, setAnnualLoading] = useState(true);
     const [selectedAnoAnual, setSelectedAnoAnual] = useState(hoje.getFullYear());
 
     // ── Categorias ──
     const [categories, setCategories] = useState<AccountCategory[]>([]);
-    const [catLoading, setCatLoading] = useState(false);
+    const [catLoading, setCatLoading] = useState(true);
 
     // ── Modal novo lançamento ──
     const [modalOpen, setModalOpen] = useState(false);
@@ -213,7 +213,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     // ── Carregamento de dados ─────────────────────────────────────────────────
 
     const loadCategories = useCallback(async () => {
-        if (!farmId) return;
+        if (!farmId) { setCatLoading(false); return; }
         setCatLoading(true);
         try {
             const data = await listAccountCategories(farmId);
@@ -223,7 +223,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     }, [farmId]);
 
     const loadTransactions = useCallback(async () => {
-        if (!farmId) { setTransactions([]); return; }
+        if (!farmId) { setTransactions([]); setIsLoading(false); return; }
         setIsLoading(true);
         setLoadError(null);
         try {
@@ -235,7 +235,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     }, [farmId, selectedMes, selectedAno]);
 
     const loadPending = useCallback(async () => {
-        if (!farmId) { setPendingAll([]); return; }
+        if (!farmId) { setPendingAll([]); setPendingLoading(false); return; }
         setPendingLoading(true);
         try {
             const data = await listTransactions(farmId);
@@ -245,7 +245,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     }, [farmId]);
 
     const loadAnnual = useCallback(async () => {
-        if (!farmId) { setAnnualTransactions([]); return; }
+        if (!farmId) { setAnnualTransactions([]); setAnnualLoading(false); return; }
         setAnnualLoading(true);
         try {
             const data = await listTransactions(farmId, undefined, selectedAnoAnual);
