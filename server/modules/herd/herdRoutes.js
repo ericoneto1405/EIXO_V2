@@ -382,7 +382,7 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
         left: { style: 'thin', color: { argb: 'E5E7EB' } },
         right: { style: 'thin', color: { argb: 'E5E7EB' } },
       };
-      cell.comment = { texts: [{ text: col.description, font: { size: 10, name: 'Arial' } }] };
+      cell.note = col.description;
 
       // Largura da coluna baseada no tipo
       const widthByType = { date: 16, number: 14, list: 22, text: 22 };
@@ -417,7 +417,7 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
         const cell = dados.getCell(3 + rowOffset, idx + 1);
         cell.value = ex[col.key] ?? col.example;
         cell.font = { italic: true, color: { argb: '9CA3AF' }, size: 10, name: 'Arial' };
-        cell.alignment = { vertical: 'middle' };
+        cell.alignment = { vertical: 'middle', horizontal: (col.type === 'date' || col.type === 'number') ? 'center' : 'left' };
       });
     });
 
@@ -446,8 +446,11 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
     // Estilo único para as linhas onde o usuário digita (evita herdar itálico/cinza dos exemplos)
     TEMPLATE_COLUMNS.forEach((col, idx) => {
       const colChar = String.fromCharCode(64 + idx + 1);
+      const horizontal = (col.type === 'date' || col.type === 'number') ? 'center' : 'left';
       for (let row = 5; row <= 1002; row++) {
-        dados.getCell(`${colChar}${row}`).font = { name: 'Arial', size: 10, color: { argb: '1F2937' }, italic: false };
+        const cell = dados.getCell(`${colChar}${row}`);
+        cell.font = { name: 'Arial', size: 10, color: { argb: '1F2937' }, italic: false };
+        cell.alignment = { vertical: 'middle', horizontal };
       }
     });
 
