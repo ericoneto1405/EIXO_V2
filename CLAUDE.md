@@ -47,20 +47,25 @@ CI roda `tsc --noEmit` no frontend **e** `vite build`. Erro de build é sempre n
 ## Arquitetura
 
 ### Server (`server/index.js`)
-Entry point único. Cada módulo expõe uma função `register*Routes(app, prisma, ...)` chamada no topo do `index.js`. Não há roteador central — cada módulo usa `app.get/post/put/delete` diretamente.
+Entry point único. Cada módulo expõe uma função `register*Routes(app)` chamada no topo do `index.js`. Não há roteador central — cada módulo usa `app.get/post/put/delete` diretamente. Cada módulo cria sua própria instância de PrismaClient.
 
 ```
 server/
-  index.js                  ← entry point, instância única de PrismaClient
+  index.js                  ← entry point
+  acasalamentoModule.js     ← acasalamento (na raiz, não extraído para modules/)
+  nutritionModule.js        ← nutrição (na raiz, não extraído para modules/)
   modules/
     auth/authRoutes.js      ← sessão via cookie httpOnly, bcrypt, Twilio OTP
     users/userRoutes.js
     farms/farmRoutes.js
     animals/animalRoutes.js
     herd/herdRoutes.js      ← rebanho: lista, eventos, sanitário, import/template
+    repro/reproRoutes.js    ← reprodução: avaliações por sessão, KPIs
+    po/poRoutes.js          ← puro de origem
     financial/
     market/
-    genetics/ (po/, acasalamento via index.js)
+    overview/
+    news/
     field/
     hq/
     chat/
@@ -114,4 +119,4 @@ frontend/
 
 - Health check no VPS: `http://127.0.0.1:3000/health` (nginx repassa de 443 para 3000).
 - `req.saas.farmId` é a fonte de verdade para isolamento de dados por fazenda — não aceitar `farmId` do body em operações sensíveis sem cruzar com o contexto da sessão.
-- Módulos de Genética/Acasalamento ainda estão parcialmente em `server/index.js` (não extraídos para `modules/`).
+- Acasalamento e Nutrição ainda estão em arquivos soltos na raiz de `server/` (`acasalamentoModule.js`, `nutritionModule.js`), não extraídos para `modules/`.

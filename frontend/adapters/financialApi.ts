@@ -1,7 +1,7 @@
 import { buildApiUrl } from '../api';
 
 export type TransactionType = 'ENTRADA' | 'SAIDA';
-export type TransactionStatus = 'PAGO' | 'PENDENTE' | 'VENCIDO';
+export type TransactionStatus = 'PAGO' | 'PENDENTE' | 'CANCELADO';
 export type AccountCategoryType = 'ENTRADA' | 'SAIDA';
 
 export type TransactionCategoria =

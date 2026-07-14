@@ -7,6 +7,22 @@ import { parseNumber } from '../utils/formatters.js';
 import { requireAuth, requireBillingAccess } from '../middlewares/requireAuth.js';
 const prisma = new PrismaClient();
 
+const STATUS_TRANSACAO_VALIDOS = ['PAGO', 'PENDENTE', 'CANCELADO'];
+
+const validarCategoriaDaFazenda = async (accountCategoryId, farmId) => {
+    const cat = await prisma.accountCategory.findFirst({
+        where: {
+            id: String(accountCategoryId),
+            isActive: true,
+            OR: [
+                { isSystem: true, farmId: null },
+                { farmId: String(farmId) },
+            ],
+        },
+    });
+    return Boolean(cat);
+};
+
 let systemAccountCategoriesReady = false;
 let systemAccountCategoriesPromise = null;
 
@@ -149,6 +165,9 @@ export function registerFinancialRoutes(app) {
             }
             if (tipo) where.type = String(tipo);
             if (status) {
+                if (!STATUS_TRANSACAO_VALIDOS.includes(String(status))) {
+                    return res.status(400).json({ message: 'Status inválido.' });
+                }
                 where.status = String(status);
             } else {
                 where.status = { not: 'CANCELADO' };
@@ -172,9 +191,16 @@ export function registerFinancialRoutes(app) {
             if (!farmId || !type || valor === undefined || valor === null || !data) {
                 return res.status(400).json({ message: 'Campos obrigatórios: farmId, type, valor, data.' });
             }
+            if (!(parseNumber(valor) > 0)) {
+                return res.status(400).json({ message: 'Valor deve ser maior que zero.' });
+            }
             const farmScope = buildFarmScopeFilter(req, { id: String(farmId) });
             const farm = await prisma.farm.findFirst({ where: farmScope });
             if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+            if (accountCategoryId && !(await validarCategoriaDaFazenda(accountCategoryId, farmId))) {
+                return res.status(400).json({ message: 'Categoria inválida para esta fazenda.' });
+            }
 
             const transaction = await prisma.financialTransaction.create({
                 data: {
@@ -212,6 +238,15 @@ export function registerFinancialRoutes(app) {
             if (!farm) return res.status(403).json({ message: 'Acesso negado.' });
 
             const { status, vencimento, valor, descricao, accountCategoryId, data } = req.body;
+            if (status !== undefined && !STATUS_TRANSACAO_VALIDOS.includes(String(status))) {
+                return res.status(400).json({ message: 'Status inválido.' });
+            }
+            if (valor !== undefined && !(parseNumber(valor) > 0)) {
+                return res.status(400).json({ message: 'Valor deve ser maior que zero.' });
+            }
+            if (accountCategoryId && !(await validarCategoriaDaFazenda(accountCategoryId, existing.farmId))) {
+                return res.status(400).json({ message: 'Categoria inválida para esta fazenda.' });
+            }
             const transaction = await prisma.financialTransaction.update({
                 where: { id: req.params.id },
                 data: {
