@@ -1,6 +1,6 @@
 #!/bin/bash
-# ─── EIXO — Deploy sem downtime ───────────────────────────────────────────────
-# Uso: ./deploy.sh
+# ─── EIXO — Deploy manual de contingência ────────────────────────────────────
+# Uso na VPS: ./deploy-manual.sh
 # Pré-requisito: PM2 instalado (npm install -g pm2)
 #                .env.production configurado em server/
 
@@ -52,7 +52,7 @@ if ! command -v pm2 >/dev/null 2>&1; then
 fi
 
 echo "======================================================"
-echo "  EIXO Deploy — $(date)"
+echo "  EIXO Deploy Manual — $(date)"
 echo "======================================================"
 
 # ── 1. Backup antes de qualquer coisa ─────────────────────────────────────────
@@ -65,14 +65,14 @@ echo ""
 echo "▶ 2/6 Atualizando código (git pull)..."
 git pull --ff-only origin "$DEPLOY_BRANCH"
 
-# ── 3. Instala dependências ───────────────────────────────────────────────────
+# ── 3. Instala dependências de forma reproduzível ─────────────────────────────
 echo ""
 echo "▶ 3/6 Instalando dependências..."
-if [ -f package-lock.json ]; then
-    npm ci --include=dev
-else
-    npm install --include=dev
+if [ ! -f package-lock.json ]; then
+    echo "Erro: package-lock.json não encontrado."
+    exit 1
 fi
+npm ci --include=dev
 
 # ── 4. Aplica migrações do banco ──────────────────────────────────────────────
 echo ""
@@ -83,43 +83,40 @@ npx prisma generate --schema server/prisma/schema.prisma
 # ── 5. Build do frontend ──────────────────────────────────────────────────────
 echo ""
 echo "▶ 5/6 Build do frontend..."
-pushd frontend >/dev/null
-if [ -f package-lock.json ]; then
-    npm ci --include=dev
-else
-    npm install --include=dev
-fi
 npm run build
-popd >/dev/null
 
 # ── 6. Reinicia o servidor via PM2 ────────────────────────────────────────────
 echo ""
 echo "▶ 6/6 Reiniciando servidor..."
-if [ -f ecosystem.config.js ]; then
-    if "${PM2_CMD[@]}" describe eixo-server >/dev/null 2>&1; then
-        "${PM2_CMD[@]}" reload ecosystem.config.js
-    else
-        "${PM2_CMD[@]}" start ecosystem.config.js
-    fi
+if [ ! -f ecosystem.config.js ]; then
+    echo "Erro: ecosystem.config.js não encontrado."
+    exit 1
+fi
+
+if "${PM2_CMD[@]}" describe eixo-server >/dev/null 2>&1; then
+    "${PM2_CMD[@]}" reload ecosystem.config.js --update-env
 else
-    if "${PM2_CMD[@]}" describe eixo-server >/dev/null 2>&1; then
-        "${PM2_CMD[@]}" reload eixo-server --update-env
-    else
-        "${PM2_CMD[@]}" start server/index.js --name eixo-server
-    fi
+    "${PM2_CMD[@]}" start ecosystem.config.js
 fi
 "${PM2_CMD[@]}" save --force
 
 # ── Pós-checagem rápida de saúde ──────────────────────────────────────────────
 echo ""
 echo "▶ Health check rápido..."
-HEALTH_URL="${DEPLOY_HEALTH_URL:-http://127.0.0.1:${PORT:-3001}/health}"
+HEALTH_URL="${DEPLOY_HEALTH_URL:-http://127.0.0.1:${PORT:-3000}/health}"
 if ! curl -fsS --max-time 10 "$HEALTH_URL" >/dev/null; then
     echo "Erro: health check falhou em $HEALTH_URL"
     echo "Verifique logs: pm2 logs eixo-server --lines 100"
     exit 1
 fi
 echo "Health OK: $HEALTH_URL"
+
+PUBLIC_URL="${DEPLOY_PUBLIC_URL:-https://eixo.agr.br}"
+if ! curl -fsSL --max-time 15 "$PUBLIC_URL" >/dev/null; then
+    echo "Erro: site indisponível em $PUBLIC_URL"
+    exit 1
+fi
+echo "Site no ar: $PUBLIC_URL"
 
 echo ""
 echo "======================================================"

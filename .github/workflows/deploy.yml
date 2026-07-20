@@ -62,8 +62,10 @@ jobs:
             set +a
 
             echo "▶ Instalando dependências (root workspace)..."
-            rm -rf node_modules package-lock.json
-            npm install --include=dev
+            npm ci --include=dev
+
+            echo "▶ Criando backup do banco..."
+            bash server/backup.sh
 
             echo "▶ Aplicando migrações do banco..."
             npx prisma migrate deploy --schema server/prisma/schema.prisma
@@ -74,25 +76,24 @@ jobs:
 
             echo "▶ Reiniciando servidor (delete + start para garantir reload do .env.production)..."
             pm2 delete eixo-server >/dev/null 2>&1 || true
-            pm2 start ecosystem.config.cjs
+            pm2 start ecosystem.config.js
             pm2 save --force
 
             echo "▶ Health check..."
             sleep 3
-            if curl -fsS --max-time 10 http://127.0.0.1:3000/health >/dev/null 2>&1; then
-              echo "Health OK"
-            else
-              echo "WARNING: Health check falhou — verifique pm2 logs"
+            if ! curl -fsS --max-time 10 "http://127.0.0.1:${PORT:-3000}/health" >/dev/null; then
+              echo "ERRO: Health check da API falhou — verifique pm2 logs"
+              exit 1
             fi
+            echo "Health OK"
 
             echo "Deploy concluído."
 
       - name: Verificar uptime
         run: |
           sleep 5
-          HTTP_CODE=$(curl -L -s -o /dev/null -w "%{http_code}" https://eixo.agr.br || true)
-          if [[ "$HTTP_CODE" =~ ^2|3 ]]; then
-            echo "Site no ar: https://eixo.agr.br (HTTP $HTTP_CODE)"
-          else
-            echo "WARNING: Site retornou HTTP $HTTP_CODE"
+          if ! curl -fsSL --max-time 15 https://eixo.agr.br >/dev/null; then
+            echo "ERRO: Site indisponível após o deploy"
+            exit 1
           fi
+          echo "Site no ar: https://eixo.agr.br"

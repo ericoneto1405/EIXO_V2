@@ -253,14 +253,16 @@ O sistema estará acessível em: **https://eixo.agr.br**
 
 ## Deploys futuros
 
-Após o setup inicial, para publicar novas versões basta rodar **no servidor**:
+O fluxo oficial é automático: mescle um pull request na branch `main` e acompanhe o workflow `deploy` no GitHub Actions.
+
+Se o GitHub Actions estiver indisponível, use a contingência **no servidor**:
 
 ```bash
 cd /var/www/eixo
-./deploy.sh
+./deploy-manual.sh
 ```
 
-O script faz tudo: backup → atualiza código → build → reinicia o servidor.
+Antes de executar, confirme que não existe outro deploy em andamento. O script faz backup, atualiza o código, instala dependências, aplica migrações, gera o build, reinicia o servidor e valida a disponibilidade.
 
 ---
 
