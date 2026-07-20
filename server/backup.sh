@@ -18,16 +18,41 @@ FILENAME="eixo_backup_${DATE}.sql.gz"
 # ── Carrega variáveis de ambiente se existir .env.production ──────────────────
 ENV_FILE="$(dirname "$0")/.env.production"
 if [ -f "$ENV_FILE" ]; then
-    # Extrai host, porta, nome e usuário da DATABASE_URL
-    DB_URL=$(grep '^DATABASE_URL=' "$ENV_FILE" | cut -d '"' -f2)
-    if [ -n "$DB_URL" ]; then
-        DB_USER=$(echo "$DB_URL" | sed 's|postgresql://||' | cut -d: -f1)
-        DB_PASS=$(echo "$DB_URL" | sed 's|postgresql://[^:]*:||' | cut -d@ -f1)
-        DB_HOST=$(echo "$DB_URL" | cut -d@ -f2 | cut -d: -f1)
-        DB_PORT=$(echo "$DB_URL" | cut -d@ -f2 | cut -d: -f2 | cut -d/ -f1)
-        DB_NAME=$(echo "$DB_URL" | cut -d/ -f4 | cut -d? -f1)
-        export PGPASSWORD="$DB_PASS"
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+fi
+
+# Usa o parser de URL do Node para preservar senhas com caracteres especiais.
+if [ -n "${DATABASE_URL:-}" ]; then
+    DB_PARTS=()
+    while IFS= read -r -d '' part; do
+        DB_PARTS+=("$part")
+    done < <(node -e '
+        const url = new URL(process.env.DATABASE_URL);
+        const values = [
+            decodeURIComponent(url.username),
+            decodeURIComponent(url.password),
+            url.hostname,
+            url.port || "5432",
+            decodeURIComponent(url.pathname.replace(/^\/+/, "")),
+        ];
+        if (!values[0] || !values[2] || !values[4]) process.exit(1);
+        process.stdout.write(values.join("\0") + "\0");
+    ')
+
+    if [ "${#DB_PARTS[@]}" -ne 5 ]; then
+        echo "Erro: DATABASE_URL inválida para o backup."
+        exit 1
     fi
+
+    DB_USER="${DB_PARTS[0]}"
+    DB_PASS="${DB_PARTS[1]}"
+    DB_HOST="${DB_PARTS[2]}"
+    DB_PORT="${DB_PARTS[3]}"
+    DB_NAME="${DB_PARTS[4]}"
+    export PGPASSWORD="$DB_PASS"
 fi
 
 # ── Cria pasta de backups se não existir ──────────────────────────────────────
@@ -36,6 +61,12 @@ mkdir -p "$BACKUP_DIR"
 echo "[$(date)] Iniciando backup: $FILENAME"
 
 # ── Gera o dump e comprime ────────────────────────────────────────────────────
+TEMP_FILE="$BACKUP_DIR/.${FILENAME}.tmp"
+cleanup_temp() {
+    rm -f "$TEMP_FILE"
+}
+trap cleanup_temp EXIT
+
 pg_dump \
     -h "$DB_HOST" \
     -p "$DB_PORT" \
@@ -45,7 +76,15 @@ pg_dump \
     --format=plain \
     --no-owner \
     --no-acl \
-    | gzip > "$BACKUP_DIR/$FILENAME"
+    | gzip > "$TEMP_FILE"
+
+if [ ! -s "$TEMP_FILE" ]; then
+    echo "Erro: backup vazio."
+    exit 1
+fi
+
+mv "$TEMP_FILE" "$BACKUP_DIR/$FILENAME"
+trap - EXIT
 
 SIZE=$(du -sh "$BACKUP_DIR/$FILENAME" | cut -f1)
 echo "[$(date)] Backup concluído: $FILENAME ($SIZE)"
