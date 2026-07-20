@@ -15,6 +15,7 @@ interface PlanoContasTabProps {
     onReloadCategories: () => Promise<void>;
     inputCls: string;
     labelCls: string;
+    notify: (message: string, type?: 'success' | 'error') => void;
 }
 
 const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
@@ -24,6 +25,7 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
     onReloadCategories,
     inputCls,
     labelCls,
+    notify,
 }) => {
     // ── Nova categoria ──
     const [pcModalOpen, setPcModalOpen] = useState(false);
@@ -75,8 +77,10 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
             setPcModalOpen(false);
             setPcFormName(''); setPcFormGroup(''); setPcFormNewGroup(''); setPcFormError(null);
             await onReloadCategories();
+            notify('Categoria criada.', 'success');
         } catch (e: any) {
             setPcFormError(e?.message || 'Erro ao criar categoria.');
+            notify(e?.message || 'Erro ao criar categoria.', 'error');
         } finally { setPcIsSaving(false); }
     };
 
@@ -99,13 +103,17 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
             await updateAccountCategory(cat.id, { name: editingCatName.trim(), group: editingCatGroup.trim() || cat.group });
             cancelEditCat();
             await onReloadCategories();
-        } catch { /* silencioso */ }
+            notify('Categoria atualizada.', 'success');
+        } catch (e: any) { notify(e?.message || 'Erro ao editar categoria.', 'error'); }
         finally { setEditCatSaving(false); }
     };
 
     const toggleCatActive = async (cat: AccountCategory) => {
-        try { await updateAccountCategory(cat.id, { isActive: !cat.isActive }); await onReloadCategories(); }
-        catch { /* silencioso */ }
+        try {
+            await updateAccountCategory(cat.id, { isActive: !cat.isActive });
+            await onReloadCategories();
+            notify(cat.isActive ? 'Categoria desativada.' : 'Categoria ativada.', 'success');
+        } catch (e: any) { notify(e?.message || 'Erro ao atualizar categoria.', 'error'); }
     };
 
     const handleDeleteCat = async () => {
@@ -116,8 +124,10 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
             await deleteAccountCategory(deleteCatConfirmId);
             setDeleteCatConfirmId(null);
             await onReloadCategories();
+            notify('Categoria excluída.', 'success');
         } catch (e: any) {
             setDeleteCatError(e?.message || 'Erro ao excluir categoria.');
+            notify(e?.message || 'Erro ao excluir categoria.', 'error');
         } finally { setIsDeletingCat(false); }
     };
 
@@ -274,7 +284,7 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                     <div className="w-full max-w-md rounded-2xl bg-[var(--eixo-surface)] shadow-2xl" onClick={e => e.stopPropagation()}>
                         <header className="flex items-center justify-between border-b border-[var(--eixo-border)] p-5">
                             <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Nova categoria</h3>
-                            <button type="button" onClick={() => setPcModalOpen(false)} className="rounded-full p-2 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">✕</button>
+                            <button type="button" aria-label="Fechar" onClick={() => setPcModalOpen(false)} className="rounded-full p-2 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--eixo-green)]">✕</button>
                         </header>
                         <form onSubmit={handleCreateCategory} className="space-y-4 p-6">
                             <div>

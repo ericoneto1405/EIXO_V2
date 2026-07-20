@@ -25,6 +25,7 @@ import FluxoTab from './finance/FluxoTab';
 import ContasTab from './finance/ContasTab';
 import VisaoGeralTab from './finance/VisaoGeralTab';
 import LancamentosTab from './finance/LancamentosTab';
+import { useToasts, ToastHost } from './finance/useToasts';
 
 interface FinanceModuleProps {
     farmId?: string | null;
@@ -40,6 +41,8 @@ const LOCKED_TABS_FREE: FinanceTab[] = [];
 
 const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreePlan = false, onUpgradeRequest }) => {
     const hoje = new Date();
+
+    const { toasts, notify, dismiss } = useToasts();
 
     // ── Estado geral ──
     const [activeTab, setActiveTab] = useState<FinanceTab>('lancamentos');
@@ -214,8 +217,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             await loadTransactions();
             if (activeTab === 'contas_pagar' || activeTab === 'contas_receber') await loadPending();
             window.dispatchEvent(new Event(FINANCIAL_PROGRESS_EVENT));
+            notify(editingTransaction ? 'Lançamento atualizado.' : 'Lançamento salvo.', 'success');
         } catch (e: any) {
             setFormError(e?.message || 'Erro ao salvar.');
+            notify(e?.message || 'Erro ao salvar lançamento.', 'error');
         } finally { setIsSaving(false); }
     };
 
@@ -229,8 +234,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             await loadTransactions();
             await loadPending();
             window.dispatchEvent(new Event(FINANCIAL_PROGRESS_EVENT));
+            notify('Lançamento excluído.', 'success');
         } catch (e: any) {
             setDeleteError(e?.message || 'Erro ao excluir.');
+            notify(e?.message || 'Erro ao excluir lançamento.', 'error');
         } finally { setIsDeleting(false); }
     };
 
@@ -240,7 +247,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             await loadPending();
             await loadTransactions();
             window.dispatchEvent(new Event(FINANCIAL_PROGRESS_EVENT));
-        } catch { /* silencioso */ }
+            notify('Conta marcada como paga.', 'success');
+        } catch (e: any) {
+            notify(e?.message || 'Erro ao marcar como paga.', 'error');
+        }
     };
 
     // ── Estilos recorrentes ───────────────────────────────────────────────────
@@ -391,6 +401,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                     onReloadCategories={loadCategories}
                     inputCls={inputCls}
                     labelCls={labelCls}
+                    notify={notify}
                 />
             )}
 
@@ -402,7 +413,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">
                                 {editingTransaction ? 'Editar lançamento' : 'Novo lançamento'}
                             </h3>
-                            <button type="button" onClick={() => { setModalOpen(false); resetForm(); }} className="rounded-full p-2 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]">✕</button>
+                            <button type="button" aria-label="Fechar" onClick={() => { setModalOpen(false); resetForm(); }} className="rounded-full p-2 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--eixo-green)]">✕</button>
                         </header>
                         <form onSubmit={handleSave} className="space-y-4 p-6">
                             {/* Tipo */}
@@ -505,6 +516,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                 </div>
             )}
 
+            <ToastHost toasts={toasts} onDismiss={dismiss} />
         </div>
     );
 };
