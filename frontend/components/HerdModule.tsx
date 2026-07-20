@@ -41,6 +41,49 @@ type TransferFarmOption = {
     id: string;
     name: string;
 };
+type AnimalFormState = {
+    brinco: string;
+    nome: string;
+    tipoRaca: string;
+    raca: string;
+    padraoRacial: string;
+    composicaoMestica: string;
+    racaPredominante: string;
+    sexo: string;
+    dataNascimento: string;
+    ultimoPeso: string;
+    registro: string;
+    tipoCadastro: string;
+    categoria: string;
+    observacoes: string;
+    lotId: string;
+    paddockId: string;
+    paddockStartAt: string;
+    valorCompra: string;
+    dataCompra: string;
+};
+
+const createInitialAnimalForm = (): AnimalFormState => ({
+    brinco: '',
+    nome: '',
+    tipoRaca: 'Pura',
+    raca: '',
+    padraoRacial: '',
+    composicaoMestica: '',
+    racaPredominante: '',
+    sexo: 'Macho',
+    dataNascimento: '',
+    ultimoPeso: '',
+    registro: '',
+    tipoCadastro: 'MESTICO',
+    categoria: '',
+    observacoes: '',
+    lotId: '',
+    paddockId: '',
+    paddockStartAt: '',
+    valorCompra: '',
+    dataCompra: '',
+});
 const LOT_OBJECTIVE_OPTIONS = [
     'Cria',
     'Recria',
@@ -224,8 +267,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     initialTabRequest,
     weighingOnlyMode = false,
 }) => {
-    void mode;
-    const resolvedMode: HerdType = herdType ?? 'COMMERCIAL';
+    const resolvedMode: HerdType = herdType ?? mode ?? 'COMMERCIAL';
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
     const [showImportModal, setShowImportModal] = useState(false);
     const [animals, setAnimals] = useState<HerdAnimal[]>([]);
@@ -253,7 +295,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
-    const [selectedAnimals, setSelectedAnimals] = useState<Set<number>>(new Set());
+    const [selectedAnimals, setSelectedAnimals] = useState<Set<string>>(new Set());
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
     const [bulkMoveToLotOpen, setBulkMoveToLotOpen] = useState(false);
     const [bulkMoveToPastoOpen, setBulkMoveToPastoOpen] = useState(false);
@@ -291,27 +333,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [nascimentoSuccess, setNascimentoSuccess] = useState<string | null>(null);
     const [nascimentoSaving, setNascimentoSaving] = useState(false);
 
-    const [animalForm, setAnimalForm] = useState({
-        brinco: '',
-        nome: '',
-        tipoRaca: 'Pura',
-        raca: '',
-        padraoRacial: '',
-        composicaoMestica: '',
-        racaPredominante: '',
-        sexo: 'Macho',
-        dataNascimento: '',
-        ultimoPeso: '',
-        registro: '',
-        tipoCadastro: 'MESTICO',
-        categoria: '',
-        observacoes: '',
-        lotId: '',
-        paddockId: '',
-        paddockStartAt: '',
-        valorCompra: '',
-        dataCompra: '',
-    });
+    const [animalForm, setAnimalForm] = useState<AnimalFormState>(createInitialAnimalForm);
     const [lotForm, setLotForm] = useState({
         name: '',
         objective: '',
@@ -352,8 +374,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         };
         return byCategory[key] ?? 0.6;
     };
-
-    const isPo = false;
 
     useEffect(() => {
         let isActive = true;
@@ -439,7 +459,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         } finally {
             setIsLoading(false);
         }
-    }, [farmId, resolvedMode, isPo]);
+    }, [farmId, resolvedMode]);
 
     useEffect(() => {
         loadData();
@@ -874,23 +894,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     }, [animals]);
 
     const resetAnimalForm = () => {
-        setAnimalForm({
-            brinco: '',
-            nome: '',
-            raca: '',
-            sexo: 'Macho',
-            dataNascimento: '',
-            ultimoPeso: '',
-            registro: '',
-            tipoCadastro: 'MESTICO',
-            categoria: '',
-            observacoes: '',
-            lotId: '',
-            paddockId: '',
-            paddockStartAt: '',
-            valorCompra: '',
-            dataCompra: '',
-        });
+        setAnimalForm(createInitialAnimalForm());
     };
 
     const resetLotForm = () => {

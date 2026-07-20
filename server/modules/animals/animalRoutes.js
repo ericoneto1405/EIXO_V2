@@ -171,6 +171,85 @@ export const moveAnimalBetweenPaddocks = async ({ animalId, paddockId, startAt, 
     }
 };
 
+export const moveAnimalsBetweenPaddocks = async ({ ids, paddockId, scopeFilter, isPo }) => {
+    const normalizedIds = Array.isArray(ids) ? ids.map(String).filter(Boolean) : [];
+    if (!normalizedIds.length || !paddockId) {
+        return { error: { status: 400, message: isPo ? 'Informe ao menos um animal P.O. e o pasto.' : 'Informe ao menos um animal e o pasto.' } };
+    }
+
+    const animalModel = isPo ? prisma.poAnimal : prisma.animal;
+    const animals = await animalModel.findMany({
+        where: { id: { in: normalizedIds }, farm: scopeFilter },
+        select: { id: true, farmId: true, brinco: true, currentPaddockId: true },
+    });
+    if (animals.length !== normalizedIds.length) {
+        return { error: { status: 403, message: isPo ? 'Um ou mais animais P.O. não pertencem a esta conta.' : 'Um ou mais animais não pertencem a esta conta.' } };
+    }
+
+    const farmIds = new Set(animals.map((animal) => animal.farmId));
+    if (farmIds.size !== 1) {
+        return { error: { status: 400, message: 'Selecione animais de apenas uma fazenda por movimentação.' } };
+    }
+    const farmId = animals[0].farmId;
+    const targetPaddockId = String(paddockId);
+    const paddock = await prisma.paddock.findFirst({
+        where: { id: targetPaddockId, farmId, farm: scopeFilter },
+        select: { id: true },
+    });
+    if (!paddock) {
+        return { error: { status: 400, message: 'Pasto inválido para esta fazenda.' } };
+    }
+
+    const animalAlreadyInPaddock = animals.find((animal) => animal.currentPaddockId === targetPaddockId);
+    if (animalAlreadyInPaddock) {
+        const label = animalAlreadyInPaddock.brinco ? ` "${animalAlreadyInPaddock.brinco}"` : '';
+        return { error: { status: 409, message: `O animal${label} já está alocado neste pasto.` } };
+    }
+
+    const moveStartAt = new Date();
+    const moveWhere = isPo
+        ? { poAnimalId: { in: normalizedIds } }
+        : { animalId: { in: normalizedIds } };
+    const openMoves = await prisma.paddockMove.findMany({
+        where: { ...moveWhere, endAt: null },
+        orderBy: { startAt: 'desc' },
+    });
+    const latestOpenMoveByAnimal = new Map();
+    for (const move of openMoves) {
+        const animalId = isPo ? move.poAnimalId : move.animalId;
+        if (animalId && !latestOpenMoveByAnimal.has(animalId)) {
+            latestOpenMoveByAnimal.set(animalId, move);
+        }
+    }
+    const invalidDateMove = Array.from(latestOpenMoveByAnimal.values()).find((move) => moveStartAt <= move.startAt);
+    if (invalidDateMove) {
+        return { error: { status: 400, message: 'Data da movimentação deve ser posterior à última entrada no pasto.' } };
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+        const updateModel = isPo ? tx.poAnimal : tx.animal;
+        await tx.paddockMove.updateMany({
+            where: { ...moveWhere, endAt: null },
+            data: { endAt: moveStartAt },
+        });
+        await tx.paddockMove.createMany({
+            data: normalizedIds.map((animalId) => ({
+                farmId,
+                paddockId: targetPaddockId,
+                ...(isPo ? { poAnimalId: animalId } : { animalId }),
+                startAt: moveStartAt,
+            })),
+        });
+        await updateModel.updateMany({
+            where: { id: { in: normalizedIds } },
+            data: { currentPaddockId: targetPaddockId },
+        });
+        return { updated: normalizedIds.length };
+    });
+
+    return { result };
+};
+
 export const transferAnimalsToFarm = async ({ ids, targetFarmId, targetPaddockId, transferDate, notes, scopeFilter, farmScopeFilter, isPo }) => {
     const normalizedIds = Array.isArray(ids) ? ids.map(String).filter(Boolean) : [];
     if (!normalizedIds.length || !targetFarmId || !targetPaddockId) {
@@ -2090,29 +2169,17 @@ app.post('/animals/bulk-move-lot', async (req, res) => {
 
 app.post('/animals/bulk-move-pasto', async (req, res) => {
     const { ids, pastoId } = req.body || {};
-    if (!Array.isArray(ids) || ids.length === 0 || !pastoId) {
-        return res.status(400).json({ message: 'Informe ao menos um animal e o pasto.' });
-    }
     try {
-        const filter = buildFarmRelationFilter(req);
-        const animals = await prisma.animal.findMany({
-            where: { id: { in: ids.map(String) }, farm: filter },
-            select: { id: true },
+        const { error, result } = await moveAnimalsBetweenPaddocks({
+            ids,
+            paddockId: pastoId,
+            scopeFilter: buildFarmRelationFilter(req),
+            isPo: false,
         });
-        if (animals.length !== ids.length) {
-            return res.status(403).json({ message: 'Um ou mais animais não pertencem a esta conta.' });
+        if (error) {
+            return res.status(error.status).json({ message: error.message });
         }
-        const results = [];
-        for (const animal of animals) {
-            const { error, result } = await moveAnimalBetweenPaddocks({
-                animalId: animal.id,
-                paddockId: String(pastoId),
-                scopeFilter: filter,
-                isPo: false,
-            });
-            if (!error) results.push(result);
-        }
-        return res.json({ updated: results.length });
+        return res.json(result);
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao mover animais para pasto.' });

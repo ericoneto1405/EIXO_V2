@@ -8,7 +8,7 @@ import {
     serializePoAnimal, serializeSemenBatch, serializeEmbryoBatch,
     serializePaddockMove, serializeNutritionPlan,
 } from '../utils/serializers.js';
-import { moveAnimalBetweenPaddocks, transferAnimalsToFarm, calculateGmdMetrics, diffDaysFloat } from '../animals/animalRoutes.js';
+import { moveAnimalBetweenPaddocks, moveAnimalsBetweenPaddocks, transferAnimalsToFarm, calculateGmdMetrics, diffDaysFloat } from '../animals/animalRoutes.js';
 const prisma = new PrismaClient();
 
 const verifyPasswordWithLegacySupport = async (user, password) => {
@@ -1496,29 +1496,17 @@ app.post('/po/animals/bulk-move-lot', async (req, res) => {
 
 app.post('/po/animals/bulk-move-pasto', async (req, res) => {
     const { ids, pastoId } = req.body || {};
-    if (!Array.isArray(ids) || ids.length === 0 || !pastoId) {
-        return res.status(400).json({ message: 'Informe ao menos um animal P.O. e o pasto.' });
-    }
     try {
-        const filter = buildFarmRelationFilter(req);
-        const animals = await prisma.poAnimal.findMany({
-            where: { id: { in: ids.map(String) }, farm: filter },
-            select: { id: true },
+        const { error, result } = await moveAnimalsBetweenPaddocks({
+            ids,
+            paddockId: pastoId,
+            scopeFilter: buildFarmRelationFilter(req),
+            isPo: true,
         });
-        if (animals.length !== ids.length) {
-            return res.status(403).json({ message: 'Um ou mais animais P.O. não pertencem a esta conta.' });
+        if (error) {
+            return res.status(error.status).json({ message: error.message });
         }
-        const results = [];
-        for (const animal of animals) {
-            const { error, result } = await moveAnimalBetweenPaddocks({
-                animalId: animal.id,
-                paddockId: String(pastoId),
-                scopeFilter: filter,
-                isPo: true,
-            });
-            if (!error) results.push(result);
-        }
-        return res.json({ updated: results.length });
+        return res.json(result);
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao mover animais P.O. para pasto.' });
