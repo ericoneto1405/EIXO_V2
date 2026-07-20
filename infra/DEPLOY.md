@@ -1,143 +1,99 @@
-# EIXO — Guia de Produção
+# EIXO V2 — Guia de Deploy em Produção
 
-## Pré-requisitos no servidor (Ubuntu 22.04)
+## Fluxo oficial
 
-```bash
-# Node.js 20
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
+O deploy de produção é automático pelo GitHub Actions:
 
-# PostgreSQL 15
-sudo apt-get install -y postgresql-15
-
-# Nginx
-sudo apt-get install -y nginx
-
-# PM2 (mantém o servidor rodando)
-sudo npm install -g pm2
-
-# Certbot (certificado SSL gratuito)
-sudo apt-get install -y certbot python3-certbot-nginx
+```text
+branch de trabalho → pull request → main → validação → VPS → produção
 ```
 
----
+O arquivo responsável é `.github/workflows/deploy.yml`. O deploy começa somente após uma atualização da branch `main`.
 
-## Primeira vez no servidor
+## Antes do deploy
 
-### 1. Configurar banco de dados
+- Trabalhar em uma branch separada.
+- Revisar o diff e confirmar o escopo.
+- Validar o TypeScript e o build.
+- Abrir um pull request para `main`.
+- Mesclar somente com o CI aprovado.
 
-```bash
-sudo -u postgres psql
-CREATE USER eixo_user WITH PASSWORD 'senha_segura';
-CREATE DATABASE eixo_prod OWNER eixo_user;
-GRANT ALL PRIVILEGES ON DATABASE eixo_prod TO eixo_user;
-\q
+Os secrets `VPS_HOST`, `VPS_USER` e `VPS_SSH_KEY` devem estar configurados no GitHub. Consulte `.github/SECRETS_SETUP.md`.
+
+## O que o workflow executa
+
+1. Instala as dependências com `npm ci`.
+2. Gera o Prisma Client.
+3. Valida o TypeScript e constrói o frontend.
+4. Conecta na VPS por SSH.
+5. Atualiza `/var/www/eixo` para a versão da `main`.
+6. Preserva e recarrega `server/.env.production`.
+7. Cria um backup do banco.
+8. Aplica as migrações pendentes do Prisma.
+9. Constrói o frontend na VPS.
+10. Reinicia `eixo-server` pelo PM2.
+11. Confirma a saúde da API e a disponibilidade do site.
+
+Se a validação, o backup, a migração, o build ou um health check falhar, o workflow termina com erro.
+
+## Acompanhar o deploy
+
+No GitHub:
+
+```text
+Actions → deploy → execução mais recente
 ```
 
-### 2. Configurar variáveis de ambiente
+Na VPS:
 
 ```bash
-cp server/.env.production.example server/.env.production
-nano server/.env.production   # preencher com valores reais
+pm2 status eixo-server
+pm2 logs eixo-server --lines 100 --nostream
 ```
 
-Gerar o SESSION_TOKEN_SALT:
-```bash
-node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+Endereços de verificação:
+
+```text
+https://eixo.agr.br
+https://eixo.agr.br/api/health
 ```
 
-### 3. Aplicar banco e iniciar servidor
+## Configuração da VPS
+
+A preparação inicial do servidor, PostgreSQL, Nginx, SSL e PM2 está documentada em `infra/SETUP_SERVIDOR.md`.
+
+O arquivo `server/.env.production` existe somente na VPS e não deve ser versionado. Antes de qualquer deploy, ele precisa conter as credenciais e configurações reais de produção.
+
+O CI continua usando Node.js 20 até a migração coordenada do projeto e da VPS para Node.js 24.
+
+## Backup
+
+O workflow executa `server/backup.sh` antes das migrações. Os arquivos ficam em `server/backups/` na VPS, com retenção configurada no próprio script.
+
+O backup automático diário pode continuar ativo como proteção adicional.
+
+## Se o deploy falhar
+
+1. Não repita o deploy sem identificar a etapa que falhou.
+2. Leia os logs da execução no GitHub Actions.
+3. Confira os logs do PM2 e do Nginx na VPS.
+4. Corrija o problema em uma nova branch.
+5. Para desfazer código já publicado, reverta o commit na `main` por pull request. A reversão iniciará outro deploy automático.
+
+Comandos úteis:
 
 ```bash
-export $(grep -v '^#' server/.env.production | xargs)
-npx prisma migrate deploy --schema server/prisma/schema.prisma
-npx prisma generate --schema server/prisma/schema.prisma
-
-cd frontend && npm install && npm run build && cd ..
-
-pm2 start server/index.js --name eixo-server --env production
-pm2 save
-pm2 startup   # ativa início automático após reboot
-```
-
-### 4. Configurar Nginx
-
-```bash
-# Editar o caminho do root no nginx.conf antes de copiar
-sudo cp infra/nginx.conf /etc/nginx/sites-available/eixo
-sudo ln -s /etc/nginx/sites-available/eixo /etc/nginx/sites-enabled/
+pm2 logs eixo-server --lines 150 --nostream
 sudo nginx -t
-sudo systemctl reload nginx
+sudo tail -n 150 /var/log/nginx/error.log
 ```
 
-### 5. Certificado SSL (Let's Encrypt)
+## Deploy manual
+
+O deploy manual deve ser usado somente como contingência e executado na VPS, dentro de `/var/www/eixo`:
 
 ```bash
-sudo certbot --nginx -d eixo.agr.br -d www.eixo.agr.br
-# Renovação automática já é configurada pelo certbot
+./deploy-manual.sh
 ```
 
----
-
-## Deploy de nova versão
-
-```bash
-./deploy.sh
-```
-
-O script faz automaticamente: backup → git pull → npm install → migração → build → reload PM2.
-
----
-
-## Backup automático (cron diário às 3h)
-
-```bash
-crontab -e
-# Adicionar linha:
-0 3 * * * /caminho/para/EIXO\ V2/server/backup.sh >> /var/log/eixo-backup.log 2>&1
-```
-
-Backups ficam em `server/backups/`. Retenção: 7 dias.
-
-Para restaurar um backup:
-```bash
-gunzip -c server/backups/eixo_backup_YYYY-MM-DD_HH-MM-SS.sql.gz | psql -U eixo_user -d eixo_prod
-```
-
----
-
-## Monitoramento de uptime
-
-### Opção gratuita recomendada: UptimeRobot
-1. Criar conta em https://uptimerobot.com
-2. Criar monitor HTTP(S) para `https://eixo.agr.br`
-3. Intervalo: 5 minutos
-4. Alerta: e-mail para `contato@eixo.agr.br`
-
-### Comandos úteis no servidor
-
-```bash
-pm2 status              # status dos processos
-pm2 logs eixo-server    # logs em tempo real
-pm2 logs eixo-server --lines 100   # últimas 100 linhas
-sudo nginx -t           # testa config do nginx
-sudo systemctl status nginx
-sudo tail -f /var/log/nginx/eixo_error.log
-```
-
----
-
-## Checklist antes de ir ao ar
-
-- [ ] `.env.production` preenchido com valores reais
-- [ ] `SESSION_TOKEN_SALT` único e gerado aleatoriamente
-- [ ] `CORS_ORIGIN` apontando para `https://eixo.agr.br`
-- [ ] `APP_BASE_URL` apontando para `https://eixo.agr.br`
-- [ ] DNS do domínio `eixo.agr.br` apontando para o IP do servidor
-- [ ] Certificado SSL instalado e renovação automática ativa
-- [ ] PM2 configurado para iniciar com o servidor (`pm2 startup`)
-- [ ] Backup automático configurado no cron
-- [ ] Monitor de uptime criado no UptimeRobot
-- [ ] Teste de login funcionando em produção
-- [ ] Teste de importação de planilha funcionando
-- [ ] Twilio e Resend com credenciais de produção (não sandbox)
+Antes de executar, confirme que não existe um deploy em andamento no GitHub Actions. O script exige a branch `main`, uma árvore Git limpa e executa backup, atualização, dependências, migrações, build, PM2 e health checks.
