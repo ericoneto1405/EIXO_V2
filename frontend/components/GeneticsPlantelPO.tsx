@@ -561,7 +561,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
 
             {activeTab === 'herd' && (
                 <div className="mt-6">
-                    <HerdModule farmId={farmId} mode="PO" />
+                    <HerdModule farmId={farmId} herdType="PO" />
                 </div>
             )}
 
