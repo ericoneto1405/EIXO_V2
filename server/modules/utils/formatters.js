@@ -30,6 +30,10 @@ export function parseNumber(value) {
     return Number.isFinite(parsed) ? parsed : null;
 }
 
+export function normalizeAnimalIdentityKey(value) {
+    return String(value ?? '').trim();
+}
+
 export function parseDateValue(value) {
     if (!value) {
         return null;

@@ -8,8 +8,7 @@ interface OnboardingChecklistProps {
     userId: string;
     farmId: string | null;
     farms: Farm[];
-    onNavigate: (view: string, options?: { herdTab?: 'animals' | 'weighings' }) => void;
-    contextView?: 'Fazendas' | 'Rebanho Comercial';
+    onNavigate: (view: string, options?: { herdTab?: 'animals' | 'weighings'; openAnimalForm?: boolean }) => void;
     onboardingCompletedAt?: string | null;
 }
 
@@ -63,13 +62,19 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
     farmId,
     farms,
     onNavigate,
-    contextView = 'Fazendas',
     onboardingCompletedAt,
 }) => {
     const [steps, setSteps] = useState<StepState>({ farm: false, paddocks: false, animals: false, weighings: false });
     const [loading, setLoading] = useState(true);
     const [visible, setVisible] = useState(true);
     const [allDone, setAllDone] = useState(false);
+    const [refreshKey, setRefreshKey] = useState(0);
+
+    useEffect(() => {
+        const refreshProgress = () => setRefreshKey((current) => current + 1);
+        window.addEventListener('eixo:herd-onboarding-progress-changed', refreshProgress);
+        return () => window.removeEventListener('eixo:herd-onboarding-progress-changed', refreshProgress);
+    }, []);
 
     useEffect(() => {
         // Guards dentro do effect — hooks sempre chamados, early return só no callback
@@ -79,7 +84,8 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
         const check = async () => {
             setLoading(true);
             const hasFarm = farms.length > 0;
-            const hasPaddocks = farms.some((farm) => (farm.paddocks?.length ?? 0) > 0);
+            const selectedFarm = farms.find((farm) => farm.id === farmId);
+            const hasPaddocks = (selectedFarm?.paddocks?.length ?? 0) > 0;
             const farmDone = hasFarm;
             const paddocksDone = hasPaddocks;
             let animalsDone = false;
@@ -104,20 +110,9 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
             setSteps(next);
             setLoading(false);
 
-            // Conclusão por contexto — fecha quando os 2 passos do contexto atual estão prontos
-            const isHerdCtx = contextView === 'Rebanho Comercial';
-            const contextDone = isHerdCtx
-                ? (next.animals && next.weighings)
-                : (next.farm && next.paddocks);
-
-            if (contextDone) {
-                setAllDone(true);
-                // Mostra mensagem de conclusão por 2,5s antes de fechar
-                setTimeout(() => setVisible(false), 2500);
-            }
-
-            // Persistência global no backend só quando os 4 passos estiverem completos
             if (next.farm && next.paddocks && next.animals && next.weighings) {
+                setAllDone(true);
+                setTimeout(() => setVisible(false), 2500);
                 markPermanentlyDone(userId);
                 fetch(buildApiUrl('/auth/me/onboarding'), {
                     method: 'PATCH',
@@ -127,7 +122,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
         };
 
         check();
-    }, [userId, farmId, farms, visible, onboardingCompletedAt, contextView]);
+    }, [userId, farmId, farms, visible, onboardingCompletedAt, refreshKey]);
 
     if (!visible || !!onboardingCompletedAt || isPermanentlyDone(userId)) return null;
 
@@ -136,21 +131,16 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
         setVisible(false);
     };
 
-    const isHerdContext = contextView === 'Rebanho Comercial';
+    const completedCount = Object.values(steps).filter(Boolean).length;
+    const progressPct = Math.round((completedCount / 4) * 100);
 
-    const contextSteps = isHerdContext
-        ? [steps.animals, steps.weighings]
-        : [steps.farm, steps.paddocks];
-    const completedCount = contextSteps.filter(Boolean).length;
-    const progressPct = Math.round((completedCount / 2) * 100);
-
-    const nextAction = isHerdContext
-        ? (!steps.animals
-            ? { label: 'Adicionar animais', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'animals' }) }
-            : { label: 'Registrar pesagem', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'weighings' }) })
-        : (!steps.farm
-            ? { label: 'Cadastrar fazenda', onClick: () => onNavigate('Fazendas') }
-            : { label: 'Cadastrar pastos', onClick: () => onNavigate('Fazendas') });
+    const nextAction = !steps.farm
+        ? { label: 'Cadastrar fazenda', onClick: () => onNavigate('Fazendas') }
+        : !steps.paddocks
+            ? { label: 'Cadastrar pastos', onClick: () => onNavigate('Fazendas') }
+            : !steps.animals
+                ? { label: 'Adicionar animal', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'animals', openAnimalForm: true }) }
+                : { label: 'Registrar pesagem', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'weighings' }) };
 
     return (
         <div className="mb-6 rounded-2xl border-2 border-[#B6E23A] bg-[var(--eixo-surface)] shadow-sm transition-all duration-200 hover:shadow-md">
@@ -170,20 +160,16 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.5 12.75l4 4 7-7M9 12.75l2 2 4-4" />
                                 </svg>
                                 <p className="text-sm font-semibold text-[var(--eixo-text)]">
-                                    {isHerdContext
-                                        ? 'Base do manejo do rebanho configurada, volte aqui sempre que precisar registrar pesagens e acompanhar o desempenho.'
-                                        : 'Estrutura da fazenda configurada, volte aqui sempre que precisar adicionar pastos ou atualizar os dados da propriedade.'}
+                                    Base inicial configurada. Agora você já pode operar o rebanho e acompanhar o desempenho.
                                 </p>
                             </div>
                         ) : (
                             <>
                                 <p className="text-sm font-semibold text-[var(--eixo-text)]">
-                                    {isHerdContext ? 'Evolução do Manejo do Rebanho' : 'Primeiros passos'} — {completedCount} de 2 concluídos
+                                    Primeiros passos — {completedCount} de 4 concluídos
                                 </p>
                                 <p className="text-xs text-[var(--eixo-text-muted)]">
-                                    {isHerdContext
-                                        ? 'Conclua a base do manejo para operar o rebanho com segurança.'
-                                        : 'Complete para começar a usar o sistema.'}
+                                    Conclua a estrutura e a base do manejo da fazenda selecionada.
                                 </p>
                             </>
                         )}
@@ -213,37 +199,12 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
                 <div className="px-5 py-4 text-sm text-[#a8a29e]">Verificando seu progresso…</div>
             ) : (
                 <div className="divide-y divide-[var(--eixo-surface-soft)] px-5">
-                    {isHerdContext ? (
-                        <>
-                            <StepRow
-                                done={steps.animals}
-                                number={1}
-                                title="Cadastre ou importe os animais"
-                                description="Monte o rebanho inicial da fazenda."
-                            />
-                            <StepRow
-                                done={steps.weighings}
-                                number={2}
-                                title="Registre a primeira pesagem"
-                                description="Comece a acompanhar o desempenho do rebanho."
-                            />
-                        </>
-                    ) : (
-                        <>
-                            <StepRow
-                                done={steps.farm}
-                                number={1}
-                                title="Cadastre a fazenda"
-                                description="Registre o nome, localização e tamanho da propriedade."
-                            />
-                            <StepRow
-                                done={steps.paddocks}
-                                number={2}
-                                title="Cadastre os pastos"
-                                description="Divida a fazenda em áreas para organizar lotação e manejo."
-                            />
-                        </>
-                    )}
+                    <>
+                        <StepRow done={steps.farm} number={1} title="Cadastre a fazenda" description="Registre o nome, localização e tamanho da propriedade." />
+                        <StepRow done={steps.paddocks} number={2} title="Cadastre os pastos" description="Divida a fazenda selecionada em áreas para organizar lotação e manejo." />
+                        <StepRow done={steps.animals} number={3} title="Cadastre ou importe os animais" description="Monte o rebanho inicial da fazenda selecionada." />
+                        <StepRow done={steps.weighings} number={4} title="Registre a primeira pesagem" description="Comece a acompanhar o desempenho do rebanho." />
+                    </>
                 </div>
             )}
             {!loading && !allDone && nextAction.onClick && (

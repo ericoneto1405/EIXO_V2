@@ -634,6 +634,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
             setPage(0);
             load();
             loadSessions();
+            window.dispatchEvent(new Event('eixo:herd-onboarding-progress-changed'));
             window.setTimeout(() => animalCodeInputRef.current?.focus(), 0);
         } catch (err: any) {
             const message = err?.message ?? 'Erro ao salvar.';
@@ -725,6 +726,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
             setPage(0);
             load();
             loadSessions();
+            window.dispatchEvent(new Event('eixo:herd-onboarding-progress-changed'));
         } catch (err: any) {
             setFormMsg({ text: err?.message ?? 'Erro ao salvar pesagem em grupo.', type: 'error' });
         } finally {
@@ -861,6 +863,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
             setPage(0);
             load();
             loadSessions();
+            window.dispatchEvent(new Event('eixo:herd-onboarding-progress-changed'));
         }
         if (errors.length > 0) {
             setImportError(errors.slice(0, 6).join(' '));

@@ -559,8 +559,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                         ← VOLTAR
                                     </button>
                                     <div className="mb-5">
-                                        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
-                                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
+                                        <div className="mb-4 inline-flex items-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                                             Crie sua conta
                                         </div>
                                         <div>

@@ -32,6 +32,7 @@ interface FinanceModuleProps {
     farmName?: string | null;
     isFreePlan?: boolean;
     onUpgradeRequest?: () => void;
+    onboardingAction?: { action: 'SAIDA' | 'ENTRADA' | 'RESULTADO'; nonce: number } | null;
 }
 
 // Financeiro completo liberado para todos os planos
@@ -39,7 +40,7 @@ const LOCKED_TABS_FREE: FinanceTab[] = [];
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreePlan = false, onUpgradeRequest }) => {
+const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreePlan = false, onUpgradeRequest, onboardingAction }) => {
     const hoje = new Date();
 
     const { toasts, notify, dismiss } = useToasts();
@@ -181,6 +182,18 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         setFormError(null);
         setModalOpen(true);
     };
+
+    useEffect(() => {
+        if (!onboardingAction) return;
+        if (onboardingAction.action === 'RESULTADO') {
+            setActiveTab('dre');
+            return;
+        }
+        setActiveTab('lancamentos');
+        resetForm();
+        setFormType(onboardingAction.action);
+        setModalOpen(true);
+    }, [onboardingAction?.nonce]);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();

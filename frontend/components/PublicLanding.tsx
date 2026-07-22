@@ -254,11 +254,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
           <div className="relative z-10 mx-auto max-w-5xl px-4 text-left lg:px-8">
 
             <div className="mb-6 flex justify-center">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--eixo-green)]" />
-                <svg className="h-3 w-3 text-[var(--eixo-graphite)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+              <div className="inline-flex items-center rounded-full border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                 EIXO Essencial · R$ 0/mês
               </div>
             </div>
@@ -279,10 +275,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </div>
 
             <div className="mt-5 flex justify-center">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-graphite)]">
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+              <div className="inline-flex items-center rounded-full bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-graphite)]">
                 Sem cartão · acesso imediato
               </div>
             </div>

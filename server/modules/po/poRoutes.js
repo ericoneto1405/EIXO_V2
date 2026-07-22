@@ -2149,7 +2149,7 @@ app.get('/farms/:farmId/weighing-sessions/:sessionId/items', requireAuth, async 
     }
 });
 
-app.get('/farms/:farmId/weighings', async (req, res) => {
+app.get('/farms/:farmId/weighings', requireAuth, async (req, res) => {
     const { farmId } = req.params;
     const { limit = 50, offset = 0, animalId, startDate, endDate, lotId, weighingSessionId } = req.query;
 

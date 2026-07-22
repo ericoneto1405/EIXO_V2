@@ -134,7 +134,7 @@ interface HerdModuleProps {
     herdType?: HerdType;
     isFreePlan?: boolean;
     onUpgradeRequest?: (animalCount?: number) => void;
-    initialTabRequest?: { tab: TabKey; nonce: number } | null;
+    initialTabRequest?: { tab: TabKey; nonce: number; openAnimalForm?: boolean } | null;
     weighingOnlyMode?: boolean;
 }
 
@@ -508,6 +508,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     useEffect(() => {
         if (initialTabRequest?.tab) {
             setActiveTab(initialTabRequest.tab);
+            if (initialTabRequest.openAnimalForm) {
+                setAnimalFormError(null);
+                setAnimalFormOpen(true);
+            }
         }
     }, [initialTabRequest?.nonce]);
 
@@ -971,6 +975,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             await createAnimal(farmId, resolvedMode, payload);
             closeAnimalForm();
             await loadData();
+            window.dispatchEvent(new Event('eixo:herd-onboarding-progress-changed'));
         } catch (error: any) {
             setAnimalFormError(error?.message || 'Não foi possível salvar o animal.');
         }
@@ -2837,7 +2842,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 farmId={farmId ?? ''}
                 paddocks={paddocks}
                 lots={lots}
-                onSuccess={loadData}
+                onSuccess={async () => {
+                    await loadData();
+                    window.dispatchEvent(new Event('eixo:herd-onboarding-progress-changed'));
+                }}
             />
 
             <ImportHerdModal
