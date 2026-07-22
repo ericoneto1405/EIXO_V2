@@ -329,7 +329,6 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
             {/* Cabeçalho */}
             <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                     Visão Geral
                 </div>
                 <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Dashboard</h1>
