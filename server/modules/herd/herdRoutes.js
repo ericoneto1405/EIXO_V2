@@ -4,7 +4,7 @@ import multer from 'multer';
 import * as XLSX from 'xlsx';
 import { requireAuth } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
-import { parseNumber, parseDateValue } from '../utils/formatters.js';
+import { parseNumber, parseDateValue, normalizeAnimalIdentityKey } from '../utils/formatters.js';
 import { logActivity } from '../utils/activityLog.js';
 import { serializeHerdEvent, serializeSanitaryRecord } from '../utils/serializers.js';
 import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../config/env.js';
@@ -671,8 +671,7 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
       if (err) { erros.push(err); continue; }
 
       const brinco = String(row.identificacao).trim();
-      const brincoNum = parseNumber(brinco);
-      const identityKey = brincoNum ? String(brincoNum) : brinco;
+      const identityKey = normalizeAnimalIdentityKey(brinco);
 
       try {
         const existing = await prisma.animal.findFirst({ where: { farmId, identityKey } });
@@ -974,8 +973,7 @@ app.post('/herd/import', requireAuth, async (req, res) => {
         continue;
       }
 
-      const brincoNum = parseNumber(brinco);
-      const identityKey = brincoNum ? String(brincoNum) : brinco;
+      const identityKey = normalizeAnimalIdentityKey(brinco);
 
       const existing = await prisma.animal.findFirst({
         where: { farmId, identityKey },
@@ -1020,7 +1018,7 @@ app.post('/herd/import', requireAuth, async (req, res) => {
       createdAnimals.push(animal);
 
       if (row.pai_nome?.trim() || row.pai_registro?.trim()) {
-        const paiKey = row.pai_registro?.trim() || row.pai_nome.trim();
+        const paiKey = normalizeAnimalIdentityKey(row.pai_registro?.trim() || row.pai_nome.trim());
         const pai = await prisma.animal.findFirst({
           where: { farmId, identityKey: paiKey },
         });
@@ -1031,7 +1029,7 @@ app.post('/herd/import', requireAuth, async (req, res) => {
       }
 
       if (row.mae_nome?.trim() || row.mae_registro?.trim()) {
-        const maeKey = row.mae_registro?.trim() || row.mae_nome.trim();
+        const maeKey = normalizeAnimalIdentityKey(row.mae_registro?.trim() || row.mae_nome.trim());
         const mae = await prisma.animal.findFirst({
           where: { farmId, identityKey: maeKey },
         });

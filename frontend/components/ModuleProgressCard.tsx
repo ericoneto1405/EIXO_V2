@@ -4,6 +4,7 @@ import { buildApiUrl } from '../api';
 interface ModuleProgressCardProps {
     activeView: string;
     farmId: string | null;
+    onFinanceAction?: (action: 'SAIDA' | 'ENTRADA' | 'RESULTADO') => void;
 }
 
 interface MetricsState {
@@ -12,6 +13,9 @@ interface MetricsState {
     transactions: number;
     occurrences: number;
     poAnimals: number;
+    expenses: number;
+    incomes: number;
+    financialResultViewed: boolean;
 }
 
 interface StepItem {
@@ -29,6 +33,13 @@ const markModuleDone = (farmId: string, view: string) => { try { localStorage.se
 const metricsCache = new Map<string, { data: MetricsState; ts: number }>();
 const CACHE_TTL_MS = 30_000;
 const FINANCIAL_PROGRESS_EVENT = 'eixo:financial-transactions-changed';
+const financialResultViewedKey = (farmId: string) => `eixo_financial_result_viewed_${farmId}`;
+const hasViewedFinancialResult = (farmId: string) => {
+    try { return localStorage.getItem(financialResultViewedKey(farmId)) === '1'; } catch { return false; }
+};
+const markFinancialResultViewed = (farmId: string) => {
+    try { localStorage.setItem(financialResultViewedKey(farmId), '1'); } catch { /* silencioso */ }
+};
 
 const getCached = (key: string): MetricsState | null => {
     const entry = metricsCache.get(key);
@@ -59,8 +70,9 @@ const cardConfig = (activeView: string, hasFarm: boolean, metrics: MetricsState)
                 title: 'Progresso de Implantação — Financeiro',
                 steps: [
                     { title: 'Selecionar fazenda', description: 'Ative a fazenda para controlar as movimentações.', done: hasFarm },
-                    { title: 'Lançar primeira transação', description: 'Registre ao menos uma entrada ou saída.', done: metrics.transactions > 0 },
-                    { title: 'Registrar ao menos 3 lançamentos', description: 'Com 3 ou mais lançamentos, o fluxo do mês fica representativo.', done: metrics.transactions >= 3 },
+                    { title: 'Registrar uma despesa', description: 'Comece registrando um custo real da fazenda.', done: metrics.expenses > 0 },
+                    { title: 'Registrar uma receita', description: 'Registre uma entrada para compor o resultado da operação.', done: metrics.incomes > 0 },
+                    { title: 'Conferir o resultado do mês', description: 'Veja a leitura de receitas, despesas e resultado no DRE.', done: metrics.financialResultViewed },
                 ],
             };
         case 'Ocorrências do EIXO Campo':
@@ -98,8 +110,9 @@ const getNextCta = (activeView: string, steps: StepItem[]): string | null => {
         'Selecionar fazenda': 'Selecione uma fazenda no menu superior para continuar.',
         'Ter animais cadastrados': 'Acesse Rebanho Comercial e cadastre ou importe animais.',
         'Registrar a primeira pesagem': 'Acesse Rebanho Comercial → Pesagens para registrar.',
-        'Lançar primeira transação': 'Registre uma entrada ou saída no módulo Financeiro.',
-        'Registrar ao menos 3 lançamentos': 'Lance mais lançamentos para o fluxo do mês ficar representativo.',
+        'Registrar uma despesa': 'Registre uma saída real da fazenda.',
+        'Registrar uma receita': 'Registre uma entrada da operação.',
+        'Conferir o resultado do mês': 'Abra o DRE para analisar receitas, despesas e resultado.',
         'Receber a primeira ocorrência': 'Abra o EIXO Campo no celular e registre uma ocorrência.',
         'Iniciar rotina de análise': 'Classifique as ocorrências recebidas nesta tela.',
         'Cadastrar rebanho': 'Acesse Manejo do Rebanho e cadastre ou importe os animais.',
@@ -111,7 +124,7 @@ const getNextCta = (activeView: string, steps: StepItem[]): string | null => {
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 
-const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, farmId }) => {
+const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, farmId, onFinanceAction }) => {
     const [loading, setLoading] = useState(false);
     const [visible, setVisible] = useState(true);
     const [metrics, setMetrics] = useState<MetricsState>({
@@ -120,6 +133,9 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
         transactions: 0,
         occurrences: 0,
         poAnimals: 0,
+        expenses: 0,
+        incomes: 0,
+        financialResultViewed: false,
     });
 
     const hasFarm = Boolean(farmId);
@@ -162,13 +178,17 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
                     occurrencesRes.json().catch(() => ({})),
                 ]);
                 const animals = Array.isArray(animalsData?.animals) ? animalsData.animals : [];
+                const transactions = Array.isArray(transactionsData?.transactions) ? transactionsData.transactions : [];
                 if (!isActive) return;
                 const data: MetricsState = {
                     animals: Number(animalsData?.total ?? animalsData?.animals?.length ?? 0),
                     weighings: Number(weighingsData?.total ?? weighingsData?.weighings?.length ?? 0),
-                    transactions: Number(transactionsData?.total ?? transactionsData?.transactions?.length ?? 0),
+                    transactions: transactions.length,
                     occurrences: Number(occurrencesData?.total ?? occurrencesData?.items?.length ?? occurrencesData?.occurrences?.length ?? 0),
                     poAnimals: animals.filter((animal: any) => animal?.tipoCadastro === 'PO').length,
+                    expenses: transactions.filter((transaction: any) => transaction?.type === 'SAIDA').length,
+                    incomes: transactions.filter((transaction: any) => transaction?.type === 'ENTRADA').length,
+                    financialResultViewed: hasViewedFinancialResult(farmId),
                 };
                 setMetrics(data);
                 setCache(cacheKey, data);
@@ -208,6 +228,19 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
     const allDone = completedCount === config.steps.length;
     const progressPct = Math.round((completedCount / config.steps.length) * 100);
     const ctaHint = !allDone ? getNextCta(activeView, config.steps) : null;
+    const nextFinanceStep = activeView === 'Financeiro' ? config.steps.find((step) => !step.done)?.title : null;
+
+    const handleFinanceAction = () => {
+        if (!farmId || !nextFinanceStep) return;
+        if (nextFinanceStep === 'Conferir o resultado do mês') {
+            markFinancialResultViewed(farmId);
+            metricsCache.delete(`${activeView}::${farmId}`);
+            setRefreshTick((current) => current + 1);
+            onFinanceAction?.('RESULTADO');
+            return;
+        }
+        onFinanceAction?.(nextFinanceStep === 'Registrar uma despesa' ? 'SAIDA' : 'ENTRADA');
+    };
 
     return (
         <div className="mb-6 rounded-2xl border-2 border-[#B6E23A] bg-[var(--eixo-surface)] shadow-sm transition-all duration-200 hover:shadow-md">
@@ -281,6 +314,11 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
                         <span className="font-semibold text-[var(--eixo-text)]">Próximo passo: </span>
                         {ctaHint}
                     </p>
+                    {activeView === 'Financeiro' && (
+                        <button type="button" onClick={handleFinanceAction} className="mt-3 rounded-xl border-2 border-[#5a8c00] bg-[#B6E23A] px-3.5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130]">
+                            {nextFinanceStep === 'Conferir o resultado do mês' ? 'Ver resultado do mês' : 'Registrar lançamento'}
+                        </button>
+                    )}
                 </div>
             )}
         </div>

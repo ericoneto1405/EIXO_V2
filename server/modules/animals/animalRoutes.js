@@ -6,7 +6,7 @@ import {
     normalizeSexo, formatSexoLabel,
     normalizeReproMode, normalizeReproEventType, normalizePregStatus,
     normalizeEmbryoTechnique, normalizeSemenMoveType, normalizeEmbryoMoveType,
-    normalizeSelectionDecision, normalizeAnimalTipoCadastro,
+    normalizeSelectionDecision, normalizeAnimalTipoCadastro, normalizeAnimalIdentityKey,
 } from '../utils/formatters.js';
 import { logActivity } from '../utils/activityLog.js';
 import {
@@ -610,7 +610,7 @@ app.patch('/animals/:id', async (req, res) => {
             });
             if (duplicate) return res.status(409).json({ message: `Já existe um animal com o brinco "${trimmed}" nesta fazenda.` });
             updateData.brinco = trimmed;
-            updateData.identityKey = trimmed;
+            updateData.identityKey = normalizeAnimalIdentityKey(trimmed);
         }
         if (raca !== undefined) updateData.raca = raca ? String(raca).trim() : null;
         if (sexo !== undefined) {
@@ -1809,7 +1809,7 @@ app.post('/animals', requireAuth, async (req, res) => {
                     farmId,
                     lotId: validLotId,
                     brinco: brinco.trim(),
-                    identityKey: brinco.trim(),
+                    identityKey: normalizeAnimalIdentityKey(brinco),
                     raca: raca.trim(),
                     tipoCadastro: normalizeAnimalTipoCadastro(tipoCadastro),
                     sexo: sexoEnum,
@@ -1937,7 +1937,7 @@ app.post('/animals/nascimento', async (req, res) => {
                 data: {
                     farmId,
                     brinco: brincoFinal,
-                    identityKey: brincoFinal,
+                    identityKey: normalizeAnimalIdentityKey(brincoFinal),
                     raca: racaBezerro,
                     sexo: sexoEnum,
                     dataNascimento: birthDate,
@@ -2040,7 +2040,7 @@ app.post('/animals/batch', async (req, res) => {
                         farmId,
                         lotId: validLotId,
                         brinco: a.brinco.trim(),
-                        identityKey: a.brinco.trim(),
+                        identityKey: normalizeAnimalIdentityKey(a.brinco),
                         raca: (a.raca || 'Indefinida').trim(),
                         sexo: sexoEnum,
                         dataNascimento: null,

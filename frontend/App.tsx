@@ -252,7 +252,8 @@ const AppContent: React.FC = () => {
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
     const isPlansRoute = location.pathname === '/planos';
     const [activeView, setActiveView] = useState('Visão Geral');
-    const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number } | null>(null);
+    const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number; openAnimalForm?: boolean } | null>(null);
+    const [financeOnboardingAction, setFinanceOnboardingAction] = useState<{ action: 'SAIDA' | 'ENTRADA' | 'RESULTADO'; nonce: number } | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
 
@@ -805,11 +806,16 @@ const AppContent: React.FC = () => {
         return false;
     }, []);
 
-    const handleOnboardingNavigate = React.useCallback((view: string, options?: { herdTab?: HerdNavigationTab }) => {
+    const handleOnboardingNavigate = React.useCallback((view: string, options?: { herdTab?: HerdNavigationTab; openAnimalForm?: boolean }) => {
         if (options?.herdTab) {
-            setHerdTabRequest({ tab: options.herdTab, nonce: Date.now() });
+            setHerdTabRequest({ tab: options.herdTab, nonce: Date.now(), openAnimalForm: options.openAnimalForm });
         }
         setActiveView(view);
+    }, []);
+
+    const handleFinanceOnboardingAction = React.useCallback((action: 'SAIDA' | 'ENTRADA' | 'RESULTADO') => {
+        setFinanceOnboardingAction({ action, nonce: Date.now() });
+        setActiveView('Financeiro');
     }, []);
 
     if (isPlansRoute) {
@@ -1093,7 +1099,7 @@ const AppContent: React.FC = () => {
             case 'Eixo Genetics':
                 return <Navigate to="/genetics/acasalamento" replace />;
             case 'Financeiro':
-                return <FinanceModule farmId={selectedFarmId} farmName={selectedFarm?.name} isFreePlan={isFreePlan} onUpgradeRequest={() => setUpgradeModal('Financeiro completo')} />;
+                return <FinanceModule farmId={selectedFarmId} farmName={selectedFarm?.name} isFreePlan={isFreePlan} onboardingAction={financeOnboardingAction} onUpgradeRequest={() => setUpgradeModal('Financeiro completo')} />;
             case 'Registro de Atividades':
                 return <ActivityModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
             case 'Ocorrências do EIXO Campo':
@@ -1186,13 +1192,13 @@ const AppContent: React.FC = () => {
                                                         farmId={selectedFarmId}
                                                         farms={farms}
                                                         onNavigate={handleOnboardingNavigate}
-                                                        contextView={activeView === 'Rebanho Comercial' ? 'Rebanho Comercial' : 'Fazendas'}
                                                         onboardingCompletedAt={currentUser.onboardingCompletedAt}
                                                     />
                                                 ) : (
                                                     <ModuleProgressCard
                                                         activeView={activeView}
                                                         farmId={selectedFarmId}
+                                                        onFinanceAction={handleFinanceOnboardingAction}
                                                     />
                                                 )}
                                             </>
