@@ -12,9 +12,9 @@ const FREE_FEATURES = [
   'Manejo do Rebanho completo',
   'Lotes e pastos',
   'Estrutura da Fazenda',
-  'Financeiro completo',
-  'Visão Geral — Dashboard',
-  'Importação de planilha própria',
+  'Receitas, despesas e resultado',
+  'Dashboard com indicadores',
+  'Até 3 usuários',
 ];
 
 const STEPS = [
@@ -26,7 +26,7 @@ const STEPS = [
   {
     n: '02',
     title: 'Cadastre sua fazenda e o rebanho',
-    desc: 'Você pode começar do zero ou importar sua planilha.',
+    desc: 'Adicione os dados essenciais para começar a acompanhar sua operação.',
   },
   {
     n: '03',
@@ -42,11 +42,11 @@ const FAQS = [
   },
   {
     q: 'É difícil de usar?',
-    a: 'Não. O sistema foi desenhado para o produtor, não para o TI. Se você usa WhatsApp, você usa o EIXO.',
+    a: 'Não. O sistema foi feito para quem trabalha na fazenda, sem linguagem técnica.',
   },
   {
-    q: 'Posso importar minha planilha atual?',
-    a: 'Sim. O EIXO aceita qualquer planilha sua. Você não precisa redigitar nada.',
+    q: 'O plano grátis limita o número de animais?',
+    a: 'Não. No EIXO Essencial, os animais são ilimitados. O plano inclui 1 fazenda e até 3 usuários.',
   },
   {
     q: 'Meus dados ficam seguros?',
@@ -54,7 +54,7 @@ const FAQS = [
   },
   {
     q: 'Quando faz sentido pagar?',
-    a: 'Quando você entender que precisa cadastrar suas outras fazendas, mais usuários na operação, módulos avançados para melhor tomada de decisões. Você decide a hora certa de alavancar seus LUCROS!',
+    a: 'Os planos pagos fazem sentido quando você precisa de múltiplas fazendas, mais usuários ou módulos avançados. Você escolhe quando evoluir.',
   },
   {
     q: 'Serve para gado comercial e P.O.?',
@@ -66,12 +66,27 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [showMobileCta, setShowMobileCta] = React.useState(false);
   const [activeNav, setActiveNav] = React.useState<'gratis' | 'antes-depois' | 'como' | 'faq'>('gratis');
+  const heroCtaRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  React.useEffect(() => {
+    const heroCta = heroCtaRef.current;
+    if (!heroCta || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowMobileCta(!entry.isIntersecting),
+      { threshold: 0.2 },
+    );
+
+    observer.observe(heroCta);
+    return () => observer.disconnect();
   }, []);
 
   const scrollTo = (id: string) => {
@@ -82,9 +97,9 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
   const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
   const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]';
-  const headerPrimaryButton = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.76)] bg-[rgba(182,226,58,0.82)] px-5 text-sm font-bold text-[#1a1a1a] shadow-[0_10px_22px_rgba(121,160,24,0.18),inset_0_1px_0_rgba(255,255,255,0.58)] transition-all duration-200 hover:bg-[rgba(182,226,58,0.92)] hover:shadow-[0_12px_28px_rgba(121,160,24,0.24),inset_0_1px_0_rgba(255,255,255,0.66)]';
+  const headerPrimaryButton = 'hidden h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.76)] bg-[rgba(182,226,58,0.82)] px-5 text-sm font-bold text-[#1a1a1a] shadow-[0_10px_22px_rgba(121,160,24,0.18),inset_0_1px_0_rgba(255,255,255,0.58)] transition-all duration-200 hover:bg-[rgba(182,226,58,0.92)] hover:shadow-[0_12px_28px_rgba(121,160,24,0.24),inset_0_1px_0_rgba(255,255,255,0.66)] sm:inline-flex';
   const navItems: Array<{ label: string; id: 'gratis' | 'antes-depois' | 'como' | 'faq'; action: () => void }> = [
-    { label: 'Plano Base', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
+    { label: 'EIXO Essencial', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
     { label: 'Antes e Depois', id: 'antes-depois', action: () => { setActiveNav('antes-depois'); scrollTo('antes-depois'); } },
     { label: 'Como funciona', id: 'como', action: () => { setActiveNav('como'); scrollTo('como'); } },
     { label: 'Dúvidas', id: 'faq', action: () => { setActiveNav('faq'); scrollTo('faq'); } },
@@ -144,7 +159,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               Ver Planos
             </button>
             <button type="button" onClick={onRegister} className={headerPrimaryButton}>
-              Começar agora
+              Criar minha conta grátis
             </button>
           </div>
         </div>
@@ -158,7 +173,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               }}
               className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
             >
-              Plano Base
+              EIXO Essencial
             </button>
             <button
               type="button"
@@ -209,7 +224,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               }}
               className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-xl bg-[var(--eixo-green)] px-5 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
             >
-              Começar agora
+              Criar minha conta grátis
             </button>
           </div>
         )}
@@ -244,22 +259,22 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 <svg className="h-3 w-3 text-[var(--eixo-graphite)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Plano Base · Apenas os 100 primeiros
+                EIXO Essencial · R$ 0/mês
               </div>
             </div>
 
             <h1 className="font-brand text-balance text-3xl font-semibold tracking-[0.01em] leading-[1.12] text-[var(--eixo-text)] sm:text-4xl lg:text-6xl">
-              A fazenda no eixo.<br />
-              <span className="text-[#7aad1a]">A decisão na mão.</span>
+              Gestão pecuária no eixo.<br />
+              <span className="text-[#7aad1a]">Decisão na mão.</span>
             </h1>
 
             <p className="mx-auto mt-6 max-w-2xl font-sans text-lg font-normal leading-relaxed text-[var(--eixo-text-muted)] lg:text-xl">
-              Controle rebanho, fazendas, financeiro, pastos e indicadores em um só lugar. Simples para começar. Forte para decidir.
+              Controle rebanho, pesagens, pastos e financeiro em um só lugar. Comece grátis no EIXO Essencial, sem cartão e sem limite de animais.
             </p>
 
             <div className="mt-3 flex justify-center">
               <p className="text-center text-xs text-[var(--eixo-text-muted)]/70">
-                Sem custo* no Plano Base. Planos pagos disponíveis para recursos avançados.
+                1 fazenda · até 3 usuários · animais ilimitados
               </p>
             </div>
 
@@ -268,13 +283,13 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                Acesso imediato — sem espera
+                Sem cartão · acesso imediato
               </div>
             </div>
 
-            <div className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <div ref={heroCtaRef} className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8 text-base`}>
-                Cadastrar minha fazenda gratuitamente
+                Criar minha conta grátis
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button type="button" onClick={() => scrollTo('como')} className={`${btnSecondary} h-12 px-8 text-base`}>
@@ -282,16 +297,40 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               </button>
             </div>
 
-            {/* Prova social + mini stats */}
-            <div className="mt-10 flex justify-center">
-              <p className="text-center text-sm font-semibold text-[var(--eixo-text-muted)]">
-                <span className="inline-flex items-center gap-1.5">
-                  <svg className="h-3.5 w-3.5 text-[var(--eixo-green-dark)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Produtores já organizando o rebanho no EIXO — junte-se a eles.
-                </span>
+          </div>
+        </section>
+
+        {/* ── Demonstração do produto ── */}
+        <section className="bg-[var(--eixo-surface)] py-20 lg:py-28">
+          <div className="mx-auto max-w-6xl px-4 lg:px-8">
+            <div className="mx-auto mb-10 max-w-3xl text-center">
+              <h2 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] lg:text-4xl">Veja o EIXO em uso</h2>
+              <p className="mt-4 text-lg text-[var(--eixo-text-muted)]">
+                Informações importantes da operação reunidas para facilitar o acompanhamento e a decisão.
               </p>
+            </div>
+
+            <figure>
+              <div className="overflow-hidden rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-bg)] p-2 shadow-xl shadow-black/10 lg:p-4">
+                <img
+                  src="/eixo-dashboard-demo.webp"
+                  alt="Dashboard do EIXO com indicadores do rebanho, pesagens e financeiro."
+                  className="h-auto w-full rounded-2xl"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption className="mt-3 text-center text-sm text-[var(--eixo-text-muted)]">
+                Prévia do dashboard do EIXO com dados demonstrativos.
+              </figcaption>
+            </figure>
+
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              {['Rebanho e indicadores reunidos', 'Pesagens e GMD acompanhados', 'Receitas e despesas da fazenda'].map((benefit) => (
+                <div key={benefit} className="flex items-center gap-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-bg)] p-4">
+                  <CheckCircle2 className="h-5 w-5 flex-shrink-0 text-[var(--eixo-green-dark)]" />
+                  <span className="font-semibold text-[var(--eixo-text)]">{benefit}</span>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -306,13 +345,13 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
           <div className="relative z-10 mx-auto max-w-5xl px-4 lg:px-8">
             <div className="mx-auto mb-12 max-w-2xl text-center">
               <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
-                Plano Base
+                EIXO Essencial
               </div>
               <h2 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] lg:text-4xl">
-                O básico que já resolve 80% dos problemas da sua fazenda — liberado agora.
+                O essencial para organizar sua fazenda desde o primeiro dia.
               </h2>
               <p className="mt-4 text-lg text-[var(--eixo-text-muted)]">
-                Comece organizando sua operação desde o primeiro dia, sem custo e sem cartão. <span className="font-semibold text-[var(--eixo-text)]">Acasalamento Inteligente</span> disponível no plano pago.
+                No EIXO Essencial, você cadastra 1 fazenda e até 3 usuários, com animais ilimitados. Sem cartão e sem prazo. <span className="font-semibold text-[var(--eixo-text)]">Acasalamento Inteligente</span> disponível no plano pago.
               </p>
             </div>
 
@@ -335,7 +374,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 </div>
                 <div className="flex flex-col items-center gap-2 sm:items-end">
                   <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8`}>
-                    Cadastrar minha fazenda gratuitamente
+                    Criar minha conta grátis
                     <ArrowRight className="h-4 w-4" />
                   </button>
                   <button type="button" onClick={() => scrollTo('como')} className="text-sm font-medium text-[var(--eixo-text-muted)] underline underline-offset-2 transition-colors hover:text-[var(--eixo-text)]">
@@ -343,9 +382,6 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                   </button>
                 </div>
               </div>
-              <p className="mt-4 text-center text-xl font-semibold text-[var(--eixo-text-muted)]">
-                Aproveite todo esse pacote grátis, somente para os 100 primeiros cadastrados.
-              </p>
             </div>
           </div>
         </section>
@@ -355,7 +391,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
           <div className="mx-auto max-w-5xl px-4 lg:px-8">
             <div className="mb-12 text-center">
               <h2 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] lg:text-4xl">
-                Você já anota. O EIXO transforma em gestão.
+                Você já registra. O EIXO transforma informação em gestão.
               </h2>
               <p className="mx-auto mt-4 max-w-3xl text-lg text-[var(--eixo-text-muted)]">
                 A rotina da fazenda já gera informação todos os dias. O EIXO coloca esses dados em ordem para ajudar na gestão.
@@ -499,7 +535,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                     <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--eixo-text)] text-xs font-bold text-white">2</span>
                   </div>
                   <h3 className="text-lg font-bold text-[var(--eixo-text)]">Cadastre sua fazenda e o rebanho</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--eixo-text-muted)]">Comece do zero ou importe sua planilha existente.</p>
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--eixo-text-muted)]">Adicione os dados essenciais para começar a acompanhar sua operação.</p>
                 </div>
 
                 {/* Passo 3 */}
@@ -521,7 +557,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
             <div className="mt-14 text-center">
               <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8`}>
-                Cadastrar minha fazenda gratuitamente
+                Criar minha conta grátis
                 <ArrowRight className="h-4 w-4" />
               </button>
             </div>
@@ -559,21 +595,21 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         <section className="bg-[var(--eixo-text)] py-20 pb-28 sm:pb-20 lg:py-28">
           <div className="mx-auto max-w-3xl px-4 text-center lg:px-8">
             <h2 className="font-brand text-balance text-3xl font-extrabold text-[#f5f0e8] lg:text-5xl">
-              Sua fazenda merece mais que caderno e planilha.
+              Tire a gestão do caderno e leve sua fazenda para o EIXO.
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-[var(--eixo-text-soft)]">
-              Sem risco. Sem cartão. Sem prazo. Animais ilimitados desde o primeiro dia.
+              Comece pelo EIXO Essencial: R$ 0/mês, sem cartão e com animais ilimitados.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <button type="button" onClick={onRegister} className="inline-flex items-center gap-2 rounded-xl bg-[var(--eixo-green)] px-8 py-4 text-base font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]">
-                Cadastrar minha fazenda gratuitamente
+                Criar minha conta grátis
                 <ArrowRight className="h-5 w-5" />
               </button>
               <button type="button" onClick={() => { window.location.href = '/planos'; }} className="inline-flex items-center gap-2 rounded-xl border border-white/20 px-8 py-4 text-base font-semibold text-white/70 transition-colors hover:border-white/40 hover:text-white">
                 Ver planos
               </button>
             </div>
-            <p className="mt-4 text-sm text-[#57534e]">Sem cartão · Sem prazo · Animais ilimitados · Somente 100 vagas</p>
+            <p className="mt-4 text-sm text-[#d6d3d1]">Sem cartão · Sem prazo · Animais ilimitados</p>
           </div>
         </section>
 
@@ -591,12 +627,12 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
       </footer>
 
       {/* CTA fixo mobile */}
-      <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden">
+      {showMobileCta && <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden">
         <button type="button" onClick={onRegister} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--eixo-green)] px-5 py-4 font-bold text-[#1a1a1a] shadow-lg hover:bg-[var(--eixo-green-dark)]">
-          Criar conta grátis — é de graça
+          Criar minha conta grátis
           <ArrowRight className="h-4 w-4" />
         </button>
-      </div>
+      </div>}
     </div>
   );
 };
