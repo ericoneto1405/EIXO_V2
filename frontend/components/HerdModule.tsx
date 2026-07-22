@@ -1928,6 +1928,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     };
 
     const renderPastures = () => {
+        const totalAreaHa = paddocks.reduce((total, paddock) => total + (Number(paddock.areaHa) || 0), 0);
+
         return (
             <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
                 <div className="overflow-x-auto">
@@ -1973,6 +1975,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 })
                             )}
                         </tbody>
+                        {paddocks.length > 0 && (
+                            <tfoot className="bg-[var(--eixo-surface-soft)] font-semibold text-[var(--eixo-text)]">
+                                <tr>
+                                    <td className="px-4 py-3">Total da fazenda</td>
+                                    <td className="px-4 py-3">{totalAreaHa.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ha</td>
+                                    <td colSpan={3} />
+                                </tr>
+                            </tfoot>
+                        )}
                     </table>
                 </div>
             </div>

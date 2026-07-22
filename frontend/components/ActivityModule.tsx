@@ -93,7 +93,6 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
                 <div className="flex items-center justify-between">
                     <div>
                         <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
                             {farmName || 'Todas as fazendas'}
                         </div>
                         <h2 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Registro de Atividades</h2>
