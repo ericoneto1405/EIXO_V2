@@ -48,6 +48,10 @@ const LOT_OBJECTIVE_HELP = [
     'Observação: animais que exigem acompanhamento.',
 ];
 const LOT_STATUS_OPTIONS = ['ATIVO', 'INATIVO'];
+const PRODUCTION_PHASE_OPTIONS = [
+    ['CRIA', 'Cria'], ['RECRIA', 'Recria'], ['ENGORDA', 'Engorda'],
+    ['REPRODUCAO', 'Reprodução'], ['OUTRA', 'Outra'],
+] as const;
 
 const formatDateInput = (value?: string | null) => {
     if (!value) return '';
@@ -83,6 +87,7 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState('');
     const [editObjective, setEditObjective] = useState('');
+    const [editProductionPhase, setEditProductionPhase] = useState('');
     const [editStatus, setEditStatus] = useState('ATIVO');
     const [editStartDate, setEditStartDate] = useState('');
     const [editNotes, setEditNotes] = useState('');
@@ -137,6 +142,7 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
 
         setEditName(lot.name);
         setEditObjective(lot.objective || '');
+        setEditProductionPhase(lot.productionPhase || '');
         setEditStatus(lot.status || 'ATIVO');
         setEditStartDate(formatDateInput(lot.startDate));
         setEditNotes(lot.notes || '');
@@ -179,12 +185,14 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
 
     const handleSaveEdit = async () => {
         if (!editName.trim()) { setEditError('Nome obrigatório.'); return; }
+        if (!editProductionPhase) { setEditError('Informe a fase produtiva.'); return; }
         setIsSavingEdit(true);
         setEditError(null);
         try {
             await updateLot(lot.id, resolvedMode, {
                 name: editName.trim(),
                 objective: editObjective || undefined,
+                productionPhase: editProductionPhase as 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'OUTRA',
                 status: editStatus,
                 startDate: editStartDate || undefined,
                 notes: editNotes.trim() || undefined,
@@ -399,6 +407,10 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
                                 <span className="font-semibold text-[var(--eixo-text)]">{lot.status === 'INATIVO' ? 'Inativo' : 'Ativo'}</span>
                             </div>
                             <div>
+                                <span className="block text-xs font-medium text-[var(--eixo-text-muted)]">Fase produtiva</span>
+                                <span className="font-semibold text-[var(--eixo-text)]">{PRODUCTION_PHASE_OPTIONS.find(([value]) => value === lot.productionPhase)?.[1] || 'Fase não informada'}</span>
+                            </div>
+                            <div>
                                 <span className="block text-xs font-medium text-[var(--eixo-text-muted)]">Início</span>
                                 <span className="font-semibold text-[var(--eixo-text)]">
                                     {lot.startDate ? new Date(lot.startDate).toLocaleDateString('pt-BR') : 'Não definido'}
@@ -431,6 +443,12 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
                             </select>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2">
+                            <div>
+                                <label className="text-xs font-medium text-[var(--eixo-text-muted)]">Fase produtiva</label>
+                                <select value={editProductionPhase} onChange={(e) => setEditProductionPhase(e.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm" required>
+                                    <option value="">Selecione...</option>{PRODUCTION_PHASE_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                                </select>
+                            </div>
                             <div>
                                 <label className="text-xs font-medium text-[var(--eixo-text-muted)]">Status</label>
                                 <select

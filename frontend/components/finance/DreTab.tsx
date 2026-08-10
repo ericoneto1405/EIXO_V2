@@ -1,112 +1,49 @@
-import React, { useMemo } from 'react';
-import { CATEGORIA_LABELS, FinancialTransaction } from '../../adapters/financialApi';
+import React, { useEffect, useState } from 'react';
+import { getIncomeStatementReport, IncomeStatementReport } from '../../adapters/financialApi';
 import { formatCurrency } from '../financeUtils';
 
 interface DreTabProps {
-    annualTransactions: FinancialTransaction[];
-    annualLoading: boolean;
+    farmId: string;
     selectedAnoAnual: number;
     setSelectedAnoAnual: (ano: number) => void;
     anos: number[];
 }
 
-const DreTab: React.FC<DreTabProps> = ({
-    annualTransactions,
-    annualLoading,
-    selectedAnoAnual,
-    setSelectedAnoAnual,
-    anos,
-}) => {
-    const dreData = useMemo(() => {
-        const receitas = new Map<string, number>();
-        const despesas = new Map<string, number>();
+const DreTab: React.FC<DreTabProps> = ({ farmId, selectedAnoAnual, setSelectedAnoAnual, anos }) => {
+    const [report, setReport] = useState<IncomeStatementReport | null>(null);
+    const [organizationScope, setOrganizationScope] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-        for (const t of annualTransactions) {
-            const grp = t.accountCategoryGroup || t.accountCategoryName || CATEGORIA_LABELS[t.categoria] || 'Outros';
-            if (t.type === 'ENTRADA') {
-                receitas.set(grp, (receitas.get(grp) ?? 0) + t.valor);
-            } else {
-                despesas.set(grp, (despesas.get(grp) ?? 0) + t.valor);
-            }
-        }
+    useEffect(() => {
+        setError(null);
+        getIncomeStatementReport(organizationScope ? undefined : farmId, selectedAnoAnual).then(setReport).catch((e) => setError(e.message));
+    }, [farmId, selectedAnoAnual, organizationScope]);
 
-        const totalReceitas = Array.from(receitas.values()).reduce((s, v) => s + v, 0);
-        const totalDespesas = Array.from(despesas.values()).reduce((s, v) => s + v, 0);
+    const rows = report ? [
+        ['Receita operacional', report.consolidated.operatingRevenue],
+        ['Custos de produção', -report.consolidated.productionCost],
+        ['Margem bruta', report.consolidated.grossMargin],
+        ['Despesas operacionais', -report.consolidated.operatingExpense],
+        ['Resultado operacional', report.consolidated.operatingResult],
+        ['Resultado financeiro', report.consolidated.financialResult],
+        ['Outros resultados', report.consolidated.otherResult],
+    ] as const : [];
 
-        return {
-            receitas: Array.from(receitas.entries()).sort((a, b) => b[1] - a[1]),
-            despesas: Array.from(despesas.entries()).sort((a, b) => b[1] - a[1]),
-            totalReceitas,
-            totalDespesas,
-            resultado: totalReceitas - totalDespesas,
-        };
-    }, [annualTransactions]);
-
-    return (
-        <>
-            {/* Seletor de ano */}
-            <div className="flex items-center gap-3">
-                <select
-                    value={selectedAnoAnual}
-                    onChange={e => setSelectedAnoAnual(Number(e.target.value))}
-                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
-                >
-                    {anos.map(a => <option key={a} value={a}>{a}</option>)}
-                </select>
-                {annualLoading && <span className="text-sm text-[var(--eixo-text-muted)]">Carregando...</span>}
+    return <div className="space-y-4">
+        <div className="flex gap-2"><select value={selectedAnoAnual} onChange={(e) => setSelectedAnoAnual(Number(e.target.value))} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm">
+            {anos.map((ano) => <option key={ano}>{ano}</option>)}
+        </select><button type="button" onClick={() => setOrganizationScope((value) => !value)} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${organizationScope ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'border-[var(--eixo-border)]'}`}>Consolidar organização</button></div>
+        {error && <p className="text-sm text-[var(--eixo-danger)]">{error}</p>}
+        {!report && !error ? <p className="text-sm text-[var(--eixo-text-muted)]">Carregando resultado...</p> : report && <>
+            {report.reliableSince && <p className="rounded-xl bg-[var(--eixo-green-soft)] px-4 py-3 text-sm text-[var(--eixo-text)]">Base analítica confiável a partir de {new Date(report.reliableSince).toLocaleDateString('pt-BR')}.</p>}
+            <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+                <div className="border-b border-[var(--eixo-border)] px-5 py-4"><h3 className="font-bold">Resultado da operação (DRE gerencial)</h3></div>
+                {rows.map(([label, value]) => <div key={label} className="flex justify-between border-b border-[var(--eixo-border)] px-5 py-3 text-sm"><span>{label}</span><strong>{formatCurrency(value)}</strong></div>)}
+                <div className="flex justify-between bg-[var(--eixo-green-soft)] px-5 py-5"><strong>Resultado gerencial do período</strong><strong className="text-xl">{formatCurrency(report.consolidated.managementResult)}</strong></div>
             </div>
-
-            {annualTransactions.length === 0 && !annualLoading ? (
-                <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-10 text-center">
-                    <p className="font-semibold text-[var(--eixo-text)]">Sem lançamentos em {selectedAnoAnual}</p>
-                    <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Registre entradas e saídas na aba Lançamentos.</p>
-                </div>
-            ) : (
-                <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
-                    {/* Receitas */}
-                    <div className="border-b-2 border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-5 py-3">
-                        <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--eixo-success)]">Receitas Operacionais</span>
-                    </div>
-                    {dreData.receitas.map(([grp, val]) => (
-                        <div key={grp} className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-3 hover:bg-[var(--eixo-surface)]">
-                            <span className="text-sm text-[var(--eixo-text)]">{grp}</span>
-                            <span className="font-semibold text-[var(--eixo-success)]">{formatCurrency(val)}</span>
-                        </div>
-                    ))}
-                    <div className="flex items-center justify-between border-b-2 border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-5 py-3">
-                        <span className="font-bold text-[var(--eixo-text)]">Total de Receitas</span>
-                        <span className="font-extrabold text-[var(--eixo-success)]">{formatCurrency(dreData.totalReceitas)}</span>
-                    </div>
-
-                    {/* Despesas */}
-                    <div className="mt-1 border-b border-[var(--eixo-border)] bg-[rgba(184,66,50,0.08)] px-5 py-3">
-                        <span className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--eixo-danger)]">Despesas Operacionais</span>
-                    </div>
-                    {dreData.despesas.map(([grp, val]) => (
-                        <div key={grp} className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-3 hover:bg-[var(--eixo-surface)]">
-                            <span className="text-sm text-[var(--eixo-text)]">{grp}</span>
-                            <span className="font-semibold text-[var(--eixo-danger)]">{formatCurrency(val)}</span>
-                        </div>
-                    ))}
-                    <div className="flex items-center justify-between border-b-2 border-[var(--eixo-border)] bg-[rgba(184,66,50,0.08)] px-5 py-3">
-                        <span className="font-bold text-[var(--eixo-text)]">Total de Despesas</span>
-                        <span className="font-extrabold text-[var(--eixo-danger)]">{formatCurrency(dreData.totalDespesas)}</span>
-                    </div>
-
-                    {/* Resultado */}
-                    <div className={`flex items-center justify-between px-5 py-5 ${dreData.resultado >= 0 ? 'bg-[var(--eixo-green-soft)]' : 'bg-[rgba(184,66,50,0.08)]'}`}>
-                        <div>
-                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Resultado do Exercício</p>
-                            <p className="mt-1 text-lg font-extrabold text-[var(--eixo-text)]">{selectedAnoAnual}</p>
-                        </div>
-                        <span className={`font-brand text-3xl font-extrabold ${dreData.resultado >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
-                            {formatCurrency(dreData.resultado)}
-                        </span>
-                    </div>
-                </div>
-            )}
-        </>
-    );
+            {organizationScope && report.byFarm.length > 1 && <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5"><h4 className="mb-3 font-bold">Comparação por fazenda</h4>{report.byFarm.map((farm) => <div key={farm.farmId} className="flex justify-between border-t border-[var(--eixo-border)] py-3 text-sm"><span>{farm.farmName}</span><strong>{formatCurrency(farm.managementResult)}</strong></div>)}</div>}
+        </>}
+    </div>;
 };
 
 export default DreTab;

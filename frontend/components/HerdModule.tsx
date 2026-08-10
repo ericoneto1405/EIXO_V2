@@ -11,10 +11,16 @@ import {
     HerdLot,
     HerdType,
     createAnimal,
+    createEmbryoTransfer,
+    assignDefinitiveIdentification,
     createBirthAnimal,
     createLot,
     listAnimals,
+    listEmbryoTransfers,
     listLots,
+    registerCalfWeaning,
+    updatePoGenealogy,
+    updateResponsibleMother,
 } from '../adapters/herdApi';
 import { getMyHerdColumns, updateMyHerdColumns } from '../adapters/usersApi';
 import { buildApiUrl } from '../api';
@@ -35,7 +41,7 @@ const HERD_TABLE_COLUMNS: { key: string; label: string }[] = [
 const HERD_TABLE_COLUMN_KEYS = HERD_TABLE_COLUMNS.map((c) => c.key);
 
 type TabKey = 'overview' | 'animals' | 'pastures' | 'lots' | 'weighings' | 'settings';
-type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'sem_categoria' | 'gmd_baixo';
+type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'sem_categoria' | 'gmd_baixo' | 'desmame' | 'aguardando_id';
 type AnimalHeaderFilterKey = 'identificacao' | 'registro' | 'raca' | 'sexo' | 'pasto' | 'lote' | 'categoria' | 'peso' | 'nutricao' | null;
 type TransferFarmOption = {
     id: string;
@@ -111,6 +117,22 @@ const LOT_OBJECTIVE_HELP = [
     'Observação: animais que exigem acompanhamento.',
 ];
 const LOT_STATUS_OPTIONS = ['ATIVO', 'INATIVO'];
+
+const isReadyForWeaning = (animal: HerdAnimal) => {
+    if (!animal.identificacaoProvisoria || animal.desmamadoEm) return false;
+    const birthTime = animal.dataNascimento ? new Date(animal.dataNascimento).getTime() : Number.NaN;
+    const ageInMonths = Number.isFinite(birthTime) ? (Date.now() - birthTime) / (30.4375 * 86400000) : 0;
+    const sex = String(animal.sexo || '').toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const weight = animal.ultimoPeso ?? 0;
+    return ageInMonths >= 7 || (sex === 'FEMEA' && weight >= 180) || (sex === 'MACHO' && weight >= 200);
+};
+const PRODUCTION_PHASE_OPTIONS = [
+    { value: 'CRIA', label: 'Cria' },
+    { value: 'RECRIA', label: 'Recria' },
+    { value: 'ENGORDA', label: 'Engorda' },
+    { value: 'REPRODUCAO', label: 'Reprodução' },
+    { value: 'OUTRA', label: 'Outra' },
+] as const;
 
 const LotObjectiveHelp: React.FC = () => (
     <span className="group relative inline-flex">
@@ -207,6 +229,11 @@ const formatNumber = (value?: number | null) => {
         return '—';
     }
     return value.toFixed(2);
+};
+
+const formatTeReference = (value: string | null | undefined, prefix: 'DO' | 'TE') => {
+    const cleaned = String(value || '').trim().replace(new RegExp(`^${prefix}[-\\s]*`, 'i'), '');
+    return cleaned ? `${prefix}-${cleaned}` : `${prefix}-não informada`;
 };
 
 const PAGE_SIZE = 30;
@@ -325,18 +352,37 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         sexo: 'Fêmea',
         dataNascimento: new Date().toISOString().slice(0, 10),
         pesoNascimento: '',
-        brinco: '',
+        nome: '',
         maeId: '',
         maeNome: '',
+        paiId: '',
+        paiNome: '',
     });
     const [nascimentoError, setNascimentoError] = useState<string | null>(null);
     const [nascimentoSuccess, setNascimentoSuccess] = useState<string | null>(null);
     const [nascimentoSaving, setNascimentoSaving] = useState(false);
+    const [birthOrigin, setBirthOrigin] = useState<'NATURAL' | 'TE'>('NATURAL');
+    const [embryoTransfers, setEmbryoTransfers] = useState<Array<{ id: string; recipientSnapshot: string; donorSnapshot: string; sireSnapshot?: string | null; embryoBatch?: { lote: string } }>>([]);
+    const [selectedEmbryoTransferId, setSelectedEmbryoTransferId] = useState('');
+    const [embryoTransferModalOpen, setEmbryoTransferModalOpen] = useState(false);
+    const [embryoBatches, setEmbryoBatches] = useState<Array<{ id: string; lote: string; tecnica: string; quantidadeDisponivel: number }>>([]);
+    const [embryoTransferForm, setEmbryoTransferForm] = useState({ embryoBatchId: '', recipientId: '', transferredAt: new Date().toISOString().slice(0, 10), notes: '' });
+    const [embryoTransferError, setEmbryoTransferError] = useState<string | null>(null);
+    const [embryoTransferSaving, setEmbryoTransferSaving] = useState(false);
+    const [identificationAnimal, setIdentificationAnimal] = useState<HerdAnimal | null>(null);
+    const [definitiveIdentification, setDefinitiveIdentification] = useState('');
+    const [newResponsibleMotherId, setNewResponsibleMotherId] = useState('');
+    const [biologicalMotherId, setBiologicalMotherId] = useState('');
+    const [biologicalFatherId, setBiologicalFatherId] = useState('');
+    const [identificationError, setIdentificationError] = useState<string | null>(null);
+    const [identificationSaving, setIdentificationSaving] = useState(false);
+    const [weaningForm, setWeaningForm] = useState({ date: new Date().toISOString().slice(0, 10), peso: '', identificacaoDefinitiva: '', paddockId: '', lotId: '', observacoes: '' });
 
     const [animalForm, setAnimalForm] = useState<AnimalFormState>(createInitialAnimalForm);
     const [lotForm, setLotForm] = useState({
         name: '',
         objective: '',
+        productionPhase: '',
         status: 'ATIVO',
         startDate: '',
         notes: '',
@@ -461,6 +507,32 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         }
     }, [farmId, resolvedMode]);
 
+    const openBirthModal = async () => {
+        setNascimentoModalOpen(true);
+        setNascimentoError(null);
+        setNascimentoSuccess(null);
+        if (!farmId) return;
+        try {
+            setEmbryoTransfers(await listEmbryoTransfers(farmId, resolvedMode));
+        } catch (error: any) {
+            setNascimentoError(error?.message || 'Não foi possível carregar as transferências pendentes.');
+        }
+    };
+
+    const openEmbryoTransferModal = async () => {
+        setEmbryoTransferModalOpen(true);
+        setEmbryoTransferError(null);
+        if (!farmId) return;
+        try {
+            const response = await fetch(buildApiUrl(`/po/embryos?farmId=${encodeURIComponent(farmId)}`), { credentials: 'include' });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data?.message || 'Erro ao carregar lotes de embrião.');
+            setEmbryoBatches((data.batches || []).filter((batch: any) => batch.tecnica === 'TE' && batch.quantidadeDisponivel > 0));
+        } catch (error: any) {
+            setEmbryoTransferError(error?.message || 'Não foi possível carregar os lotes de embrião.');
+        }
+    };
+
     useEffect(() => {
         loadData();
     }, [loadData]);
@@ -486,6 +558,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setFilterGmdMin('');
         setFilterGmdMax('');
         setFilterNutrition('');
+        setSelectedAnimals(new Set());
+        setBulkDeleteOpen(false);
+        setBulkMoveToLotOpen(false);
+        setBulkMoveToPastoOpen(false);
+        setBulkTransferFarmOpen(false);
+        setBulkTargetLotId('');
+        setBulkTargetPastoId('');
+        setBulkError(null);
+        setNascimentoModalOpen(false);
+        setEmbryoTransferModalOpen(false);
+        setBirthOrigin('NATURAL');
+        setSelectedEmbryoTransferId('');
+        setEmbryoTransfers([]);
+        setIdentificationAnimal(null);
+        setIdentificationError(null);
     }, [farmId, resolvedMode]);
 
     useEffect(() => {
@@ -602,6 +689,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 if (currentGmd === null) return false;
                 if (currentGmd >= getGmdTargetByCategory(animal.categoria)) return false;
             }
+            if (healthQuickFilter === 'desmame' && !isReadyForWeaning(animal)) {
+                return false;
+            }
+            if (healthQuickFilter === 'aguardando_id' && !(animal.desmamadoEm && animal.identificacaoProvisoria)) {
+                return false;
+            }
 
             if (lotFilter && animal.lotId !== lotFilter) {
                 return false;
@@ -708,6 +801,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         let withoutCategory = 0;
         let staleWeighing = 0;
         let belowTargetGmd = 0;
+        let readyForWeaning = 0;
+        let weanedAwaitingId = 0;
 
         for (const animal of animals) {
             const hasPaddock = Boolean(animal.currentPaddockId || animal.currentPaddockName);
@@ -731,9 +826,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             if (currentGmd !== null && currentGmd < getGmdTargetByCategory(animal.categoria)) {
                 belowTargetGmd++;
             }
+            if (isReadyForWeaning(animal)) readyForWeaning++;
+            if (animal.desmamadoEm && animal.identificacaoProvisoria) weanedAwaitingId++;
         }
 
-        return { withoutPaddock, withoutWeighing, staleWeighing, withoutCategory, belowTargetGmd };
+        return { withoutPaddock, withoutWeighing, staleWeighing, withoutCategory, belowTargetGmd, readyForWeaning, weanedAwaitingId };
     }, [animals]);
 
     const clearAllFilters = () => {
@@ -902,7 +999,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     };
 
     const resetLotForm = () => {
-        setLotForm({ name: '', objective: '', status: 'ATIVO', startDate: '', notes: '' });
+        setLotForm({ name: '', objective: '', productionPhase: '', status: 'ATIVO', startDate: '', notes: '' });
     };
 
     const openAnimalForm = () => {
@@ -943,6 +1040,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             );
             return;
         }
+        if (isPoMode && (!animalForm.nome.trim() || !animalForm.paddockId)) {
+            setAnimalFormError('No Plantel P.O., informe o nome e o pasto do animal.');
+            return;
+        }
 
         const parsedPeso = animalForm.ultimoPeso ? Number(animalForm.ultimoPeso) : null;
         if (animalForm.ultimoPeso && (!parsedPeso || parsedPeso <= 0)) {
@@ -954,6 +1055,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             setAnimalFormError(null);
             const payload = {
                 brinco: animalForm.brinco.trim(),
+                nome: animalForm.nome.trim() || undefined,
                 raca: isPura ? animalForm.raca.trim() : (animalForm.racaPredominante.trim() || animalForm.composicaoMestica.trim()),
                 tipoRaca: animalForm.tipoRaca,
                 padraoRacial: isPura ? (animalForm.padraoRacial.trim() || undefined) : undefined,
@@ -991,11 +1093,16 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             setLotFormError('Informe o nome do lote.');
             return;
         }
+        if (!lotForm.productionPhase) {
+            setLotFormError('Informe a fase produtiva do lote.');
+            return;
+        }
         try {
             setLotFormError(null);
             await createLot(farmId, resolvedMode, {
                 name: lotForm.name.trim(),
                 objective: lotForm.objective || undefined,
+                productionPhase: lotForm.productionPhase,
                 status: lotForm.status,
                 startDate: lotForm.startDate || undefined,
                 notes: lotForm.notes.trim() || undefined,
@@ -1182,7 +1289,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     };
 
     const handleDownloadImportTemplate = async () => {
-        const url = buildApiUrl('/herd/import/template');
+        const url = buildApiUrl(isPoMode ? '/po/herd/import/template' : '/herd/import/template');
         const res = await fetch(url, { credentials: 'include' });
         if (!res.ok) throw new Error('Erro ao baixar planilha modelo');
         const blob = await res.blob();
@@ -1561,6 +1668,29 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         </td>
                                         <th scope="row" className="whitespace-nowrap border-r border-[var(--eixo-border)] !pl-2.5 px-4 py-3 font-bold text-[var(--eixo-text)]">
                                             <div className="truncate" title={animal.identificacao}>{animal.identificacao}</div>
+                                            {animal.origemNascimento === 'TE' && (
+                                                <div className="mt-0.5 max-w-[260px] truncate text-[10px] font-medium text-[#527a13]" title={`${animal.identificacaoProvisoriaOriginal || animal.identificacao} = ${formatTeReference(animal.doadoraSnapshot, 'DO')}${animal.touroSnapshot ? ` × touro ${animal.touroSnapshot}` : ''}`}>
+                                                    {animal.identificacaoProvisoriaOriginal || animal.identificacao} = {formatTeReference(animal.doadoraSnapshot, 'DO')}{animal.touroSnapshot ? ` × ${animal.touroSnapshot}` : ''}
+                                                </div>
+                                            )}
+                                            {(animal.identificacaoProvisoria || isPoMode || animal.origemNascimento === 'TE') && (
+                                                <button
+                                                    type="button"
+                                                    onClick={(event) => {
+                                                        event.stopPropagation();
+                                                        setIdentificationAnimal(animal);
+                                                        setDefinitiveIdentification('');
+                                                        setNewResponsibleMotherId(animal.matrizResponsavelId || animal.maeId || '');
+                                                        setBiologicalMotherId(animal.maeId || '');
+                                                        setBiologicalFatherId(animal.paiId || '');
+                                                        setWeaningForm({ date: new Date().toISOString().slice(0, 10), peso: animal.ultimoPeso ? String(animal.ultimoPeso) : '', identificacaoDefinitiva: '', paddockId: animal.currentPaddockId || '', lotId: animal.lotId || '', observacoes: '' });
+                                                        setIdentificationError(null);
+                                                    }}
+                                                    className="mt-1 text-[10px] font-semibold text-[#527a13] underline decoration-dotted underline-offset-2"
+                                                >
+                                                    {animal.identificacaoProvisoria ? 'Identificar / filiação' : animal.origemNascimento === 'TE' ? 'Ver rastreabilidade' : 'Corrigir genealogia'}
+                                                </button>
+                                            )}
                                         </th>
                                         {visibleColumns.has('registro') && (
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
@@ -2071,11 +2201,19 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     </div>
                                     <button
                                         type="button"
-                                        onClick={() => setNascimentoModalOpen(true)}
+                                        onClick={() => { void openBirthModal(); }}
                                         className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-border)] bg-white px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
                                     >
                                         <span className="mr-1.5">🐄</span>
                                         <span className="hidden sm:block">Registrar nascimento</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => { void openEmbryoTransferModal(); }}
+                                        className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-border)] bg-white px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
+                                    >
+                                        <span className="mr-1.5">🧬</span>
+                                        <span className="hidden sm:block">Registrar TE</span>
                                     </button>
                                     <button
                                         type="button"
@@ -2128,7 +2266,33 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             </div>
 
             {activeTab === 'animals' && (
-                <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+                    <button
+                        type="button"
+                        onClick={() => applyHealthQuickFilter('desmame')}
+                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
+                            healthQuickFilter === 'desmame'
+                                ? 'border-[#b8d86d] bg-[#f0f9d4]'
+                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
+                        }`}
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Prontos para desmame</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#3a5c10]">{healthOverview.readyForWeaning}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">7 meses ou peso mínimo</p>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => applyHealthQuickFilter('aguardando_id')}
+                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
+                            healthQuickFilter === 'aguardando_id'
+                                ? 'border-[#b8d86d] bg-[#f0f9d4]'
+                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
+                        }`}
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Desmamados aguardando ID</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#3a5c10]">{healthOverview.weanedAwaitingId}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Identificação provisória mantida</p>
+                    </button>
                     <button
                         type="button"
                         onClick={() => applyHealthQuickFilter('sem_pasto')}
@@ -2765,6 +2929,18 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             </div>
                             <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
+                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Fase produtiva</label>
+                                    <select
+                                        value={lotForm.productionPhase}
+                                        onChange={(event) => setLotForm((prev) => ({ ...prev, productionPhase: event.target.value }))}
+                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none"
+                                        required
+                                    >
+                                        <option value="">Selecione...</option>
+                                        {PRODUCTION_PHASE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                                    </select>
+                                </div>
+                                <div>
                                     <label className="block text-sm font-medium text-[var(--eixo-text)]">Status</label>
                                     <select
                                         value={lotForm.status}
@@ -2846,6 +3022,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     await loadData();
                     window.dispatchEvent(new Event('eixo:herd-onboarding-progress-changed'));
                 }}
+                herdType={resolvedMode}
             />
 
             <ImportHerdModal
@@ -2855,7 +3032,61 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 farmId={farmId}
                 farmName={farmName}
                 onSuccess={loadData}
+                herdType={resolvedMode}
             />
+
+            {embryoTransferModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-[var(--eixo-border)] bg-white p-6 shadow-2xl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 className="font-bold text-[#2F2F2F]">Registrar transferência de embrião</h3>
+                                <p className="mt-1 text-xs text-[#5E5E5E]">A baixa do estoque e o vínculo com a receptora são feitos juntos.</p>
+                            </div>
+                            <button type="button" onClick={() => setEmbryoTransferModalOpen(false)} className="rounded-full p-1.5 text-[#5E5E5E] hover:bg-[#f5f5f5]">✕</button>
+                        </div>
+                        <form className="mt-5 space-y-4" onSubmit={async (event) => {
+                            event.preventDefault();
+                            if (!farmId) return;
+                            setEmbryoTransferSaving(true);
+                            setEmbryoTransferError(null);
+                            try {
+                                await createEmbryoTransfer({ farmId, herdType: resolvedMode, ...embryoTransferForm });
+                                setEmbryoTransferForm({ embryoBatchId: '', recipientId: '', transferredAt: new Date().toISOString().slice(0, 10), notes: '' });
+                                setEmbryoTransferModalOpen(false);
+                            } catch (error: any) {
+                                setEmbryoTransferError(error?.message || 'Erro ao registrar transferência de embrião.');
+                            } finally {
+                                setEmbryoTransferSaving(false);
+                            }
+                        }}>
+                            <div>
+                                <label className="block text-sm font-semibold text-[#2F2F2F]">Lote de embrião TE</label>
+                                <select required value={embryoTransferForm.embryoBatchId} onChange={(event) => setEmbryoTransferForm((prev) => ({ ...prev, embryoBatchId: event.target.value }))} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm">
+                                    <option value="">Selecione o lote</option>
+                                    {embryoBatches.map((batch) => <option key={batch.id} value={batch.id}>{batch.lote} · {batch.quantidadeDisponivel} disponível(is)</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-[#2F2F2F]">Receptora</label>
+                                <select required value={embryoTransferForm.recipientId} onChange={(event) => setEmbryoTransferForm((prev) => ({ ...prev, recipientId: event.target.value }))} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm">
+                                    <option value="">Selecione a fêmea</option>
+                                    {animals.filter((animal) => ['FÊMEA', 'FEMEA'].includes(String(animal.sexo).toUpperCase())).map((animal) => <option key={animal.id} value={animal.id}>{animal.identificacao}{animal.nome ? ` — ${animal.nome}` : ''}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-[#2F2F2F]">Data da transferência</label>
+                                <input required type="date" value={embryoTransferForm.transferredAt} onChange={(event) => setEmbryoTransferForm((prev) => ({ ...prev, transferredAt: event.target.value }))} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm" />
+                            </div>
+                            <textarea value={embryoTransferForm.notes} onChange={(event) => setEmbryoTransferForm((prev) => ({ ...prev, notes: event.target.value }))} rows={2} placeholder="Observações (opcional)" className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm" />
+                            {embryoTransferError && <p className="rounded-xl bg-[#fce8e8] px-3 py-2 text-sm text-[#8c2020]">{embryoTransferError}</p>}
+                            <button type="submit" disabled={embryoTransferSaving || !embryoTransferForm.embryoBatchId || !embryoTransferForm.recipientId || !embryoTransferForm.transferredAt} className="w-full rounded-xl bg-[#B6E23A] py-2.5 text-sm font-bold text-[#1a1a1a] disabled:opacity-50">
+                                {embryoTransferSaving ? 'Registrando...' : 'Confirmar transferência'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
 
             {/* ── Modal de Nascimento ─────────────────────────────────────── */}
             {nascimentoModalOpen && (
@@ -2877,20 +3108,23 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             setNascimentoSuccess(null);
                             setNascimentoSaving(true);
                             try {
-                                if (isPoMode) {
-                                    throw new Error('Registro de nascimento está disponível apenas no Rebanho Comercial.');
-                                }
+                                if (birthOrigin === 'NATURAL' && !nascimentoForm.maeId) throw new Error('Selecione a matriz responsável cadastrada nesta fazenda.');
+                                if (birthOrigin === 'TE' && !selectedEmbryoTransferId) throw new Error('Selecione uma transferência de embrião pendente.');
                                 const data = await createBirthAnimal({
                                     farmId,
                                     sexo: nascimentoForm.sexo,
                                     dataNascimento: nascimentoForm.dataNascimento,
                                     pesoNascimento: nascimentoForm.pesoNascimento ? Number(nascimentoForm.pesoNascimento) : undefined,
-                                    brinco: nascimentoForm.brinco || undefined,
-                                    maeId: nascimentoForm.maeId || undefined,
+                                    nome: nascimentoForm.nome || undefined,
+                                    maeId: nascimentoForm.maeId,
                                     maeNome: nascimentoForm.maeNome || undefined,
-                                });
+                                    paiId: isPoMode ? nascimentoForm.paiId || undefined : undefined,
+                                    origemNascimento: birthOrigin,
+                                    embryoTransferId: birthOrigin === 'TE' ? selectedEmbryoTransferId : undefined,
+                                }, resolvedMode);
                                 await loadData();
-                                setNascimentoForm({ sexo: 'Fêmea', dataNascimento: new Date().toISOString().slice(0, 10), pesoNascimento: '', brinco: '', maeId: '', maeNome: '' });
+                                setNascimentoForm({ sexo: 'Fêmea', dataNascimento: new Date().toISOString().slice(0, 10), pesoNascimento: '', nome: '', maeId: '', maeNome: '', paiId: '', paiNome: '' });
+                                setSelectedEmbryoTransferId('');
                                 if (data.brincoProvisorio) {
                                     setNascimentoSuccess(`Nascimento registrado. Brinco provisório: ${data.animal?.brinco || 'não informado'}.`);
                                 } else {
@@ -2902,8 +3136,18 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 setNascimentoSaving(false);
                             }
                         }}>
-                            {/* Mãe */}
                             <div>
+                                <label className="block text-sm font-semibold text-[#2F2F2F]">Origem do nascimento</label>
+                                <div className="mt-1 grid grid-cols-2 gap-2">
+                                    {(['NATURAL', 'TE'] as const).map((origin) => (
+                                        <button key={origin} type="button" onClick={() => setBirthOrigin(origin)} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${birthOrigin === origin ? 'border-[#B6E23A] bg-[#f0f9d4] text-[#3a5c10]' : 'border-[var(--eixo-border)] text-[#5E5E5E]'}`}>
+                                            {origin === 'NATURAL' ? 'Natural' : 'Transferência de embrião'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {birthOrigin === 'NATURAL' ? <div>
                                 <label className="block text-sm font-semibold text-[#2F2F2F]">Mãe (brinco ou nome)</label>
                                 <input
                                     type="text"
@@ -2926,9 +3170,40 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     <p className="mt-1 text-xs text-[#3a5c10]">✓ Mãe encontrada no plantel — raça e pasto serão herdados</p>
                                 )}
                                 {nascimentoForm.maeNome && !nascimentoForm.maeId && (
-                                    <p className="mt-1 text-xs text-[#5E5E5E]">Mãe salva como texto — pode ser vinculada depois</p>
+                                    <p className="mt-1 text-xs text-[#8c2020]">Selecione uma matriz da lista para gerar a sequência.</p>
                                 )}
-                            </div>
+                            </div> : <div>
+                                <label className="block text-sm font-semibold text-[#2F2F2F]">Transferência pendente</label>
+                                <select value={selectedEmbryoTransferId} onChange={(event) => setSelectedEmbryoTransferId(event.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm">
+                                    <option value="">Selecione receptora e doadora</option>
+                                    {embryoTransfers.map((transfer) => (
+                                        <option key={transfer.id} value={transfer.id}>Receptora {transfer.recipientSnapshot} · Doadora {transfer.donorSnapshot}{transfer.sireSnapshot ? ` · Touro ${transfer.sireSnapshot}` : ''}</option>
+                                    ))}
+                                </select>
+                                {embryoTransfers.length === 0 && <p className="mt-1 text-xs text-[#8c2020]">Nenhuma transferência TE pendente neste rebanho.</p>}
+                            </div>}
+
+                            {isPoMode && birthOrigin === 'NATURAL' && (
+                                <div>
+                                    <label className="block text-sm font-semibold text-[#2F2F2F]">Pai biológico (opcional)</label>
+                                    <input
+                                        type="text"
+                                        value={nascimentoForm.paiNome}
+                                        list="pai-suggestions"
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            const found = animals.find(a => (a.brinco === val || a.registro === val || a.nome === val) && String(a.sexo).toUpperCase() === 'MACHO');
+                                            setNascimentoForm(prev => ({ ...prev, paiNome: val, paiId: found?.id || '' }));
+                                        }}
+                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm focus:border-[#B6E23A] focus:outline-none"
+                                    />
+                                    <datalist id="pai-suggestions">
+                                        {animals.filter(a => String(a.sexo).toUpperCase() === 'MACHO').map(a => (
+                                            <option key={a.id} value={a.brinco || a.registro || a.nome || ''}>{a.nome || a.registro || a.brinco}</option>
+                                        ))}
+                                    </datalist>
+                                </div>
+                            )}
 
                             {/* Sexo */}
                             <div>
@@ -2972,20 +3247,20 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-[#5E5E5E]">Brinco do bezerro <span className="text-xs">(opcional)</span></label>
+                                    <label className="block text-sm font-medium text-[#5E5E5E]">Nome da cria <span className="text-xs">(opcional)</span></label>
                                     <input type="text"
-                                        value={nascimentoForm.brinco}
-                                        onChange={(e) => setNascimentoForm(prev => ({ ...prev, brinco: e.target.value }))}
-                                        placeholder="ex: 0847"
+                                        value={nascimentoForm.nome}
+                                        onChange={(e) => setNascimentoForm(prev => ({ ...prev, nome: e.target.value }))}
+                                        placeholder="Nome ou apelido"
                                         className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm focus:border-[#B6E23A] focus:outline-none"
                                     />
                                 </div>
                             </div>
-                            {!nascimentoForm.brinco && (
-                                <p className="text-xs text-[#5E5E5E]">
-                                    Sem brinco? O sistema gera um ID provisório — você completa depois.
-                                </p>
-                            )}
+                            <p className="rounded-xl bg-[#f0f9d4] px-3 py-2 text-xs text-[#3a5c10]">
+                                {birthOrigin === 'TE'
+                                    ? 'O ID será gerado como “TE-receptora-01 | DO-doadora”. A sequência da combinação nunca será reutilizada.'
+                                    : `O ID será gerado automaticamente como “Mãe ${nascimentoForm.maeNome || 'XXXX'}-N” e a sequência nunca será reutilizada.`}
+                            </p>
 
                             {nascimentoError && (
                                 <p className="rounded-xl bg-[#fce8e8] px-3 py-2 text-sm text-[#8c2020]">{nascimentoError}</p>
@@ -2994,11 +3269,186 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 <p className="rounded-xl bg-[var(--eixo-green-soft)] px-3 py-2 text-sm text-[var(--eixo-success)]">{nascimentoSuccess}</p>
                             )}
 
-                            <button type="submit" disabled={nascimentoSaving || !nascimentoForm.dataNascimento}
+                            <button type="submit" disabled={nascimentoSaving || !nascimentoForm.dataNascimento || (birthOrigin === 'NATURAL' ? !nascimentoForm.maeId : !selectedEmbryoTransferId)}
                                 className="w-full rounded-xl bg-[#B6E23A] py-2.5 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130] disabled:opacity-50">
                                 {nascimentoSaving ? 'Registrando...' : '🐄 Registrar nascimento'}
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {identificationAnimal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-[var(--eixo-border)] bg-white p-6 shadow-2xl">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 className="font-bold text-[#2F2F2F]">Identificação da cria</h3>
+                                <p className="mt-1 text-sm text-[#5E5E5E]">Atual: {identificationAnimal.identificacao}</p>
+                                {identificationAnimal.origemNascimento === 'TE' && (
+                                    <p className="mt-1 text-xs text-[#3a5c10]">
+                                        {identificationAnimal.identificacaoProvisoriaOriginal || identificationAnimal.identificacao}
+                                        {' = '}{formatTeReference(identificationAnimal.doadoraSnapshot, 'DO')}
+                                        {identificationAnimal.touroSnapshot ? ` × touro ${identificationAnimal.touroSnapshot}` : ''}
+                                    </p>
+                                )}
+                            </div>
+                            <button type="button" onClick={() => setIdentificationAnimal(null)} className="rounded-full p-1.5 text-[#5E5E5E] hover:bg-[#f5f5f5]">✕</button>
+                        </div>
+
+                        {identificationAnimal.identificacaoProvisoria && <div className="mt-5 space-y-2 border-t border-[var(--eixo-border)] pt-4">
+                            <label className="block text-sm font-semibold text-[#2F2F2F]">Atribuir ID definitivo</label>
+                            <input
+                                type="text"
+                                value={definitiveIdentification}
+                                onChange={(event) => setDefinitiveIdentification(event.target.value)}
+                                placeholder="Novo brinco ou identificação"
+                                className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm"
+                            />
+                            <button
+                                type="button"
+                                disabled={identificationSaving || !definitiveIdentification.trim()}
+                                onClick={async () => {
+                                    setIdentificationSaving(true);
+                                    setIdentificationError(null);
+                                    try {
+                                        await assignDefinitiveIdentification(identificationAnimal.id, resolvedMode, definitiveIdentification.trim());
+                                        await loadData();
+                                        setIdentificationAnimal(null);
+                                    } catch (error: any) {
+                                        setIdentificationError(error.message || 'Erro ao atribuir ID definitivo.');
+                                    } finally {
+                                        setIdentificationSaving(false);
+                                    }
+                                }}
+                                className="w-full rounded-xl bg-[#B6E23A] px-4 py-2 text-sm font-bold text-[#1a1a1a] disabled:opacity-50"
+                            >
+                                Confirmar ID definitivo
+                            </button>
+                        </div>}
+
+                        {identificationAnimal.identificacaoProvisoria && !identificationAnimal.desmamadoEm && <div className="mt-5 space-y-2 border-t border-[var(--eixo-border)] pt-4">
+                            <label className="block text-sm font-semibold text-[#2F2F2F]">Registrar desmama</label>
+                            <p className="text-xs text-[#5E5E5E]">O ID definitivo é opcional. Sem ele, o brinco provisório será mantido.</p>
+                            <div className="grid grid-cols-2 gap-2">
+                                <input type="date" value={weaningForm.date} onChange={(event) => setWeaningForm((prev) => ({ ...prev, date: event.target.value }))} className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm" />
+                                <input type="number" min="0.1" step="0.1" value={weaningForm.peso} onChange={(event) => setWeaningForm((prev) => ({ ...prev, peso: event.target.value }))} placeholder="Peso (kg)" className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm" />
+                            </div>
+                            <input type="text" value={weaningForm.identificacaoDefinitiva} onChange={(event) => setWeaningForm((prev) => ({ ...prev, identificacaoDefinitiva: event.target.value }))} placeholder="ID definitivo (opcional)" className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm" />
+                            <div className="grid grid-cols-2 gap-2">
+                                <select value={weaningForm.paddockId} onChange={(event) => setWeaningForm((prev) => ({ ...prev, paddockId: event.target.value }))} className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm">
+                                    <option value="">Manter pasto</option>
+                                    {paddocks.map((paddock) => <option key={paddock.id} value={paddock.id}>{paddock.name}</option>)}
+                                </select>
+                                <select value={weaningForm.lotId} onChange={(event) => setWeaningForm((prev) => ({ ...prev, lotId: event.target.value }))} className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm">
+                                    <option value="">Manter lote</option>
+                                    {lots.map((lot) => <option key={lot.id} value={lot.id}>{lot.name}</option>)}
+                                </select>
+                            </div>
+                            <textarea rows={2} value={weaningForm.observacoes} onChange={(event) => setWeaningForm((prev) => ({ ...prev, observacoes: event.target.value }))} placeholder="Observações" className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm" />
+                            <button type="button" disabled={identificationSaving || !weaningForm.date || !Number(weaningForm.peso)} onClick={async () => {
+                                setIdentificationSaving(true);
+                                setIdentificationError(null);
+                                try {
+                                    await registerCalfWeaning(identificationAnimal.id, resolvedMode, {
+                                        date: weaningForm.date,
+                                        peso: Number(weaningForm.peso),
+                                        identificacaoDefinitiva: weaningForm.identificacaoDefinitiva.trim() || undefined,
+                                        paddockId: weaningForm.paddockId || undefined,
+                                        lotId: weaningForm.lotId || undefined,
+                                        observacoes: weaningForm.observacoes.trim() || undefined,
+                                    });
+                                    await loadData();
+                                    setIdentificationAnimal(null);
+                                } catch (error: any) {
+                                    setIdentificationError(error?.message || 'Erro ao registrar desmama.');
+                                } finally {
+                                    setIdentificationSaving(false);
+                                }
+                            }} className="w-full rounded-xl bg-[#B6E23A] px-4 py-2 text-sm font-bold text-[#1a1a1a] disabled:opacity-50">
+                                Registrar desmama
+                            </button>
+                        </div>}
+
+                        {identificationAnimal.identificacaoProvisoria && <div className="mt-5 space-y-2 border-t border-[var(--eixo-border)] pt-4">
+                            <label className="block text-sm font-semibold text-[#2F2F2F]">Trocar matriz responsável</label>
+                            <p className="text-xs text-[#5E5E5E]">Gera uma nova sequência, sem alterar automaticamente a mãe biológica.</p>
+                            <select
+                                value={newResponsibleMotherId}
+                                onChange={(event) => setNewResponsibleMotherId(event.target.value)}
+                                className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm"
+                            >
+                                <option value="">Selecione a nova matriz</option>
+                                {animals
+                                    .filter((animal) => animal.id !== identificationAnimal.id && ['FÊMEA', 'FEMEA'].includes(String(animal.sexo).toUpperCase()))
+                                    .map((animal) => (
+                                        <option key={animal.id} value={animal.id}>{animal.identificacao}{animal.nome ? ` — ${animal.nome}` : ''}</option>
+                                    ))}
+                            </select>
+                            <button
+                                type="button"
+                                disabled={identificationSaving || !newResponsibleMotherId || newResponsibleMotherId === identificationAnimal.matrizResponsavelId}
+                                onClick={async () => {
+                                    setIdentificationSaving(true);
+                                    setIdentificationError(null);
+                                    try {
+                                        await updateResponsibleMother(identificationAnimal.id, resolvedMode, newResponsibleMotherId);
+                                        await loadData();
+                                        setIdentificationAnimal(null);
+                                    } catch (error: any) {
+                                        setIdentificationError(error.message || 'Erro ao trocar a matriz responsável.');
+                                    } finally {
+                                        setIdentificationSaving(false);
+                                    }
+                                }}
+                                className="w-full rounded-xl border border-[#9fc431] px-4 py-2 text-sm font-bold text-[#3a5c10] disabled:opacity-50"
+                            >
+                                Confirmar troca de matriz
+                            </button>
+                        </div>}
+
+                        {isPoMode && (
+                            <div className="mt-5 space-y-2 border-t border-[var(--eixo-border)] pt-4">
+                                <label className="block text-sm font-semibold text-[#2F2F2F]">Correção auditada da genealogia</label>
+                                <p className="text-xs text-[#5E5E5E]">A matriz responsável e a tatuagem não mudam nesta ação.</p>
+                                <select value={biologicalMotherId} onChange={(event) => setBiologicalMotherId(event.target.value)} className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm">
+                                    <option value="">Mãe biológica não informada</option>
+                                    {animals.filter((animal) => animal.id !== identificationAnimal.id && ['FÊMEA', 'FEMEA'].includes(String(animal.sexo).toUpperCase())).map((animal) => (
+                                        <option key={animal.id} value={animal.id}>{animal.identificacao}{animal.nome ? ` — ${animal.nome}` : ''}</option>
+                                    ))}
+                                </select>
+                                <select value={biologicalFatherId} onChange={(event) => setBiologicalFatherId(event.target.value)} className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm">
+                                    <option value="">Pai biológico não informado</option>
+                                    {animals.filter((animal) => animal.id !== identificationAnimal.id && String(animal.sexo).toUpperCase() === 'MACHO').map((animal) => (
+                                        <option key={animal.id} value={animal.id}>{animal.identificacao}{animal.nome ? ` — ${animal.nome}` : ''}</option>
+                                    ))}
+                                </select>
+                                <button
+                                    type="button"
+                                    disabled={identificationSaving}
+                                    onClick={async () => {
+                                        setIdentificationSaving(true);
+                                        setIdentificationError(null);
+                                        try {
+                                            await updatePoGenealogy(identificationAnimal.id, biologicalMotherId || null, biologicalFatherId || null);
+                                            await loadData();
+                                            setIdentificationAnimal(null);
+                                        } catch (error: any) {
+                                            setIdentificationError(error.message || 'Erro ao corrigir genealogia P.O.');
+                                        } finally {
+                                            setIdentificationSaving(false);
+                                        }
+                                    }}
+                                    className="w-full rounded-xl border border-[#9fc431] px-4 py-2 text-sm font-bold text-[#3a5c10] disabled:opacity-50"
+                                >
+                                    Salvar correção da genealogia
+                                </button>
+                            </div>
+                        )}
+
+                        {identificationError && (
+                            <p className="mt-4 rounded-xl bg-[#fce8e8] px-3 py-2 text-sm text-[#8c2020]">{identificationError}</p>
+                        )}
                     </div>
                 </div>
             )}

@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { requireAuth, requireSuperAdmin } from '../middlewares/requireAuth.js';
 import { PLAN_ENTITLEMENTS, PLAN_MODULES } from '../utils/saasContext.js';
 import { FIELD_WORKER_ROLE, FIELD_ADMIN_ROLE } from '../config/env.js';
-import { createSupportLog, getSupportConversationState, SUPPORT_ENTITY, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE, SUPPORT_ACTION_ADMIN } from '../chat/chatService.js';
+import { createSupportLog, getSupportConversationState, SUPPORT_ENTITY, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE, SUPPORT_ACTION_ADMIN, SUPPORT_ACTION_REQUEST } from '../chat/chatService.js';
 import { logActivity } from '../utils/activityLog.js';
 const prisma = new PrismaClient();
 
@@ -302,7 +302,7 @@ export function registerHQRoutes(app) {
             const logs = await prisma.activityLog.findMany({
                 where: {
                     entity: SUPPORT_ENTITY,
-                    action: { in: ['chat_message_user', 'chat_message_ai', 'chat_message_admin'] },
+                    action: { in: ['chat_message_user', 'chat_message_ai', 'chat_message_admin', SUPPORT_ACTION_REQUEST, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE] },
                 },
                 orderBy: { createdAt: 'desc' },
                 take: 500,
@@ -315,20 +315,43 @@ export function registerHQRoutes(app) {
                 if (!grouped.has(key)) {
                     grouped.set(key, {
                         conversationId: key,
-                        user: log.user ? { id: log.user.id, name: log.user.name, email: log.user.email } : null,
-                        lastMessage: log.description || '',
-                        lastAction: log.action || '',
+                        user: null,
+                        lastMessage: '',
+                        lastAction: '',
                         lastAt: log.createdAt,
                         totalMessages: 0,
+                        humanRequested: false,
+                        assumedByAdmin: false,
+                        latestControl: null,
                     });
                 }
                 const row = grouped.get(key);
-                row.totalMessages += 1;
+                if (['chat_message_user', 'chat_message_ai', 'chat_message_admin', SUPPORT_ACTION_REQUEST].includes(log.action)) {
+                    row.totalMessages += 1;
+                    if (!row.lastMessage) {
+                        row.lastMessage = log.description || '';
+                        row.lastAction = log.action || '';
+                    }
+                    if (!row.user && log.user) {
+                        row.user = { id: log.user.id, name: log.user.name, email: log.user.email };
+                    }
+                }
+                if (!row.latestControl && [SUPPORT_ACTION_REQUEST, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE].includes(log.action)) {
+                    row.latestControl = log.action;
+                }
             }
 
-            const conversations = Array.from(grouped.values()).sort(
-                (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime(),
-            );
+            const conversations = Array.from(grouped.values())
+                .map((item) => ({
+                    ...item,
+                    humanRequested: item.latestControl === SUPPORT_ACTION_REQUEST,
+                    assumedByAdmin: item.latestControl === SUPPORT_ACTION_ASSUME,
+                    latestControl: undefined,
+                }))
+                .sort((a, b) => {
+                    if (a.humanRequested !== b.humanRequested) return a.humanRequested ? -1 : 1;
+                    return new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime();
+                });
 
             return res.json({ suporte: conversations });
         } catch (error) {
@@ -345,7 +368,7 @@ export function registerHQRoutes(app) {
                     where: {
                         entity: SUPPORT_ENTITY,
                         entityId: conversationId,
-                        action: { in: ['chat_message_user', 'chat_message_ai', 'chat_message_admin'] },
+                        action: { in: ['chat_message_user', 'chat_message_ai', 'chat_message_admin', SUPPORT_ACTION_REQUEST] },
                     },
                     orderBy: { createdAt: 'asc' },
                     include: { user: { select: { id: true, name: true, email: true } } },
@@ -362,7 +385,13 @@ export function registerHQRoutes(app) {
                     action: item.action,
                     text: item.description || '',
                     createdAt: item.createdAt,
-                    user: item.user ? { id: item.user.id, name: item.user.name, email: item.user.email } : null,
+                    user: item.action === SUPPORT_ACTION_ADMIN
+                        ? {
+                            id: item.requestMeta?.adminUserId || null,
+                            name: item.requestMeta?.adminName || 'Equipe EIXO',
+                            email: null,
+                        }
+                        : item.user ? { id: item.user.id, name: item.user.name, email: item.user.email } : null,
                 })),
             });
         } catch (error) {
@@ -374,7 +403,7 @@ export function registerHQRoutes(app) {
     app.post('/api/hq/suporte/:conversationId/assume', requireAuth, requireSuperAdmin, async (req, res) => {
         const { conversationId } = req.params;
         try {
-            await createSupportLog(req, {
+            const assumedSaved = await createSupportLog(req, {
                 conversationId,
                 action: SUPPORT_ACTION_ASSUME,
                 message: 'Conversa assumida por SUPER ADMIN.',
@@ -383,6 +412,7 @@ export function registerHQRoutes(app) {
                     adminName: req.user.name || null,
                 },
             });
+            if (!assumedSaved) throw new Error('Não foi possível registrar o atendimento.');
             return res.json({ ok: true });
         } catch (error) {
             console.error(error);
@@ -393,7 +423,7 @@ export function registerHQRoutes(app) {
     app.post('/api/hq/suporte/:conversationId/release', requireAuth, requireSuperAdmin, async (req, res) => {
         const { conversationId } = req.params;
         try {
-            await createSupportLog(req, {
+            const releasedSaved = await createSupportLog(req, {
                 conversationId,
                 action: SUPPORT_ACTION_RELEASE,
                 message: 'Conversa devolvida para atendimento automático.',
@@ -402,6 +432,7 @@ export function registerHQRoutes(app) {
                     adminName: req.user.name || null,
                 },
             });
+            if (!releasedSaved) throw new Error('Não foi possível liberar o atendimento.');
             return res.json({ ok: true });
         } catch (error) {
             console.error(error);
@@ -416,16 +447,44 @@ export function registerHQRoutes(app) {
             return res.status(400).json({ message: 'Mensagem vazia.' });
         }
         try {
-            await createSupportLog(req, {
+            const ownerLog = await prisma.activityLog.findFirst({
+                where: {
+                    entity: SUPPORT_ENTITY,
+                    entityId: conversationId,
+                    action: { in: ['chat_message_user', SUPPORT_ACTION_REQUEST] },
+                },
+                orderBy: { createdAt: 'asc' },
+                select: { userId: true, organizationId: true },
+            });
+            if (!ownerLog) {
+                return res.status(404).json({ message: 'Conversa não encontrada.' });
+            }
+            const state = await getSupportConversationState(conversationId);
+            if (!state.assumed) {
+                const assumedSaved = await createSupportLog(req, {
+                    conversationId,
+                    action: SUPPORT_ACTION_ASSUME,
+                    message: 'Conversa assumida automaticamente ao responder.',
+                    requestMeta: {
+                        adminUserId: req.user.id,
+                        adminName: req.user.name || null,
+                    },
+                });
+                if (!assumedSaved) throw new Error('Não foi possível assumir a conversa.');
+            }
+            const replySaved = await createSupportLog(req, {
                 conversationId,
                 action: SUPPORT_ACTION_ADMIN,
                 message: String(message).trim().slice(0, 2000),
+                userIdOverride: ownerLog.userId,
+                organizationIdOverride: ownerLog.organizationId,
                 requestMeta: {
                     adminUserId: req.user.id,
                     adminName: req.user.name || null,
                     role: 'super_admin',
                 },
             });
+            if (!replySaved) throw new Error('Não foi possível registrar a resposta.');
             return res.json({ ok: true });
         } catch (error) {
             console.error(error);

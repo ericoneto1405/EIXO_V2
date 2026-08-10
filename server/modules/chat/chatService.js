@@ -1,9 +1,15 @@
 import crypto from 'node:crypto';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { PrismaClient } from '@prisma/client';
-import { GOOGLE_API_KEY, CHAT_RATE_WINDOW_MS, CHAT_RATE_MAX_PER_USER, CHAT_BURST_WINDOW_MS, CHAT_BURST_MAX_PER_USER } from '../config/env.js';
+import {
+    APP_BASE_URL,
+    GOOGLE_API_KEY,
+    CHAT_RATE_WINDOW_MS,
+    CHAT_RATE_MAX_PER_USER,
+    CHAT_BURST_WINDOW_MS,
+    CHAT_BURST_MAX_PER_USER,
+} from '../config/env.js';
 import { chatRateAttempts, chatBurstAttempts, isWindowRateLimited, registerWindowAttempt, getWindowRetryAfterSeconds } from '../middlewares/rateLimiter.js';
-import { escapeHtml } from '../utils/formatters.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
 import { normalizeUserModules, getDerivedAccessType } from '../utils/saasContext.js';
 import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
@@ -130,7 +136,9 @@ const SUPPORT_ACTION_AI = 'chat_message_ai';
 export const SUPPORT_ACTION_ADMIN = 'chat_message_admin';
 export const SUPPORT_ACTION_ASSUME = 'chat_assumed';
 export const SUPPORT_ACTION_RELEASE = 'chat_released';
-const SUPPORT_ALERT_TO_EMAIL = process.env.SUPPORT_ALERT_TO_EMAIL || process.env.RESEND_FROM_EMAIL || '';
+export const SUPPORT_ACTION_REQUEST = 'chat_human_requested';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 const SUPPORT_ALERT_COOLDOWN_MS = Number(process.env.SUPPORT_ALERT_COOLDOWN_MS) || 15 * 60 * 1000;
 const supportAlertCooldownStore = new Map();
 const SUPPORT_MODULE_CATALOG = [
@@ -288,6 +296,7 @@ export const createSupportLog = async (req, {
     action,
     message = null,
     userIdOverride = null,
+    organizationIdOverride = undefined,
     requestMeta = null,
 }) => {
     try {
@@ -295,7 +304,9 @@ export const createSupportLog = async (req, {
             data: {
                 id: crypto.randomUUID(),
                 userId: userIdOverride || req.user.id,
-                organizationId: req.saas?.organizationId || null,
+                organizationId: organizationIdOverride !== undefined
+                    ? organizationIdOverride
+                    : req.saas?.organizationId || null,
                 method: req.method,
                 path: req.originalUrl || req.path || '',
                 action,
@@ -308,8 +319,10 @@ export const createSupportLog = async (req, {
                 userAgent: req.get('user-agent') || null,
             },
         });
+        return true;
     } catch (error) {
         console.error('Erro ao registrar log de suporte:', error);
+        return false;
     }
 };
 
@@ -318,13 +331,17 @@ export const getSupportConversationState = async (conversationId) => {
         where: {
             entity: SUPPORT_ENTITY,
             entityId: conversationId,
-            action: { in: [SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE] },
+            action: { in: [SUPPORT_ACTION_REQUEST, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE] },
         },
         orderBy: { createdAt: 'desc' },
     });
 
     if (!latestControl || latestControl.action === SUPPORT_ACTION_RELEASE) {
-        return { assumed: false, assumedByUserId: null };
+        return { assumed: false, requested: false, assumedByUserId: null };
+    }
+
+    if (latestControl.action === SUPPORT_ACTION_REQUEST) {
+        return { assumed: false, requested: true, assumedByUserId: null };
     }
 
     const requestMeta = latestControl.requestMeta && typeof latestControl.requestMeta === 'object'
@@ -332,6 +349,7 @@ export const getSupportConversationState = async (conversationId) => {
         : {};
     return {
         assumed: true,
+        requested: false,
         assumedByUserId: requestMeta?.adminUserId || latestControl.userId || null,
     };
 };
@@ -353,44 +371,124 @@ const shouldTriggerSupportNoAnswerFallback = (text) => {
     return weakPatterns.some((pattern) => normalized.includes(pattern));
 };
 
-const sendSupportAlertEmail = async (req, {
+const sendSupportTelegramAlert = async (req, {
     conversationId,
     farmId = null,
     reason,
     userMessage,
 }) => {
-    if (!SUPPORT_ALERT_TO_EMAIL) return;
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return false;
     const cooldownKey = `${conversationId}:${reason}`;
     const lastSentAt = supportAlertCooldownStore.get(cooldownKey) || 0;
-    if (Date.now() - lastSentAt < SUPPORT_ALERT_COOLDOWN_MS) return;
+    if (Date.now() - lastSentAt < SUPPORT_ALERT_COOLDOWN_MS) return false;
 
     try {
-        const subject = `[EIXO] Alerta de suporte (${reason})`;
-        const safeMessage = escapeHtml(String(userMessage || '').slice(0, 2000));
-        const userEmail = escapeHtml(String(req.user?.email || 'não informado'));
-        const orgId = escapeHtml(String(req.saas?.organizationId || 'não informado'));
-        const farmLabel = farmId ? escapeHtml(String(farmId)) : 'chat genérico';
-        const body = `
-            <div style="font-family: Arial, sans-serif; color: #1f2937;">
-                <h2 style="margin: 0 0 12px;">Alerta automático do EIXO Suporte</h2>
-                <p><strong>Motivo:</strong> ${escapeHtml(reason)}</p>
-                <p><strong>Conversa:</strong> ${escapeHtml(conversationId)}</p>
-                <p><strong>Usuário:</strong> ${userEmail}</p>
-                <p><strong>Organização:</strong> ${orgId}</p>
-                <p><strong>Fazenda:</strong> ${farmLabel}</p>
-                <p><strong>Mensagem do usuário:</strong></p>
-                <blockquote style="margin: 0; padding: 10px; border-left: 3px solid #d1d5db; background: #f9fafb;">
-                    ${safeMessage}
-                </blockquote>
-            </div>
-        `;
+        const text = [
+            'EIXO Suporte — novo alerta',
+            '',
+            `Motivo: ${String(reason || 'não informado')}`,
+            `Usuário: ${req.user?.name || 'não informado'} (${req.user?.email || 'sem e-mail'})`,
+            `Organização: ${req.saas?.organization?.name || req.saas?.organizationId || 'não informada'}`,
+            `Fazenda: ${farmId || 'não selecionada'}`,
+            `Conversa: ${conversationId}`,
+            '',
+            `Mensagem: ${String(userMessage || '').slice(0, 1200) || 'Sem mensagem.'}`,
+            '',
+            `Abrir EIXO HQ: ${APP_BASE_URL}`,
+        ].join('\n');
+        const response = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(5000),
+            body: JSON.stringify({
+                chat_id: TELEGRAM_CHAT_ID,
+                text,
+                disable_web_page_preview: true,
+            }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload?.ok !== true) {
+            throw new Error(payload?.description || 'Falha ao enviar alerta pelo Telegram.');
+        }
         supportAlertCooldownStore.set(cooldownKey, Date.now());
+        return true;
     } catch (error) {
-        console.error('Erro ao enviar alerta de suporte por e-mail:', error);
+        console.error('Erro ao enviar alerta de suporte pelo Telegram:', error);
+        return false;
     }
 };
 
 export function registerChatRoutes(app) {
+    app.post('/api/chat/request-human', requireAuth, async (req, res) => {
+        const { conversationId, farmId, currentPath } = req.body || {};
+        const conversationKey = String(conversationId || '').trim() || crypto.randomUUID();
+        const normalizedFarmId = typeof farmId === 'string' && farmId.trim() ? farmId.trim() : null;
+        const normalizedCurrentPath = typeof currentPath === 'string' && currentPath.trim()
+            ? currentPath.trim().slice(0, 160)
+            : null;
+
+        try {
+            const [existingOwner, lastUserMessage] = await Promise.all([
+                prisma.activityLog.findFirst({
+                    where: {
+                        entity: SUPPORT_ENTITY,
+                        entityId: conversationKey,
+                        action: { in: [SUPPORT_ACTION_USER, SUPPORT_ACTION_AI, SUPPORT_ACTION_ADMIN, SUPPORT_ACTION_REQUEST] },
+                    },
+                    orderBy: { createdAt: 'asc' },
+                    select: { userId: true },
+                }),
+                prisma.activityLog.findFirst({
+                    where: {
+                        entity: SUPPORT_ENTITY,
+                        entityId: conversationKey,
+                        action: SUPPORT_ACTION_USER,
+                        userId: req.user.id,
+                    },
+                    orderBy: { createdAt: 'desc' },
+                    select: { description: true },
+                }),
+            ]);
+            if (existingOwner && existingOwner.userId !== req.user.id) {
+                return res.status(403).json({ message: 'Conversa não pertence a este usuário.' });
+            }
+
+            const state = await getSupportConversationState(conversationKey);
+            if (!state.requested && !state.assumed) {
+                const confirmation = 'Sua solicitação foi enviada para a equipe EIXO. Um especialista continuará o atendimento por aqui.';
+                const requestSaved = await createSupportLog(req, {
+                    conversationId: conversationKey,
+                    action: SUPPORT_ACTION_REQUEST,
+                    message: confirmation,
+                    requestMeta: {
+                        role: 'system',
+                        farmId: normalizedFarmId,
+                        currentPath: normalizedCurrentPath,
+                    },
+                });
+                if (!requestSaved) {
+                    throw new Error('Não foi possível registrar a solicitação de atendimento.');
+                }
+                await sendSupportTelegramAlert(req, {
+                    conversationId: conversationKey,
+                    farmId: normalizedFarmId,
+                    reason: 'human_requested',
+                    userMessage: lastUserMessage?.description || 'O usuário solicitou falar com um especialista.',
+                });
+            }
+
+            return res.json({
+                ok: true,
+                conversationId: conversationKey,
+                humanRequested: !state.assumed,
+                assumedByAdmin: state.assumed,
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao solicitar atendimento humano.' });
+        }
+    });
+
     app.post('/api/chat/send-message', requireAuth, async (req, res) => {
         const { message, history, conversationId, farmId, currentPath } = req.body || {};
         if (!message) {
@@ -435,7 +533,7 @@ export function registerChatRoutes(app) {
                 message: fallbackText,
                 requestMeta: { role: 'ai', farmId: normalizedFarmId, fallbackReason: 'ai_unavailable' },
             });
-            await sendSupportAlertEmail(req, {
+            await sendSupportTelegramAlert(req, {
                 conversationId: conversationKey,
                 farmId: normalizedFarmId,
                 reason: 'ai_unavailable',
@@ -446,11 +544,14 @@ export function registerChatRoutes(app) {
 
         try {
             const state = await getSupportConversationState(conversationKey);
-            if (state.assumed) {
+            if (state.assumed || state.requested) {
                 return res.json({
-                    response: 'Seu atendimento foi assumido por um especialista do suporte. Aguarde a resposta aqui no chat.',
+                    response: state.assumed
+                        ? 'Seu atendimento foi assumido por um especialista do suporte.'
+                        : 'Sua solicitação está aguardando um especialista do suporte.',
                     conversationId: conversationKey,
-                    assumedByAdmin: true,
+                    assumedByAdmin: state.assumed,
+                    humanRequested: state.requested,
                 });
             }
 
@@ -473,7 +574,7 @@ export function registerChatRoutes(app) {
                     message: fallbackText,
                     requestMeta: { role: 'ai', farmId: normalizedFarmId, fallbackReason: 'low_confidence' },
                 });
-                await sendSupportAlertEmail(req, {
+                await sendSupportTelegramAlert(req, {
                     conversationId: conversationKey,
                     farmId: normalizedFarmId,
                     reason: 'low_confidence',
@@ -499,7 +600,7 @@ export function registerChatRoutes(app) {
                 message: fallbackText,
                 requestMeta: { role: 'ai', farmId: normalizedFarmId, fallbackReason: 'ai_error' },
             });
-            await sendSupportAlertEmail(req, {
+            await sendSupportTelegramAlert(req, {
                 conversationId: conversationKey,
                 farmId: normalizedFarmId,
                 reason: 'ai_error',
@@ -519,7 +620,7 @@ export function registerChatRoutes(app) {
             const logs = await prisma.activityLog.findMany({
                 where: {
                     entity: SUPPORT_ENTITY,
-                    action: { in: [SUPPORT_ACTION_USER, SUPPORT_ACTION_AI, SUPPORT_ACTION_ADMIN] },
+                    action: { in: [SUPPORT_ACTION_USER, SUPPORT_ACTION_AI, SUPPORT_ACTION_ADMIN, SUPPORT_ACTION_REQUEST] },
                     userId: req.user.id,
                     entityId: { not: null },
                 },
@@ -584,7 +685,7 @@ export function registerChatRoutes(app) {
                     where: {
                         entity: SUPPORT_ENTITY,
                         entityId: conversationId,
-                        action: { in: [SUPPORT_ACTION_USER, SUPPORT_ACTION_AI, SUPPORT_ACTION_ADMIN] },
+                        action: { in: [SUPPORT_ACTION_USER, SUPPORT_ACTION_AI, SUPPORT_ACTION_ADMIN, SUPPORT_ACTION_REQUEST] },
                         userId: req.user.id,
                     },
                     orderBy: { createdAt: 'asc' },
@@ -601,9 +702,13 @@ export function registerChatRoutes(app) {
             return res.json({
                 conversationId,
                 assumedByAdmin: state.assumed,
+                humanRequested: state.requested,
                 messages: messages.map((item) => ({
                     id: item.id,
                     role: item.action === SUPPORT_ACTION_USER ? 'user' : 'model',
+                    source: item.action === SUPPORT_ACTION_ADMIN
+                        ? 'specialist'
+                        : item.action === SUPPORT_ACTION_REQUEST ? 'system' : item.action === SUPPORT_ACTION_AI ? 'ai' : 'user',
                     text: item.description || '',
                     createdAt: item.createdAt,
                 })),

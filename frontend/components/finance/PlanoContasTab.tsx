@@ -2,8 +2,10 @@ import React, { useMemo, useState } from 'react';
 import {
     AccountCategory,
     AccountCategoryType,
+    CashFlowClass,
+    RecognitionRule,
+    ResultClass,
     createAccountCategory,
-    deleteAccountCategory,
     updateAccountCategory,
 } from '../../adapters/financialApi';
 import { PlusIcon, LockIcon, normalizeSearchText } from '../financeUtils';
@@ -33,6 +35,9 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
     const [pcFormGroup, setPcFormGroup] = useState('');
     const [pcFormNewGroup, setPcFormNewGroup] = useState('');
     const [pcFormType, setPcFormType] = useState<AccountCategoryType>('SAIDA');
+    const [pcCashFlowClass, setPcCashFlowClass] = useState<CashFlowClass>('OPERATING');
+    const [pcResultClass, setPcResultClass] = useState<ResultClass | ''>('PRODUCTION_COST');
+    const [pcRecognitionRule, setPcRecognitionRule] = useState<RecognitionRule>('IMMEDIATE');
     const [pcFormError, setPcFormError] = useState<string | null>(null);
     const [pcIsSaving, setPcIsSaving] = useState(false);
     const [pcSearch, setPcSearch] = useState('');
@@ -41,12 +46,10 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
     const [editingCatId, setEditingCatId] = useState<string | null>(null);
     const [editingCatName, setEditingCatName] = useState('');
     const [editingCatGroup, setEditingCatGroup] = useState('');
+    const [editingCashFlowClass, setEditingCashFlowClass] = useState<CashFlowClass>('OPERATING');
+    const [editingResultClass, setEditingResultClass] = useState<ResultClass | ''>('PRODUCTION_COST');
+    const [editingRecognitionRule, setEditingRecognitionRule] = useState<RecognitionRule>('IMMEDIATE');
     const [editCatSaving, setEditCatSaving] = useState(false);
-
-    // ── Delete ──
-    const [deleteCatConfirmId, setDeleteCatConfirmId] = useState<string | null>(null);
-    const [isDeletingCat, setIsDeletingCat] = useState(false);
-    const [deleteCatError, setDeleteCatError] = useState<string | null>(null);
 
     const existingGroups = useMemo(() => {
         const set = new Set(categories.filter(c => c.type === pcFormType).map(c => c.group));
@@ -73,7 +76,15 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
         if (!pcResolvedGroup) { setPcFormError('Informe o grupo.'); return; }
         setPcIsSaving(true);
         try {
-            await createAccountCategory({ farmId, name: pcFormName.trim(), group: pcResolvedGroup, type: pcFormType });
+            await createAccountCategory({
+                farmId,
+                name: pcFormName.trim(),
+                group: pcResolvedGroup,
+                type: pcFormType,
+                cashFlowClass: pcCashFlowClass,
+                resultClass: pcResultClass || null,
+                recognitionRule: pcRecognitionRule,
+            });
             setPcModalOpen(false);
             setPcFormName(''); setPcFormGroup(''); setPcFormNewGroup(''); setPcFormError(null);
             await onReloadCategories();
@@ -86,6 +97,9 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
 
     const openCategoryModal = (type: AccountCategoryType = 'SAIDA', useNewGroup = false) => {
         setPcFormType(type);
+        setPcCashFlowClass('OPERATING');
+        setPcResultClass(type === 'ENTRADA' ? 'OPERATING_REVENUE' : 'PRODUCTION_COST');
+        setPcRecognitionRule('IMMEDIATE');
         setPcFormName('');
         setPcFormError(null);
         setPcFormNewGroup('');
@@ -93,14 +107,23 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
         setPcModalOpen(true);
     };
 
-    const startEditCat = (cat: AccountCategory) => { setEditingCatId(cat.id); setEditingCatName(cat.name); setEditingCatGroup(cat.group); };
+    const startEditCat = (cat: AccountCategory) => {
+        setEditingCatId(cat.id); setEditingCatName(cat.name); setEditingCatGroup(cat.group);
+        setEditingCashFlowClass(cat.cashFlowClass || 'OPERATING');
+        setEditingResultClass(cat.resultClass || '');
+        setEditingRecognitionRule(cat.recognitionRule || 'IMMEDIATE');
+    };
     const cancelEditCat = () => { setEditingCatId(null); setEditingCatName(''); setEditingCatGroup(''); };
 
     const saveEditCat = async (cat: AccountCategory) => {
         if (!editingCatName.trim()) return;
         setEditCatSaving(true);
         try {
-            await updateAccountCategory(cat.id, { name: editingCatName.trim(), group: editingCatGroup.trim() || cat.group });
+            await updateAccountCategory(cat.id, {
+                name: editingCatName.trim(), group: editingCatGroup.trim() || cat.group,
+                cashFlowClass: editingCashFlowClass, resultClass: editingResultClass || null,
+                recognitionRule: editingRecognitionRule, isConfigured: true,
+            });
             cancelEditCat();
             await onReloadCategories();
             notify('Categoria atualizada.', 'success');
@@ -114,21 +137,6 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
             await onReloadCategories();
             notify(cat.isActive ? 'Categoria desativada.' : 'Categoria ativada.', 'success');
         } catch (e: any) { notify(e?.message || 'Erro ao atualizar categoria.', 'error'); }
-    };
-
-    const handleDeleteCat = async () => {
-        if (!deleteCatConfirmId) return;
-        setIsDeletingCat(true);
-        setDeleteCatError(null);
-        try {
-            await deleteAccountCategory(deleteCatConfirmId);
-            setDeleteCatConfirmId(null);
-            await onReloadCategories();
-            notify('Categoria excluída.', 'success');
-        } catch (e: any) {
-            setDeleteCatError(e?.message || 'Erro ao excluir categoria.');
-            notify(e?.message || 'Erro ao excluir categoria.', 'error');
-        } finally { setIsDeletingCat(false); }
     };
 
     return (
@@ -202,6 +210,9 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                                     placeholder="Grupo"
                                                     className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:outline-none lg:w-48"
                                                 />
+                                                <select value={editingCashFlowClass} onChange={(e) => setEditingCashFlowClass(e.target.value as CashFlowClass)} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="OPERATING">Operação</option><option value="INVESTING">Investimento</option><option value="FINANCING">Financiamento</option></select>
+                                                <select value={editingResultClass} onChange={(e) => setEditingResultClass(e.target.value as ResultClass | '')} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="">Fora da DRE</option><option value="OPERATING_REVENUE">Receita</option><option value="PRODUCTION_COST">Custo</option><option value="OPERATING_EXPENSE">Despesa</option><option value="FINANCIAL_RESULT">Financeiro</option><option value="OTHER_RESULT">Outros</option></select>
+                                                <select value={editingRecognitionRule} onChange={(e) => setEditingRecognitionRule(e.target.value as RecognitionRule)} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="IMMEDIATE">Competência</option><option value="ON_NUTRITION_CONSUMPTION">Consumo</option><option value="ON_ANIMAL_SALE">Venda animal</option><option value="NOT_IN_RESULT">Fora da DRE</option></select>
                                                 <input
                                                     type="text"
                                                     value={editingCatName}
@@ -239,6 +250,13 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                                         <span className="flex h-3.5 w-3.5 flex-shrink-0 rounded-full bg-[var(--eixo-green-soft)]" />
                                                     )}
                                                     <span className="truncate text-sm font-medium text-[var(--eixo-text)]">{cat.name}</span>
+                                                    {!cat.isActive && (
+                                                        <span className="flex-shrink-0 rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">
+                                                            Inativa
+                                                        </span>
+                                                    )}
+                                                    {cat.deprecatedAt && <span className="rounded-full bg-[rgba(197,138,32,0.10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--eixo-warning)]">Histórico</span>}
+                                                    {!cat.isConfigured && !cat.deprecatedAt && <span className="rounded-full bg-[rgba(197,138,32,0.10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--eixo-warning)]">Configuração pendente</span>}
                                                 </div>
                                                 <span className="text-right text-[10px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">
                                                     {cat.isSystem ? 'Sistema' : 'Cliente'}
@@ -258,13 +276,6 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                                             className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
                                                         >
                                                             {cat.isActive ? 'Desativar' : 'Ativar'}
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => { setDeleteCatError(null); setDeleteCatConfirmId(cat.id); }}
-                                                            className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)]"
-                                                        >
-                                                            Excluir
                                                         </button>
                                                     </div>
                                                 )}
@@ -289,7 +300,7 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                         <form onSubmit={handleCreateCategory} className="space-y-4 p-6">
                             <div>
                                 <label className={labelCls}>Tipo</label>
-                                <select value={pcFormType} onChange={e => setPcFormType(e.target.value as AccountCategoryType)} className={inputCls}>
+                                <select value={pcFormType} onChange={e => { const type = e.target.value as AccountCategoryType; setPcFormType(type); setPcResultClass(type === 'ENTRADA' ? 'OPERATING_REVENUE' : 'PRODUCTION_COST'); }} className={inputCls}>
                                     <option value="ENTRADA">Entrada</option>
                                     <option value="SAIDA">Saída</option>
                                 </select>
@@ -314,6 +325,24 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                 <input type="text" value={pcFormName} onChange={e => setPcFormName(e.target.value)}
                                     placeholder="Ex: Arrendamento de Pasto" className={inputCls} required />
                             </div>
+                            <div>
+                                <label className={labelCls}>Como movimenta o caixa?</label>
+                                <select value={pcCashFlowClass} onChange={e => setPcCashFlowClass(e.target.value as CashFlowClass)} className={inputCls}>
+                                    <option value="OPERATING">Operação</option><option value="INVESTING">Investimento</option><option value="FINANCING">Financiamento</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelCls}>Como entra no resultado?</label>
+                                <select value={pcResultClass} onChange={e => setPcResultClass(e.target.value as ResultClass | '')} className={inputCls}>
+                                    <option value="">Não entra na DRE</option><option value="OPERATING_REVENUE">Receita operacional</option><option value="PRODUCTION_COST">Custo de produção</option><option value="OPERATING_EXPENSE">Despesa operacional</option><option value="FINANCIAL_RESULT">Resultado financeiro</option><option value="OTHER_RESULT">Outros resultados</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className={labelCls}>Quando reconhecer?</label>
+                                <select value={pcRecognitionRule} onChange={e => setPcRecognitionRule(e.target.value as RecognitionRule)} className={inputCls}>
+                                    <option value="IMMEDIATE">Na competência informada</option><option value="ON_NUTRITION_CONSUMPTION">No consumo da Nutrição</option><option value="ON_ANIMAL_SALE">Na venda do animal</option><option value="NOT_IN_RESULT">Não entra na DRE</option>
+                                </select>
+                            </div>
                             {pcFormError && <p className="text-sm text-[var(--eixo-danger)]">{pcFormError}</p>}
                             <div className="flex justify-end gap-3">
                                 <button type="button" onClick={() => setPcModalOpen(false)}
@@ -326,31 +355,6 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
-            )}
-
-            {/* ── Modal: Confirmar exclusão de categoria ────────────────────────── */}
-            {deleteCatConfirmId && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
-                        <div className="p-6">
-                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Excluir categoria</h3>
-                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
-                                Lançamentos existentes não serão afetados, mas a categoria não estará disponível para novos lançamentos.
-                            </p>
-                            {deleteCatError && <p className="mt-3 text-sm text-[var(--eixo-danger)]">{deleteCatError}</p>}
-                            <div className="mt-6 flex justify-end gap-3">
-                                <button type="button" onClick={() => setDeleteCatConfirmId(null)} disabled={isDeletingCat}
-                                    className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50">
-                                    Cancelar
-                                </button>
-                                <button type="button" onClick={handleDeleteCat} disabled={isDeletingCat}
-                                    className="rounded-xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-4 py-2 text-sm font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)] disabled:opacity-50">
-                                    {isDeletingCat ? 'Excluindo...' : 'Excluir'}
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             )}
