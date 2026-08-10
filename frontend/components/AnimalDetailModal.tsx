@@ -34,6 +34,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
     COMPRA: 'Compra',
     VENDA: 'Venda',
     MORTE: 'Morte',
+    DESMAMA: 'Desmama',
 };
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
@@ -41,6 +42,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
     COMPRA: 'bg-[#e8eef8] text-[#3a5799]',
     VENDA: 'bg-[#f7f1df] text-amber-800',
     MORTE: 'bg-[#fff2ef] text-[var(--eixo-danger)]',
+    DESMAMA: 'bg-[#f0f9d4] text-[#3a5c10]',
 };
 
 const SANITARY_TIPO_LABELS: Record<string, string> = {
@@ -127,6 +129,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const [eventDate, setEventDate] = useState(new Date().toISOString().slice(0, 10));
     const [eventPeso, setEventPeso] = useState('');
     const [eventValor, setEventValor] = useState('');
+    const [eventPurchasePurpose, setEventPurchasePurpose] = useState<'PRODUCTION' | 'BREEDING'>('PRODUCTION');
     const [eventOrigem, setEventOrigem] = useState('');
     const [eventDestino, setEventDestino] = useState('');
     const [eventObs, setEventObs] = useState('');
@@ -442,6 +445,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                 origem: eventOrigem || undefined,
                 destino: eventDestino || undefined,
                 observacoes: eventObs || undefined,
+                purchasePurpose: eventType === 'COMPRA' ? eventPurchasePurpose : undefined,
             });
             setEventPeso('');
             setEventValor('');
@@ -533,12 +537,21 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             { label: 'GMD 30 dias', value: (a as any).gmd30 != null ? `${((a as any).gmd30 as number).toFixed(2)} kg/dia` : '—' },
             { label: 'GMD último intervalo', value: ((a as any).gmdLast ?? a.gmd) != null ? `${(((a as any).gmdLast ?? a.gmd) as number).toFixed(2)} kg/dia` : '—' },
             { label: 'Pasto atual', value: a.currentPaddockName || '—' },
+            { label: 'Desmama', value: a.desmamadoEm ? `${new Date(a.desmamadoEm).toLocaleDateString('pt-BR')} · ${a.pesoDesmamaKg ?? '—'} kg` : '—' },
         ];
-        if (resolvedMode !== 'PO') return baseItems;
+        const teItems = a.origemNascimento === 'TE' ? [
+            { label: 'Origem', value: 'Transferência de embrião' },
+            { label: 'ID TE original', value: a.identificacaoProvisoriaOriginal || '—' },
+            { label: 'Receptora', value: a.receptoraGestacionalSnapshot || '—' },
+            { label: 'Doadora', value: a.doadoraSnapshot || '—' },
+            { label: 'Touro', value: a.touroSnapshot || 'Não informado' },
+        ] : [];
+        if (resolvedMode !== 'PO') return [...baseItems, ...teItems];
         return [
             { label: 'Nome', value: a.nome || '—' },
             { label: 'Registro', value: a.registro || '—' },
             ...baseItems,
+            ...teItems,
         ];
     }, [animal, resolvedMode]);
 
@@ -958,6 +971,15 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             <div className="flex flex-col">
                                                 <label className={labelClass}>Valor (R$)</label>
                                                 <input type="number" step="0.01" value={eventValor} onChange={(e) => setEventValor(e.target.value)} className={inputClass} placeholder="Opcional" />
+                                            </div>
+                                        )}
+                                        {eventType === 'COMPRA' && (
+                                            <div className="flex flex-col">
+                                                <label className={labelClass}>Finalidade da compra</label>
+                                                <select value={eventPurchasePurpose} onChange={(e) => setEventPurchasePurpose(e.target.value as 'PRODUCTION' | 'BREEDING')} className={inputClass}>
+                                                    <option value="PRODUCTION">Produção (custo na venda)</option>
+                                                    <option value="BREEDING">Matriz ou reprodutor (investimento)</option>
+                                                </select>
                                             </div>
                                         )}
                                         {(eventType === 'NASCIMENTO' || eventType === 'COMPRA') && (

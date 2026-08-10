@@ -88,7 +88,7 @@ interface User {
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda', 'Rebanho Comercial', 'Eixo Genetics'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda', 'Rebanho Comercial', 'Plantel P.O.', 'Eixo Genetics'],
     },
     {
         title: 'Cadastros',
@@ -299,8 +299,8 @@ const AppContent: React.FC = () => {
         }
         const LEGACY_MODULE_MAP: Record<string, string> = {
             'Rebanho Genética': 'Eixo Genetics',
-            'Rebanho P.O.': 'Rebanho Comercial',
-            'Plantel P.O.': 'Rebanho Comercial',
+            'Rebanho P.O.': 'Plantel P.O.',
+            'Plantel P.O.': 'Plantel P.O.',
             'Contas a Pagar': 'Financeiro',
             'Contas a Receber': 'Financeiro',
             'Fluxo de Caixa': 'Financeiro',

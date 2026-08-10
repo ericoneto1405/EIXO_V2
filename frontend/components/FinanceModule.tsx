@@ -11,6 +11,9 @@ import {
     listTransactions,
     updateTransaction,
 } from '../adapters/financialApi';
+import { HerdLot, listLots } from '../adapters/herdApi';
+import { buildApiUrl } from '../api';
+import { Paddock } from '../types';
 import {
     PlusIcon,
     LockIcon,
@@ -25,6 +28,8 @@ import FluxoTab from './finance/FluxoTab';
 import ContasTab from './finance/ContasTab';
 import VisaoGeralTab from './finance/VisaoGeralTab';
 import LancamentosTab from './finance/LancamentosTab';
+import AnalyticsTab from './finance/AnalyticsTab';
+import DataQualityTab from './finance/DataQualityTab';
 import { useToasts, ToastHost } from './finance/useToasts';
 
 interface FinanceModuleProps {
@@ -59,9 +64,6 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     const [pendingAll, setPendingAll] = useState<FinancialTransaction[]>([]);
     const [pendingLoading, setPendingLoading] = useState(true);
 
-    // ── Fluxo de Caixa / DRE (anual) ──
-    const [annualTransactions, setAnnualTransactions] = useState<FinancialTransaction[]>([]);
-    const [annualLoading, setAnnualLoading] = useState(true);
     const [selectedAnoAnual, setSelectedAnoAnual] = useState(hoje.getFullYear());
 
     // ── Categorias ──
@@ -74,9 +76,13 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     const [formCategoryId, setFormCategoryId] = useState<string>('');
     const [formValor, setFormValor] = useState('');
     const [formData, setFormData] = useState(hoje.toISOString().slice(0, 10));
+    const [formSettledAt, setFormSettledAt] = useState(hoje.toISOString().slice(0, 10));
     const [formDescricao, setFormDescricao] = useState('');
     const [formStatus, setFormStatus] = useState<TransactionStatus>('PAGO');
     const [formVencimento, setFormVencimento] = useState('');
+    const [allocationRows, setAllocationRows] = useState<Array<{ lotId: string; paddockId: string; percent: string }>>([]);
+    const [availableLots, setAvailableLots] = useState<HerdLot[]>([]);
+    const [availablePaddocks, setAvailablePaddocks] = useState<Paddock[]>([]);
     const [formError, setFormError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -122,24 +128,17 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         finally { setPendingLoading(false); }
     }, [farmId]);
 
-    const loadAnnual = useCallback(async () => {
-        if (!farmId) { setAnnualTransactions([]); setAnnualLoading(false); return; }
-        setAnnualLoading(true);
-        try {
-            const data = await listTransactions(farmId, undefined, selectedAnoAnual);
-            setAnnualTransactions(data);
-        } catch { /* silencioso */ }
-        finally { setAnnualLoading(false); }
-    }, [farmId, selectedAnoAnual]);
-
     useEffect(() => { loadTransactions(); }, [loadTransactions]);
     useEffect(() => { loadCategories(); }, [loadCategories]);
     useEffect(() => {
+        if (!modalOpen || !farmId) return;
+        listLots(farmId, 'COMMERCIAL').then(setAvailableLots).catch(() => setAvailableLots([]));
+        fetch(buildApiUrl(`/pastos?farmId=${farmId}`), { credentials: 'include' })
+            .then((response) => response.json()).then((payload) => setAvailablePaddocks(payload.items || [])).catch(() => setAvailablePaddocks([]));
+    }, [modalOpen, farmId]);
+    useEffect(() => {
         if (activeTab === 'contas_pagar' || activeTab === 'contas_receber') loadPending();
     }, [activeTab, loadPending]);
-    useEffect(() => {
-        if (activeTab === 'fluxo' || activeTab === 'dre') loadAnnual();
-    }, [activeTab, loadAnnual]);
 
     // ── Sumário mensal ────────────────────────────────────────────────────────
 
@@ -148,7 +147,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     // ── Categorias filtradas por tipo ──────────────────────────────────────────
 
     const filteredCategories = useMemo(
-        () => categories.filter(c => c.type === formType && c.isActive),
+        () => categories.filter(c => c.type === formType && c.isActive && c.isConfigured && !c.deprecatedAt),
         [categories, formType],
     );
 
@@ -164,9 +163,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         setFormType('ENTRADA');
         setFormValor('');
         setFormData(new Date().toISOString().slice(0, 10));
+        setFormSettledAt(new Date().toISOString().slice(0, 10));
         setFormDescricao('');
         setFormStatus('PAGO');
         setFormVencimento('');
+        setAllocationRows([]);
         setFormError(null);
     };
 
@@ -175,6 +176,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         setFormType(t.type);
         setFormValor(String(t.valor));
         setFormData(t.data.slice(0, 10));
+        setFormSettledAt((t.settledAt || t.data).slice(0, 10));
         setFormDescricao(t.descricao ?? '');
         setFormStatus(t.status);
         setFormVencimento(t.vencimento ? t.vencimento.slice(0, 10) : '');
@@ -199,7 +201,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         e.preventDefault();
         if (!farmId) return;
         const valorNum = parseFloat(formValor.replace(',', '.'));
-        if (isNaN(valorNum) || valorNum < 0) { setFormError('Informe um valor válido.'); return; }
+        if (isNaN(valorNum) || valorNum <= 0) { setFormError('Informe um valor maior que zero.'); return; }
         if (!formCategoryId) { setFormError('Selecione uma categoria.'); return; }
         setIsSaving(true);
         try {
@@ -208,6 +210,8 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                     accountCategoryId: formCategoryId,
                     valor: valorNum,
                     data: formData,
+                    competenceDate: formData,
+                    settledAt: formStatus === 'PAGO' ? formSettledAt : null,
                     descricao: formDescricao || null,
                     status: formStatus,
                     vencimento: formVencimento || null,
@@ -220,9 +224,16 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                     accountCategoryId: formCategoryId,
                     valor: valorNum,
                     data: formData,
+                    competenceDate: formData,
+                    settledAt: formStatus === 'PAGO' ? formSettledAt : undefined,
                     descricao: formDescricao || undefined,
                     status: formStatus,
                     vencimento: formVencimento || undefined,
+                    allocations: allocationRows.filter((row) => row.lotId || row.paddockId).map((row) => ({
+                        lotId: row.lotId || undefined,
+                        paddockId: row.paddockId || undefined,
+                        percent: Number(row.percent),
+                    })),
                 });
             }
             setModalOpen(false);
@@ -385,8 +396,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             {/* ── Aba: Fluxo de Caixa ──────────────────────────────────────────── */}
             {activeTab === 'fluxo' && (
                 <FluxoTab
-                    annualTransactions={annualTransactions}
-                    annualLoading={annualLoading}
+                    farmId={farmId!}
                     selectedAnoAnual={selectedAnoAnual}
                     setSelectedAnoAnual={setSelectedAnoAnual}
                     anos={anos}
@@ -396,13 +406,15 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             {/* ── Aba: DRE ─────────────────────────────────────────────────────── */}
             {activeTab === 'dre' && (
                 <DreTab
-                    annualTransactions={annualTransactions}
-                    annualLoading={annualLoading}
+                    farmId={farmId!}
                     selectedAnoAnual={selectedAnoAnual}
                     setSelectedAnoAnual={setSelectedAnoAnual}
                     anos={anos}
                 />
             )}
+
+            {activeTab === 'analytics' && farmId && <AnalyticsTab farmId={farmId} year={selectedAnoAnual} />}
+            {activeTab === 'quality' && farmId && <DataQualityTab farmId={farmId} />}
 
             {/* ── Aba: Plano de Contas ──────────────────────────────────────────── */}
             {activeTab === 'plano_contas' && (
@@ -466,7 +478,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             </div>
                             {/* Data */}
                             <div>
-                                <label className={labelCls}>Data do lançamento</label>
+                                <label className={labelCls}>Data de competência</label>
                                 <input type="date" value={formData} onChange={e => setFormData(e.target.value)} className={inputCls} required />
                             </div>
                             {/* Status */}
@@ -477,6 +489,12 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                     <option value="PENDENTE">Pendente</option>
                                 </select>
                             </div>
+                            {formStatus === 'PAGO' && (
+                                <div>
+                                    <label className={labelCls}>Data do pagamento ou recebimento</label>
+                                    <input type="date" value={formSettledAt} onChange={e => setFormSettledAt(e.target.value)} className={inputCls} required />
+                                </div>
+                            )}
                             {/* Vencimento (só para pendentes) */}
                             {formStatus === 'PENDENTE' && (
                                 <div>
@@ -489,6 +507,17 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                 <label className={labelCls}>Descrição <span className="text-[var(--eixo-text-muted)]">(opcional)</span></label>
                                 <input type="text" value={formDescricao} onChange={e => setFormDescricao(e.target.value)} className={inputCls} />
                             </div>
+                            {!editingTransaction && (
+                                <div className="space-y-2 rounded-xl border border-[var(--eixo-border)] p-3">
+                                    <div className="flex items-center justify-between"><div><p className={labelCls}>Dividir entre destinos <span className="text-[var(--eixo-text-muted)]">(opcional)</span></p><p className="text-xs text-[var(--eixo-text-muted)]">O restante ficará como não atribuído.</p></div><button type="button" onClick={() => setAllocationRows((rows) => [...rows, { lotId: '', paddockId: '', percent: '' }])} className="rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-xs font-semibold">Adicionar divisão</button></div>
+                                    {allocationRows.map((row, index) => <div key={index} className="grid grid-cols-[1fr_1fr_80px_auto] gap-2">
+                                        <select value={row.lotId} onChange={(e) => setAllocationRows((rows) => rows.map((item, i) => i === index ? { ...item, lotId: e.target.value } : item))} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="">Sem lote</option>{availableLots.map((lot) => <option key={lot.id} value={lot.id}>{lot.name}</option>)}</select>
+                                        <select value={row.paddockId} onChange={(e) => setAllocationRows((rows) => rows.map((item, i) => i === index ? { ...item, paddockId: e.target.value } : item))} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="">Sem pasto</option>{availablePaddocks.map((paddock) => <option key={paddock.id} value={paddock.id}>{paddock.name}</option>)}</select>
+                                        <input type="number" min="0.01" max="100" step="0.01" value={row.percent} onChange={(e) => setAllocationRows((rows) => rows.map((item, i) => i === index ? { ...item, percent: e.target.value } : item))} placeholder="%" className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs" required />
+                                        <button type="button" aria-label="Remover divisão" onClick={() => setAllocationRows((rows) => rows.filter((_, i) => i !== index))} className="text-[var(--eixo-danger)]">✕</button>
+                                    </div>)}
+                                </div>
+                            )}
                             {formError && <p className="text-sm text-[var(--eixo-danger)]">{formError}</p>}
                             <div className="flex justify-end gap-3">
                                 <button type="button" onClick={() => { setModalOpen(false); resetForm(); }}
@@ -510,8 +539,8 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                     <div className="w-full max-w-md rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
                         <div className="p-6">
-                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Excluir lançamento</h3>
-                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Tem certeza? Essa ação não pode ser desfeita.</p>
+                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Cancelar lançamento</h3>
+                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">O lançamento será preservado no histórico e retirado dos relatórios ativos.</p>
                             {deleteError && <p className="mt-3 text-sm text-[var(--eixo-danger)]">{deleteError}</p>}
                             <div className="mt-6 flex justify-end gap-3">
                                 <button type="button" onClick={() => setDeleteConfirmId(null)} disabled={isDeleting}
@@ -520,7 +549,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                                 </button>
                                 <button type="button" onClick={handleDeleteConfirm} disabled={isDeleting}
                                     className="rounded-xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-4 py-2 text-sm font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)] disabled:opacity-50">
-                                    {isDeleting ? 'Excluindo...' : 'Excluir'}
+                                    {isDeleting ? 'Cancelando...' : 'Cancelar lançamento'}
                                 </button>
                             </div>
                         </div>

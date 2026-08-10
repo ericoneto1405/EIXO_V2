@@ -1,3 +1,5 @@
+import { reverseResultBySource, upsertAutomaticResult } from './modules/financial/financialService.js';
+
 const NUTRITION_ADJUSTMENT_BY_SCORE = {
     0: 5,
     1: 2,
@@ -2247,6 +2249,21 @@ const registerNutritionModuleRoutes = ({ app, prisma, parseNumber, parseDateValu
                         approvedByName: reviewStatus === 'APPROVED' ? actor.name : null,
                     },
                 });
+                if (reviewStatus === 'APPROVED' && totalCost > 0) {
+                    await upsertAutomaticResult(tx, {
+                        farmId: farm.id,
+                        accountCategoryId: 'sys-racao',
+                        sourceKey: `NUTRITION_EXECUTION:${created.id}:CONSUMPTION`,
+                        sourceType: 'NUTRITION_CONSUMPTION',
+                        sourceId: created.id,
+                        nutritionExecutionId: created.id,
+                        resultClass: 'PRODUCTION_COST',
+                        amount: totalCost,
+                        competenceDate: executionDate,
+                        description: `Consumo de nutrição — ${unit.name}`,
+                        allocations: unit.lotId ? [{ lotId: unit.lotId }] : [],
+                    });
+                }
                 return tx.nutritionExecution.findUnique({
                     where: { id: created.id },
                     include: {
@@ -2286,24 +2303,32 @@ const registerNutritionModuleRoutes = ({ app, prisma, parseNumber, parseDateValu
                 return res.status(409).json({ message: 'Este trato já está aprovado.' });
             }
             const actor = getNutritionActor(req);
-            const updated = await prisma.nutritionExecution.update({
-                where: { id: execution.id },
-                data: {
-                    reviewStatus: 'APPROVED',
-                    approvedAt: new Date(),
-                    approvedByUserId: actor.userId,
-                    approvedByName: actor.name,
-                    rejectedAt: null,
-                    rejectedByUserId: null,
-                    rejectedByName: null,
-                    rejectionReason: null,
-                },
-                include: {
-                    unit: { include: { lot: true, phase: true } },
-                    plan: { include: { preparedFeed: { include: { items: { include: { ingredient: true }, orderBy: { sequence: 'asc' } } } }, phase: true } },
-                    preparedFeed: { include: { items: { include: { ingredient: true }, orderBy: { sequence: 'asc' } } } },
-                    fabrication: { include: { items: true, preparedFeed: { include: { items: { include: { ingredient: true }, orderBy: { sequence: 'asc' } } } } } },
-                },
+            const updated = await prisma.$transaction(async (tx) => {
+                const approved = await tx.nutritionExecution.update({
+                    where: { id: execution.id },
+                    data: {
+                        reviewStatus: 'APPROVED', approvedAt: new Date(), approvedByUserId: actor.userId,
+                        approvedByName: actor.name, rejectedAt: null, rejectedByUserId: null,
+                        rejectedByName: null, rejectionReason: null,
+                    },
+                    include: {
+                        unit: { include: { lot: true, phase: true } },
+                        plan: { include: { preparedFeed: { include: { items: { include: { ingredient: true }, orderBy: { sequence: 'asc' } } } }, phase: true } },
+                        preparedFeed: { include: { items: { include: { ingredient: true }, orderBy: { sequence: 'asc' } } } },
+                        fabrication: { include: { items: true, preparedFeed: { include: { items: { include: { ingredient: true }, orderBy: { sequence: 'asc' } } } } } },
+                    },
+                });
+                if (Number(approved.totalCost || 0) > 0) {
+                    await upsertAutomaticResult(tx, {
+                        farmId: approved.farmId, accountCategoryId: 'sys-racao',
+                        sourceKey: `NUTRITION_EXECUTION:${approved.id}:CONSUMPTION`, sourceType: 'NUTRITION_CONSUMPTION',
+                        sourceId: approved.id, resultClass: 'PRODUCTION_COST', amount: approved.totalCost,
+                        nutritionExecutionId: approved.id,
+                        competenceDate: approved.date, description: `Consumo de nutrição — ${approved.unit?.name || 'unidade'}`,
+                        allocations: approved.lotId ? [{ lotId: approved.lotId }] : [],
+                    });
+                }
+                return approved;
             });
             return res.json({ item: serializeNutritionExecution(updated) });
         } catch (error) {
@@ -2351,6 +2376,7 @@ const registerNutritionModuleRoutes = ({ app, prisma, parseNumber, parseDateValu
                     fabrication: { include: { items: true, preparedFeed: { include: { items: { include: { ingredient: true }, orderBy: { sequence: 'asc' } } } } } },
                 },
             });
+            await reverseResultBySource(prisma, `NUTRITION_EXECUTION:${execution.id}:CONSUMPTION`);
             return res.json({ item: serializeNutritionExecution(updated) });
         } catch (error) {
             console.error(error);
@@ -2400,6 +2426,7 @@ const registerNutritionModuleRoutes = ({ app, prisma, parseNumber, parseDateValu
                         },
                     });
                 }
+                await reverseResultBySource(tx, `NUTRITION_EXECUTION:${execution.id}:CONSUMPTION`);
                 return tx.nutritionExecution.update({
                     where: { id: execution.id },
                     data: {

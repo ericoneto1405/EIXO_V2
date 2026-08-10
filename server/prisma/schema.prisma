@@ -54,38 +54,38 @@ model User {
 }
 
 model MarketSource {
-  id        String           @id @default(uuid())
-  name      String
-  type      MarketSourceType
-  url       String?
-  priority  Int              @default(100)
-  trustScore Int             @default(70)
-  autoPublishMinConfidence Int @default(85)
-  requiresReview Boolean     @default(true)
-  isAutomationEnabled Boolean @default(false)
-  isActive  Boolean          @default(true)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  prices    MarketPrice[]
-  rawCaptures MarketRawCapture[]
-  normalizedPrices MarketNormalizedPrice[]
-  publishJobs MarketPublishJob[]
+  id                       String                  @id @default(uuid())
+  name                     String
+  type                     MarketSourceType
+  url                      String?
+  priority                 Int                     @default(100)
+  trustScore               Int                     @default(70)
+  autoPublishMinConfidence Int                     @default(85)
+  requiresReview           Boolean                 @default(true)
+  isAutomationEnabled      Boolean                 @default(false)
+  isActive                 Boolean                 @default(true)
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  prices                   MarketPrice[]
+  rawCaptures              MarketRawCapture[]
+  normalizedPrices         MarketNormalizedPrice[]
+  publishJobs              MarketPublishJob[]
 
   @@unique([name])
   @@index([isActive])
 }
 
 model MarketRegion {
-  id               String        @id @default(uuid())
+  id               String                  @id @default(uuid())
   name             String
   state            String
   city             String?
   marketPlaceName  String?
   sourceRegionName String?
   macroRegion      MarketMacroRegion?
-  isActive         Boolean       @default(true)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  isActive         Boolean                 @default(true)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
   prices           MarketPrice[]
   normalizedPrices MarketNormalizedPrice[]
 
@@ -94,24 +94,24 @@ model MarketRegion {
 }
 
 model MarketPrice {
-  id                      String             @id @default(uuid())
-  regionId                String
-  sourceId                String
-  productType             MarketProductType
-  price                   Decimal            @db.Decimal(12, 2)
-  unit                    MarketUnit
-  paymentType             MarketPaymentType  @default(NAO_INFORMADO)
-  referenceDate           DateTime
-  referenceWeightArrobas  Float?
-  sourceBase              String?
-  notes                   String?
-  status                  MarketPriceStatus  @default(DRAFT)
-  createdByUserId         String?
-  createdAt               DateTime           @default(now())
-  updatedAt               DateTime           @updatedAt
-  region                  MarketRegion       @relation(fields: [regionId], references: [id], onDelete: Restrict)
-  source                  MarketSource       @relation(fields: [sourceId], references: [id], onDelete: Restrict)
-  createdByUser           User?              @relation("MarketPriceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  id                     String            @id @default(uuid())
+  regionId               String
+  sourceId               String
+  productType            MarketProductType
+  price                  Decimal           @db.Decimal(12, 2)
+  unit                   MarketUnit
+  paymentType            MarketPaymentType @default(NAO_INFORMADO)
+  referenceDate          DateTime
+  referenceWeightArrobas Float?
+  sourceBase             String?
+  notes                  String?
+  status                 MarketPriceStatus @default(DRAFT)
+  createdByUserId        String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  region                 MarketRegion      @relation(fields: [regionId], references: [id], onDelete: Restrict)
+  source                 MarketSource      @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  createdByUser          User?             @relation("MarketPriceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([regionId, productType, status, referenceDate])
   @@index([sourceId, status, referenceDate])
@@ -119,20 +119,20 @@ model MarketPrice {
 }
 
 model MarketRawCapture {
-  id            String                @id @default(uuid())
-  sourceId      String
-  capturedAt    DateTime              @default(now())
-  referenceDate DateTime?
-  rawTitle      String?
-  rawText       String?
-  rawUrl        String?
-  rawPayload    Json?
-  captureMethod MarketCaptureMethod
-  status        MarketCaptureStatus   @default(CAPTURED)
-  errorMessage  String?
-  createdAt     DateTime              @default(now())
-  updatedAt     DateTime              @updatedAt
-  source        MarketSource          @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  id               String                  @id @default(uuid())
+  sourceId         String
+  capturedAt       DateTime                @default(now())
+  referenceDate    DateTime?
+  rawTitle         String?
+  rawText          String?
+  rawUrl           String?
+  rawPayload       Json?
+  captureMethod    MarketCaptureMethod
+  status           MarketCaptureStatus     @default(CAPTURED)
+  errorMessage     String?
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  source           MarketSource            @relation(fields: [sourceId], references: [id], onDelete: Restrict)
   normalizedPrices MarketNormalizedPrice[]
 
   @@index([sourceId, capturedAt])
@@ -140,27 +140,27 @@ model MarketRawCapture {
 }
 
 model MarketNormalizedPrice {
-  id                      String                  @id @default(uuid())
-  rawCaptureId            String?
-  sourceId                String
-  regionId                String?
-  productType             MarketProductType
-  price                   Decimal                 @db.Decimal(12, 2)
-  unit                    MarketUnit
-  paymentType             MarketPaymentType       @default(NAO_INFORMADO)
-  referenceDate           DateTime
-  referenceWeightArrobas  Float?
-  confidenceScore         Int
-  validationStatus        MarketValidationStatus
-  validationReasons       Json?
-  normalizedPayload       Json?
-  status                  MarketNormalizedStatus  @default(PENDING)
-  reviewerNotes           String?
-  createdAt               DateTime                @default(now())
-  updatedAt               DateTime                @updatedAt
-  rawCapture              MarketRawCapture?       @relation(fields: [rawCaptureId], references: [id], onDelete: SetNull)
-  source                  MarketSource            @relation(fields: [sourceId], references: [id], onDelete: Restrict)
-  region                  MarketRegion?           @relation(fields: [regionId], references: [id], onDelete: SetNull)
+  id                     String                 @id @default(uuid())
+  rawCaptureId           String?
+  sourceId               String
+  regionId               String?
+  productType            MarketProductType
+  price                  Decimal                @db.Decimal(12, 2)
+  unit                   MarketUnit
+  paymentType            MarketPaymentType      @default(NAO_INFORMADO)
+  referenceDate          DateTime
+  referenceWeightArrobas Float?
+  confidenceScore        Int
+  validationStatus       MarketValidationStatus
+  validationReasons      Json?
+  normalizedPayload      Json?
+  status                 MarketNormalizedStatus @default(PENDING)
+  reviewerNotes          String?
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  rawCapture             MarketRawCapture?      @relation(fields: [rawCaptureId], references: [id], onDelete: SetNull)
+  source                 MarketSource           @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  region                 MarketRegion?          @relation(fields: [regionId], references: [id], onDelete: SetNull)
 
   @@index([sourceId, referenceDate, productType])
   @@index([validationStatus, confidenceScore])
@@ -185,16 +185,16 @@ model MarketValidationRule {
 }
 
 model MarketPublishJob {
-  id          String            @id @default(uuid())
-  status      MarketJobStatus   @default(PENDING)
-  startedAt   DateTime?
-  finishedAt  DateTime?
-  sourceId    String?
-  summary     Json?
+  id           String          @id @default(uuid())
+  status       MarketJobStatus @default(PENDING)
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  sourceId     String?
+  summary      Json?
   errorMessage String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  source      MarketSource?     @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  source       MarketSource?   @relation(fields: [sourceId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
 }
@@ -221,6 +221,8 @@ model Farm {
   seasons                 BreedingSeason[]
   criaMortalities         CriaMortality[]
   embryoBatches           EmbryoBatch[]
+  embryoTransfers         EmbryoTransfer[]
+  embryoPairSequences     EmbryoPairSequence[]
   externalOperations      ExternalOperation[]
   organization            Organization?            @relation(fields: [organizationId], references: [id])
   user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -229,6 +231,7 @@ model Farm {
   financialPayables       FinancialPayable[]
   financialReceivables    FinancialReceivable[]
   financialTransactions   FinancialTransaction[]
+  financialResultEntries  FinancialResultEntry[]
   geneticsAnalysisRuns    GeneticsAnalysisRun[]
   herdCategoryTargets     HerdCategoryTarget[]
   herdEvents              HerdEvent[]
@@ -265,46 +268,49 @@ model Farm {
 }
 
 model Paddock {
-  id               String            @id @default(uuid())
-  name             String
-  areaHa           Float?            @map("size")
-  capacity         Float?
-  lat              Float?
-  lng              Float?
-  mapGeometry      Json?
-  active           Boolean           @default(true)
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  farmId           String
-  divisionType     String?           @map("division_type")
-  forrageira       String?
-  lotacaoUaHa      Float?
-  currentAnimals   Animal[]          @relation("AnimalCurrentPaddock")
-  fieldOccurrences FieldOccurrence[]
-  farm             Farm              @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  paddockMoves     PaddockMove[]
-  currentPoAnimals PoAnimal[]        @relation("PoAnimalCurrentPaddock")
+  id                   String                      @id @default(uuid())
+  name                 String
+  areaHa               Float?                      @map("size")
+  capacity             Float?
+  lat                  Float?
+  lng                  Float?
+  mapGeometry          Json?
+  active               Boolean                     @default(true)
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  farmId               String
+  divisionType         String?                     @map("division_type")
+  forrageira           String?
+  lotacaoUaHa          Float?
+  currentAnimals       Animal[]                    @relation("AnimalCurrentPaddock")
+  fieldOccurrences     FieldOccurrence[]
+  farm                 Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  paddockMoves         PaddockMove[]
+  currentPoAnimals     PoAnimal[]                  @relation("PoAnimalCurrentPaddock")
+  financialAllocations FinancialResultAllocation[]
 
   @@index([farmId])
 }
 
 model Lot {
-  id                   String                @id @default(uuid())
+  id                   String                      @id @default(uuid())
   name                 String
   notes                String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
   farmId               String
   objective            String?
   phase                String?
+  productionPhase      ProductionPhase?
   startDate            DateTime?
-  status               String                @default("ATIVO")
+  status               String                      @default("ATIVO")
   animals              Animal[]
-  farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  farm                 Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
   nutritionAssignments NutritionAssignment[]
   nutritionCostEntries NutritionCostEntry[]
   nutritionExecutions  NutritionExecution[]
   nutritionUnits       NutritionUnit[]
+  financialAllocations FinancialResultAllocation[]
 
   @@index([farmId])
 }
@@ -331,25 +337,46 @@ model Animal {
   maeNome              String?
   paiId                String?
   paiNome              String?
-   sisbov               String?
-   tatuagem             String?
-   nome                 String?
-   brincoEletronico     String?
-   padraoRacial         String?
-   tipoRaca             String?
-   composicaoMestica    String?
-   racaPredominante     String?
-   funcaoReprodutiva    String?
-   statusReprodutivo    String?
-   previsaoParto        DateTime?
-   observacoes          String?
-   currentPaddock       Paddock?              @relation("AnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
+  sisbov               String?
+  tatuagem             String?
+  nome                 String?
+  brincoEletronico     String?
+  padraoRacial         String?
+  tipoRaca             String?
+  composicaoMestica    String?
+  racaPredominante     String?
+  funcaoReprodutiva    String?
+  statusReprodutivo    String?
+  previsaoParto        DateTime?
+  observacoes          String?
+  identificacaoProvisoria Boolean              @default(false)
+  identificacaoAnterior   String?
+  identificacaoMatrizSnapshot String?
+  sequenciaMatriz         Int?
+  matrizResponsavelId     String?
+  ultimaSequenciaCria     Int                  @default(0)
+  origemNascimento        String?
+  identificacaoProvisoriaOriginal String?
+  receptoraGestacionalId  String?
+  receptoraGestacionalSnapshot String?
+  doadoraSnapshot         String?
+  touroSnapshot           String?
+  embryoTransferId        String?              @unique
+  desmamadoEm             DateTime?
+  pesoDesmamaKg           Float?
+  currentPaddock       Paddock?              @relation("AnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
   farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
   lot                  Lot?                  @relation(fields: [lotId], references: [id])
   mae                  Animal?               @relation("AnimalMae", fields: [maeId], references: [id])
   filhosMae            Animal[]              @relation("AnimalMae")
   pai                  Animal?               @relation("AnimalPai", fields: [paiId], references: [id])
   filhosPai            Animal[]              @relation("AnimalPai")
+  matrizResponsavel    Animal?               @relation("AnimalMatrizResponsavel", fields: [matrizResponsavelId], references: [id])
+  criasResponsaveis    Animal[]              @relation("AnimalMatrizResponsavel")
+  receptoraGestacional Animal?               @relation("AnimalReceptoraGestacional", fields: [receptoraGestacionalId], references: [id])
+  criasComoReceptora   Animal[]              @relation("AnimalReceptoraGestacional")
+  embryoTransfer       EmbryoTransfer?       @relation("AnimalEmbryoTransfer", fields: [embryoTransferId], references: [id])
+  embryoTransfersRecebidos EmbryoTransfer[]  @relation("EmbryoTransferRecipientAnimal")
   criaMortalities      CriaMortality[]
   exposures            Exposure[]
   fieldOccurrences     FieldOccurrence[]
@@ -373,6 +400,10 @@ model Animal {
   @@index([currentPaddockId])
   @@index([maeId])
   @@index([paiId])
+  @@index([matrizResponsavelId])
+  @@index([receptoraGestacionalId])
+  @@index([desmamadoEm])
+  @@index([farmId, identificacaoProvisoria])
 }
 
 model Weighing {
@@ -400,10 +431,13 @@ model WeighingSession {
   farmId          String
   createdAt       DateTime   @default(now())
   responsibleName String?
+  herdType        String     @default("COMMERCIAL")
   weighings       Weighing[]
+  poWeighings     PoWeighing[]
   farm            Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
   @@index([farmId])
+  @@index([farmId, herdType])
 }
 
 model CriaMortality {
@@ -465,6 +499,7 @@ model Organization {
   memberships          OrganizationMembership[]
   entitlements         OrganizationProductEntitlement[]
   activeUsers          User[]                           @relation("ActiveOrganization")
+  financialSettings    OrganizationFinancialSettings?
 
   @@index([accessState])
 }
@@ -524,14 +559,14 @@ model Invitation {
 }
 
 model BreedingSeason {
-  id        String       @id @default(uuid())
-  farmId    String
-  name      String
-  startAt   DateTime
-  endAt     DateTime
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-  farm            Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  id              String                @id @default(uuid())
+  farmId          String
+  name            String
+  startAt         DateTime
+  endAt           DateTime
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  farm            Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
   exposures       Exposure[]
   events          ReproEvent[]
   checkupSessions ReproCheckupSession[]
@@ -604,6 +639,26 @@ model PoAnimal {
   registro             String?
   categoria            String?
   observacoes          String?
+  maeId                String?
+  maeNome              String?
+  paiId                String?
+  paiNome              String?
+  matrizResponsavelId  String?
+  identificacaoProvisoria Boolean              @default(false)
+  identificacaoAnterior   String?
+  identificacaoMatrizSnapshot String?
+  sequenciaMatriz         Int?
+  ultimaSequenciaCria     Int                  @default(0)
+  tatuagemOrelhaEsquerda  String?
+  origemNascimento        String?
+  identificacaoProvisoriaOriginal String?
+  receptoraGestacionalId  String?
+  receptoraGestacionalSnapshot String?
+  doadoraSnapshot         String?
+  touroSnapshot           String?
+  embryoTransferId        String?              @unique
+  desmamadoEm             DateTime?
+  pesoDesmamaKg           Float?
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   criaMortalities      CriaMortality[]
@@ -615,6 +670,16 @@ model PoAnimal {
   currentPaddock       Paddock               @relation("PoAnimalCurrentPaddock", fields: [currentPaddockId], references: [id])
   farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
   lot                  PoLot?                @relation(fields: [lotId], references: [id])
+  mae                  PoAnimal?             @relation("PoAnimalMae", fields: [maeId], references: [id])
+  filhosMae            PoAnimal[]            @relation("PoAnimalMae")
+  pai                  PoAnimal?             @relation("PoAnimalPai", fields: [paiId], references: [id])
+  filhosPai            PoAnimal[]            @relation("PoAnimalPai")
+  matrizResponsavel    PoAnimal?             @relation("PoAnimalMatrizResponsavel", fields: [matrizResponsavelId], references: [id])
+  criasResponsaveis    PoAnimal[]            @relation("PoAnimalMatrizResponsavel")
+  receptoraGestacional PoAnimal?             @relation("PoAnimalReceptoraGestacional", fields: [receptoraGestacionalId], references: [id])
+  criasComoReceptora   PoAnimal[]            @relation("PoAnimalReceptoraGestacional")
+  embryoTransfer       EmbryoTransfer?       @relation("PoAnimalEmbryoTransfer", fields: [embryoTransferId], references: [id])
+  embryoTransfersRecebidos EmbryoTransfer[]  @relation("EmbryoTransferRecipientPoAnimal")
   pesagens             PoWeighing[]
   sanitaryRecords      SanitaryRecord[]
   semenBatches         SemenBatch[]          @relation("SemenBull")
@@ -623,20 +688,28 @@ model PoAnimal {
   @@index([farmId])
   @@index([lotId])
   @@index([currentPaddockId])
+  @@index([maeId])
+  @@index([paiId])
+  @@index([matrizResponsavelId])
+  @@index([receptoraGestacionalId])
+  @@index([desmamadoEm])
+  @@index([farmId, identificacaoProvisoria])
 }
 
 model PoLot {
-  id                   String                @id @default(uuid())
+  id                   String                      @id @default(uuid())
   name                 String
   notes                String?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
   farmId               String
+  productionPhase      ProductionPhase?
   nutritionAssignments NutritionAssignment[]
   nutritionCostEntries NutritionCostEntry[]
   nutritionExecutions  NutritionExecution[]
   animals              PoAnimal[]
-  farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  farm                 Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  financialAllocations FinancialResultAllocation[]
 
   @@index([farmId])
 }
@@ -650,13 +723,16 @@ model PoWeighing {
   createdAt  DateTime @default(now())
   poAnimalId String
   farmId     String
+  weighingSessionId String?
   farm       Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
   poAnimal   PoAnimal @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
+  weighingSession WeighingSession? @relation(fields: [weighingSessionId], references: [id])
 
   @@unique([poAnimalId, data])
   @@index([poAnimalId, data])
   @@index([farmId])
   @@index([farmId, data])
+  @@index([weighingSessionId])
 }
 
 model NutritionPlan {
@@ -1108,6 +1184,7 @@ model EmbryoBatch {
   sireAnimal           Animal?         @relation("EmbryoSireAnimal", fields: [sireAnimalId], references: [id])
   sirePoAnimal         PoAnimal?       @relation("EmbryoSire", fields: [sirePoAnimalId], references: [id])
   moves                EmbryoMove[]
+  transfers            EmbryoTransfer[]
 
   @@unique([farmId, lote])
   @@index([farmId])
@@ -1115,6 +1192,51 @@ model EmbryoBatch {
   @@index([donorPoAnimalId])
   @@index([sireAnimalId])
   @@index([sirePoAnimalId])
+}
+
+model EmbryoTransfer {
+  id                    String       @id @default(uuid())
+  farmId                String
+  herdType              String
+  embryoBatchId         String
+  recipientAnimalId     String?
+  recipientPoAnimalId   String?
+  transferredAt         DateTime
+  status                String       @default("PENDING")
+  recipientSnapshot     String
+  donorKey              String
+  donorSnapshot         String
+  sireSnapshot          String?
+  notes                 String?
+  birthAt               DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+  farm                  Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  embryoBatch           EmbryoBatch  @relation(fields: [embryoBatchId], references: [id], onDelete: Restrict)
+  recipientAnimal       Animal?      @relation("EmbryoTransferRecipientAnimal", fields: [recipientAnimalId], references: [id])
+  recipientPoAnimal     PoAnimal?    @relation("EmbryoTransferRecipientPoAnimal", fields: [recipientPoAnimalId], references: [id])
+  childAnimal           Animal?      @relation("AnimalEmbryoTransfer")
+  childPoAnimal         PoAnimal?    @relation("PoAnimalEmbryoTransfer")
+
+  @@index([farmId, herdType, status])
+  @@index([embryoBatchId])
+  @@index([recipientAnimalId])
+  @@index([recipientPoAnimalId])
+}
+
+model EmbryoPairSequence {
+  id             String   @id @default(uuid())
+  farmId         String
+  herdType       String
+  recipientKey   String
+  donorKey       String
+  lastSequence   Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  farm           Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, herdType, recipientKey, donorKey])
+  @@index([farmId, herdType])
 }
 
 model SemenMove {
@@ -1402,17 +1524,23 @@ model FinancialReceivable {
 }
 
 model AccountCategory {
-  id           String                 @id @default(cuid())
-  farmId       String?
-  name         String
-  group        String
-  type         AccountCategoryType
-  isSystem     Boolean                @default(false)
-  isActive     Boolean                @default(true)
-  createdAt    DateTime               @default(now())
-  updatedAt    DateTime               @updatedAt
-  farm         Farm?                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  transactions FinancialTransaction[]
+  id              String                    @id @default(cuid())
+  farmId          String?
+  name            String
+  group           String
+  type            AccountCategoryType
+  isSystem        Boolean                   @default(false)
+  isActive        Boolean                   @default(true)
+  cashFlowClass   FinancialCashFlowClass?
+  resultClass     FinancialResultClass?
+  recognitionRule FinancialRecognitionRule?
+  isConfigured    Boolean                   @default(false)
+  deprecatedAt    DateTime?
+  createdAt       DateTime                  @default(now())
+  updatedAt       DateTime                  @updatedAt
+  farm            Farm?                     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  transactions    FinancialTransaction[]
+  resultEntries   FinancialResultEntry[]
 
   @@index([farmId])
   @@index([type])
@@ -1434,10 +1562,14 @@ model FinancialTransaction {
   sanitaryRecordId  String?
   status            String                        @default("PAGO")
   vencimento        DateTime?
+  competenceDate    DateTime?
+  settledAt         DateTime?
+  modelVersion      Int                           @default(1)
   accountCategory   AccountCategory?              @relation(fields: [accountCategoryId], references: [id])
   farm              Farm                          @relation(fields: [farmId], references: [id], onDelete: Cascade)
   herdEvent         HerdEvent?                    @relation(fields: [herdEventId], references: [id])
   sanitaryRecord    SanitaryRecord?               @relation(fields: [sanitaryRecordId], references: [id])
+  resultEntries     FinancialResultEntry[]
 
   @@index([farmId, data])
   @@index([farmId, type])
@@ -1445,6 +1577,73 @@ model FinancialTransaction {
   @@index([herdEventId])
   @@index([sanitaryRecordId])
   @@index([accountCategoryId])
+}
+
+model OrganizationFinancialSettings {
+  id                 String       @id @default(uuid())
+  organizationId     String       @unique
+  analyticsStartedAt DateTime     @default(now())
+  modelVersion       Int          @default(2)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+}
+
+model FinancialResultEntry {
+  id                   String                      @id @default(uuid())
+  farmId               String
+  transactionId        String?
+  accountCategoryId    String?
+  sourceKey            String                      @unique
+  sourceType           String
+  sourceId             String?
+  herdEventId          String?
+  sanitaryRecordId     String?
+  nutritionExecutionId String?
+  resultClass          FinancialResultClass
+  amount               Decimal                     @db.Decimal(12, 2)
+  competenceDate       DateTime
+  description          String?
+  status               FinancialResultStatus       @default(ACTIVE)
+  modelVersion         Int                         @default(2)
+  reversedAt           DateTime?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  farm                 Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  transaction          FinancialTransaction?       @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  accountCategory      AccountCategory?            @relation(fields: [accountCategoryId], references: [id], onDelete: SetNull)
+  allocations          FinancialResultAllocation[]
+
+  @@index([farmId, competenceDate])
+  @@index([farmId, resultClass])
+  @@index([transactionId])
+  @@index([herdEventId])
+  @@index([sanitaryRecordId])
+  @@index([nutritionExecutionId])
+}
+
+model FinancialResultAllocation {
+  id                  String               @id @default(uuid())
+  resultEntryId       String
+  amount              Decimal              @db.Decimal(12, 2)
+  lotId               String?
+  poLotId             String?
+  paddockId           String?
+  productionPhase     ProductionPhase?
+  lotNameSnapshot     String?
+  paddockNameSnapshot String?
+  phaseLabelSnapshot  String?
+  createdAt           DateTime             @default(now())
+  resultEntry         FinancialResultEntry @relation(fields: [resultEntryId], references: [id], onDelete: Cascade)
+  lot                 Lot?                 @relation(fields: [lotId], references: [id], onDelete: SetNull)
+  poLot               PoLot?               @relation(fields: [poLotId], references: [id], onDelete: SetNull)
+  paddock             Paddock?             @relation(fields: [paddockId], references: [id], onDelete: SetNull)
+
+  @@index([resultEntryId])
+  @@index([lotId])
+  @@index([poLotId])
+  @@index([paddockId])
+  @@index([productionPhase])
 }
 
 model GeneticsAnalysisRun {
@@ -1940,6 +2139,7 @@ model HerdEvent {
   origem                String?
   destino               String?
   observacoes           String?
+  purchasePurpose       AnimalPurchasePurpose?
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   financialTransactions FinancialTransaction[]
@@ -2321,6 +2521,45 @@ enum FinancialTransactionCategoria {
 enum AccountCategoryType {
   ENTRADA
   SAIDA
+}
+
+enum FinancialCashFlowClass {
+  OPERATING
+  INVESTING
+  FINANCING
+}
+
+enum FinancialResultClass {
+  OPERATING_REVENUE
+  PRODUCTION_COST
+  OPERATING_EXPENSE
+  FINANCIAL_RESULT
+  OTHER_RESULT
+}
+
+enum FinancialRecognitionRule {
+  IMMEDIATE
+  ON_NUTRITION_CONSUMPTION
+  ON_ANIMAL_SALE
+  NOT_IN_RESULT
+}
+
+enum FinancialResultStatus {
+  ACTIVE
+  REVERSED
+}
+
+enum ProductionPhase {
+  CRIA
+  RECRIA
+  ENGORDA
+  REPRODUCAO
+  OUTRA
+}
+
+enum AnimalPurchasePurpose {
+  PRODUCTION
+  BREEDING
 }
 
 enum AcasalamentoSourceType {

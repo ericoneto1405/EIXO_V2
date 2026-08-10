@@ -8,6 +8,7 @@ import { parseNumber, parseDateValue, normalizeAnimalIdentityKey } from '../util
 import { logActivity } from '../utils/activityLog.js';
 import { serializeHerdEvent, serializeSanitaryRecord } from '../utils/serializers.js';
 import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../config/env.js';
+import { createIntegratedTransaction, upsertAutomaticResult } from '../financial/financialService.js';
 const prisma = new PrismaClient();
 
 const VALID_EVENT_TYPES = ['NASCIMENTO', 'COMPRA', 'VENDA', 'MORTE'];
@@ -36,7 +37,7 @@ app.get('/animals/:id/eventos', async (req, res) => {
 
 app.post('/animals/:id/eventos', async (req, res) => {
     const { id } = req.params;
-    const { type, date, peso, valor, origem, destino, observacoes } = req.body || {};
+    const { type, date, peso, valor, origem, destino, observacoes, purchasePurpose } = req.body || {};
 
     if (!VALID_EVENT_TYPES.includes(type?.toUpperCase?.())) {
         return res.status(400).json({ message: 'Tipo inválido. Use NASCIMENTO, COMPRA, VENDA ou MORTE.' });
@@ -54,40 +55,33 @@ app.post('/animals/:id/eventos', async (req, res) => {
             return res.status(404).json({ message: 'Animal não encontrado.' });
         }
         const eventType = type.toUpperCase();
-        const event = await prisma.herdEvent.create({
-            data: {
-                farmId: animal.farmId,
-                animalId: id,
-                type: eventType,
-                date: eventDate,
-                peso: parseNumber(peso),
-                valor: parseNumber(valor),
-                origem: origem?.trim() || null,
-                destino: destino?.trim() || null,
-                observacoes: observacoes?.trim() || null,
-            },
-        });
-
-        // Auto-lançamento financeiro para COMPRA e VENDA
-        const financialMap = HERD_EVENT_CATEGORY_MAP[eventType];
-        if (financialMap && valor) {
+        if (purchasePurpose && !['PRODUCTION', 'BREEDING'].includes(purchasePurpose)) {
+            return res.status(400).json({ message: 'Finalidade da compra inválida.' });
+        }
+        const resolvedPurchasePurpose = eventType === 'COMPRA' ? (purchasePurpose || 'PRODUCTION') : null;
+        const event = await prisma.$transaction(async (tx) => {
+            const createdEvent = await tx.herdEvent.create({ data: {
+                farmId: animal.farmId, animalId: id, type: eventType, date: eventDate,
+                peso: parseNumber(peso), valor: parseNumber(valor), origem: origem?.trim() || null,
+                destino: destino?.trim() || null, observacoes: observacoes?.trim() || null,
+                purchasePurpose: resolvedPurchasePurpose,
+            } });
+            const financialMap = HERD_EVENT_CATEGORY_MAP[eventType];
             const parsedValor = parseNumber(valor);
-            if (parsedValor && parsedValor > 0) {
-                await prisma.financialTransaction.create({
-                    data: {
-                        farmId: animal.farmId,
-                        type: financialMap.type,
-                        categoria: financialMap.categoria,
-                        accountCategoryId: financialMap.categoryId,
-                        valor: parsedValor,
-                        data: eventDate,
-                        descricao: `${eventType === 'COMPRA' ? 'Compra' : 'Venda'} de animal — ${animal.brinco || id}`,
-                        herdEventId: event.id,
-                        status: 'PAGO',
-                    },
+            if (financialMap && parsedValor && parsedValor > 0) {
+                await createIntegratedTransaction(tx, {
+                    farmId: animal.farmId, type: financialMap.type, categoria: financialMap.categoria,
+                    accountCategoryId: eventType === 'COMPRA'
+                        ? (resolvedPurchasePurpose === 'BREEDING' ? (animal.sexo === 'MACHO' ? 'sys-compra-reprodutores' : 'sys-compra-matrizes') : 'sys-compra-animais-producao')
+                        : financialMap.categoryId,
+                    amount: parsedValor, competenceDate: eventDate,
+                    description: `${eventType === 'COMPRA' ? 'Compra' : 'Venda'} de animal — ${animal.brinco || id}`,
+                    herdEventId: createdEvent.id, animalId: animal.id,
+                    allocations: (animal.lotId || animal.currentPaddockId) ? [{ lotId: animal.lotId, paddockId: animal.currentPaddockId }] : [],
                 });
             }
-        }
+            return createdEvent;
+        });
 
         const eventLabels = { COMPRA: 'Registrou compra', VENDA: 'Registrou venda', MORTE: 'Registrou morte', NASCIMENTO: 'Registrou nascimento' };
         const label = eventLabels[eventType] || 'Registrou evento';
@@ -148,37 +142,25 @@ app.post('/animals/:id/sanitario', async (req, res) => {
         }
         const tipoUpper = tipo.toUpperCase();
         const parsedValor = parseNumber(valorUnitario);
-        const record = await prisma.sanitaryRecord.create({
-            data: {
-                farmId: animal.farmId,
-                animalId: id,
-                tipo: tipoUpper,
-                produto: produto.trim(),
-                date: eventDate,
-                dose: dose?.trim() || null,
-                proximaAplicacao: parseDateValue(proximaAplicacao),
-                observacoes: observacoes?.trim() || null,
-                valorUnitario: parsedValor || null,
-            },
+        const record = await prisma.$transaction(async (tx) => {
+            const createdRecord = await tx.sanitaryRecord.create({ data: {
+                farmId: animal.farmId, animalId: id, tipo: tipoUpper, produto: produto.trim(),
+                date: eventDate, dose: dose?.trim() || null, proximaAplicacao: parseDateValue(proximaAplicacao),
+                observacoes: observacoes?.trim() || null, valorUnitario: parsedValor || null,
+            } });
+            const sanitaryMap = SANITARY_CATEGORY_MAP[tipoUpper];
+            if (sanitaryMap && parsedValor && parsedValor > 0) {
+                await upsertAutomaticResult(tx, {
+                    farmId: animal.farmId, accountCategoryId: sanitaryMap.categoryId,
+                    sourceKey: `SANITARY_RECORD:${createdRecord.id}:APPLICATION`, sourceType: 'SANITARY_APPLICATION',
+                    sourceId: createdRecord.id, sanitaryRecordId: createdRecord.id, resultClass: 'PRODUCTION_COST',
+                    amount: parsedValor, competenceDate: eventDate,
+                    description: `${produto.trim()} — ${animal.brinco || id}`,
+                    allocations: (animal.lotId || animal.currentPaddockId) ? [{ lotId: animal.lotId, paddockId: animal.currentPaddockId }] : [],
+                });
+            }
+            return createdRecord;
         });
-
-        // Auto-lançamento financeiro se valorUnitario foi informado
-        const sanitaryMap = SANITARY_CATEGORY_MAP[tipoUpper];
-        if (sanitaryMap && parsedValor && parsedValor > 0) {
-            await prisma.financialTransaction.create({
-                data: {
-                    farmId: animal.farmId,
-                    type: 'SAIDA',
-                    categoria: sanitaryMap.categoria,
-                    accountCategoryId: sanitaryMap.categoryId,
-                    valor: parsedValor,
-                    data: eventDate,
-                    descricao: `${produto.trim()} — ${animal.brinco || id}`,
-                    sanitaryRecordId: record.id,
-                    status: 'PAGO',
-                },
-            });
-        }
 
         return res.status(201).json({ record: serializeSanitaryRecord(record) });
     } catch (error) {
@@ -661,25 +643,20 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
     }
 
     const erros = [];
-    const criados = [];
-    const ignorados = [];
-
+    const prepared = [];
+    const identityLines = new Map();
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const line = row.__line || i + 1;
       const err = validateUploadRow(row, line);
       if (err) { erros.push(err); continue; }
-
       const brinco = String(row.identificacao).trim();
       const identityKey = normalizeAnimalIdentityKey(brinco);
-
-      try {
-        const existing = await prisma.animal.findFirst({ where: { farmId, identityKey } });
-        if (existing) {
-          ignorados.push({ line, identificacao: brinco, motivo: 'Animal já existe' });
-          continue;
-        }
-
+      if (identityLines.has(identityKey)) {
+        erros.push({ line, identificacao: brinco, motivos: [`Identificação duplicada na planilha (também na linha ${identityLines.get(identityKey)})`], dados: { ...row } });
+        continue;
+      }
+      identityLines.set(identityKey, line);
         const sexo = normalizeSexoImport(row.sexo);
         const tipoRacaRaw = String(row.tipo_raca || '').trim().toLowerCase();
         const isPura = tipoRacaRaw === 'pura';
@@ -701,9 +678,11 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
         const previsaoParto = parseImportDate(row.previsao_parto);
         const dataPesagem = parseImportDate(row.data_pesagem);
         const pesoAtual = parseNumber(row.ultimo_peso_kg);
-
-        const animal = await prisma.animal.create({
-          data: {
+        if ((row.data_nascimento && !dataNascimento) || (row.data_pesagem && !dataPesagem) || (row.ultimo_peso_kg && (!pesoAtual || pesoAtual <= 0))) {
+          erros.push({ line, identificacao: brinco, motivos: ['Data ou peso inválido'], dados: { ...row } });
+          continue;
+        }
+        prepared.push({ line, brinco, identityKey, dataPesagem, pesoAtual, data: {
             farmId,
             brinco,
             identityKey,
@@ -725,28 +704,38 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
             maeNome: String(row.mae_nome || '').trim() || null,
             observacoes: String(row.observacoes || '').trim() || null,
             categoria: String(row.categoria || '').trim() || null,
-          },
-        });
-
-        // Pesagem inicial, se informada
-        if (dataPesagem && pesoAtual) {
-          await prisma.weighing.create({
-            data: { animalId: animal.id, data: dataPesagem, peso: pesoAtual, gmd: 0, source: 'MANUAL' },
-          }).catch(() => null);
-        }
-
-        criados.push({ line, id: animal.id, identificacao: brinco });
-      } catch (err) {
-        erros.push({ line, identificacao: brinco, motivos: [err?.message || 'Erro ao criar animal'] });
-      }
+        } });
     }
+
+    if (prepared.length) {
+      const existing = await prisma.animal.findMany({ where: { farmId, identityKey: { in: prepared.map((item) => item.identityKey) } }, select: { identityKey: true } });
+      const existingKeys = new Set(existing.map((item) => item.identityKey));
+      prepared.forEach((item) => {
+        if (existingKeys.has(item.identityKey)) erros.push({ line: item.line, identificacao: item.brinco, motivos: ['Animal já existe'], dados: { identificacao: item.brinco } });
+      });
+    }
+    if (erros.length) {
+      return res.status(422).json({ total: rows.length, criados: 0, ignorados: 0, erros: erros.length, detalhes: { criados: [], ignorados: [], erros } });
+    }
+
+    const criados = await prisma.$transaction(async (tx) => {
+      const result = [];
+      for (const item of prepared) {
+        const animal = await tx.animal.create({ data: item.data });
+        if (item.dataPesagem && item.pesoAtual) {
+          await tx.weighing.create({ data: { animalId: animal.id, data: item.dataPesagem, peso: item.pesoAtual, gmd: 0, source: 'MANUAL' } });
+        }
+        result.push({ line: item.line, id: animal.id, identificacao: item.brinco });
+      }
+      return result;
+    });
 
     return res.json({
       total: rows.length,
       criados: criados.length,
-      ignorados: ignorados.length,
-      erros: erros.length,
-      detalhes: { criados, ignorados, erros },
+      ignorados: 0,
+      erros: 0,
+      detalhes: { criados, ignorados: [], erros: [] },
     });
   } catch (error) {
     console.error('Erro no upload de rebanho:', error);
@@ -834,6 +823,183 @@ app.post('/herd/import/erros-xlsx', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Erro ao gerar planilha de erros:', error);
     return res.status(500).json({ message: 'Erro ao gerar planilha de erros.' });
+  }
+});
+
+const PO_TEMPLATE_COLUMNS = [
+  { key: 'nome', label: 'Nome', required: true },
+  { key: 'identificacao', label: 'Brinco', required: true },
+  { key: 'registro', label: 'Registro', required: false },
+  { key: 'raca', label: 'Raça', required: true },
+  { key: 'sexo', label: 'Sexo', required: true },
+  { key: 'data_nascimento', label: 'Data de Nascimento', required: false },
+  { key: 'ultimo_peso_kg', label: 'Último Peso (kg)', required: false },
+  { key: 'data_pesagem', label: 'Data da Pesagem', required: false },
+  { key: 'categoria', label: 'Categoria', required: false },
+  { key: 'pasto', label: 'Pasto', required: true },
+  { key: 'lote', label: 'Lote P.O.', required: false },
+  { key: 'mae', label: 'Mãe (brinco ou registro)', required: false },
+  { key: 'pai', label: 'Pai (brinco ou registro)', required: false },
+  { key: 'observacoes', label: 'Observações', required: false },
+];
+
+const parsePoSpreadsheet = (buffer) => {
+  const workbook = XLSX.read(buffer, { type: 'buffer' });
+  const sheet = workbook.Sheets[workbook.SheetNames.find((name) => normalizeHeader(name) === 'dados') || workbook.SheetNames[0]];
+  if (!sheet) throw new Error('Planilha vazia ou sem abas.');
+  const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false });
+  const labels = new Map(PO_TEMPLATE_COLUMNS.flatMap((column) => [[normalizeHeader(column.label), column.key], [normalizeHeader(column.key), column.key]]));
+  const headerIndex = rawRows.findIndex((row, index) => index < 6 && row.some((cell) => labels.has(normalizeHeader(cell))));
+  if (headerIndex < 0) throw new Error('Cabeçalho da planilha P.O. não encontrado.');
+  const keys = rawRows[headerIndex].map((cell) => labels.get(normalizeHeader(cell)) || null);
+  return rawRows.slice(headerIndex + 1).map((row, index) => {
+    const data = { __line: headerIndex + index + 2 };
+    keys.forEach((key, columnIndex) => {
+      if (key && row[columnIndex] !== undefined && row[columnIndex] !== null && row[columnIndex] !== '') data[key] = row[columnIndex];
+    });
+    return data;
+  }).filter((row) => Object.keys(row).length > 1);
+};
+
+app.get('/po/herd/import/template', requireAuth, async (req, res) => {
+  try {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'EIXO';
+    const sheet = workbook.addWorksheet('Dados');
+    sheet.addRow(PO_TEMPLATE_COLUMNS.map((column) => `${column.label}${column.required ? ' *' : ''}`));
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2F8A3E' } };
+    sheet.columns.forEach((column) => { column.width = 24; });
+    sheet.views = [{ state: 'frozen', ySplit: 1 }];
+    const instructions = workbook.addWorksheet('Instruções');
+    instructions.addRows([
+      ['Importação do Plantel P.O.'],
+      ['Nome, brinco, raça, sexo e pasto são obrigatórios.'],
+      ['Mãe e pai podem ser informados por brinco ou registro e devem pertencer à mesma fazenda.'],
+      ['A importação é tudo ou nada: qualquer erro impede a criação de todas as linhas.'],
+    ]);
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="[EIXO] Modelo Plantel PO.xlsx"');
+    return res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Erro ao gerar modelo do Plantel P.O.' });
+  }
+});
+
+app.post('/po/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, res) => {
+  try {
+    const farmId = String(req.body?.farmId || '');
+    if (!farmId || !req.file) return res.status(400).json({ message: 'Informe fazenda e arquivo.' });
+    const farm = await prisma.farm.findFirst({ where: buildFarmScopeFilter(req, { id: farmId }) });
+    if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada ou sem acesso.' });
+    let rows;
+    try { rows = parsePoSpreadsheet(req.file.buffer); } catch (error) { return res.status(400).json({ message: error.message }); }
+    if (!rows.length) return res.status(400).json({ message: 'Planilha P.O. sem linhas para importar.' });
+    if (rows.length > 1000) return res.status(400).json({ message: 'Limite de 1000 linhas por importação.' });
+
+    const [paddocks, lots, existingAnimals] = await Promise.all([
+      prisma.paddock.findMany({ where: { farmId }, select: { id: true, name: true } }),
+      prisma.poLot.findMany({ where: { farmId }, select: { id: true, name: true } }),
+      prisma.poAnimal.findMany({ where: { farmId }, select: { id: true, brinco: true, registro: true, sexo: true } }),
+    ]);
+    const paddockByName = new Map(paddocks.map((item) => [normalizeHeader(item.name), item]));
+    const lotByName = new Map(lots.map((item) => [normalizeHeader(item.name), item]));
+    const existingByRef = new Map();
+    existingAnimals.forEach((animal) => {
+      if (animal.brinco) existingByRef.set(normalizeHeader(animal.brinco), animal);
+      if (animal.registro) existingByRef.set(normalizeHeader(animal.registro), animal);
+    });
+    const errors = [];
+    const prepared = [];
+    const usedIds = new Set();
+    for (const row of rows) {
+      const line = row.__line;
+      const nome = String(row.nome || '').trim();
+      const brinco = String(row.identificacao || '').trim();
+      const registro = String(row.registro || '').trim();
+      const raca = String(row.raca || '').trim();
+      const sexo = normalizeSexoImport(String(row.sexo || ''));
+      const paddock = paddockByName.get(normalizeHeader(row.pasto));
+      const lot = row.lote ? lotByName.get(normalizeHeader(row.lote)) : null;
+      const birthDate = row.data_nascimento ? parseImportDate(row.data_nascimento) : null;
+      const weighingDate = row.data_pesagem ? parseImportDate(row.data_pesagem) : null;
+      const weight = row.ultimo_peso_kg ? parseNumber(row.ultimo_peso_kg) : null;
+      const reasons = [];
+      if (!nome || !brinco || !raca || !sexo || !paddock) reasons.push('Nome, brinco, raça, sexo e pasto são obrigatórios');
+      if (usedIds.has(normalizeHeader(brinco)) || existingByRef.has(normalizeHeader(brinco))) reasons.push('Brinco duplicado');
+      if (row.lote && !lot) reasons.push('Lote P.O. não encontrado na fazenda');
+      if (row.data_nascimento && !birthDate) reasons.push('Data de nascimento inválida');
+      if (row.data_pesagem && !weighingDate) reasons.push('Data de pesagem inválida');
+      if (row.ultimo_peso_kg && (!weight || weight <= 0)) reasons.push('Peso inválido');
+      if (reasons.length) errors.push({ line, identificacao: brinco, motivos: reasons, dados: { ...row } });
+      else {
+        usedIds.add(normalizeHeader(brinco));
+        prepared.push({ line, nome, brinco, registro, raca, sexo, paddock, lot, birthDate, weighingDate, weight, maeRef: String(row.mae || '').trim(), paiRef: String(row.pai || '').trim(), categoria: String(row.categoria || '').trim(), observacoes: String(row.observacoes || '').trim(), raw: { ...row } });
+      }
+    }
+
+    const preparedByRef = new Map();
+    prepared.forEach((item) => {
+      preparedByRef.set(normalizeHeader(item.brinco), item);
+      if (item.registro) preparedByRef.set(normalizeHeader(item.registro), item);
+    });
+    prepared.forEach((item) => {
+      for (const [kind, ref, expectedSex] of [['Mãe', item.maeRef, 'FEMEA'], ['Pai', item.paiRef, 'MACHO']]) {
+        if (!ref) continue;
+        const parent = existingByRef.get(normalizeHeader(ref)) || preparedByRef.get(normalizeHeader(ref));
+        if (!parent) errors.push({ line: item.line, identificacao: item.brinco, motivos: [`${kind} não encontrado(a)`], dados: item.raw });
+        else if (parent === item || parent.sexo !== expectedSex) errors.push({ line: item.line, identificacao: item.brinco, motivos: [`${kind} inválido(a)`], dados: item.raw });
+      }
+    });
+    if (errors.length) return res.status(422).json({ total: rows.length, criados: 0, ignorados: 0, erros: errors.length, detalhes: { criados: [], ignorados: [], erros: errors } });
+
+    const created = await prisma.$transaction(async (tx) => {
+      const createdByRef = new Map();
+      const result = [];
+      for (const item of prepared) {
+        const animal = await tx.poAnimal.create({ data: { farmId, nome: item.nome, brinco: item.brinco, registro: item.registro || null, raca: item.raca, sexo: item.sexo, dataNascimento: item.birthDate, pesoAtual: item.weight || 0, categoria: item.categoria || null, observacoes: item.observacoes || null, currentPaddockId: item.paddock.id, lotId: item.lot?.id || null } });
+        createdByRef.set(normalizeHeader(item.brinco), animal);
+        if (item.registro) createdByRef.set(normalizeHeader(item.registro), animal);
+        await tx.paddockMove.create({ data: { farmId, paddockId: item.paddock.id, poAnimalId: animal.id, startAt: item.weighingDate || item.birthDate || new Date() } });
+        if (item.weight && item.weighingDate) await tx.poWeighing.create({ data: { farmId, poAnimalId: animal.id, data: item.weighingDate, peso: item.weight, gmd: 0 } });
+        result.push({ line: item.line, id: animal.id, identificacao: item.brinco });
+      }
+      for (const item of prepared) {
+        if (!item.maeRef && !item.paiRef) continue;
+        const animal = createdByRef.get(normalizeHeader(item.brinco));
+        const mae = item.maeRef ? (existingByRef.get(normalizeHeader(item.maeRef)) || createdByRef.get(normalizeHeader(item.maeRef))) : null;
+        const pai = item.paiRef ? (existingByRef.get(normalizeHeader(item.paiRef)) || createdByRef.get(normalizeHeader(item.paiRef))) : null;
+        await tx.poAnimal.update({ where: { id: animal.id }, data: { maeId: mae?.id || null, paiId: pai?.id || null, matrizResponsavelId: mae?.id || null, tatuagemOrelhaEsquerda: mae?.brinco || mae?.registro || null } });
+      }
+      return result;
+    });
+    return res.json({ total: rows.length, criados: created.length, ignorados: 0, erros: 0, detalhes: { criados: created, ignorados: [], erros: [] } });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Erro interno ao importar Plantel P.O.' });
+  }
+});
+
+app.post('/po/herd/import/erros-xlsx', requireAuth, async (req, res) => {
+  try {
+    const errors = Array.isArray(req.body?.erros) ? req.body.erros : [];
+    if (!errors.length) return res.status(400).json({ message: 'Nenhum erro informado.' });
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('Erros P.O.');
+    sheet.addRow([...PO_TEMPLATE_COLUMNS.map((column) => column.label), 'Motivo do erro']);
+    errors.forEach((error) => sheet.addRow([...PO_TEMPLATE_COLUMNS.map((column) => error?.dados?.[column.key] ?? ''), (error?.motivos || []).join(' · ')]));
+    sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFF' } };
+    sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'A32D2D' } };
+    sheet.columns.forEach((column) => { column.width = 24; });
+    const buffer = await workbook.xlsx.writeBuffer();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="[EIXO] Erros Plantel PO.xlsx"');
+    return res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Erro ao gerar planilha de erros P.O.' });
   }
 });
 
@@ -1070,6 +1236,7 @@ app.post('/herd/import', requireAuth, async (req, res) => {
             valor: valorCompra,
             origem: [origemAnimal, fornecedor].filter(Boolean).join(' — ') || null,
             observacoes: [`Forma de entrada: ${eventType}`].filter(Boolean).join('. ') || null,
+            purchasePurpose: eventType === 'COMPRA' ? 'PRODUCTION' : null,
           },
         });
         rowResult.created.herdEvent = herdEvent.id;
@@ -1077,18 +1244,17 @@ app.post('/herd/import', requireAuth, async (req, res) => {
         if (valorCompra && valorCompra > 0) {
           const financialMap = HERD_EVENT_CATEGORY_MAP[eventType];
           if (financialMap) {
-            const ft = await prisma.financialTransaction.create({
-              data: {
-                farmId,
-                type: financialMap.type,
-                categoria: financialMap.categoria,
-                accountCategoryId: financialMap.categoryId,
-                valor: valorCompra,
-                data: eventDate,
-                descricao: `${eventType} de animal — ${brinco}`,
-                herdEventId: herdEvent.id,
-                status: 'PAGO',
-              },
+            const ft = await createIntegratedTransaction(prisma, {
+              farmId,
+              type: financialMap.type,
+              categoria: financialMap.categoria,
+              accountCategoryId: eventType === 'COMPRA' ? 'sys-compra-animais-producao' : financialMap.categoryId,
+              amount: valorCompra,
+              competenceDate: eventDate,
+              description: `${eventType} de animal — ${brinco}`,
+              herdEventId: herdEvent.id,
+              animalId: animal.id,
+              allocations: (animal.lotId || animal.currentPaddockId) ? [{ lotId: animal.lotId, paddockId: animal.currentPaddockId }] : [],
             });
             rowResult.created.financialTransaction = ft.id;
           }
@@ -1228,7 +1394,7 @@ app.get('/po/animals/:id/eventos', async (req, res) => {
 
 app.post('/po/animals/:id/eventos', async (req, res) => {
     const { id } = req.params;
-    const { type, date, peso, valor, origem, destino, observacoes } = req.body || {};
+    const { type, date, peso, valor, origem, destino, observacoes, purchasePurpose } = req.body || {};
 
     if (!VALID_EVENT_TYPES.includes(type?.toUpperCase?.())) {
         return res.status(400).json({ message: 'Tipo inválido. Use NASCIMENTO, COMPRA, VENDA ou MORTE.' });
@@ -1246,39 +1412,33 @@ app.post('/po/animals/:id/eventos', async (req, res) => {
             return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
         }
         const eventType = type.toUpperCase();
-        const event = await prisma.herdEvent.create({
-            data: {
-                farmId: animal.farmId,
-                poAnimalId: id,
-                type: eventType,
-                date: eventDate,
-                peso: parseNumber(peso),
-                valor: parseNumber(valor),
-                origem: origem?.trim() || null,
-                destino: destino?.trim() || null,
-                observacoes: observacoes?.trim() || null,
-            },
-        });
-
-        const financialMap = HERD_EVENT_CATEGORY_MAP[eventType];
-        if (financialMap && valor) {
+        if (purchasePurpose && !['PRODUCTION', 'BREEDING'].includes(purchasePurpose)) {
+            return res.status(400).json({ message: 'Finalidade da compra inválida.' });
+        }
+        const resolvedPurchasePurpose = eventType === 'COMPRA' ? (purchasePurpose || 'PRODUCTION') : null;
+        const event = await prisma.$transaction(async (tx) => {
+            const createdEvent = await tx.herdEvent.create({ data: {
+                farmId: animal.farmId, poAnimalId: id, type: eventType, date: eventDate,
+                peso: parseNumber(peso), valor: parseNumber(valor), origem: origem?.trim() || null,
+                destino: destino?.trim() || null, observacoes: observacoes?.trim() || null,
+                purchasePurpose: resolvedPurchasePurpose,
+            } });
+            const financialMap = HERD_EVENT_CATEGORY_MAP[eventType];
             const parsedValor = parseNumber(valor);
-            if (parsedValor && parsedValor > 0) {
-                await prisma.financialTransaction.create({
-                    data: {
-                        farmId: animal.farmId,
-                        type: financialMap.type,
-                        categoria: financialMap.categoria,
-                        accountCategoryId: financialMap.categoryId,
-                        valor: parsedValor,
-                        data: eventDate,
-                        descricao: `${eventType === 'COMPRA' ? 'Compra' : 'Venda'} P.O. — ${animal.brinco || animal.nome || id}`,
-                        herdEventId: event.id,
-                        status: 'PAGO',
-                    },
+            if (financialMap && parsedValor && parsedValor > 0) {
+                await createIntegratedTransaction(tx, {
+                    farmId: animal.farmId, type: financialMap.type, categoria: financialMap.categoria,
+                    accountCategoryId: eventType === 'COMPRA'
+                        ? (resolvedPurchasePurpose === 'BREEDING' ? 'sys-compra-reprodutores' : 'sys-compra-animais-producao')
+                        : financialMap.categoryId,
+                    amount: parsedValor, competenceDate: eventDate,
+                    description: `${eventType === 'COMPRA' ? 'Compra' : 'Venda'} P.O. — ${animal.brinco || animal.nome || id}`,
+                    herdEventId: createdEvent.id, poAnimalId: animal.id,
+                    allocations: (animal.lotId || animal.currentPaddockId) ? [{ poLotId: animal.lotId, paddockId: animal.currentPaddockId }] : [],
                 });
             }
-        }
+            return createdEvent;
+        });
 
         return res.status(201).json({ event: serializeHerdEvent(event) });
     } catch (error) {
@@ -1335,36 +1495,25 @@ app.post('/po/animals/:id/sanitario', async (req, res) => {
         }
         const tipoUpper = tipo.toUpperCase();
         const parsedValor = parseNumber(valorUnitario);
-        const record = await prisma.sanitaryRecord.create({
-            data: {
-                farmId: animal.farmId,
-                poAnimalId: id,
-                tipo: tipoUpper,
-                produto: produto.trim(),
-                date: eventDate,
-                dose: dose?.trim() || null,
-                proximaAplicacao: parseDateValue(proximaAplicacao),
-                observacoes: observacoes?.trim() || null,
-                valorUnitario: parsedValor || null,
-            },
+        const record = await prisma.$transaction(async (tx) => {
+            const createdRecord = await tx.sanitaryRecord.create({ data: {
+                farmId: animal.farmId, poAnimalId: id, tipo: tipoUpper, produto: produto.trim(),
+                date: eventDate, dose: dose?.trim() || null, proximaAplicacao: parseDateValue(proximaAplicacao),
+                observacoes: observacoes?.trim() || null, valorUnitario: parsedValor || null,
+            } });
+            const sanitaryMap = SANITARY_CATEGORY_MAP[tipoUpper];
+            if (sanitaryMap && parsedValor && parsedValor > 0) {
+                await upsertAutomaticResult(tx, {
+                    farmId: animal.farmId, accountCategoryId: sanitaryMap.categoryId,
+                    sourceKey: `SANITARY_RECORD:${createdRecord.id}:APPLICATION`, sourceType: 'SANITARY_APPLICATION',
+                    sourceId: createdRecord.id, sanitaryRecordId: createdRecord.id, resultClass: 'PRODUCTION_COST',
+                    amount: parsedValor, competenceDate: eventDate,
+                    description: `${produto.trim()} P.O. — ${animal.brinco || animal.nome || id}`,
+                    allocations: (animal.lotId || animal.currentPaddockId) ? [{ poLotId: animal.lotId, paddockId: animal.currentPaddockId }] : [],
+                });
+            }
+            return createdRecord;
         });
-
-        const sanitaryMap = SANITARY_CATEGORY_MAP[tipoUpper];
-        if (sanitaryMap && parsedValor && parsedValor > 0) {
-            await prisma.financialTransaction.create({
-                data: {
-                    farmId: animal.farmId,
-                    type: 'SAIDA',
-                    categoria: sanitaryMap.categoria,
-                    accountCategoryId: sanitaryMap.categoryId,
-                    valor: parsedValor,
-                    data: eventDate,
-                    descricao: `${produto.trim()} P.O. — ${animal.brinco || animal.nome || id}`,
-                    sanitaryRecordId: record.id,
-                    status: 'PAGO',
-                },
-            });
-        }
 
         return res.status(201).json({ record: serializeSanitaryRecord(record) });
     } catch (error) {

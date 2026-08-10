@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { buildApiUrl } from '../api';
+import type { HerdType } from '../adapters/herdApi';
 
 type Status = 'idle' | 'uploading' | 'done' | 'error';
 
@@ -33,6 +34,7 @@ interface ImportHerdModalProps {
     farmId?: string | null;
     farmName?: string | null;
     onSuccess?: () => void;
+    herdType: HerdType;
 }
 
 const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
@@ -42,6 +44,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
     farmId,
     farmName,
     onSuccess,
+    herdType,
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [status, setStatus] = useState<Status>('idle');
@@ -91,13 +94,19 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
             const formData = new FormData();
             formData.append('file', file);
             formData.append('farmId', farmId);
-            const res = await fetch(buildApiUrl('/herd/import/upload'), {
+            const uploadPath = herdType === 'PO' ? '/po/herd/import/upload' : '/herd/import/upload';
+            const res = await fetch(buildApiUrl(uploadPath), {
                 method: 'POST',
                 credentials: 'include',
                 body: formData,
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) {
+                if (Array.isArray(data?.detalhes?.erros) && data.detalhes.erros.length > 0) {
+                    setResult(data as UploadResult);
+                    setStatus('done');
+                    return;
+                }
                 setErrorMessage(data?.message || 'Erro ao processar planilha.');
                 setStatus('error');
                 return;
@@ -120,7 +129,8 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
         const erros = result?.detalhes?.erros;
         if (!erros || erros.length === 0) return;
         try {
-            const res = await fetch(buildApiUrl('/herd/import/erros-xlsx'), {
+            const errorsPath = herdType === 'PO' ? '/po/herd/import/erros-xlsx' : '/herd/import/erros-xlsx';
+            const res = await fetch(buildApiUrl(errorsPath), {
                 method: 'POST',
                 credentials: 'include',
                 headers: { 'Content-Type': 'application/json' },
@@ -153,7 +163,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                         <h3 className="text-base font-bold text-[var(--eixo-text)]">Importar Rebanho</h3>
                         <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">
                             {status === 'done'
-                                ? 'Importação concluída.'
+                                ? result?.erros ? 'Arquivo validado com erros. Nenhum animal foi criado.' : 'Importação concluída.'
                                 : status === 'uploading'
                                 ? 'Processando planilha…'
                                 : 'Baixe o modelo, preencha e envie a planilha.'}
@@ -264,10 +274,15 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
                             </div>
-                            <p className="mt-3 text-base font-semibold text-[var(--eixo-text)]">Importação concluída</p>
-                            <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
-                                {fileName} · {result.total} linhas processadas
+                            <p className="mt-3 text-base font-semibold text-[var(--eixo-text)]">
+                                {result.erros > 0 ? 'Importação não realizada' : 'Importação concluída'}
                             </p>
+                            <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                                {fileName} · {result.total} linhas validadas
+                            </p>
+                            {result.erros > 0 && (
+                                <p className="mt-2 text-xs font-semibold text-[var(--eixo-danger)]">Nenhum animal foi criado. Corrija todas as linhas e envie novamente.</p>
+                            )}
                         </div>
 
                         <div className="mt-5 grid grid-cols-3 gap-2">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { buildApiUrl } from '../api';
+import type { HerdType } from '../adapters/herdApi';
 
 interface Paddock {
     id: string;
@@ -17,6 +18,8 @@ interface AnimalRow {
     sexo: 'Macho' | 'Fêmea';
     raca: string;
     peso: string;
+    nome: string;
+    registro: string;
 }
 
 interface LotePurchaseModalProps {
@@ -26,6 +29,7 @@ interface LotePurchaseModalProps {
     paddocks: Paddock[];
     lots: Lot[];
     onSuccess: () => void;
+    herdType: HerdType;
 }
 
 let _rowCounter = 0;
@@ -35,6 +39,8 @@ const newRow = (racaPadrao = ''): AnimalRow => ({
     sexo: 'Macho',
     raca: racaPadrao,
     peso: '',
+    nome: '',
+    registro: '',
 });
 
 const inputCls =
@@ -64,6 +70,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
     paddocks,
     lots,
     onSuccess,
+    herdType,
 }) => {
     const today = new Date().toISOString().slice(0, 10);
 
@@ -124,6 +131,9 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
 
         const validRows = rows.filter((r) => r.brinco.trim());
         if (validRows.length === 0) { setError('Informe pelo menos um brinco.'); return; }
+        if (herdType === 'PO' && validRows.some((row) => !row.nome.trim() || !(row.raca.trim() || racaPadrao.trim()))) {
+            setError('No Plantel P.O., informe nome e raça de todos os animais.'); return;
+        }
 
         const dupBrincos = validRows.map((r) => r.brinco.trim().toLowerCase());
         if (new Set(dupBrincos).size !== dupBrincos.length) {
@@ -138,6 +148,8 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
 
         const animals = validRows.map((r) => ({
             brinco: r.brinco.trim(),
+            nome: r.nome.trim() || undefined,
+            registro: r.registro.trim() || undefined,
             raca: r.raca.trim() || racaPadrao.trim() || 'Indefinida',
             sexo: r.sexo,
             ultimoPeso: r.peso ? parseImportNumber(r.peso) ?? undefined : undefined,
@@ -145,7 +157,8 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
 
         setSaving(true);
         try {
-            const resp = await fetch(buildApiUrl('/animals/batch'), {
+            const endpoint = herdType === 'PO' ? '/po/animals/batch' : '/animals/batch';
+            const resp = await fetch(buildApiUrl(endpoint), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -299,8 +312,10 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                             </div>
 
                             {/* cabeçalho da tabela */}
-                            <div className="grid grid-cols-[2fr_1.2fr_1.5fr_1fr_32px] gap-2 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
+                            <div className={`grid ${herdType === 'PO' ? 'grid-cols-[1.4fr_1.4fr_1.1fr_1fr_1.2fr_1fr_32px]' : 'grid-cols-[2fr_1.2fr_1.5fr_1fr_32px]'} gap-2 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]`}>
+                                {herdType === 'PO' && <span>Nome</span>}
                                 <span>Brinco</span>
+                                {herdType === 'PO' && <span>Registro</span>}
                                 <span>Sexo</span>
                                 <span>Raça</span>
                                 <span>Peso (kg)</span>
@@ -311,8 +326,11 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                                 {rows.map((row, idx) => (
                                     <div
                                         key={row._id}
-                                        className="grid grid-cols-[2fr_1.2fr_1.5fr_1fr_32px] items-center gap-2 px-4 py-2"
+                                        className={`grid ${herdType === 'PO' ? 'grid-cols-[1.4fr_1.4fr_1.1fr_1fr_1.2fr_1fr_32px]' : 'grid-cols-[2fr_1.2fr_1.5fr_1fr_32px]'} items-center gap-2 px-4 py-2`}
                                     >
+                                        {herdType === 'PO' && (
+                                            <input type="text" value={row.nome} onChange={(e) => updateRow(row._id, 'nome', e.target.value)} placeholder="Nome" className={inputCls} />
+                                        )}
                                         <input
                                             type="text"
                                             value={row.brinco}
@@ -320,6 +338,9 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                                             placeholder={`#${idx + 1}`}
                                             className={inputCls}
                                         />
+                                        {herdType === 'PO' && (
+                                            <input type="text" value={row.registro} onChange={(e) => updateRow(row._id, 'registro', e.target.value)} placeholder="Registro" className={inputCls} />
+                                        )}
                                         <select
                                             value={row.sexo}
                                             onChange={(e) => updateRow(row._id, 'sexo', e.target.value)}

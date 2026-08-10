@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import { parseDateValue, normalizePregnant } from '../utils/formatters.js';
 import { serializeCheckupSession, serializeCheckupRecord } from '../utils/serializers.js';
+import { logActivity } from '../utils/activityLog.js';
 
 const prisma = new PrismaClient();
 
@@ -12,8 +13,121 @@ function cleanText(value) {
     return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
+function animalSnapshot(animal) {
+    return cleanText(animal?.brinco) || cleanText(animal?.registro) || cleanText(animal?.nome);
+}
+
+function stableExternalReference(registry, name) {
+    return cleanText(registry) || cleanText(name);
+}
+
 // ─── Reprodução: avaliações (toque) por sessão + KPIs de decisão ─────────────
 export function registerReproRoutes(app) {
+    app.get('/repro/embryo-transfers', async (req, res) => {
+        const { farmId, herdType = 'COMMERCIAL', status = 'PENDING' } = req.query || {};
+        if (!farmId || !['COMMERCIAL', 'PO'].includes(String(herdType))) {
+            return res.status(400).json({ message: 'Informe fazenda e tipo de rebanho válidos.' });
+        }
+        try {
+            const farm = await prisma.farm.findFirst({ where: buildFarmScopeFilter(req, { id: String(farmId) }) });
+            if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+            const transfers = await prisma.embryoTransfer.findMany({
+                where: { farmId: farm.id, herdType: String(herdType), ...(status ? { status: String(status) } : {}) },
+                include: { embryoBatch: { select: { id: true, lote: true, tecnica: true } } },
+                orderBy: { transferredAt: 'desc' },
+            });
+            return res.json({ transfers });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao listar transferências de embrião.' });
+        }
+    });
+
+    app.post('/repro/embryo-transfers', async (req, res) => {
+        const { farmId, herdType = 'COMMERCIAL', embryoBatchId, recipientId, transferredAt, date, notes } = req.body || {};
+        const normalizedHerdType = String(herdType).toUpperCase();
+        const transferDate = parseDateValue(transferredAt || date);
+        if (!farmId || !embryoBatchId || !recipientId || !transferDate || !['COMMERCIAL', 'PO'].includes(normalizedHerdType)) {
+            return res.status(400).json({ message: 'Informe fazenda, rebanho, lote, receptora e data válidos.' });
+        }
+        try {
+            const farm = await prisma.farm.findFirst({ where: buildFarmScopeFilter(req, { id: String(farmId) }) });
+            if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+
+            const batch = await prisma.embryoBatch.findFirst({
+                where: { id: String(embryoBatchId), farmId: farm.id },
+                include: { donorAnimal: true, donorPoAnimal: true, sireAnimal: true, sirePoAnimal: true },
+            });
+            if (!batch || batch.tecnica !== 'TE') return res.status(400).json({ message: 'Lote de embrião TE inválido.' });
+            if (batch.quantidadeDisponivel < 1) return res.status(409).json({ message: 'O lote não possui embrião disponível.' });
+            if ((batch.donorAnimal && batch.donorAnimal.sexo !== 'FEMEA') || (batch.donorPoAnimal && batch.donorPoAnimal.sexo !== 'FEMEA')) {
+                return res.status(400).json({ message: 'A doadora vinculada ao lote precisa ser fêmea.' });
+            }
+            if ((batch.sireAnimal && batch.sireAnimal.sexo !== 'MACHO') || (batch.sirePoAnimal && batch.sirePoAnimal.sexo !== 'MACHO')) {
+                return res.status(400).json({ message: 'O touro vinculado ao lote precisa ser macho.' });
+            }
+
+            const recipientModel = normalizedHerdType === 'PO' ? prisma.poAnimal : prisma.animal;
+            const recipient = await recipientModel.findFirst({ where: { id: String(recipientId), farmId: farm.id, sexo: 'FEMEA' } });
+            const recipientSnapshot = animalSnapshot(recipient);
+            if (!recipient || !recipientSnapshot) return res.status(400).json({ message: 'Receptora inválida para esta fazenda.' });
+
+            const donorSnapshot = animalSnapshot(batch.donorAnimal)
+                || animalSnapshot(batch.donorPoAnimal)
+                || stableExternalReference(batch.donorRegistry, batch.donorName);
+            if (!donorSnapshot) return res.status(400).json({ message: 'A doadora precisa de identificação ou registro estável.' });
+            const donorKey = batch.donorAnimalId
+                ? `ANIMAL:${batch.donorAnimalId}`
+                : batch.donorPoAnimalId
+                    ? `PO:${batch.donorPoAnimalId}`
+                    : `EXTERNAL:${donorSnapshot.toUpperCase()}`;
+            const sireSnapshot = animalSnapshot(batch.sireAnimal)
+                || animalSnapshot(batch.sirePoAnimal)
+                || stableExternalReference(batch.sireRegistry, batch.sireName);
+
+            const pendingRecipientWhere = normalizedHerdType === 'PO'
+                ? { recipientPoAnimalId: recipient.id }
+                : { recipientAnimalId: recipient.id };
+            const pending = await prisma.embryoTransfer.findFirst({
+                where: { farmId: farm.id, herdType: normalizedHerdType, status: 'PENDING', ...pendingRecipientWhere },
+                select: { id: true },
+            });
+            if (pending) return res.status(409).json({ message: 'A receptora já possui uma transferência pendente.' });
+
+            const transfer = await prisma.$transaction(async (tx) => {
+                const stockUpdate = await tx.embryoBatch.updateMany({
+                    where: { id: batch.id, farmId: farm.id, quantidadeDisponivel: { gte: 1 } },
+                    data: { quantidadeDisponivel: { decrement: 1 } },
+                });
+                if (stockUpdate.count !== 1) throw new Error('EMBRYO_STOCK_UNAVAILABLE');
+                await tx.embryoMove.create({
+                    data: { embryoBatchId: batch.id, date: transferDate, qty: 1, type: 'TRANSFER', notes: cleanText(notes) },
+                });
+                return tx.embryoTransfer.create({
+                    data: {
+                        farmId: farm.id,
+                        herdType: normalizedHerdType,
+                        embryoBatchId: batch.id,
+                        recipientAnimalId: normalizedHerdType === 'COMMERCIAL' ? recipient.id : null,
+                        recipientPoAnimalId: normalizedHerdType === 'PO' ? recipient.id : null,
+                        transferredAt: transferDate,
+                        recipientSnapshot,
+                        donorKey,
+                        donorSnapshot,
+                        sireSnapshot,
+                        notes: cleanText(notes),
+                    },
+                });
+            });
+            await logActivity(prisma, req, { action: 'TRANSFERENCIA_EMBRIAO_REGISTRADA', entity: 'EmbryoTransfer', entityId: transfer.id, description: `Registrou TE na receptora ${recipientSnapshot}`, farmId: farm.id });
+            return res.status(201).json({ transfer });
+        } catch (error) {
+            if (error?.message === 'EMBRYO_STOCK_UNAVAILABLE') return res.status(409).json({ message: 'O lote não possui embrião disponível.' });
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao registrar transferência de embrião.' });
+        }
+    });
+
     // Criar sessão de avaliação com as fichas das vacas avaliadas
     app.post('/repro/checkups', async (req, res) => {
         const { farmId, occurredAt, responsibleName, seasonId, notes, records } = req.body || {};

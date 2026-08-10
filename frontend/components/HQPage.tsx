@@ -42,6 +42,8 @@ interface HQSuporteItem {
     lastAction: string;
     lastAt: string;
     totalMessages: number;
+    humanRequested: boolean;
+    assumedByAdmin: boolean;
 }
 
 interface HQSuporteMessage {
@@ -400,7 +402,7 @@ const HQPage: React.FC = () => {
                             {suporte.map((item) => (
                                 <tr
                                     key={item.conversationId}
-                                    className={`cursor-pointer border-t border-[#ECECEC] ${selectedConversationId === item.conversationId ? 'bg-[#f5f8ef]' : ''}`}
+                                    className={`cursor-pointer border-t border-[#ECECEC] ${item.humanRequested ? 'bg-[#fff5dc]' : selectedConversationId === item.conversationId ? 'bg-[#f5f8ef]' : ''}`}
                                     onClick={() => {
                                         setSelectedConversationId(item.conversationId);
                                         void loadSupportConversation(item.conversationId);
@@ -409,6 +411,12 @@ const HQPage: React.FC = () => {
                                     <td className="px-4 py-3">
                                         <p>{item.user?.name || '-'}</p>
                                         <p className="text-xs text-[#5E5E5E]">{item.user?.email || '-'}</p>
+                                        {item.humanRequested && (
+                                            <span className="mt-1 inline-flex rounded-full bg-[#f5b942] px-2 py-0.5 text-[10px] font-bold uppercase text-[#4b3500]">Aguardando especialista</span>
+                                        )}
+                                        {item.assumedByAdmin && (
+                                            <span className="mt-1 inline-flex rounded-full bg-[#dff0b8] px-2 py-0.5 text-[10px] font-bold uppercase text-[#355000]">Em atendimento</span>
+                                        )}
                                     </td>
                                     <td className="px-4 py-3">{getSuporteContent(item)}</td>
                                     <td className="px-4 py-3">{formatDate(item.lastAt)}</td>
@@ -432,11 +440,18 @@ const HQPage: React.FC = () => {
                                             onClick={async () => {
                                                 setSupportActionLoading(true);
                                                 try {
-                                                    await fetch(buildApiUrl(`/api/hq/suporte/${selectedConversationId}/assume`), {
+                                                    const response = await fetch(buildApiUrl(`/api/hq/suporte/${selectedConversationId}/assume`), {
                                                         method: 'POST',
                                                         credentials: 'include',
                                                     });
+                                                    const payload = await response.json().catch(() => ({}));
+                                                    if (!response.ok) throw new Error(payload?.message || 'Erro ao assumir conversa.');
                                                     await loadSupportConversation(selectedConversationId);
+                                                } catch (error) {
+                                                    setErrorByTab((current) => ({
+                                                        ...current,
+                                                        suporte: error instanceof Error ? error.message : 'Erro ao assumir conversa.',
+                                                    }));
                                                 } finally {
                                                     setSupportActionLoading(false);
                                                 }
@@ -452,11 +467,18 @@ const HQPage: React.FC = () => {
                                             onClick={async () => {
                                                 setSupportActionLoading(true);
                                                 try {
-                                                    await fetch(buildApiUrl(`/api/hq/suporte/${selectedConversationId}/release`), {
+                                                    const response = await fetch(buildApiUrl(`/api/hq/suporte/${selectedConversationId}/release`), {
                                                         method: 'POST',
                                                         credentials: 'include',
                                                     });
+                                                    const payload = await response.json().catch(() => ({}));
+                                                    if (!response.ok) throw new Error(payload?.message || 'Erro ao liberar conversa.');
                                                     await loadSupportConversation(selectedConversationId);
+                                                } catch (error) {
+                                                    setErrorByTab((current) => ({
+                                                        ...current,
+                                                        suporte: error instanceof Error ? error.message : 'Erro ao liberar conversa.',
+                                                    }));
                                                 } finally {
                                                     setSupportActionLoading(false);
                                                 }
@@ -498,14 +520,21 @@ const HQPage: React.FC = () => {
                                         if (!supportReply.trim()) return;
                                         setSupportActionLoading(true);
                                         try {
-                                            await fetch(buildApiUrl(`/api/hq/suporte/${selectedConversationId}/reply`), {
+                                            const response = await fetch(buildApiUrl(`/api/hq/suporte/${selectedConversationId}/reply`), {
                                                 method: 'POST',
                                                 headers: { 'Content-Type': 'application/json' },
                                                 credentials: 'include',
                                                 body: JSON.stringify({ message: supportReply.trim() }),
                                             });
+                                            const payload = await response.json().catch(() => ({}));
+                                            if (!response.ok) throw new Error(payload?.message || 'Erro ao responder conversa.');
                                             setSupportReply('');
                                             await loadSupportConversation(selectedConversationId);
+                                        } catch (error) {
+                                            setErrorByTab((current) => ({
+                                                ...current,
+                                                suporte: error instanceof Error ? error.message : 'Erro ao responder conversa.',
+                                            }));
                                         } finally {
                                             setSupportActionLoading(false);
                                         }

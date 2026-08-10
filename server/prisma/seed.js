@@ -8,6 +8,7 @@ const DEFAULT_MODULES = [
     'Visão Geral',
     'Fazendas',
     'Rebanho Comercial',
+    'Plantel P.O.',
     'Rebanho Genética',
     'Fornecedores',
     'Remédios',

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+    createBulkWeighings,
     createWeighing,
     createWeighingSession,
     deleteWeighingSession,
@@ -272,7 +273,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                 startDate: filterStart || undefined,
                 endDate: filterEnd || undefined,
                 search: filterSearch || undefined,
-            });
+            }, herdType);
             setSessionRows(data.sessions || []);
             setTotal(data.total ?? 0);
 
@@ -281,7 +282,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
         } finally {
             setLoading(false);
         }
-    }, [farmId, page, filterLot, filterStart, filterEnd, filterSearch]);
+    }, [farmId, herdType, page, filterLot, filterStart, filterEnd, filterSearch]);
 
     useEffect(() => {
         load();
@@ -290,12 +291,12 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
     const loadSessions = useCallback(async () => {
         if (!farmId) return;
         try {
-            const list = await listWeighingSessions(farmId);
+            const list = await listWeighingSessions(farmId, herdType);
             setSessions(list);
         } catch {
             setSessions([]);
         }
-    }, [farmId]);
+    }, [farmId, herdType]);
 
     useEffect(() => {
         loadSessions();
@@ -315,7 +316,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
         setSessionSaving(true);
         setSessionError(null);
         try {
-            const session = await createWeighingSession(farmId, name, responsibleName);
+            const session = await createWeighingSession(farmId, name, responsibleName, herdType);
             setActiveSession({ id: session.id, name: session.name });
             setActiveSessionMode(mode);
             setSessions((current) => [session, ...current.filter((item) => item.id !== session.id)]);
@@ -402,9 +403,9 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                 animalId: editWeighingAnimalId,
                 data: editWeighingDate,
                 peso: weight,
-            });
+            }, herdType);
             if (detailData?.session?.sessionId) {
-                const updated = await getWeighingSessionItems(farmId, detailData.session.sessionId);
+                const updated = await getWeighingSessionItems(farmId, detailData.session.sessionId, herdType);
                 setDetailData(updated);
             }
             await load();
@@ -433,9 +434,9 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
         setDeleteWeighingSaving(true);
         setDeleteWeighingError(null);
         try {
-            await deleteWeighing(farmId, deletingWeighingId, masterPassword);
+            await deleteWeighing(farmId, deletingWeighingId, masterPassword, herdType);
             if (detailData?.session?.sessionId) {
-                const updated = await getWeighingSessionItems(farmId, detailData.session.sessionId);
+                const updated = await getWeighingSessionItems(farmId, detailData.session.sessionId, herdType);
                 setDetailData(updated);
             }
             await load();
@@ -698,13 +699,13 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
         const averageWeight = Number((totalWeightNum / countNum).toFixed(1));
         setFormSaving(true);
         try {
-            for (const animal of selectedAnimals) {
-                await createWeighing(animal.id, herdType, {
-                    data: formDate,
-                    peso: averageWeight,
-                    ...(activeSession ? { weighingSessionId: activeSession.id } : {}),
-                });
-            }
+            const result = await createBulkWeighings(farmId, herdType, {
+                animalIds: selectedAnimals.map((animal) => animal.id),
+                animalCount: countNum,
+                data: formDate,
+                totalWeightKg: totalWeightNum,
+                ...(activeSession ? { weighingSessionId: activeSession.id } : {}),
+            });
             playSuccessBeep();
             const nowIso = new Date().toISOString();
             setManualSessionWeighings((current) => [
@@ -718,7 +719,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                 })),
                 ...current,
             ]);
-            setFormMsg({ text: `Pesagem em grupo registrada. Peso médio: ${averageWeight.toFixed(1)} kg.`, type: 'success' });
+            setFormMsg({ text: `Pesagem em grupo registrada. Peso médio: ${result.averageWeightKg.toFixed(1)} kg.`, type: 'success' });
             setGroupTotalWeight('');
             setGroupAnimalsCount('');
             setGroupSelectedAnimalIds([]);
@@ -1776,7 +1777,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                                                     setDetailError(null);
                                                     setDetailData(null);
                                                     try {
-                                                        const detail = await getWeighingSessionItems(farmId, row.sessionId);
+                                                        const detail = await getWeighingSessionItems(farmId, row.sessionId, herdType);
                                                         setDetailData(detail);
                                                     } catch (err: any) {
                                                         setDetailError(err?.message || 'Erro ao carregar detalhes da sessão.');
@@ -1805,7 +1806,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                                                         setDetailError(null);
                                                         setDetailData(null);
                                                         try {
-                                                            const detail = await getWeighingSessionItems(farmId, row.sessionId);
+                                                            const detail = await getWeighingSessionItems(farmId, row.sessionId, herdType);
                                                             setDetailData(detail);
                                                         } catch (err: any) {
                                                             setDetailError(err?.message || 'Erro ao carregar detalhes da sessão.');

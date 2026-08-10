@@ -70,6 +70,7 @@ export interface LotUI {
     notes?: string | null;
     objective?: string | null;
     phase?: string | null;
+    productionPhase?: 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'OUTRA' | null;
     status?: string | null;
     startDate?: string | null;
     farmId: string;
@@ -100,6 +101,25 @@ export interface AnimalUI {
     selectionDecision?: string | null;
     currentPaddockId?: string | null;
     currentPaddockName?: string | null;
+    maeId?: string | null;
+    maeNome?: string | null;
+    paiId?: string | null;
+    paiNome?: string | null;
+    matrizResponsavelId?: string | null;
+    identificacaoProvisoria?: boolean;
+    identificacaoAnterior?: string | null;
+    identificacaoMatrizSnapshot?: string | null;
+    sequenciaMatriz?: number | null;
+    tatuagemOrelhaEsquerda?: string | null;
+    origemNascimento?: 'NATURAL' | 'TE' | string | null;
+    identificacaoProvisoriaOriginal?: string | null;
+    receptoraGestacionalId?: string | null;
+    receptoraGestacionalSnapshot?: string | null;
+    doadoraSnapshot?: string | null;
+    touroSnapshot?: string | null;
+    embryoTransferId?: string | null;
+    desmamadoEm?: string | null;
+    pesoDesmamaKg?: number | null;
     nutritionPlan?: {
         id: string;
         nome: string;
@@ -131,6 +151,7 @@ export interface Lot {
     notes?: string | null;
     objective?: string | null;
     phase?: string | null;
+    productionPhase?: 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'OUTRA' | null;
     status?: string | null;
     startDate?: string | null;
     farmId: string;

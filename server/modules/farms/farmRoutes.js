@@ -804,14 +804,19 @@ app.get('/lots', async (req, res) => {
     }
 });
 
+const PRODUCTION_PHASES = ['CRIA', 'RECRIA', 'ENGORDA', 'REPRODUCAO', 'OUTRA'];
+
 app.post('/lots', requireNonFieldWorker, async (req, res) => {
-    const { farmId, name, notes, objective, phase, status, startDate } = req.body || {};
+    const { farmId, name, notes, objective, phase, productionPhase, status, startDate } = req.body || {};
     if (!farmId || !name?.trim()) {
         return res.status(400).json({ message: 'Informe fazenda e nome do lote.' });
     }
     const parsedStartDate = startDate ? parseDateValue(startDate) : null;
     if (startDate && !parsedStartDate) {
         return res.status(400).json({ message: 'Data de início inválida.' });
+    }
+    if (!PRODUCTION_PHASES.includes(String(productionPhase || ''))) {
+        return res.status(400).json({ message: 'Informe a fase produtiva do lote.' });
     }
 
     try {
@@ -829,6 +834,7 @@ app.post('/lots', requireNonFieldWorker, async (req, res) => {
                 notes: notes?.trim() || null,
                 objective: objective?.trim() || null,
                 phase: phase?.trim() || null,
+                productionPhase,
                 status: status?.trim() || 'ATIVO',
                 startDate: parsedStartDate,
             },
@@ -843,13 +849,16 @@ app.post('/lots', requireNonFieldWorker, async (req, res) => {
 
 app.patch('/lots/:id', requireNonFieldWorker, async (req, res) => {
     const { id } = req.params;
-    const { name, notes, objective, phase, status, startDate } = req.body || {};
+    const { name, notes, objective, phase, productionPhase, status, startDate } = req.body || {};
     if (!name?.trim()) {
         return res.status(400).json({ message: 'Informe o nome do lote.' });
     }
     const parsedStartDate = startDate ? parseDateValue(startDate) : null;
     if (startDate && !parsedStartDate) {
         return res.status(400).json({ message: 'Data de início inválida.' });
+    }
+    if (productionPhase !== undefined && !PRODUCTION_PHASES.includes(String(productionPhase))) {
+        return res.status(400).json({ message: 'Fase produtiva inválida.' });
     }
     try {
         const lot = await prisma.lot.findFirst({
@@ -863,6 +872,7 @@ app.patch('/lots/:id', requireNonFieldWorker, async (req, res) => {
                 notes: notes?.trim() || null,
                 objective: objective?.trim() || null,
                 phase: phase?.trim() || null,
+                ...(productionPhase !== undefined ? { productionPhase } : {}),
                 status: status?.trim() || 'ATIVO',
                 startDate: parsedStartDate,
             },

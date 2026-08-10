@@ -120,17 +120,17 @@ const LancamentosTab: React.FC<LancamentosTabProps> = ({
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 <div className="flex min-h-[96px] flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Entradas</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Entradas lançadas</p>
                     <p className="mt-2 font-brand text-3xl font-extrabold text-[var(--eixo-success)]">{formatCurrency(summary.entradas)}</p>
                     <p className="mt-1 text-xs invisible">—</p>
                 </div>
                 <div className="flex min-h-[96px] flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Saídas</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Saídas lançadas</p>
                     <p className="mt-2 font-brand text-3xl font-extrabold text-[var(--eixo-danger)]">{formatCurrency(summary.saidas)}</p>
                     <p className="mt-1 text-xs invisible">—</p>
                 </div>
                 <div className="flex min-h-[96px] flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Saldo</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Movimentação líquida lançada</p>
                     <p className={`mt-2 font-brand text-3xl font-extrabold ${summary.saldo >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
                         {formatCurrency(summary.saldo)}
                     </p>
@@ -214,7 +214,7 @@ const LancamentosTab: React.FC<LancamentosTabProps> = ({
                                                 {t.type === 'ENTRADA' ? 'Entrada' : 'Saída'}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 font-medium text-[var(--eixo-text)]">{getCatLabel(t)}</td>
+                                        <td className="px-4 py-3 font-medium text-[var(--eixo-text)]">{getCatLabel(t)} {t.modelVersion === 1 && <span className="ml-1 rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] text-[var(--eixo-text-muted)]">Histórico anterior</span>}</td>
                                         <td className="px-4 py-3 text-[var(--eixo-text-muted)]">{t.accountCategoryGroup || '—'}</td>
                                         <td className="px-4 py-3 text-[var(--eixo-text-muted)]">{t.descricao || '—'}</td>
                                         <td className="px-4 py-3">
@@ -240,7 +240,7 @@ const LancamentosTab: React.FC<LancamentosTabProps> = ({
                                                     <button type="button"
                                                         onClick={() => onDelete(t)}
                                                         className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)]">
-                                                        Excluir
+                                                        Cancelar
                                                     </button>
                                                 </div>
                                             )}

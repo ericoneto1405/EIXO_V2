@@ -97,7 +97,8 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
 
   const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
   const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]';
-  const headerPrimaryButton = 'hidden h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.76)] bg-[rgba(182,226,58,0.82)] px-5 text-sm font-bold text-[#1a1a1a] shadow-[0_10px_22px_rgba(121,160,24,0.18),inset_0_1px_0_rgba(255,255,255,0.58)] transition-all duration-200 hover:bg-[rgba(182,226,58,0.92)] hover:shadow-[0_12px_28px_rgba(121,160,24,0.24),inset_0_1px_0_rgba(255,255,255,0.66)] sm:inline-flex';
+  const headerSecondaryButton = 'inline-flex h-10 items-center justify-center rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]/70 px-4 text-sm font-semibold text-[var(--eixo-text)] shadow-sm transition-colors hover:bg-[var(--eixo-surface)]';
+  const headerPrimaryButton = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.76)] bg-[rgba(182,226,58,0.82)] px-5 text-sm font-bold text-[#1a1a1a] shadow-[0_10px_22px_rgba(121,160,24,0.18),inset_0_1px_0_rgba(255,255,255,0.58)] transition-all duration-200 hover:bg-[rgba(182,226,58,0.92)] hover:shadow-[0_12px_28px_rgba(121,160,24,0.24),inset_0_1px_0_rgba(255,255,255,0.66)]';
   const navItems: Array<{ label: string; id: 'gratis' | 'antes-depois' | 'como' | 'faq'; action: () => void }> = [
     { label: 'EIXO Essencial', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
     { label: 'Antes e Depois', id: 'antes-depois', action: () => { setActiveNav('antes-depois'); scrollTo('antes-depois'); } },
@@ -118,7 +119,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </div>
           </div>
           <nav
-            className="hidden items-center rounded-2xl border border-white/45 bg-white/22 p-1 shadow-[0_12px_30px_rgba(47,47,47,0.07),inset_0_1px_0_rgba(255,255,255,0.56)] backdrop-blur-xl lg:flex"
+            className="hidden items-center rounded-2xl border border-white/45 bg-white/22 p-1 shadow-[0_12px_30px_rgba(47,47,47,0.07),inset_0_1px_0_rgba(255,255,255,0.56)] backdrop-blur-xl xl:flex"
           >
             {navItems.map((item) => (
               <button
@@ -139,32 +140,28 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             <button
               type="button"
               onClick={() => setMenuOpen((prev) => !prev)}
-              className="rounded-xl border border-white/50 bg-white/34 p-2 text-[var(--eixo-text)] shadow-[0_8px_22px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.66)] backdrop-blur-xl transition-colors hover:bg-white/52 lg:hidden"
+              className="rounded-xl border border-white/50 bg-white/34 p-2 text-[var(--eixo-text)] shadow-[0_8px_22px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.66)] backdrop-blur-xl transition-colors hover:bg-white/52 xl:hidden"
               aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
             <button
               type="button"
-              onClick={onEnter}
-              className="hidden h-10 items-center px-1 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:text-[var(--eixo-text)] hover:underline sm:inline-flex"
-            >
-              Entrar
-            </button>
-            <button
-              type="button"
               onClick={() => { window.location.href = '/planos'; }}
-              className="hidden h-10 items-center rounded-xl border border-white/62 bg-white/46 px-4 text-sm font-semibold text-[var(--eixo-text)] shadow-[0_9px_20px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-all duration-200 hover:border-white/86 hover:bg-white/62 sm:inline-flex"
+              className="hidden h-10 items-center rounded-xl border border-white/62 bg-white/46 px-4 text-sm font-semibold text-[var(--eixo-text)] shadow-[0_9px_20px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-all duration-200 hover:border-white/86 hover:bg-white/62 lg:inline-flex"
             >
               Ver Planos
             </button>
-            <button type="button" onClick={onRegister} className={headerPrimaryButton}>
+            <button type="button" onClick={onEnter} className={`${headerSecondaryButton} hidden md:inline-flex`}>
+              Entrar
+            </button>
+            <button type="button" onClick={onRegister} className={`${headerPrimaryButton} hidden md:inline-flex`}>
               Criar minha conta grátis
             </button>
           </div>
         </div>
         {menuOpen && (
-          <div className="border-b border-[var(--eixo-border)] bg-[var(--eixo-bg)] px-4 py-3 lg:hidden">
+          <div className="border-b border-[var(--eixo-border)] bg-[var(--eixo-bg)] px-4 py-3 xl:hidden">
             <button
               type="button"
               onClick={() => {

@@ -73,15 +73,17 @@ export const FINANCIAL_PROGRESS_EVENT = 'eixo:financial-transactions-changed';
 
 // ── Tipos de aba ──────────────────────────────────────────────────────────────
 
-export type FinanceTab = 'lancamentos' | 'visao_geral' | 'contas_pagar' | 'contas_receber' | 'fluxo' | 'dre' | 'plano_contas';
+export type FinanceTab = 'lancamentos' | 'visao_geral' | 'contas_pagar' | 'contas_receber' | 'fluxo' | 'dre' | 'analytics' | 'quality' | 'plano_contas';
 
 export const TAB_LABELS: Record<FinanceTab, string> = {
     lancamentos: 'Lançamentos',
     visao_geral: 'Visão Geral',
     contas_pagar: 'Contas a Pagar',
     contas_receber: 'Contas a Receber',
-    fluxo: 'Fluxo de Caixa',
-    dre: 'DRE',
+    fluxo: 'Caixa realizado e projetado',
+    dre: 'Resultado da operação',
+    analytics: 'Custos e margens',
+    quality: 'Qualidade dos dados',
     plano_contas: 'Plano de Contas',
 };
 

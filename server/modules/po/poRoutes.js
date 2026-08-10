@@ -8,7 +8,10 @@ import {
     serializePoAnimal, serializeSemenBatch, serializeEmbryoBatch,
     serializePaddockMove, serializeNutritionPlan,
 } from '../utils/serializers.js';
-import { moveAnimalBetweenPaddocks, moveAnimalsBetweenPaddocks, transferAnimalsToFarm, calculateGmdMetrics, diffDaysFloat } from '../animals/animalRoutes.js';
+import { moveAnimalBetweenPaddocks, moveAnimalsBetweenPaddocks, transferAnimalsToFarm, createBulkWeighings, calculateGmdMetrics, diffDaysFloat, weanCalf } from '../animals/animalRoutes.js';
+import { HERD_EVENT_CATEGORY_MAP } from '../config/env.js';
+import { createIntegratedTransaction } from '../financial/financialService.js';
+import { buildProvisionalIdentification, buildTeProvisionalIdentification } from '../animals/herdIntegrityService.js';
 const prisma = new PrismaClient();
 
 const verifyPasswordWithLegacySupport = async (user, password) => {
@@ -27,9 +30,12 @@ const verifyPasswordWithLegacySupport = async (user, password) => {
     return matches;
 };
 
-const recalculateAnimalWeighingChain = async (tx, animalId) => {
-    const allWeighings = await tx.weighing.findMany({
-        where: { animalId },
+const recalculateAnimalWeighingChain = async (tx, animalId, isPo = false) => {
+    const weighingModel = isPo ? tx.poWeighing : tx.weighing;
+    const animalModel = isPo ? tx.poAnimal : tx.animal;
+    const animalIdField = isPo ? 'poAnimalId' : 'animalId';
+    const allWeighings = await weighingModel.findMany({
+        where: { [animalIdField]: animalId },
         orderBy: { data: 'asc' },
     });
 
@@ -43,7 +49,7 @@ const recalculateAnimalWeighingChain = async (tx, animalId) => {
             }
         }
         if (row.gmd !== gmdValue) {
-            await tx.weighing.update({
+            await weighingModel.update({
                 where: { id: row.id },
                 data: { gmd: gmdValue },
             });
@@ -52,7 +58,7 @@ const recalculateAnimalWeighingChain = async (tx, animalId) => {
     }
 
     if (!allWeighings.length) {
-        await tx.animal.update({
+        await animalModel.update({
             where: { id: animalId },
             data: {
                 pesoAtual: null,
@@ -67,7 +73,7 @@ const recalculateAnimalWeighingChain = async (tx, animalId) => {
         allWeighings.map((item) => ({ date: item.data, weight: item.peso })),
     );
     const latest = allWeighings[allWeighings.length - 1];
-    await tx.animal.update({
+    await animalModel.update({
         where: { id: animalId },
         data: {
             pesoAtual: latest.peso,
@@ -220,13 +226,15 @@ const createPoWeighing = async (req, res, responseKey) => {
 };
 
 function serializeWeighingSession(s) {
+    const isPo = s.herdType === 'PO';
     return {
         id: s.id,
         name: s.name,
         responsibleName: s.responsibleName ?? null,
         farmId: s.farmId,
         createdAt: s.createdAt,
-        weighingsCount: s._count?.weighings ?? undefined,
+        herdType: s.herdType || 'COMMERCIAL',
+        weighingsCount: isPo ? (s._count?.poWeighings ?? undefined) : (s._count?.weighings ?? undefined),
     };
 }
 
@@ -326,12 +334,12 @@ app.get('/po/animals', requireAuth, async (req, res) => {
 });
 
 app.post('/po/animals', requireAuth, async (req, res) => {
-    const { farmId, lotId, brinco, nome, raca, sexo, dataNascimento, registro, categoria, observacoes, ultimoPeso, paddockId, paddockStartAt } = req.body || {};
+    const { farmId, lotId, brinco, nome, raca, sexo, dataNascimento, registro, categoria, observacoes, ultimoPeso, paddockId, paddockStartAt, valorCompra, dataCompra } = req.body || {};
     if (Object.prototype.hasOwnProperty.call(req.body || {}, 'pesoAtual')) {
         return res.status(400).json({ message: 'Campo inválido: use "ultimoPeso" no lugar de "pesoAtual".' });
     }
-    if (!farmId || !nome?.trim() || !raca?.trim() || !sexo) {
-        return res.status(400).json({ message: 'Dados obrigatórios do animal P.O. ausentes.' });
+    if (!farmId || !nome?.trim() || !raca?.trim() || !sexo || !paddockId) {
+        return res.status(400).json({ message: 'Informe nome, raça, sexo e pasto do animal P.O.' });
     }
 
     const sexoEnum = normalizeSexo(sexo);
@@ -391,6 +399,11 @@ app.post('/po/animals', requireAuth, async (req, res) => {
             }
             validPaddockId = paddock.id;
         }
+        const parsedValorCompra = valorCompra === undefined || valorCompra === '' ? null : parseNumber(valorCompra);
+        const purchaseDate = dataCompra ? parseDateValue(dataCompra) : (moveStartAt || new Date());
+        if ((parsedValorCompra !== null && parsedValorCompra <= 0) || !purchaseDate) {
+            return res.status(400).json({ message: 'Data ou valor de compra inválido.' });
+        }
 
         const animal = await prisma.$transaction(async (tx) => {
             const created = await tx.poAnimal.create({
@@ -411,6 +424,11 @@ app.post('/po/animals', requireAuth, async (req, res) => {
                     currentPaddockId: validPaddockId,
                 },
             });
+            if (parsedPesoAtual) {
+                await tx.poWeighing.create({
+                    data: { farmId: farm.id, poAnimalId: created.id, data: purchaseDate, peso: parsedPesoAtual, gmd: 0 },
+                });
+            }
             if (validPaddockId && moveStartAt) {
                 await tx.paddockMove.create({
                     data: {
@@ -419,6 +437,24 @@ app.post('/po/animals', requireAuth, async (req, res) => {
                         poAnimalId: created.id,
                         startAt: moveStartAt,
                     },
+                });
+            }
+            if (parsedValorCompra) {
+                const category = HERD_EVENT_CATEGORY_MAP.COMPRA;
+                const event = await tx.herdEvent.create({
+                    data: { farmId: farm.id, poAnimalId: created.id, type: 'COMPRA', date: purchaseDate, peso: parsedPesoAtual, valor: parsedValorCompra, purchasePurpose: 'BREEDING', observacoes: `Compra P.O. registrada no cadastro — brinco ${trimmedBrinco || created.nome}` },
+                });
+                await createIntegratedTransaction(tx, {
+                    farmId: farm.id,
+                    type: category.type,
+                    categoria: category.categoria,
+                    accountCategoryId: sexoEnum === 'MACHO' ? 'sys-compra-reprodutores' : 'sys-compra-matrizes',
+                    amount: parsedValorCompra,
+                    competenceDate: purchaseDate,
+                    description: `Compra de animal P.O. — ${trimmedBrinco || created.nome}`,
+                    herdEventId: event.id,
+                    poAnimalId: created.id,
+                    allocations: [{ poLotId: validLotId, paddockId: validPaddockId }],
                 });
             }
             return created;
@@ -431,6 +467,303 @@ app.post('/po/animals', requireAuth, async (req, res) => {
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar animal P.O.' });
+    }
+});
+
+app.post('/po/animals/nascimento', async (req, res) => {
+    const { farmId, maeId, paiId, sexo, dataNascimento, pesoNascimento, nome, lotId, paddockId, origemNascimento, embryoTransferId } = req.body || {};
+    const isTe = String(origemNascimento || '').toUpperCase() === 'TE' || Boolean(embryoTransferId);
+    if (!farmId || (!isTe && !maeId) || (isTe && !embryoTransferId) || !sexo || !dataNascimento) {
+        return res.status(400).json({ message: 'Informe fazenda, origem, matriz ou transferência, sexo e data de nascimento.' });
+    }
+    const sexoEnum = normalizeSexo(sexo);
+    const birthDate = parseDateValue(dataNascimento);
+    const peso = pesoNascimento ? parseNumber(pesoNascimento) : null;
+    if (!sexoEnum || !birthDate || (peso !== null && peso <= 0)) {
+        return res.status(400).json({ message: 'Dados do nascimento P.O. inválidos.' });
+    }
+    try {
+        const farm = await prisma.farm.findFirst({ where: buildFarmScopeFilter(req, { id: String(farmId) }) });
+        if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+        const transfer = isTe ? await prisma.embryoTransfer.findFirst({
+            where: { id: String(embryoTransferId), farmId: farm.id, herdType: 'PO', status: 'PENDING' },
+            include: { embryoBatch: { include: { donorPoAnimal: true, sirePoAnimal: true } }, recipientPoAnimal: true },
+        }) : null;
+        if (isTe && (!transfer || !transfer.recipientPoAnimal || transfer.transferredAt > birthDate)) {
+            return res.status(400).json({ message: 'Transferência de embrião pendente inválida para este nascimento P.O.' });
+        }
+        const mae = isTe
+            ? transfer.recipientPoAnimal
+            : await prisma.poAnimal.findFirst({ where: { id: String(maeId), farmId: farm.id } });
+        if (!mae || mae.sexo !== 'FEMEA') return res.status(400).json({ message: 'Matriz P.O. inválida.' });
+        let pai = null;
+        if (!isTe && paiId) {
+            pai = await prisma.poAnimal.findFirst({ where: { id: String(paiId), farmId: farm.id } });
+            if (!pai || pai.sexo !== 'MACHO' || pai.id === mae.id) return res.status(400).json({ message: 'Pai P.O. inválido.' });
+        }
+        const targetPaddockId = String(paddockId || mae.currentPaddockId || '');
+        const targetLotId = lotId ? String(lotId) : (mae.lotId || null);
+        const paddock = await prisma.paddock.findFirst({ where: { id: targetPaddockId, farmId: farm.id } });
+        if (!paddock) return res.status(400).json({ message: 'Informe um pasto válido para a cria P.O.' });
+        if (targetLotId) {
+            const lot = await prisma.poLot.findFirst({ where: { id: targetLotId, farmId: farm.id } });
+            if (!lot) return res.status(400).json({ message: 'Lote P.O. inválido.' });
+        }
+
+        const cria = await prisma.$transaction(async (tx) => {
+            let snapshot;
+            let sequence;
+            let provisionalId;
+            if (isTe) {
+                const pair = await tx.embryoPairSequence.upsert({
+                    where: { farmId_herdType_recipientKey_donorKey: { farmId: farm.id, herdType: 'PO', recipientKey: mae.id, donorKey: transfer.donorKey } },
+                    create: { farmId: farm.id, herdType: 'PO', recipientKey: mae.id, donorKey: transfer.donorKey, lastSequence: 1 },
+                    update: { lastSequence: { increment: 1 } },
+                    select: { lastSequence: true },
+                });
+                snapshot = transfer.recipientSnapshot;
+                sequence = pair.lastSequence;
+                provisionalId = buildTeProvisionalIdentification(snapshot, transfer.donorSnapshot, sequence);
+            } else {
+                const matriz = await tx.poAnimal.update({
+                    where: { id: mae.id },
+                    data: { ultimaSequenciaCria: { increment: 1 } },
+                    select: { ultimaSequenciaCria: true, brinco: true, registro: true, nome: true },
+                });
+                snapshot = matriz.brinco || matriz.registro || matriz.nome;
+                sequence = matriz.ultimaSequenciaCria;
+                provisionalId = buildProvisionalIdentification(snapshot, sequence);
+            }
+            const created = await tx.poAnimal.create({
+                data: {
+                    farmId: farm.id,
+                    brinco: provisionalId,
+                    nome: String(nome || provisionalId).trim(),
+                    raca: transfer?.embryoBatch?.donorPoAnimal?.raca || mae.raca,
+                    sexo: sexoEnum,
+                    dataNascimento: birthDate,
+                    pesoAtual: peso || 0,
+                    gmd: null,
+                    gmd30: null,
+                    lotId: targetLotId,
+                    currentPaddockId: paddock.id,
+                    maeId: isTe ? (transfer.embryoBatch.donorPoAnimalId || null) : mae.id,
+                    maeNome: isTe ? transfer.donorSnapshot : null,
+                    paiId: isTe ? (transfer.embryoBatch.sirePoAnimalId || null) : (pai?.id || null),
+                    paiNome: isTe ? transfer.sireSnapshot : null,
+                    matrizResponsavelId: mae.id,
+                    identificacaoProvisoria: true,
+                    identificacaoProvisoriaOriginal: provisionalId,
+                    identificacaoMatrizSnapshot: snapshot,
+                    sequenciaMatriz: sequence,
+                    tatuagemOrelhaEsquerda: snapshot,
+                    origemNascimento: isTe ? 'TE' : 'NATURAL',
+                    receptoraGestacionalId: mae.id,
+                    receptoraGestacionalSnapshot: snapshot,
+                    doadoraSnapshot: isTe ? transfer.donorSnapshot : null,
+                    touroSnapshot: isTe ? transfer.sireSnapshot : null,
+                    embryoTransferId: isTe ? transfer.id : null,
+                },
+            });
+            if (isTe) {
+                await tx.embryoTransfer.update({ where: { id: transfer.id }, data: { status: 'BORN', birthAt: birthDate } });
+            }
+            if (peso) {
+                await tx.poWeighing.create({ data: { farmId: farm.id, poAnimalId: created.id, data: birthDate, peso, gmd: 0 } });
+            }
+            await tx.paddockMove.create({ data: { farmId: farm.id, paddockId: paddock.id, poAnimalId: created.id, startAt: birthDate } });
+            await tx.herdEvent.create({
+                data: {
+                    farmId: farm.id,
+                    poAnimalId: created.id,
+                    type: 'NASCIMENTO',
+                    date: birthDate,
+                    peso,
+                    observacoes: isTe
+                        ? `Nascimento P.O. por TE — receptora ${transfer.recipientSnapshot}; doadora ${transfer.donorSnapshot}`
+                        : `Nascimento P.O. — matriz ${snapshot}`,
+                },
+            });
+            return created;
+        });
+        await logActivity(prisma, req, { action: 'NASCIMENTO_PO_REGISTRADO', entity: 'PoAnimal', entityId: cria.id, description: `Registrou nascimento P.O. — ${cria.brinco}`, farmId: farm.id });
+        return res.status(201).json({ animal: serializePoAnimal(cria), brincoProvisorio: true });
+    } catch (error) {
+        if (error?.code === 'P2002') return res.status(409).json({ message: 'Identificação P.O. já cadastrada nesta fazenda.' });
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao registrar nascimento P.O.' });
+    }
+});
+
+app.post('/po/animals/:id/identificacao-definitiva', async (req, res) => {
+    const identificacao = String(req.body?.identificacao || '').trim();
+    if (!identificacao) return res.status(400).json({ message: 'Informe a identificação definitiva.' });
+    try {
+        const animal = await prisma.poAnimal.findFirst({ where: { id: String(req.params.id), farm: buildFarmRelationFilter(req) } });
+        if (!animal) return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
+        if (!animal.identificacaoProvisoria) return res.status(409).json({ message: 'O animal P.O. já possui identificação definitiva.' });
+        const duplicate = await prisma.poAnimal.findFirst({ where: { farmId: animal.farmId, brinco: identificacao, NOT: { id: animal.id } }, select: { id: true } });
+        const duplicateCommercial = await prisma.animal.findFirst({ where: { farmId: animal.farmId, OR: [{ brinco: identificacao }, { identityKey: identificacao }] }, select: { id: true } });
+        if (duplicate || duplicateCommercial) return res.status(409).json({ message: 'Identificação já cadastrada nesta fazenda.' });
+        const updated = await prisma.poAnimal.update({
+            where: { id: animal.id },
+            data: { identificacaoAnterior: animal.brinco, brinco: identificacao, identificacaoProvisoria: false },
+        });
+        await logActivity(prisma, req, { action: 'IDENTIFICACAO_DEFINITIVA_PO', entity: 'PoAnimal', entityId: animal.id, description: `Substituiu ${animal.brinco} por ${identificacao}`, farmId: animal.farmId });
+        return res.json({ animal: serializePoAnimal(updated) });
+    } catch (error) {
+        if (error?.code === 'P2002') return res.status(409).json({ message: 'Identificação já cadastrada nesta fazenda.' });
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao atribuir identificação definitiva P.O.' });
+    }
+});
+
+app.post('/po/animals/:id/desmama', async (req, res) => {
+    try {
+        const { error, result, previousIdentification, definitiveId } = await weanCalf({ req, animalId: req.params.id, isPo: true });
+        if (error) return res.status(error.status).json({ message: error.message });
+        await logActivity(prisma, req, {
+            action: 'DESMAMA_PO_REGISTRADA',
+            entity: 'PoAnimal',
+            entityId: result.id,
+            description: definitiveId
+                ? `Registrou desmama P.O. e substituiu ${previousIdentification} por ${definitiveId}`
+                : `Registrou desmama P.O. de ${previousIdentification}; aguardando ID definitivo`,
+            farmId: result.farmId,
+        });
+        return res.status(201).json({ animal: serializePoAnimal(result) });
+    } catch (error) {
+        if (error?.code === 'P2002') return res.status(409).json({ message: 'Identificação ou pesagem P.O. já cadastrada.' });
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao registrar desmama P.O.' });
+    }
+});
+
+app.post('/po/animals/:id/matriz-responsavel', async (req, res) => {
+    const matrizResponsavelId = String(req.body?.matrizResponsavelId || '').trim();
+    if (!matrizResponsavelId) return res.status(400).json({ message: 'Informe a matriz responsável P.O.' });
+    try {
+        const animal = await prisma.poAnimal.findFirst({ where: { id: String(req.params.id), farm: buildFarmRelationFilter(req) } });
+        if (!animal) return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
+        if (!animal.identificacaoProvisoria) return res.status(409).json({ message: 'A troca de matriz exige identificação provisória.' });
+        if (animal.id === matrizResponsavelId) return res.status(400).json({ message: 'O animal não pode ser sua própria matriz.' });
+        const matriz = await prisma.poAnimal.findFirst({ where: { id: matrizResponsavelId, farmId: animal.farmId, sexo: 'FEMEA' } });
+        if (!matriz) return res.status(400).json({ message: 'Matriz responsável P.O. inválida.' });
+        if (animal.origemNascimento === 'TE') {
+            const updated = await prisma.poAnimal.update({ where: { id: animal.id }, data: { matrizResponsavelId: matriz.id } });
+            await logActivity(prisma, req, { action: 'MATRIZ_RESPONSAVEL_PO_ALTERADA', entity: 'PoAnimal', entityId: animal.id, description: `Alterou matriz responsável de ${animal.brinco}; a receptora e a identificação TE foram preservadas`, farmId: animal.farmId });
+            return res.json({ animal: serializePoAnimal(updated) });
+        }
+        const updated = await prisma.$transaction(async (tx) => {
+            const nextMother = await tx.poAnimal.update({ where: { id: matriz.id }, data: { ultimaSequenciaCria: { increment: 1 } }, select: { ultimaSequenciaCria: true, brinco: true, registro: true, nome: true } });
+            const snapshot = nextMother.brinco || nextMother.registro || nextMother.nome;
+            const nextId = buildProvisionalIdentification(snapshot, nextMother.ultimaSequenciaCria);
+            return tx.poAnimal.update({ where: { id: animal.id }, data: { identificacaoAnterior: animal.brinco, brinco: nextId, matrizResponsavelId: matriz.id, identificacaoMatrizSnapshot: snapshot, sequenciaMatriz: nextMother.ultimaSequenciaCria, tatuagemOrelhaEsquerda: snapshot } });
+        });
+        await logActivity(prisma, req, { action: 'MATRIZ_RESPONSAVEL_PO_ALTERADA', entity: 'PoAnimal', entityId: animal.id, description: `Alterou matriz responsável P.O.; ${animal.brinco} passou a ${updated.brinco}`, farmId: animal.farmId });
+        return res.json({ animal: serializePoAnimal(updated) });
+    } catch (error) {
+        if (error?.code === 'P2002') return res.status(409).json({ message: 'A nova identificação provisória P.O. já existe.' });
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao alterar matriz responsável P.O.' });
+    }
+});
+
+app.post('/po/animals/:id/genealogia', async (req, res) => {
+    const maeId = req.body?.maeId ? String(req.body.maeId) : null;
+    const paiId = req.body?.paiId ? String(req.body.paiId) : null;
+    try {
+        const animal = await prisma.poAnimal.findFirst({ where: { id: String(req.params.id), farm: buildFarmRelationFilter(req) } });
+        if (!animal) return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
+        if (maeId === animal.id || paiId === animal.id) return res.status(400).json({ message: 'O animal não pode ser seu próprio ascendente.' });
+        const parentIds = [maeId, paiId].filter(Boolean);
+        const parents = parentIds.length
+            ? await prisma.poAnimal.findMany({ where: { id: { in: parentIds }, farmId: animal.farmId }, select: { id: true, sexo: true, brinco: true, registro: true, nome: true } })
+            : [];
+        const mae = maeId ? parents.find((parent) => parent.id === maeId) : null;
+        const pai = paiId ? parents.find((parent) => parent.id === paiId) : null;
+        if (maeId && (!mae || mae.sexo !== 'FEMEA')) return res.status(400).json({ message: 'Mãe biológica P.O. inválida.' });
+        if (paiId && (!pai || pai.sexo !== 'MACHO')) return res.status(400).json({ message: 'Pai biológico P.O. inválido.' });
+        const updated = await prisma.poAnimal.update({
+            where: { id: animal.id },
+            data: {
+                maeId,
+                maeNome: mae ? (mae.brinco || mae.registro || mae.nome) : null,
+                paiId,
+                paiNome: pai ? (pai.brinco || pai.registro || pai.nome) : null,
+            },
+        });
+        await logActivity(prisma, req, {
+            action: 'GENEALOGIA_PO_CORRIGIDA',
+            entity: 'PoAnimal',
+            entityId: animal.id,
+            description: `Corrigiu genealogia P.O. de mãe ${animal.maeId || 'não informada'} para ${maeId || 'não informada'} e pai ${animal.paiId || 'não informado'} para ${paiId || 'não informado'}`,
+            farmId: animal.farmId,
+        });
+        return res.json({ animal: serializePoAnimal(updated) });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao corrigir genealogia P.O.' });
+    }
+});
+
+app.post('/po/animals/batch', async (req, res) => {
+    const { farmId, paddockId, lotId, dataCompra, valorPorCabeca, animals } = req.body || {};
+    if (!farmId || !paddockId || !Array.isArray(animals) || !animals.length) {
+        return res.status(400).json({ message: 'Informe fazenda, pasto e animais P.O.' });
+    }
+    const farm = await prisma.farm.findFirst({ where: buildFarmScopeFilter(req, { id: String(farmId) }) });
+    if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
+    const paddock = await prisma.paddock.findFirst({ where: { id: String(paddockId), farmId: farm.id } });
+    if (!paddock) return res.status(400).json({ message: 'Pasto inválido.' });
+    let validLotId = null;
+    if (lotId) {
+        const lot = await prisma.poLot.findFirst({ where: { id: String(lotId), farmId: farm.id } });
+        if (!lot) return res.status(400).json({ message: 'Lote P.O. inválido.' });
+        validLotId = lot.id;
+    }
+    const normalized = animals.map((animal, index) => ({
+        line: index + 1,
+        nome: String(animal?.nome || '').trim(),
+        brinco: String(animal?.brinco || '').trim(),
+        registro: String(animal?.registro || '').trim(),
+        raca: String(animal?.raca || '').trim(),
+        sexo: normalizeSexo(animal?.sexo),
+        peso: animal?.ultimoPeso === undefined || animal?.ultimoPeso === '' ? null : parseNumber(animal.ultimoPeso),
+    }));
+    const invalid = normalized.find((animal) => !animal.nome || !animal.brinco || !animal.raca || !animal.sexo || (animal.peso !== null && animal.peso <= 0));
+    if (invalid) return res.status(400).json({ message: `Linha ${invalid.line}: preencha nome, brinco, raça e sexo com valores válidos.` });
+    const brincos = normalized.map((animal) => animal.brinco);
+    if (new Set(brincos).size !== brincos.length) return res.status(400).json({ message: 'Há brincos duplicados na lista.' });
+    const existing = await prisma.poAnimal.findFirst({ where: { farmId: farm.id, brinco: { in: brincos } } });
+    if (existing) return res.status(409).json({ message: `Brinco P.O. já cadastrado: ${existing.brinco}` });
+    const purchaseDate = dataCompra ? parseDateValue(dataCompra) : new Date();
+    const unitValue = valorPorCabeca ? parseNumber(valorPorCabeca) : null;
+    if (!purchaseDate || (unitValue !== null && unitValue <= 0)) return res.status(400).json({ message: 'Data ou valor de compra inválido.' });
+    try {
+        const created = await prisma.$transaction(async (tx) => {
+            const result = [];
+            for (const item of normalized) {
+                const animal = await tx.poAnimal.create({
+                    data: { farmId: farm.id, currentPaddockId: paddock.id, lotId: validLotId, nome: item.nome, brinco: item.brinco, registro: item.registro || null, raca: item.raca, sexo: item.sexo, pesoAtual: item.peso || 0 },
+                });
+                if (item.peso) await tx.poWeighing.create({ data: { farmId: farm.id, poAnimalId: animal.id, data: purchaseDate, peso: item.peso, gmd: 0 } });
+                await tx.paddockMove.create({ data: { farmId: farm.id, paddockId: paddock.id, poAnimalId: animal.id, startAt: purchaseDate } });
+                const event = await tx.herdEvent.create({ data: { farmId: farm.id, poAnimalId: animal.id, type: 'COMPRA', date: purchaseDate, peso: item.peso, valor: unitValue, purchasePurpose: 'BREEDING', observacoes: `Entrada de lote P.O. — brinco ${item.brinco}` } });
+                if (unitValue) {
+                    const category = HERD_EVENT_CATEGORY_MAP.COMPRA;
+                    await createIntegratedTransaction(tx, { farmId: farm.id, type: category.type, categoria: category.categoria, accountCategoryId: item.sexo === 'MACHO' ? 'sys-compra-reprodutores' : 'sys-compra-matrizes', amount: unitValue, competenceDate: purchaseDate, description: `Compra de animal P.O. — ${item.brinco}`, herdEventId: event.id, poAnimalId: animal.id, allocations: [{ poLotId: validLotId, paddockId: paddock.id }] });
+                }
+                result.push(animal);
+            }
+            return result;
+        });
+        await logActivity(prisma, req, { action: 'LOTE_PO_CRIADO', entity: 'PoAnimal', description: `Cadastrou lote P.O. de ${created.length} animal(is)`, farmId: farm.id });
+        return res.status(201).json({ count: created.length, message: `${created.length} animal(is) P.O. cadastrado(s) com sucesso.` });
+    } catch (error) {
+        if (error?.code === 'P2002') return res.status(409).json({ message: 'Um ou mais brincos P.O. já estão cadastrados.' });
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar lote de animais P.O.' });
     }
 });
 
@@ -571,10 +904,15 @@ app.get('/po/lots', async (req, res) => {
     }
 });
 
+const PO_PRODUCTION_PHASES = ['CRIA', 'RECRIA', 'ENGORDA', 'REPRODUCAO', 'OUTRA'];
+
 app.post('/po/lots', async (req, res) => {
-    const { farmId, name, notes } = req.body || {};
+    const { farmId, name, notes, productionPhase } = req.body || {};
     if (!farmId || !name?.trim()) {
         return res.status(400).json({ message: 'Informe fazenda e nome do lote.' });
+    }
+    if (!PO_PRODUCTION_PHASES.includes(String(productionPhase || ''))) {
+        return res.status(400).json({ message: 'Informe a fase produtiva do lote P.O.' });
     }
     try {
         const farm = await prisma.farm.findFirst({
@@ -588,12 +926,45 @@ app.post('/po/lots', async (req, res) => {
                 farmId: farm.id,
                 name: name.trim(),
                 notes: typeof notes === 'string' && notes.trim() ? notes.trim() : null,
+                productionPhase,
             },
         });
         return res.status(201).json({ lot });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar lote P.O.' });
+    }
+});
+
+app.patch('/po/lots/:id', async (req, res) => {
+    const { name, notes, productionPhase } = req.body || {};
+    if (!name?.trim()) return res.status(400).json({ message: 'Informe o nome do lote.' });
+    if (!PO_PRODUCTION_PHASES.includes(String(productionPhase || ''))) return res.status(400).json({ message: 'Informe a fase produtiva do lote P.O.' });
+    try {
+        const existing = await prisma.poLot.findFirst({ where: { id: req.params.id, farm: buildFarmRelationFilter(req) } });
+        if (!existing) return res.status(404).json({ message: 'Lote P.O. não encontrado.' });
+        const lot = await prisma.poLot.update({ where: { id: existing.id }, data: { name: name.trim(), notes: notes?.trim() || null, productionPhase } });
+        return res.json({ lot });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao editar lote P.O.' });
+    }
+});
+app.delete('/po/lots/:id', requireNonFieldWorker, async (req, res) => {
+    try {
+        const lot = await prisma.poLot.findFirst({
+            where: { id: String(req.params.id), farm: buildFarmRelationFilter(req) },
+            select: { id: true, _count: { select: { animals: true } } },
+        });
+        if (!lot) return res.status(404).json({ message: 'Lote P.O. não encontrado.' });
+        if (lot._count.animals > 0) {
+            return res.status(409).json({ message: 'Retire os animais deste lote P.O. antes de excluí-lo.' });
+        }
+        await prisma.poLot.delete({ where: { id: lot.id } });
+        return res.json({ ok: true });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao excluir lote P.O.' });
     }
 });
 app.get('/po/animals/:id/pesagens', (req, res) => listPoWeighings(req, res, 'pesagens'));
@@ -1103,10 +1474,6 @@ app.post('/po/embryos', async (req, res) => {
         if (!validDonorAnimalId && !validDonorId && !trimmedDonorName) {
             return res.status(400).json({ message: 'Informe o nome da doadora externa.' });
         }
-        if (!validSireAnimalId && !validSireId && !trimmedSireName) {
-            return res.status(400).json({ message: 'Informe o nome do reprodutor externo.' });
-        }
-
         const batch = await prisma.embryoBatch.create({
             data: {
                 farmId: farm.id,
@@ -1116,7 +1483,7 @@ app.post('/po/embryos', async (req, res) => {
                 donorRegistry: validDonorAnimalId || validDonorId ? null : trimmedDonorRegistry || null,
                 sireAnimalId: validSireAnimalId,
                 sirePoAnimalId: validSireId,
-                sireName: validSireAnimalId || validSireId ? null : trimmedSireName,
+                sireName: validSireAnimalId || validSireId ? null : (trimmedSireName || null),
                 sireRegistry: validSireAnimalId || validSireId ? null : trimmedSireRegistry || null,
                 tecnica: tecnicaEnum,
                 estagio: trimmedEstagio || null,
@@ -1260,10 +1627,6 @@ app.patch('/po/embryos/:id', async (req, res) => {
         }
 
         if (nextSireAnimalId === null && nextSireId === null) {
-            const nextName = sireName !== undefined ? trimmedSireName : batch.sireName;
-            if (!nextName) {
-                return res.status(400).json({ message: 'Informe o nome do reprodutor externo.' });
-            }
             if (sireName !== undefined) {
                 updates.sireName = trimmedSireName || null;
             }
@@ -1451,10 +1814,13 @@ app.post('/po/animals/bulk-delete', async (req, res) => {
         const filter = buildFarmRelationFilter(req);
         const animals = await prisma.poAnimal.findMany({
             where: { id: { in: ids.map(String) }, farm: filter },
-            select: { id: true },
+            select: { id: true, farmId: true },
         });
         if (animals.length !== ids.length) {
             return res.status(403).json({ message: 'Um ou mais animais P.O. não pertencem a esta conta.' });
+        }
+        if (new Set(animals.map((animal) => animal.farmId)).size !== 1) {
+            return res.status(400).json({ message: 'Selecione animais P.O. de apenas uma fazenda.' });
         }
         await prisma.poAnimal.deleteMany({ where: { id: { in: ids.map(String) } } });
         return res.json({ deleted: ids.length });
@@ -1478,6 +1844,9 @@ app.post('/po/animals/bulk-move-lot', async (req, res) => {
         if (animals.length !== ids.length) {
             return res.status(403).json({ message: 'Um ou mais animais P.O. não pertencem a esta conta.' });
         }
+        if (new Set(animals.map((animal) => animal.farmId)).size !== 1) {
+            return res.status(400).json({ message: 'Selecione animais P.O. de apenas uma fazenda.' });
+        }
         if (lotId) {
             const farmId = animals[0].farmId;
             const lot = await prisma.poLot.findFirst({ where: { id: String(lotId), farmId } });
@@ -1495,21 +1864,43 @@ app.post('/po/animals/bulk-move-lot', async (req, res) => {
 });
 
 app.post('/po/animals/bulk-move-pasto', async (req, res) => {
-    const { ids, pastoId } = req.body || {};
+    const { ids, pastoId, startAt, notes } = req.body || {};
     try {
         const { error, result } = await moveAnimalsBetweenPaddocks({
             ids,
             paddockId: pastoId,
+            startAt,
+            notes,
             scopeFilter: buildFarmRelationFilter(req),
             isPo: true,
         });
-        if (error) {
-            return res.status(error.status).json({ message: error.message });
-        }
+        if (error) return res.status(error.status).json({ message: error.message });
         return res.json(result);
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao mover animais P.O. para pasto.' });
+    }
+});
+
+app.post('/po/animals/bulk-weighings', async (req, res) => {
+    const { farmId, animalIds, animalCount, data, totalWeightKg, weighingSessionId } = req.body || {};
+    try {
+        const { error, result } = await createBulkWeighings({
+            ids: animalIds,
+            farmId,
+            animalCount,
+            date: data,
+            totalWeightKg,
+            weighingSessionId,
+            scopeFilter: buildFarmRelationFilter(req),
+            isPo: true,
+        });
+        if (error) return res.status(error.status).json({ message: error.message });
+        return res.status(201).json(result);
+    } catch (error) {
+        if (error?.code === 'P2002') return res.status(409).json({ message: 'Já existe pesagem nesta data para um ou mais animais P.O.' });
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar pesagem em grupo P.O.' });
     }
 });
 
@@ -1664,6 +2055,7 @@ app.post('/po/animals/:id/move-pasto', async (req, res) => {
 app.patch('/farms/:farmId/weighings/:weighingId', requireAuth, async (req, res) => {
     const { farmId, weighingId } = req.params;
     const { animalId, data, peso } = req.body || {};
+    const isPo = req.query?.herdType === 'PO';
 
     const weighingDate = parseDateValue(data);
     if (!weighingDate) {
@@ -1681,41 +2073,48 @@ app.patch('/farms/:farmId/weighings/:weighingId', requireAuth, async (req, res) 
         });
         if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
 
-        const weighing = await prisma.weighing.findFirst({
-            where: { id: weighingId, animal: { farmId: farm.id } },
-            select: { id: true, animalId: true, weighingSessionId: true },
+        const weighingModel = isPo ? prisma.poWeighing : prisma.weighing;
+        const animalModel = isPo ? prisma.poAnimal : prisma.animal;
+        const animalRelation = isPo ? 'poAnimal' : 'animal';
+        const animalIdField = isPo ? 'poAnimalId' : 'animalId';
+        const weighing = await weighingModel.findFirst({
+            where: { id: weighingId, [animalRelation]: { farmId: farm.id } },
+            select: { id: true, [animalIdField]: true, weighingSessionId: true },
         });
         if (!weighing) return res.status(404).json({ message: 'Pesagem não encontrada.' });
 
-        const targetAnimalId = String(animalId || weighing.animalId);
-        const targetAnimal = await prisma.animal.findFirst({
+        const originalAnimalId = weighing[animalIdField];
+        const targetAnimalId = String(animalId || originalAnimalId);
+        const targetAnimal = await animalModel.findFirst({
             where: { id: targetAnimalId, farmId: farm.id },
             select: { id: true },
         });
         if (!targetAnimal) return res.status(400).json({ message: 'Animal inválido para esta fazenda.' });
 
         const updated = await prisma.$transaction(async (tx) => {
-            await tx.weighing.update({
+            const txWeighingModel = isPo ? tx.poWeighing : tx.weighing;
+            await txWeighingModel.update({
                 where: { id: weighing.id },
                 data: {
-                    animalId: targetAnimalId,
+                    [animalIdField]: targetAnimalId,
                     data: weighingDate,
                     peso: parsedPeso,
                 },
             });
 
-            await recalculateAnimalWeighingChain(tx, targetAnimalId);
-            if (weighing.animalId !== targetAnimalId) {
-                await recalculateAnimalWeighingChain(tx, weighing.animalId);
+            await recalculateAnimalWeighingChain(tx, targetAnimalId, isPo);
+            if (originalAnimalId !== targetAnimalId) {
+                await recalculateAnimalWeighingChain(tx, originalAnimalId, isPo);
             }
 
-            return tx.weighing.findUnique({
+            return txWeighingModel.findUnique({
                 where: { id: weighing.id },
                 include: {
-                    animal: { select: { id: true, brinco: true, categoria: true } },
+                    [animalRelation]: { select: { id: true, brinco: true, categoria: true } },
                 },
             });
         });
+        const updatedAnimal = updated[animalRelation];
 
         return res.json({
             weighing: {
@@ -1724,9 +2123,9 @@ app.patch('/farms/:farmId/weighings/:weighingId', requireAuth, async (req, res) 
                 weightKg: updated.peso,
                 gmd: updated.gmd,
                 animal: {
-                    id: updated.animal.id,
-                    brinco: updated.animal.brinco,
-                    categoria: updated.animal.categoria || null,
+                    id: updatedAnimal.id,
+                    brinco: updatedAnimal.brinco,
+                    categoria: updatedAnimal.categoria || null,
                 },
             },
         });
@@ -1742,6 +2141,7 @@ app.patch('/farms/:farmId/weighings/:weighingId', requireAuth, async (req, res) 
 app.delete('/farms/:farmId/weighings/:weighingId', requireAuth, async (req, res) => {
     const { farmId, weighingId } = req.params;
     const { masterPassword } = req.body || {};
+    const isPo = req.query?.herdType === 'PO';
 
     if (!masterPassword || String(masterPassword).trim().length < 1) {
         return res.status(400).json({ message: 'Informe a senha do usuário master.' });
@@ -1754,9 +2154,12 @@ app.delete('/farms/:farmId/weighings/:weighingId', requireAuth, async (req, res)
         });
         if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
 
-        const weighing = await prisma.weighing.findFirst({
-            where: { id: weighingId, animal: { farmId: farm.id } },
-            select: { id: true, animalId: true },
+        const weighingModel = isPo ? prisma.poWeighing : prisma.weighing;
+        const animalRelation = isPo ? 'poAnimal' : 'animal';
+        const animalIdField = isPo ? 'poAnimalId' : 'animalId';
+        const weighing = await weighingModel.findFirst({
+            where: { id: weighingId, [animalRelation]: { farmId: farm.id } },
+            select: { id: true, [animalIdField]: true },
         });
         if (!weighing) return res.status(404).json({ message: 'Pesagem não encontrada.' });
 
@@ -1785,8 +2188,8 @@ app.delete('/farms/:farmId/weighings/:weighingId', requireAuth, async (req, res)
         }
 
         await prisma.$transaction(async (tx) => {
-            await tx.weighing.delete({ where: { id: weighing.id } });
-            await recalculateAnimalWeighingChain(tx, weighing.animalId);
+            await (isPo ? tx.poWeighing : tx.weighing).delete({ where: { id: weighing.id } });
+            await recalculateAnimalWeighingChain(tx, weighing[animalIdField], isPo);
         });
 
         return res.json({ ok: true });
@@ -1799,13 +2202,15 @@ app.delete('/farms/:farmId/weighings/:weighingId', requireAuth, async (req, res)
 
 // ── Pesagens da fazenda (listagem central) ──────────────────────────────────
 function serializeWeighingSession(s) {
+    const isPo = s.herdType === 'PO';
     return {
         id: s.id,
         name: s.name,
         responsibleName: s.responsibleName ?? null,
         farmId: s.farmId,
         createdAt: s.createdAt,
-        weighingsCount: s._count?.weighings ?? undefined,
+        herdType: s.herdType || 'COMMERCIAL',
+        weighingsCount: isPo ? (s._count?.poWeighings ?? undefined) : (s._count?.weighings ?? undefined),
     };
 }
 
@@ -1815,14 +2220,16 @@ app.post('/farms/:farmId/weighing-sessions', requireAuth, async (req, res) => {
         const farm = await prisma.farm.findFirst({ where: { id: req.params.farmId, ...scopeFilter } });
         if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
 
-        const { name, responsibleName } = req.body;
+        const { name, responsibleName, herdType = 'COMMERCIAL' } = req.body;
         if (!name?.trim()) return res.status(400).json({ message: 'Nome da sessão é obrigatório.' });
+        if (!['COMMERCIAL', 'PO'].includes(herdType)) return res.status(400).json({ message: 'Tipo de rebanho inválido.' });
 
         const session = await prisma.weighingSession.create({
             data: {
                 name: name.trim(),
                 responsibleName: responsibleName?.trim() ? responsibleName.trim() : null,
                 farmId: farm.id,
+                herdType,
             },
         });
         res.status(201).json(serializeWeighingSession(session));
@@ -1838,11 +2245,12 @@ app.get('/farms/:farmId/weighing-sessions', requireAuth, async (req, res) => {
         const farm = await prisma.farm.findFirst({ where: { id: req.params.farmId, ...scopeFilter } });
         if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
 
+        const herdType = req.query?.herdType === 'PO' ? 'PO' : 'COMMERCIAL';
         const sessions = await prisma.weighingSession.findMany({
-            where: { farmId: farm.id },
+            where: { farmId: farm.id, herdType },
             orderBy: { createdAt: 'desc' },
             take: 50,
-            include: { _count: { select: { weighings: true } } },
+            include: { _count: { select: { weighings: true, poWeighings: true } } },
         });
         res.json({ sessions: sessions.map(serializeWeighingSession) });
     } catch (err) {
@@ -1872,7 +2280,7 @@ app.patch('/farms/:farmId/weighing-sessions/:sessionId', requireAuth, async (req
                 name: name.trim(),
                 responsibleName: responsibleName.trim(),
             },
-            include: { _count: { select: { weighings: true } } },
+            include: { _count: { select: { weighings: true, poWeighings: true } } },
         });
 
         return res.json(serializeWeighingSession(updated));
@@ -1922,8 +2330,10 @@ app.delete('/farms/:farmId/weighing-sessions/:sessionId', requireAuth, async (re
             return res.status(401).json({ message: 'Senha do usuário master inválida.' });
         }
 
-        await prisma.weighingSession.delete({
-            where: { id: session.id },
+        await prisma.$transaction(async (tx) => {
+            await tx.weighing.updateMany({ where: { weighingSessionId: session.id }, data: { weighingSessionId: null } });
+            await tx.poWeighing.updateMany({ where: { weighingSessionId: session.id }, data: { weighingSessionId: null } });
+            await tx.weighingSession.delete({ where: { id: session.id } });
         });
 
         return res.json({ ok: true });
@@ -1935,7 +2345,9 @@ app.delete('/farms/:farmId/weighing-sessions/:sessionId', requireAuth, async (re
 
 app.get('/farms/:farmId/weighing-sessions/summary', requireAuth, async (req, res) => {
     const { farmId } = req.params;
-    const { limit = 30, offset = 0, lotId, startDate, endDate, search } = req.query;
+        const { limit = 30, offset = 0, lotId, startDate, endDate, search } = req.query;
+        const herdType = req.query?.herdType === 'PO' ? 'PO' : 'COMMERCIAL';
+        const isPo = herdType === 'PO';
 
     try {
         const farm = await prisma.farm.findFirst({
@@ -1944,7 +2356,7 @@ app.get('/farms/:farmId/weighing-sessions/summary', requireAuth, async (req, res
         });
         if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada.' });
 
-        const where = { farmId: farm.id };
+        const where = { farmId: farm.id, herdType };
         if (search) where.name = { contains: String(search), mode: 'insensitive' };
 
         const take = Math.min(Math.max(parseInt(String(limit), 10) || 30, 1), 200);
@@ -1969,6 +2381,17 @@ app.get('/farms/:farmId/weighing-sessions/summary', requireAuth, async (req, res
                             },
                         },
                     },
+                    poWeighings: {
+                        include: {
+                            poAnimal: {
+                                select: {
+                                    id: true,
+                                    lotId: true,
+                                    lot: { select: { id: true, name: true } },
+                                },
+                            },
+                        },
+                    },
                 },
             }),
         ]);
@@ -1979,7 +2402,9 @@ app.get('/farms/:farmId/weighing-sessions/summary', requireAuth, async (req, res
 
         const mapped = sessions
             .map((session) => {
-                const weighings = session.weighings || [];
+                const weighings = isPo
+                    ? (session.poWeighings || []).map((item) => ({ ...item, animalId: item.poAnimalId, animal: item.poAnimal }))
+                    : (session.weighings || []);
                 if (weighings.length === 0) {
                     return {
                         sessionId: session.id,
@@ -2066,27 +2491,30 @@ app.get('/farms/:farmId/weighing-sessions/:sessionId/items', requireAuth, async 
         });
         if (!session) return res.status(404).json({ message: 'Sessão de pesagem não encontrada.' });
 
-        const weighings = await prisma.weighing.findMany({
-            where: { weighingSessionId: session.id, animal: { farmId: farm.id } },
-            orderBy: { data: 'desc' },
-            include: {
-                animal: {
-                    select: {
-                        id: true,
-                        brinco: true,
-                        categoria: true,
-                        lot: { select: { id: true, name: true } },
-                    },
-                },
-            },
-        });
+        const isPo = session.herdType === 'PO';
+        const rawWeighings = isPo
+            ? await prisma.poWeighing.findMany({
+                where: { weighingSessionId: session.id, poAnimal: { farmId: farm.id } },
+                orderBy: { data: 'desc' },
+                include: { poAnimal: { select: { id: true, brinco: true, nome: true, categoria: true, lot: { select: { id: true, name: true } } } } },
+            })
+            : await prisma.weighing.findMany({
+                where: { weighingSessionId: session.id, animal: { farmId: farm.id } },
+                orderBy: { data: 'desc' },
+                include: { animal: { select: { id: true, brinco: true, nome: true, categoria: true, lot: { select: { id: true, name: true } } } } },
+            });
+        const weighings = rawWeighings.map((item) => ({
+            ...item,
+            animalId: isPo ? item.poAnimalId : item.animalId,
+            animal: isPo ? item.poAnimal : item.animal,
+        }));
 
         const animalIds = [...new Set(weighings.map((item) => item.animalId))];
         const previousMap = {};
         await Promise.all(
             animalIds.map(async (animalId) => {
-                const history = await prisma.weighing.findMany({
-                    where: { animalId },
+                const history = await (isPo ? prisma.poWeighing : prisma.weighing).findMany({
+                    where: isPo ? { poAnimalId: animalId } : { animalId },
                     orderBy: { data: 'asc' },
                     select: { id: true, data: true, peso: true },
                 });
@@ -2133,7 +2561,7 @@ app.get('/farms/:farmId/weighing-sessions/:sessionId/items', requireAuth, async 
                     weighingId: item.id,
                     animalId: item.animal.id,
                     animalCode: item.animal.brinco,
-                    animalName: null,
+                    animalName: item.animal.nome || null,
                     category: item.animal.categoria || null,
                     weightKg: item.peso,
                     previousWeightKg: prev ? prev.peso : null,
