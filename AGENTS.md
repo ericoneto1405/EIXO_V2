@@ -57,6 +57,14 @@ Use:
 
 Se o usuário disser claramente “faça”, “corrija”, “altere”, “aplique”, “execute” ou “implemente”, execute sem reconfirmar, salvo se houver risco alto.
 
+### Deploy completo
+
+O fluxo oficial está documentado em `infra/DEPLOY.md` e deve ser seguido integralmente.
+
+Quando o usuário solicitar explicitamente commit, push, pull request e deploy, considere essas etapas autorizadas em conjunto. Não peça uma nova confirmação entre validação, commit, push, pull request, CI, mesclagem, deploy e verificação de produção.
+
+Interrompa e consulte o usuário somente se houver risco alto, teste ou backup com falha, alteração local fora do escopo, ação destrutiva ou mudança não prevista de banco ou configuração de produção.
+
 ---
 
 ## Stack do projeto

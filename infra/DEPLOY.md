@@ -10,6 +10,25 @@ branch de trabalho → pull request → main → validação → VPS → produç
 
 O arquivo responsável é `.github/workflows/deploy.yml`. O deploy começa somente após uma atualização da branch `main`.
 
+## Autorização do fluxo completo
+
+O deploy só deve ser iniciado quando o usuário solicitar explicitamente a publicação completa.
+
+Quando o pedido incluir commit, push, pull request e deploy, essas etapas ficam autorizadas em conjunto:
+
+1. validar o código;
+2. criar o commit;
+3. fazer push da branch de trabalho;
+4. abrir o pull request;
+5. acompanhar o CI;
+6. mesclar o pull request na `main`;
+7. acompanhar o deploy automático;
+8. validar a aplicação em produção.
+
+Não pedir uma nova confirmação entre essas etapas. Interromper e consultar o usuário somente se houver risco alto, teste ou backup com falha, alteração local fora do escopo, ação destrutiva ou mudança não prevista de banco ou configuração de produção.
+
+Autorizações técnicas solicitadas pelo sistema operacional ou pela ferramenta continuam obrigatórias quando aparecerem.
+
 ## Antes do deploy
 
 - Trabalhar em uma branch separada.
