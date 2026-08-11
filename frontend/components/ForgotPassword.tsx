@@ -40,7 +40,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
                 <div
                     className="absolute inset-0 opacity-40"
                     style={{
-                        backgroundImage: "url('/pasture-horizon.jpg')",
+                        backgroundImage: "url('/hero-curral-1600.webp')",
                         backgroundPosition: 'center -160px',
                         backgroundSize: 'cover',
                     }}

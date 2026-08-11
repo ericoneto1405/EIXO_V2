@@ -31,7 +31,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, error, success, onBack, onRegist
                     <div
                         className="absolute inset-0 opacity-40"
                         style={{
-                            backgroundImage: "url('/pasture-horizon.jpg')",
+                            backgroundImage: "url('/hero-curral-1600.webp')",
                             backgroundPosition: 'center -160px',
                             backgroundSize: 'cover',
                         }}

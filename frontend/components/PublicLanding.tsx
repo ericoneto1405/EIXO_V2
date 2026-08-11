@@ -62,17 +62,31 @@ const FAQS = [
   },
 ];
 
+const NAV_SECTION_IDS = ['gratis', 'antes-depois', 'como', 'faq'] as const;
+type NavSectionId = typeof NAV_SECTION_IDS[number];
+
 const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) => {
   const [activeFaq, setActiveFaq] = React.useState<number | null>(null);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [showMobileCta, setShowMobileCta] = React.useState(false);
-  const [activeNav, setActiveNav] = React.useState<'gratis' | 'antes-depois' | 'como' | 'faq'>('gratis');
+  const [activeNav, setActiveNav] = React.useState<NavSectionId | null>(null);
   const heroCtaRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+
+      const currentSection = NAV_SECTION_IDS.reduce<NavSectionId | null>((current, id) => {
+        const section = document.getElementById(id);
+        return section && section.getBoundingClientRect().top <= 140 ? id : current;
+      }, null);
+
+      setActiveNav(currentSection);
+    };
+
+    handleScroll();
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
@@ -95,15 +109,16 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
     window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 80, behavior: 'smooth' });
   };
 
-  const btnPrimary = 'inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]';
-  const btnSecondary = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]';
-  const headerSecondaryButton = 'inline-flex h-10 items-center justify-center rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]/70 px-4 text-sm font-semibold text-[var(--eixo-text)] shadow-sm transition-colors hover:bg-[var(--eixo-surface)]';
-  const headerPrimaryButton = 'inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.76)] bg-[rgba(182,226,58,0.82)] px-5 text-sm font-bold text-[#1a1a1a] shadow-[0_10px_22px_rgba(121,160,24,0.18),inset_0_1px_0_rgba(255,255,255,0.58)] transition-all duration-200 hover:bg-[rgba(182,226,58,0.92)] hover:shadow-[0_12px_28px_rgba(121,160,24,0.24),inset_0_1px_0_rgba(255,255,255,0.66)]';
-  const navItems: Array<{ label: string; id: 'gratis' | 'antes-depois' | 'como' | 'faq'; action: () => void }> = [
-    { label: 'EIXO Essencial', id: 'gratis', action: () => { setActiveNav('gratis'); scrollTo('gratis'); } },
-    { label: 'Antes e Depois', id: 'antes-depois', action: () => { setActiveNav('antes-depois'); scrollTo('antes-depois'); } },
-    { label: 'Como funciona', id: 'como', action: () => { setActiveNav('como'); scrollTo('como'); } },
-    { label: 'Dúvidas', id: 'faq', action: () => { setActiveNav('faq'); scrollTo('faq'); } },
+  const focusRing = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-graphite)] focus-visible:ring-offset-2';
+  const btnPrimary = `inline-flex items-center justify-center gap-2 rounded-xl bg-[var(--eixo-green)] px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] ${focusRing}`;
+  const btnSecondary = `inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)] ${focusRing}`;
+  const headerSecondaryButton = `inline-flex h-10 items-center justify-center rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]/70 px-4 text-sm font-semibold text-[var(--eixo-text)] shadow-sm transition-colors hover:bg-[var(--eixo-surface)] ${focusRing}`;
+  const headerPrimaryButton = `inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.76)] bg-[rgba(182,226,58,0.82)] px-5 text-sm font-bold text-[#1a1a1a] shadow-[0_10px_22px_rgba(121,160,24,0.18),inset_0_1px_0_rgba(255,255,255,0.58)] transition-all duration-200 hover:bg-[rgba(182,226,58,0.92)] hover:shadow-[0_12px_28px_rgba(121,160,24,0.24),inset_0_1px_0_rgba(255,255,255,0.66)] ${focusRing}`;
+  const navItems: Array<{ label: string; id: NavSectionId; action: () => void }> = [
+    { label: 'EIXO Essencial', id: 'gratis', action: () => scrollTo('gratis') },
+    { label: 'Antes e Depois', id: 'antes-depois', action: () => scrollTo('antes-depois') },
+    { label: 'Como funciona', id: 'como', action: () => scrollTo('como') },
+    { label: 'Dúvidas', id: 'faq', action: () => scrollTo('faq') },
   ];
 
   return (
@@ -126,7 +141,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 key={item.label}
                 type="button"
                 onClick={item.action}
-                className={`inline-flex h-9 items-center justify-center rounded-lg px-3.5 text-sm font-semibold tracking-[0.01em] transition-colors ${
+                className={`inline-flex h-9 items-center justify-center rounded-lg px-3.5 text-sm font-semibold tracking-[0.01em] transition-colors ${focusRing} ${
                   item.id === activeNav
                     ? 'bg-[rgba(240,249,212,0.68)] text-[var(--eixo-graphite)]'
                     : 'text-[var(--eixo-text)]/82 hover:bg-white/36 hover:text-[var(--eixo-text)]'
@@ -140,15 +155,17 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             <button
               type="button"
               onClick={() => setMenuOpen((prev) => !prev)}
-              className="rounded-xl border border-white/50 bg-white/34 p-2 text-[var(--eixo-text)] shadow-[0_8px_22px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.66)] backdrop-blur-xl transition-colors hover:bg-white/52 xl:hidden"
+              className={`rounded-xl border border-white/50 bg-white/34 p-2 text-[var(--eixo-text)] shadow-[0_8px_22px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.66)] backdrop-blur-xl transition-colors hover:bg-white/52 xl:hidden ${focusRing}`}
               aria-label={menuOpen ? 'Fechar menu' : 'Abrir menu'}
+              aria-expanded={menuOpen}
+              aria-controls="landing-mobile-menu"
             >
-              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              {menuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
             </button>
             <button
               type="button"
               onClick={() => { window.location.href = '/planos'; }}
-              className="hidden h-10 items-center rounded-xl border border-white/62 bg-white/46 px-4 text-sm font-semibold text-[var(--eixo-text)] shadow-[0_9px_20px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-all duration-200 hover:border-white/86 hover:bg-white/62 lg:inline-flex"
+              className={`hidden h-10 items-center rounded-xl border border-white/62 bg-white/46 px-4 text-sm font-semibold text-[var(--eixo-text)] shadow-[0_9px_20px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-all duration-200 hover:border-white/86 hover:bg-white/62 lg:inline-flex ${focusRing}`}
             >
               Ver Planos
             </button>
@@ -161,14 +178,14 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
           </div>
         </div>
         {menuOpen && (
-          <div className="border-b border-[var(--eixo-border)] bg-[var(--eixo-bg)] px-4 py-3 xl:hidden">
+          <div id="landing-mobile-menu" className="border-b border-[var(--eixo-border)] bg-[var(--eixo-bg)] px-4 py-3 xl:hidden">
             <button
               type="button"
               onClick={() => {
                 scrollTo('gratis');
                 setMenuOpen(false);
               }}
-              className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
+              className={`w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)] ${focusRing}`}
             >
               EIXO Essencial
             </button>
@@ -178,7 +195,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 scrollTo('como');
                 setMenuOpen(false);
               }}
-              className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
+              className={`w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)] ${focusRing}`}
             >
               Como funciona
             </button>
@@ -188,7 +205,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 scrollTo('faq');
                 setMenuOpen(false);
               }}
-              className="w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)]"
+              className={`w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)] ${focusRing}`}
             >
               Dúvidas
             </button>
@@ -199,7 +216,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 setMenuOpen(false);
                 onEnter();
               }}
-              className="w-full px-1 py-2 text-left text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:text-[var(--eixo-text)] hover:underline"
+              className={`w-full px-1 py-2 text-left text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:text-[var(--eixo-text)] hover:underline ${focusRing}`}
             >
               Entrar
             </button>
@@ -209,7 +226,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 setMenuOpen(false);
                 window.location.href = '/planos';
               }}
-              className="mt-2 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-3 text-left text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+              className={`mt-2 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-3 text-left text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)] ${focusRing}`}
             >
               Ver Planos
             </button>
@@ -219,7 +236,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 setMenuOpen(false);
                 onRegister();
               }}
-              className="mt-2 inline-flex h-11 w-full items-center justify-center rounded-xl bg-[var(--eixo-green)] px-5 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
+              className={`mt-2 inline-flex h-11 w-full items-center justify-center rounded-xl bg-[var(--eixo-green)] px-5 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] ${focusRing}`}
             >
               Criar minha conta grátis
             </button>
@@ -230,27 +247,25 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
       <main className="pt-[75px]">
 
         {/* ── Hero ── */}
-        <section
-          className={`relative min-h-[calc(100svh-75px)] overflow-hidden pb-20 lg:pb-24 ${
-            isScrolled
-              ? '-mt-4 pt-24 lg:-mt-6 lg:pt-32'
-              : 'pt-12 lg:pt-16'
-          }`}
-        >
-          <div
-            className="absolute inset-0 opacity-[0.60]"
-            style={{
-              backgroundImage: "url('/homem de costas no curral.png')",
-              backgroundPosition: 'center 42%',
-              backgroundSize: 'cover',
-            }}
-          />
-          <div className="absolute inset-0 bg-[rgba(255,250,241,0.58)]" />
-          <div className="absolute inset-0 bg-gradient-to-b from-[var(--eixo-surface)]/90 via-[var(--eixo-bg)]/96 to-[var(--eixo-bg)]" />
+        <section className="relative min-h-[calc(100svh-75px)] overflow-hidden pb-20 pt-12 lg:pb-24 lg:pt-16">
+          <picture className="absolute inset-0">
+            <source media="(max-width: 767px)" srcSet="/hero-curral-768.webp" type="image/webp" />
+            <source srcSet="/hero-curral-1600.webp" type="image/webp" />
+            <img
+              src="/homem de costas no curral.png"
+              alt=""
+              aria-hidden="true"
+              fetchPriority="high"
+              className="h-full w-full object-cover opacity-90"
+              style={{ objectPosition: 'center 42%' }}
+            />
+          </picture>
+          <div className="absolute inset-0 bg-gradient-to-r from-[rgba(237,237,237,0.97)] via-[rgba(237,237,237,0.84)] to-[rgba(237,237,237,0.58)] lg:via-[rgba(237,237,237,0.72)] lg:to-[rgba(237,237,237,0.18)]" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[var(--eixo-bg)]" />
 
           <div className="relative z-10 mx-auto max-w-5xl px-4 text-left lg:px-8">
 
-            <div className="mb-6 flex justify-center">
+            <div className="mb-6 flex justify-start">
               <div className="inline-flex items-center rounded-full border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                 EIXO Essencial · R$ 0/mês
               </div>
@@ -261,31 +276,23 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               <span className="text-[#7aad1a]">Decisão na mão.</span>
             </h1>
 
-            <p className="mx-auto mt-6 max-w-2xl font-sans text-lg font-normal leading-relaxed text-[var(--eixo-text-muted)] lg:text-xl">
-              Controle rebanho, pesagens, pastos e financeiro em um só lugar. Comece grátis no EIXO Essencial, sem cartão e sem limite de animais.
+            <p className="mt-6 max-w-2xl font-sans text-lg font-normal leading-relaxed text-[var(--eixo-text-muted)] lg:text-xl">
+              Controle rebanho, pesagens, pastos e financeiro em um só lugar.
             </p>
 
-            <div className="mt-3 flex justify-center">
-              <p className="text-center text-xs text-[var(--eixo-text-muted)]/70">
-                1 fazenda · até 3 usuários · animais ilimitados
-              </p>
-            </div>
-
-            <div className="mt-5 flex justify-center">
-              <div className="inline-flex items-center rounded-full bg-[var(--eixo-green-soft)] px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-graphite)]">
-                Sem cartão · acesso imediato
-              </div>
-            </div>
-
-            <div ref={heroCtaRef} className="mt-4 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8 text-base`}>
+            <div ref={heroCtaRef} className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-start">
+              <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 w-full px-8 text-base sm:w-auto`}>
                 Criar minha conta grátis
                 <ArrowRight className="h-4 w-4" />
               </button>
-              <button type="button" onClick={() => scrollTo('como')} className={`${btnSecondary} h-12 px-8 text-base`}>
+              <button type="button" onClick={() => scrollTo('como')} className={`${btnSecondary} h-12 w-full px-8 text-base sm:w-auto`}>
                 Ver como funciona
               </button>
             </div>
+
+            <p className="mt-4 text-left text-xs text-[var(--eixo-text-muted)]/80">
+              Sem cartão · 1 fazenda · até 3 usuários · animais ilimitados
+            </p>
 
           </div>
         </section>
@@ -328,8 +335,12 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         {/* ── O que é grátis ── */}
         <section id="gratis" className="relative overflow-hidden bg-[var(--eixo-surface)] py-20 lg:py-28">
           <div
-            className="absolute inset-0 opacity-[0.60]"
-            style={{ backgroundImage: "url('/pasture-horizon.jpg')", backgroundPosition: 'center', backgroundSize: 'cover' }}
+            className="absolute inset-0"
+            style={{
+              backgroundImage: "linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url('/vista_aerea_fazenda_eixo.png')",
+              backgroundPosition: 'center',
+              backgroundSize: 'cover',
+            }}
           />
 
           <div className="relative z-10 mx-auto max-w-5xl px-4 lg:px-8">
@@ -563,17 +574,29 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             <div className="space-y-3">
               {FAQS.map((faq, i) => {
                 const open = activeFaq === i;
+                const buttonId = `faq-button-${i}`;
+                const panelId = `faq-panel-${i}`;
                 return (
                   <div key={faq.q} className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
-                    <button type="button" onClick={() => setActiveFaq(open ? null : i)} className="flex w-full items-center justify-between gap-4 px-6 py-4 text-left">
+                    <button
+                      id={buttonId}
+                      type="button"
+                      onClick={() => setActiveFaq(open ? null : i)}
+                      className={`flex w-full items-center justify-between gap-4 px-6 py-4 text-left ${focusRing}`}
+                      aria-expanded={open}
+                      aria-controls={panelId}
+                    >
                       <span className="font-semibold text-[var(--eixo-text)]">{faq.q}</span>
-                      <ChevronDown className={`h-5 w-5 flex-shrink-0 text-[var(--eixo-text-soft)] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+                      <ChevronDown aria-hidden="true" className={`h-5 w-5 flex-shrink-0 text-[var(--eixo-text-soft)] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
                     </button>
-                    {open && (
-                      <div className="border-t border-[var(--eixo-border)] px-6 pb-5 pt-4 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
-                        {faq.a}
-                      </div>
-                    )}
+                    <div
+                      id={panelId}
+                      role="region"
+                      aria-labelledby={buttonId}
+                      className={`${open ? 'block' : 'hidden'} border-t border-[var(--eixo-border)] px-6 pb-5 pt-4 text-sm leading-relaxed text-[var(--eixo-text-muted)]`}
+                    >
+                      {faq.a}
+                    </div>
                   </div>
                 );
               })}
@@ -587,7 +610,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             <h2 className="font-brand text-balance text-3xl font-extrabold text-[#f5f0e8] lg:text-5xl">
               Tire a gestão do caderno e leve sua fazenda para o EIXO.
             </h2>
-            <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-[var(--eixo-text-soft)]">
+            <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-[#d6d3d1]">
               Comece pelo EIXO Essencial: R$ 0/mês, sem cartão e com animais ilimitados.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
