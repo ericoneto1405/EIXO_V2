@@ -41,33 +41,21 @@ cd frontend && npm run dev
 
 ## Deploy
 
-O EIXO está em produção. O deploy deve seguir a documentação própria do projeto.
+O EIXO está em produção. O fluxo oficial é automático pelo GitHub Actions:
 
-Documentação:
-
-```txt
-DEPLOY.md
+```text
+branch de trabalho → pull request → main → validação → VPS → produção
 ```
 
-Comando padrão:
-
-```bash
-./deploy-eixo.sh "mensagem do commit"
-```
-
-Exemplo:
-
-```bash
-./deploy-eixo.sh "fix: ajuste no fluxo de login"
-```
+A documentação completa está em [`infra/DEPLOY.md`](infra/DEPLOY.md). O checklist está em [`infra/DEPLOY_CHECKLIST_EIXO_AGR_BR.md`](infra/DEPLOY_CHECKLIST_EIXO_AGR_BR.md).
 
 Antes de rodar deploy, confirme:
 
 - branch correta;
 - TypeScript sem erro;
-- variáveis de produção configuradas;
-- SSH sem senha funcionando;
-- PM2 ativo na VPS.
+- build concluído;
+- pull request aprovado;
+- CI aprovado.
 
 ## Módulos
 
@@ -211,6 +199,7 @@ app-de-manejo/
 | Arquivo | Finalidade |
 |--------|------------|
 | `AGENTS.md` | Instruções para Codex e regras técnicas do projeto |
-| `DEPLOY.md` | Deploy e operação em produção |
+| `infra/DEPLOY.md` | Deploy e operação em produção |
+| `infra/DEPLOY_CHECKLIST_EIXO_AGR_BR.md` | Checklist de publicação e verificação |
 | `EIXOCAMPO.md` | Plano completo do App de Manejo |
 | `README.md` | Visão geral do projeto |
