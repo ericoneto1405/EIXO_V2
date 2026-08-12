@@ -41,3 +41,90 @@
     color: var(--eixo-text);
   }
 }
+
+@keyframes eixo-map-plot {
+  0%, 65%, 100% {
+    background: rgba(255, 255, 255, 0.14);
+    box-shadow: none;
+    transform: scale(0.88);
+  }
+
+  28%, 42% {
+    background: var(--eixo-green);
+    box-shadow: 0 0 8px rgba(182, 226, 58, 0.72);
+    transform: scale(1);
+  }
+}
+
+@keyframes eixo-map-route {
+  0% {
+    opacity: 0.2;
+    transform: translateY(-50%) scaleX(0.12);
+  }
+
+  48%, 70% {
+    opacity: 0.9;
+    transform: translateY(-50%) scaleX(1);
+  }
+
+  100% {
+    opacity: 0.2;
+    transform: translateY(-50%) scaleX(1);
+  }
+}
+
+.eixo-loading-map {
+  position: relative;
+  display: grid;
+  flex: none;
+  grid-template-columns: repeat(3, 8px);
+  grid-template-rows: repeat(3, 8px);
+  gap: 3px;
+}
+
+.eixo-loading-map::after {
+  position: absolute;
+  top: 50%;
+  right: -2px;
+  left: -2px;
+  height: 1px;
+  content: '';
+  background: rgba(182, 226, 58, 0.8);
+  transform: translateY(-50%) scaleX(0.12);
+  transform-origin: left center;
+  animation: eixo-map-route 1.8s ease-in-out infinite;
+}
+
+.eixo-loading-map__plot {
+  z-index: 1;
+  display: block;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.14);
+  animation: eixo-map-plot 1.8s ease-in-out infinite;
+}
+
+.eixo-loading-map__plot:nth-child(2) { animation-delay: 100ms; }
+.eixo-loading-map__plot:nth-child(3) { animation-delay: 200ms; }
+.eixo-loading-map__plot:nth-child(6) { animation-delay: 300ms; }
+.eixo-loading-map__plot:nth-child(9) { animation-delay: 400ms; }
+.eixo-loading-map__plot:nth-child(8) { animation-delay: 500ms; }
+.eixo-loading-map__plot:nth-child(7) { animation-delay: 600ms; }
+.eixo-loading-map__plot:nth-child(4) { animation-delay: 700ms; }
+.eixo-loading-map__plot:nth-child(5) { animation-delay: 800ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .eixo-loading-map::after,
+  .eixo-loading-map__plot {
+    animation: none;
+  }
+
+  .eixo-loading-map::after {
+    opacity: 0.8;
+    transform: translateY(-50%) scaleX(1);
+  }
+
+  .eixo-loading-map__plot:nth-child(5) {
+    background: var(--eixo-green);
+  }
+}
