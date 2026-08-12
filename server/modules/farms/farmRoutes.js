@@ -6,7 +6,7 @@ import { parseCoordinate, validateCoordinatePair } from '../utils/validators.js'
 import { parseNumber, parseDateValue } from '../utils/formatters.js';
 import { logActivity, recordActivityLog } from '../utils/activityLog.js';
 import { serializePaddock, serializeSeason } from '../utils/serializers.js';
-import { isSaasContextError } from '../utils/saasContext.js';
+import { getPlanLimits, isSaasContextError } from '../utils/saasContext.js';
 import { normalizeReproMode } from '../utils/formatters.js';
 import { serializeAnimal } from '../utils/serializers.js';
 import { REPRO_WINDOW_DAYS } from '../config/env.js';
@@ -96,19 +96,21 @@ app.post('/farms', requireNonFieldWorker, async (req, res) => {
         // --- Limite de fazendas por plano ---
         const orgId = req.saas?.organizationId || null;
         if (orgId) {
-            const activePaidSubscription = await prisma.billingSubscription.findFirst({
+            const activeSubscription = await prisma.billingSubscription.findFirst({
                 where: {
                     organizationId: orgId,
                     status: 'ACTIVE',
-                    NOT: { planCode: { in: ['gratis', 'free', 'gratuito'] } },
                 },
+                orderBy: { createdAt: 'desc' },
+                select: { planCode: true },
             });
-            if (!activePaidSubscription) {
+            const planLimits = getPlanLimits(activeSubscription?.planCode);
+            if (planLimits.farms !== null) {
                 const farmCount = await prisma.farm.count({ where: { organizationId: orgId } });
-                if (farmCount >= 1) {
+                if (farmCount >= planLimits.farms) {
                     return res.status(403).json({
                         code: 'farm_limit_reached',
-                        message: 'O plano gratuito permite apenas 1 fazenda. Faça upgrade para cadastrar mais fazendas.',
+                        message: `O ${planLimits.label} permite até ${planLimits.farms} ${planLimits.farms === 1 ? 'fazenda' : 'fazendas'}. Faça upgrade para cadastrar mais fazendas.`,
                     });
                 }
             }

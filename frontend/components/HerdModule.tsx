@@ -1261,6 +1261,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     };
 
     const handleExportAnimals = async () => {
+        if (isFreePlan) {
+            onUpgradeRequest?.();
+            return;
+        }
         const dateStr = new Date().toISOString().slice(0, 10);
         const fileName = `rebanho_${(farmName || 'fazenda').replace(/\s+/g, '_')}_${dateStr}.xlsx`;
         const headers = ['ID / Brinco', 'Raça', 'Sexo', 'Categoria', 'Pasto', 'Lote', 'Peso (kg)', 'Peso (@)', 'GMD (kg/dia)', 'Última pesagem'];
@@ -2378,13 +2382,18 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         <button
                             type="button"
                             onClick={handleExportAnimals}
-                            disabled={sortedAnimals.length === 0}
+                            disabled={!isFreePlan && sortedAnimals.length === 0}
+                            title={isFreePlan ? 'Disponível nos planos pagos' : undefined}
                             className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:cursor-not-allowed disabled:opacity-40"
                         >
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
+                            {isFreePlan ? (
+                                <LockIcon className="h-4 w-4" />
+                            ) : (
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                            )}
                             Exportar ({sortedAnimals.length})
                         </button>
                     </div>
@@ -2402,6 +2411,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     lots={lots}
                     herdType={resolvedMode}
                     managementMode={weighingOnlyMode}
+                    isFreePlan={isFreePlan}
+                    onUpgradeRequest={onUpgradeRequest}
                 />
             )}
             {activeTab === 'settings' && farmId && (

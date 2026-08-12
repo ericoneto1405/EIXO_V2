@@ -17,7 +17,10 @@ import {
 } from '../config/env.js';
 import { isPasswordStrongEnough, validateCNPJ, validateCPF, fetchCnpjData } from '../utils/validators.js';
 import { sanitizeUser, escapeHtml, normalizeEmailForLogin, isEmailValid } from '../utils/formatters.js';
-import { normalizeUserModules, isSaasContextError } from '../utils/saasContext.js';
+import {
+    canManageOrganizationUsers, canUpgradePlan, normalizePlanCode,
+    normalizeUserModules, isSaasContextError,
+} from '../utils/saasContext.js';
 import { logActivity } from '../utils/activityLog.js';
 import {
     otpSendAttempts, otpVerifyAttempts, forgotPasswordAttempts,
@@ -405,6 +408,63 @@ app.use(
     requireBillingAccess,
     requireEntitlement('NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'),
 );
+
+app.post('/billing/plan-interest', requireAuth, async (req, res) => {
+    const targetPlanCode = normalizePlanCode(req.body?.planCode);
+    const currentPlanCode = req.saas?.planCode || 'GRATIS';
+
+    if (!canManageOrganizationUsers(req)) {
+        return res.status(403).json({ message: 'Apenas proprietários ou administradores podem solicitar upgrade.' });
+    }
+    if (!canUpgradePlan(currentPlanCode, targetPlanCode)) {
+        return res.status(400).json({ message: 'Selecione um plano superior ao plano atual.' });
+    }
+
+    try {
+        const description = `Solicitou contato para upgrade de ${currentPlanCode} para ${targetPlanCode}`;
+        const recentInterest = await prisma.activityLog.findFirst({
+            where: {
+                userId: req.user.id,
+                organizationId: req.saas?.organizationId || null,
+                action: 'PLANO_UPGRADE_SOLICITADO',
+                description,
+                createdAt: { gte: new Date(Date.now() - (60 * 60 * 1000)) },
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { id: true, createdAt: true },
+        });
+        if (recentInterest) {
+            return res.json({ ok: true, alreadyRegistered: true, interest: recentInterest });
+        }
+
+        const activity = await prisma.activityLog.create({
+            data: {
+                id: crypto.randomUUID(),
+                userId: req.user.id,
+                organizationId: req.saas?.organizationId || null,
+                method: req.method,
+                path: req.originalUrl || req.path || '/billing/plan-interest',
+                statusCode: 201,
+                ip: req.ip || null,
+                userAgent: req.get('user-agent') || null,
+                action: 'PLANO_UPGRADE_SOLICITADO',
+                entity: 'BillingSubscription',
+                entityId: req.saas?.organizationId || null,
+                description,
+                requestMeta: {
+                    source: 'PLANS_PAGE',
+                    currentPlanCode,
+                    targetPlanCode,
+                },
+            },
+            select: { id: true, createdAt: true },
+        });
+        return res.status(201).json({ ok: true, interest: activity });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Não foi possível registrar o interesse no plano.' });
+    }
+});
 
 // ─── Recuperação de e-mail por CNPJ ──────────────────────────────────────────
 

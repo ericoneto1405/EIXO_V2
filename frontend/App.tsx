@@ -80,6 +80,7 @@ interface User {
         mode: string;
     };
     entitlements?: string[];
+    planCode?: 'GRATIS' | 'EIXO_GESTAO' | 'EIXO_DECISAO';
     onboardingCompletedAt?: string | null;
     phone?: string | null;
     avatarUrl?: string | null;
@@ -285,6 +286,10 @@ const AppContent: React.FC = () => {
     }, [currentUser]);
     const PAID_ENTITLEMENTS = ['GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'];
     const isFreePlan = !(currentUser?.entitlements?.some(e => PAID_ENTITLEMENTS.includes(e)));
+    const currentPlanCode: 'GRATIS' | 'EIXO_GESTAO' | 'EIXO_DECISAO' = currentUser?.planCode
+        || (currentUser?.entitlements?.includes('EIXO_DECISAO')
+            ? 'EIXO_DECISAO'
+            : isFreePlan ? 'GRATIS' : 'EIXO_GESTAO');
     // Módulos exclusivos de planos pagos — bloqueados mesmo que estejam no banco do usuário
     const PAID_ONLY_MODULES: string[] = [];
     const currentAllowedModules = React.useMemo(() => {
@@ -818,20 +823,22 @@ const AppContent: React.FC = () => {
         setActiveView('Financeiro');
     }, []);
 
-    if (isPlansRoute) {
-        return (
-            <PlansPage
-                isAuthenticated={isAuthenticated}
-                onBack={isAuthenticated ? () => window.history.back() : undefined}
-            />
-        );
-    }
-
     if (isAuthLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]">
                 Carregando...
             </div>
+        );
+    }
+
+    if (isPlansRoute) {
+        return (
+            <PlansPage
+                isAuthenticated={isAuthenticated}
+                currentPlanCode={isAuthenticated ? currentPlanCode : undefined}
+                canRequestUpgrade={canManageUsers}
+                onBack={isAuthenticated ? () => { window.location.href = '/'; } : undefined}
+            />
         );
     }
 
@@ -1072,7 +1079,7 @@ const AppContent: React.FC = () => {
                         paddocksRefreshNonce={paddocksRefreshNonce}
                         isFreePlan={isFreePlan}
                         initialTabRequest={herdTabRequest}
-                        onUpgradeRequest={() => setUpgradeModal('Plano pago')}
+                        onUpgradeRequest={() => setUpgradeModal('Exportação de dados')}
                     />
                 );
             case 'Plantel P.O.':
@@ -1093,7 +1100,7 @@ const AppContent: React.FC = () => {
                         paddocksRefreshNonce={paddocksRefreshNonce}
                         isFreePlan={isFreePlan}
                         initialTabRequest={herdTabRequest}
-                        onUpgradeRequest={() => setUpgradeModal('Plano pago')}
+                        onUpgradeRequest={() => setUpgradeModal('Exportação de dados')}
                     />
                 );
             case 'Eixo Genetics':
@@ -1287,7 +1294,7 @@ const AppContent: React.FC = () => {
                                 <ul className="space-y-1">
                                     <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Animais ilimitados</li>
                                     <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Manejo do Rebanho</li>
-                                    <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Financeiro básico</li>
+                                    <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Financeiro completo</li>
                                     <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Estrutura da Fazenda</li>
                                 </ul>
                             </div>

@@ -44,6 +44,8 @@ interface WeighingsTabProps {
     lots: HerdLot[];
     herdType: HerdType;
     managementMode?: boolean;
+    isFreePlan?: boolean;
+    onUpgradeRequest?: () => void;
 }
 
 type SessionMode = 'INDIVIDUAL' | 'GROUP';
@@ -137,6 +139,12 @@ const DownloadIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' 
     </svg>
 );
 
+const LockIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75z" />
+    </svg>
+);
+
 const downloadWorkbook = async (fileName: string, sheetName: string, rows: Array<Array<string | number>>) => {
     const { default: ExcelJS } = await import('exceljs');
     const workbook = new ExcelJS.Workbook();
@@ -187,7 +195,15 @@ const playSuccessBeep = () => {
 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
-const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herdType, managementMode = false }) => {
+const WeighingsTab: React.FC<WeighingsTabProps> = ({
+    farmId,
+    animals,
+    lots,
+    herdType,
+    managementMode = false,
+    isFreePlan = false,
+    onUpgradeRequest,
+}) => {
     // lista de sessões de pesagem da fazenda
     const [sessionRows, setSessionRows] = useState<WeighingSessionSummary[]>([]);
     const [total, setTotal] = useState(0);
@@ -535,6 +551,10 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
     };
 
     const exportManualSessionCsv = () => {
+        if (isFreePlan) {
+            onUpgradeRequest?.();
+            return;
+        }
         if (manualSessionWeighings.length === 0) return;
 
         const rows = [
@@ -1537,9 +1557,11 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({ farmId, animals, lots, herd
                                     <button
                                         type="button"
                                         onClick={exportManualSessionCsv}
-                                        disabled={manualSessionWeighings.length === 0}
+                                        disabled={!isFreePlan && manualSessionWeighings.length === 0}
+                                        title={isFreePlan ? 'Disponível nos planos pagos' : undefined}
                                         className="rounded-xl border border-[#d7cab3] px-3 py-1.5 text-xs font-bold text-[#2f3a2d] hover:bg-[#f1e7d8] disabled:cursor-not-allowed disabled:opacity-40"
                                     >
+                                        {isFreePlan && <LockIcon className="mr-1 inline h-3.5 w-3.5" />}
                                         Exportar conferência
                                     </button>
                                 </div>

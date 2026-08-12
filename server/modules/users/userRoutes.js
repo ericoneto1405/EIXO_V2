@@ -11,6 +11,7 @@ import {
     isFieldAppUser, hasUserRole,
     ensureSaasContextForUser, ensureFieldWorkerFarmAccess,
     normalizeUserModules as normalizeUserModulesFn,
+    getPlanLimits,
 } from '../utils/saasContext.js';
 import {
     generateActivationCode, hashActivationCode, normalizeActivationCode,
@@ -161,22 +162,24 @@ app.post('/users', requireAuth, async (req, res) => {
             }
         }
 
-        // Limite de usuários do plano gratuito (3 usuários por org)
-        const paidSub = await prisma.billingSubscription.findFirst({
+        // Limite de usuários por plano
+        const activeSubscription = await prisma.billingSubscription.findFirst({
             where: {
                 organizationId,
                 status: 'ACTIVE',
-                NOT: { planCode: { in: ['gratis', 'free', 'gratuito'] } },
             },
+            orderBy: { createdAt: 'desc' },
+            select: { planCode: true },
         });
-        if (!paidSub) {
+        const planLimits = getPlanLimits(activeSubscription?.planCode);
+        if (planLimits.users !== null) {
             const memberCount = await prisma.organizationMembership.count({
                 where: { organizationId },
             });
-            if (memberCount >= 3) {
+            if (memberCount >= planLimits.users) {
                 return res.status(403).json({
                     code: 'user_limit_reached',
-                    message: 'O plano gratuito permite até 3 usuários. Faça upgrade para adicionar mais.',
+                    message: `O ${planLimits.label} permite até ${planLimits.users} usuários. Faça upgrade para adicionar mais.`,
                 });
             }
         }
