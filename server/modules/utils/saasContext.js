@@ -23,6 +23,43 @@ export const PLAN_MODULES = {
     EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics'],
 };
 
+export const PLAN_LIMITS = {
+    GRATIS: { farms: 1, users: 3, label: 'plano gratuito' },
+    EIXO_GESTAO: { farms: 3, users: 5, label: 'plano EIXO Gestão' },
+    EIXO_DECISAO: { farms: null, users: null, label: 'plano EIXO Performance' },
+};
+
+export const normalizePlanCode = (value) => {
+    const normalized = String(value || '').trim().toUpperCase();
+    if (['GRATIS', 'FREE', 'GRATUITO'].includes(normalized)) {
+        return 'GRATIS';
+    }
+    return normalized;
+};
+
+export const getPlanLimits = (planCode) => {
+    const normalizedPlanCode = normalizePlanCode(planCode);
+    return {
+        code: PLAN_LIMITS[normalizedPlanCode] ? normalizedPlanCode : 'GRATIS',
+        ...(PLAN_LIMITS[normalizedPlanCode] || PLAN_LIMITS.GRATIS),
+    };
+};
+
+const PLAN_ORDER = {
+    GRATIS: 0,
+    EIXO_GESTAO: 1,
+    EIXO_DECISAO: 2,
+};
+
+export const canUpgradePlan = (currentPlanCode, targetPlanCode) => {
+    const normalizedTarget = normalizePlanCode(targetPlanCode);
+    if (!Object.hasOwn(PLAN_ORDER, normalizedTarget)) {
+        return false;
+    }
+    const normalizedCurrent = getPlanLimits(currentPlanCode).code;
+    return PLAN_ORDER[normalizedTarget] > PLAN_ORDER[normalizedCurrent];
+};
+
 export const buildLegacyEntitlements = (modules) => {
     const normalized = new Set((modules || []).map((item) => String(item || '').trim()));
     const codes = ['CORE'];
@@ -351,16 +388,15 @@ export const ensureSaasContextForUser = async (userId, { allowProvision = false 
         },
         include: { product: true },
     });
-    const activeSubscription = await prisma.billingSubscription.findFirst({
-        where: {
-            organizationId: activeOrganization.id,
-            status: 'ACTIVE',
-        },
+    const latestSubscription = await prisma.billingSubscription.findFirst({
+        where: { organizationId: activeOrganization.id },
         orderBy: { createdAt: 'desc' },
-        select: { planCode: true },
+        select: { planCode: true, status: true },
     });
-    const subscriptionPlanCode = String(activeSubscription?.planCode || '').trim().toUpperCase();
-    const subscriptionEntitlements = PLAN_ENTITLEMENTS[subscriptionPlanCode] || [];
+    const subscriptionPlanCode = getPlanLimits(latestSubscription?.planCode).code;
+    const subscriptionEntitlements = latestSubscription?.status === 'ACTIVE'
+        ? (PLAN_ENTITLEMENTS[subscriptionPlanCode] || [])
+        : [];
     const mergedEntitlementCodes = Array.from(new Set([
         ...entitlements.map((item) => item.product.code),
         ...subscriptionEntitlements,
@@ -370,6 +406,7 @@ export const ensureSaasContextForUser = async (userId, { allowProvision = false 
         organizationId: activeOrganization.id,
         membershipRole: membership?.role || null,
         billingAccessState: activeOrganization.accessState,
+        planCode: getPlanLimits(subscriptionPlanCode).code,
         entitlements: mergedEntitlementCodes,
         organization: {
             id: activeOrganization.id,
@@ -397,6 +434,7 @@ export const serializeAuthUser = (user, saasContext = null, accessContext = null
     organizationId: saasContext?.organizationId || null,
     membershipRole: saasContext?.membershipRole || null,
     billingAccessState: saasContext?.billingAccessState || null,
+    planCode: saasContext?.planCode || 'GRATIS',
     entitlements: user.roles?.includes('SUPER_ADMIN')
         ? ['GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO', 'EIXO_NUTRITION']
         : (saasContext?.entitlements || []),

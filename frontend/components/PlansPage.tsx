@@ -1,4 +1,5 @@
 import React from 'react';
+import { buildApiUrl } from '../api';
 
 // ─── Dados dos planos ─────────────────────────────────────────────────────────
 
@@ -9,6 +10,7 @@ interface PlanFeature {
 
 interface Plan {
     id: string;
+    code: 'GRATIS' | 'EIXO_GESTAO' | 'EIXO_DECISAO';
     name: string;
     badge?: string;
     price: string;
@@ -22,6 +24,7 @@ interface Plan {
 const PLANS: Plan[] = [
     {
         id: 'gratis',
+        code: 'GRATIS',
         name: 'EIXO Essencial',
         price: 'R$0,00/mês',
         priceNote: '',
@@ -34,15 +37,16 @@ const PLANS: Plan[] = [
             { text: 'Até 3 usuários', included: true },
             { text: 'Manejo do Rebanho (básico)', included: true },
             { text: 'Estrutura da Fazenda', included: true },
-            { text: 'Financeiro básico', included: true },
+            { text: 'Financeiro completo', included: true },
             { text: 'Dashboard (Visão Geral)', included: true },
             { text: 'Nutrição avançada', included: false },
-            { text: 'Exportação de dados (Excel/PDF)', included: false },
+            { text: 'Exportação de dados (Excel/CSV)', included: false },
             { text: 'Múltiplas fazendas', included: false },
         ],
     },
     {
         id: 'gestao',
+        code: 'EIXO_GESTAO',
         name: 'EIXO Gestão',
         badge: 'Mais popular',
         price: 'Em breve',
@@ -58,13 +62,14 @@ const PLANS: Plan[] = [
             { text: 'Dashboard (Visão Geral)', included: true },
             { text: 'Nutrição avançada', included: true },
             { text: 'Pesagens avançadas', included: true },
-            { text: 'Exportação de dados (Excel/PDF)', included: true },
+            { text: 'Exportação de dados (Excel/CSV)', included: true },
             { text: 'Eixo Acasalamento', included: false },
             { text: 'Confinamento e rastreabilidade', included: false },
         ],
     },
     {
         id: 'decisao',
+        code: 'EIXO_DECISAO',
         name: 'EIXO Performance',
         price: 'Em breve',
         priceNote: '',
@@ -90,7 +95,15 @@ const PLANS: Plan[] = [
 interface PlansPageProps {
     onBack?: () => void;
     isAuthenticated?: boolean;
+    currentPlanCode?: Plan['code'];
+    canRequestUpgrade?: boolean;
 }
+
+const PLAN_ORDER: Record<Plan['code'], number> = {
+    GRATIS: 0,
+    EIXO_GESTAO: 1,
+    EIXO_DECISAO: 2,
+};
 
 const CheckIcon: React.FC = () => (
     <svg className="h-4 w-4 flex-shrink-0 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,7 +117,16 @@ const XIcon: React.FC = () => (
     </svg>
 );
 
-const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
+const PlansPage: React.FC<PlansPageProps> = ({
+    onBack,
+    isAuthenticated = false,
+    currentPlanCode,
+    canRequestUpgrade = false,
+}) => {
+    const [submittingPlanCode, setSubmittingPlanCode] = React.useState<Plan['code'] | null>(null);
+    const [interestMessage, setInterestMessage] = React.useState<string | null>(null);
+    const [interestError, setInterestError] = React.useState<string | null>(null);
+
     const handleBack = () => {
         if (onBack) {
             onBack();
@@ -117,12 +139,59 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
         window.location.href = '/';
     };
 
-    const handleCta = (plan: Plan) => {
-        if (plan.id === 'gratis') {
+    const handleCta = async (plan: Plan) => {
+        if (!isAuthenticated && plan.id === 'gratis') {
             window.location.href = '/?register=1';
             return;
         }
-        window.open('mailto:contato@eixo.ag?subject=Interesse no ' + plan.name, '_blank');
+        if (!isAuthenticated) {
+            window.open(`mailto:contato@eixo.ag?subject=${encodeURIComponent(`Interesse no ${plan.name}`)}`, '_blank');
+            return;
+        }
+        if (!canRequestUpgrade || !currentPlanCode || PLAN_ORDER[plan.code] <= PLAN_ORDER[currentPlanCode]) {
+            return;
+        }
+
+        setSubmittingPlanCode(plan.code);
+        setInterestMessage(null);
+        setInterestError(null);
+        try {
+            const response = await fetch(buildApiUrl('/billing/plan-interest'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ planCode: plan.code }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload?.message || 'Não foi possível registrar seu interesse.');
+            }
+            setInterestMessage(`Interesse no ${plan.name} registrado. Abrindo o contato comercial...`);
+            window.location.href = `mailto:contato@eixo.ag?subject=${encodeURIComponent(`Upgrade para ${plan.name}`)}`;
+        } catch (error) {
+            setInterestError(error instanceof Error ? error.message : 'Não foi possível registrar seu interesse.');
+        } finally {
+            setSubmittingPlanCode(null);
+        }
+    };
+
+    const getCtaState = (plan: Plan) => {
+        if (!isAuthenticated || !currentPlanCode) {
+            return { label: plan.cta, disabled: false };
+        }
+        if (plan.code === currentPlanCode) {
+            return { label: 'Seu plano atual', disabled: true };
+        }
+        if (PLAN_ORDER[plan.code] < PLAN_ORDER[currentPlanCode]) {
+            return { label: 'Plano anterior', disabled: true };
+        }
+        if (!canRequestUpgrade) {
+            return { label: 'Fale com o administrador', disabled: true };
+        }
+        return {
+            label: submittingPlanCode === plan.code ? 'Registrando...' : 'Solicitar upgrade',
+            disabled: submittingPlanCode !== null,
+        };
     };
 
     return (
@@ -163,21 +232,38 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
 
             {/* Cards */}
             <div className="mx-auto max-w-5xl px-6 pb-16">
+                {(interestMessage || interestError) && (
+                    <div
+                        role="status"
+                        aria-live="polite"
+                        className={`mb-6 rounded-xl border px-4 py-3 text-center text-sm ${
+                            interestError
+                                ? 'border-[#c0644a]/40 bg-[#c0644a]/10 text-[#8c4d39]'
+                                : 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
+                        }`}
+                    >
+                        {interestError || interestMessage}
+                    </div>
+                )}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                    {PLANS.map((plan) => (
-                        <div
-                            key={plan.id}
-                            className={`relative flex flex-col rounded-2xl border bg-[var(--eixo-surface)] p-6 ${
-                                plan.id === 'gestao'
-                                    ? 'border-[var(--eixo-green)] shadow-lg shadow-[var(--eixo-green)]/10'
-                                    : 'border-[var(--eixo-border)]'
-                            }`}
-                        >
+                    {PLANS.map((plan) => {
+                        const isCurrentPlan = isAuthenticated && currentPlanCode === plan.code;
+                        const ctaState = getCtaState(plan);
+                        const badge = isCurrentPlan ? 'Seu plano' : plan.badge;
+                        return (
+                            <div
+                                key={plan.id}
+                                className={`relative flex flex-col rounded-2xl border bg-[var(--eixo-surface)] p-6 ${
+                                    isCurrentPlan || plan.id === 'gestao'
+                                        ? 'border-[var(--eixo-green)] shadow-lg shadow-[var(--eixo-green)]/10'
+                                        : 'border-[var(--eixo-border)]'
+                                }`}
+                            >
                             {/* Badge */}
-                            {plan.badge && (
+                            {badge && (
                                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                                     <span className="rounded-full bg-[var(--eixo-green)] px-3 py-1 text-xs font-semibold text-[#1a1a1a]">
-                                        {plan.badge}
+                                        {badge}
                                     </span>
                                 </div>
                             )}
@@ -200,16 +286,20 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
 
                             {/* CTA */}
                             <button
+                                type="button"
                                 onClick={() => handleCta(plan)}
-                                className={`mb-6 w-full rounded-xl py-2.5 text-sm font-semibold transition-colors ${
-                                    plan.ctaVariant === 'primary'
+                                disabled={ctaState.disabled}
+                                className={`mb-6 w-full rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-default ${
+                                    ctaState.disabled
+                                        ? 'border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'
+                                        : plan.ctaVariant === 'primary'
                                         ? 'bg-[var(--eixo-green)] text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]'
                                         : plan.ctaVariant === 'dark'
                                         ? 'bg-[var(--eixo-text)] text-white hover:bg-[var(--eixo-graphite)]'
                                         : 'border border-[var(--eixo-border)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]'
                                 }`}
                             >
-                                {plan.cta}
+                                {ctaState.label}
                             </button>
 
                             {/* Divider */}
@@ -226,8 +316,9 @@ const PlansPage: React.FC<PlansPageProps> = ({ onBack, isAuthenticated }) => {
                                     </li>
                                 ))}
                             </ul>
-                        </div>
-                    ))}
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Nota de preços + Early Access */}
