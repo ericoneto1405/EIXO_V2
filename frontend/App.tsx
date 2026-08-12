@@ -257,6 +257,7 @@ const AppContent: React.FC = () => {
     const [financeOnboardingAction, setFinanceOnboardingAction] = useState<{ action: 'SAIDA' | 'ENTRADA' | 'RESULTADO'; nonce: number } | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
+    const [isLoginLoading, setIsLoginLoading] = useState(false);
 
     // Mantém viewport responsivo para evitar quebra visual em telas desktop amplas.
     useEffect(() => {
@@ -637,6 +638,8 @@ const AppContent: React.FC = () => {
 
     const handleLogin = async (email: string, password: string, rememberMe: boolean) => {
         setAuthError(null);
+        setIsLoginLoading(true);
+        const minimumLoadingTime = new Promise<void>((resolve) => window.setTimeout(resolve, 2000));
         try {
             const webDeviceKey = getWebDeviceKey();
             const response = await fetch(buildApiUrl('/auth/login'), {
@@ -646,6 +649,7 @@ const AppContent: React.FC = () => {
                 body: JSON.stringify({ email, password, rememberMe, webDeviceKey }),
             });
             const payload = await response.json().catch(() => ({}));
+            await minimumLoadingTime;
             if (!response.ok) {
                 setAuthError(payload?.message || 'Não foi possível autenticar.');
                 return;
@@ -675,7 +679,10 @@ const AppContent: React.FC = () => {
             }
         } catch (error) {
             console.error(error);
+            await minimumLoadingTime;
             setAuthError('Não foi possível conectar ao servidor.');
+        } finally {
+            setIsLoginLoading(false);
         }
     };
 
@@ -907,8 +914,10 @@ const AppContent: React.FC = () => {
         return (
             <Login
                 onLogin={handleLogin}
+                isLoading={isLoginLoading}
                 error={authError}
                 success={registerMessage}
+                onClearError={() => setAuthError(null)}
                 onBack={() => setAuthScreen('landing')}
                 onRegister={() => {
                     setAuthError(null);
