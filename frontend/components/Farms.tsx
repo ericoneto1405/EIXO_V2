@@ -2,16 +2,18 @@ import React, { useEffect, useRef, useState } from 'react';
 import FarmRegistrationForm from './FarmRegistrationForm';
 import OnboardingSpotlight from './OnboardingSpotlight';
 import { Farm } from '../types';
-import { buildApiUrl } from '../api';
+
+const FarmMap = React.lazy(() => import('./FarmMap'));
 
 // Icons
 const PlusIcon: React.FC = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>;
 
 interface FarmsProps {
     farms: Farm[];
+    selectedFarm?: Farm | null;
     onFarmCreated?: (farm: Farm) => void;
     onFarmUpdated?: (farm: Farm) => void;
-    onFarmDeleted?: (farmId: string) => void;
+    onRequestFarmDeletion?: (farm: Farm) => void;
     openForm?: boolean;
     onFormOpened?: () => void;
     onFormClosed?: () => void;
@@ -20,7 +22,7 @@ interface FarmsProps {
 
 const TABS: { key: string; label: string; comingSoon?: boolean }[] = [
     { key: 'farms', label: 'Fazendas e Pastos' },
-    { key: 'map', label: 'Mapa da Fazenda', comingSoon: true },
+    { key: 'map', label: 'Mapa da Fazenda' },
     { key: 'pharmacy', label: 'Farmácia', comingSoon: true },
     { key: 'supplies', label: 'Galpão de Suprimentos', comingSoon: true },
     { key: 'machinery', label: 'Maquinários', comingSoon: true },
@@ -28,9 +30,10 @@ const TABS: { key: string; label: string; comingSoon?: boolean }[] = [
 
 const Farms: React.FC<FarmsProps> = ({
     farms,
+    selectedFarm,
     onFarmCreated,
     onFarmUpdated,
-    onFarmDeleted,
+    onRequestFarmDeletion,
     openForm,
     onFormOpened,
     onFormClosed,
@@ -40,17 +43,14 @@ const Farms: React.FC<FarmsProps> = ({
     const [showForm, setShowForm] = useState(false);
     const [focusOnForm, setFocusOnForm] = useState(false);
     const [editingFarm, setEditingFarm] = useState<Farm | null>(null);
-    const [farmToDelete, setFarmToDelete] = useState<Farm | null>(null);
     const [showUpgradePopover, setShowUpgradePopover] = useState(false);
-    const [deleteError, setDeleteError] = useState<string | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
     const [expandedFarmId, setExpandedFarmId] = useState<string | null>(null);
     const [hoveredFarmId, setHoveredFarmId] = useState<string | null>(null);
     const togglePaddocks = (farmId: string) =>
         setExpandedFarmId(prev => prev === farmId ? null : farmId);
     const formRef = useRef<HTMLDivElement | null>(null);
     const upgradePopoverRef = useRef<HTMLDivElement | null>(null);
-    const firstFarmWithoutPaddocks = farms.find((farm) => (farm.paddocks?.length ?? 0) === 0) ?? null;
+    const firstFarmWithoutPaddocks = farms.find((farm) => !(farm.paddocks || []).some((paddock) => paddock.active !== false)) ?? null;
     const formatNumber = (value: number) =>
         Number.isFinite(value)
             ? value.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
@@ -93,7 +93,7 @@ const Farms: React.FC<FarmsProps> = ({
 
     const handleFarmCreated = (farm: Farm) => {
         setFocusOnForm(false);
-        setEditingFarm(null);
+        setEditingFarm(farm);
         onFarmCreated?.(farm);
     };
 
@@ -108,40 +108,6 @@ const Farms: React.FC<FarmsProps> = ({
         setShowForm(true);
         setFocusOnForm(true);
         onFormOpened?.();
-    };
-
-    const handleDeleteRequest = (farm: Farm) => {
-        setDeleteError(null);
-        setFarmToDelete(farm);
-    };
-
-    const handleDeleteCancel = () => {
-        setFarmToDelete(null);
-        setDeleteError(null);
-    };
-
-    const handleDeleteConfirm = async () => {
-        if (!farmToDelete) return;
-        setIsDeleting(true);
-        setDeleteError(null);
-        try {
-            const response = await fetch(buildApiUrl(`/farms/${farmToDelete.id}`), {
-                method: 'DELETE',
-                credentials: 'include',
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                setDeleteError(payload?.message || 'Não foi possível excluir a fazenda.');
-                return;
-            }
-            onFarmDeleted?.(farmToDelete.id);
-            setFarmToDelete(null);
-        } catch (error) {
-            console.error(error);
-            setDeleteError('Não foi possível excluir a fazenda. Verifique sua conexão.');
-        } finally {
-            setIsDeleting(false);
-        }
     };
 
     useEffect(() => {
@@ -173,49 +139,6 @@ const Farms: React.FC<FarmsProps> = ({
     return (
         <div className="space-y-6">
 
-            {/* Modal de confirmação de exclusão */}
-            {farmToDelete && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-                    <div
-                        className="absolute inset-0 bg-[var(--eixo-graphite)]/50 backdrop-blur-sm"
-                        onClick={handleDeleteCancel}
-                    />
-                    <div className="relative w-full max-w-md rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-8 shadow-2xl">
-                        <h2 className="text-xl font-bold text-[var(--eixo-text)]">Excluir fazenda</h2>
-                        <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
-                            Tem certeza que deseja excluir a fazenda{' '}
-                            <span className="font-semibold text-[var(--eixo-text)]">"{farmToDelete.name}"</span>?
-                            Essa ação não pode ser desfeita.
-                        </p>
-
-                        {deleteError && (
-                            <p className="mt-4 rounded-2xl bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
-                                {deleteError}
-                            </p>
-                        )}
-
-                        <div className="mt-6 flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={handleDeleteCancel}
-                                disabled={isDeleting}
-                                className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-2.5 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6] disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleDeleteConfirm}
-                                disabled={isDeleting}
-                                className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-5 py-2.5 text-sm font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f7ddd7] disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {isDeleting ? 'Excluindo...' : 'Excluir'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Cabeçalho do módulo */}
             <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -230,7 +153,7 @@ const Farms: React.FC<FarmsProps> = ({
                             Gerencie as fazendas cadastradas e a base territorial da operação.
                         </p>
                     </div>
-                    {!showForm && (() => {
+                    {!showForm && activeTab === 'farms' && (() => {
                         const freeLimitHit = isFreePlan && farms.length >= 1;
                         if (freeLimitHit) {
                             return (
@@ -302,7 +225,26 @@ const Farms: React.FC<FarmsProps> = ({
                 </div>
             </div>
 
-            {/* Conteúdo: Fazendas e Pastos */}
+            {/* Conteúdo da aba selecionada */}
+            {activeTab === 'map' ? (
+                selectedFarm ? (
+                    <div className="h-[70vh] min-h-[520px] overflow-hidden rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+                        <React.Suspense fallback={<div className="flex h-full items-center justify-center text-sm text-[var(--eixo-text-muted)]">Carregando mapa...</div>}>
+                            <FarmMap
+                                key={selectedFarm.id}
+                                farm={selectedFarm}
+                                asPage
+                                onGeometrySaved={(farm) => onFarmUpdated?.(farm)}
+                            />
+                        </React.Suspense>
+                    </div>
+                ) : (
+                    <div className="rounded-[24px] border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-12 text-center">
+                        <p className="text-base font-bold text-[var(--eixo-text)]">Selecione uma fazenda para abrir o mapa</p>
+                        <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Use o seletor de fazendas no topo da tela.</p>
+                    </div>
+                )
+            ) : (
             <>
                     {showForm && (
                         <div className="mb-6" ref={formRef}>
@@ -347,9 +289,10 @@ const Farms: React.FC<FarmsProps> = ({
                         <div className="grid gap-4">
                             {farms.map((farm) => {
                                 const paddocks = farm.paddocks ?? [];
-                                const paddocksCount = paddocks.length;
-                                const totalPaddockArea = paddocks.reduce((sum, paddock) => sum + (paddock.areaHa ?? 0), 0);
-                                const totalCapacityUa = paddocks.reduce((sum, paddock) => {
+                                const activePaddocks = paddocks.filter((paddock) => paddock.active !== false);
+                                const paddocksCount = activePaddocks.length;
+                                const totalPaddockArea = activePaddocks.reduce((sum, paddock) => sum + (paddock.areaHa ?? 0), 0);
+                                const totalCapacityUa = activePaddocks.reduce((sum, paddock) => {
                                     if (typeof paddock.capacity === 'number') return sum + paddock.capacity;
                                     if (typeof paddock.areaHa === 'number' && typeof paddock.lotacaoUaHa === 'number') {
                                         return sum + (paddock.areaHa * paddock.lotacaoUaHa);
@@ -361,13 +304,13 @@ const Farms: React.FC<FarmsProps> = ({
                                 const INFRA_TYPES = ['curral de manejo', 'curral de engorda'];
                                 const NON_PRODUCTIVE_TYPES = ['aguada / reservatório', 'área de preservação', 'área de plantio'];
 
-                                const areaGrazing = paddocks
+                                const areaGrazing = activePaddocks
                                     .filter(p => GRAZING_TYPES.includes(p.divisionType ?? ''))
                                     .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
-                                const areaInfra = paddocks
+                                const areaInfra = activePaddocks
                                     .filter(p => INFRA_TYPES.includes(p.divisionType ?? ''))
                                     .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
-                                const areaNonProd = paddocks
+                                const areaNonProd = activePaddocks
                                     .filter(p => NON_PRODUCTIVE_TYPES.includes(p.divisionType ?? ''))
                                     .reduce((sum, p) => sum + (p.areaHa ?? 0), 0);
                                 const areaUncovered = Math.max(0, (farm.size ?? 0) - totalPaddockArea);
@@ -375,7 +318,6 @@ const Farms: React.FC<FarmsProps> = ({
                                 const pctGrazing = (areaGrazing / farmSizeForCalc) * 100;
                                 const pctInfra = (areaInfra / farmSizeForCalc) * 100;
                                 const pctNonProd = (areaNonProd / farmSizeForCalc) * 100;
-                                const pctUncovered = (areaUncovered / farmSizeForCalc) * 100;
                                 const animalsCount = typeof (farm as Farm & { animalsCount?: number }).animalsCount === 'number'
                                     ? (farm as Farm & { animalsCount?: number }).animalsCount
                                     : null;
@@ -419,10 +361,10 @@ const Farms: React.FC<FarmsProps> = ({
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleDeleteRequest(farm)}
+                                                    onClick={() => onRequestFarmDeletion?.(farm)}
                                                     className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f7ddd7]"
                                                 >
-                                                    Excluir
+                                                    Solicitar exclusão
                                                 </button>
                                             </div>
                                         </div>
@@ -523,12 +465,15 @@ const Farms: React.FC<FarmsProps> = ({
                                             )}
                                         </div>
 
-                                        {expandedFarmId === farm.id && paddocksCount > 0 && (
+                                        {expandedFarmId === farm.id && paddocks.length > 0 && (
                                             <div className="mt-4 space-y-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
                                                 {paddocks.map((paddock) => (
                                                     <div key={paddock.id} className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2">
                                                         <div className="flex flex-wrap items-center justify-between gap-2">
-                                                            <p className="text-sm font-semibold text-[var(--eixo-text)]">{paddock.name}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-sm font-semibold text-[var(--eixo-text)]">{paddock.name}</p>
+                                                                {paddock.active === false && <span className="rounded-full bg-[#e7e5e4] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#57534e]">Inativo</span>}
+                                                            </div>
                                                             <p className="text-xs text-[var(--eixo-text-muted)]">
                                                                 {typeof paddock.areaHa === 'number' ? `${formatNumber(paddock.areaHa)} ha` : 'Área não informada'}
                                                             </p>
@@ -561,6 +506,7 @@ const Farms: React.FC<FarmsProps> = ({
                         </div>
                     )}
             </>
+            )}
 
         </div>
     );

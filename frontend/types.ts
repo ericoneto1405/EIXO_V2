@@ -166,6 +166,8 @@ export interface Paddock {
     divisionType?: string | null;
     forrageira?: string | null;
     lotacaoUaHa?: number | null;
+    sistemaPastejo?: string | null;
+    diasDescanso?: number | null;
     capacity?: number | null;
     lat?: number | null;
     lng?: number | null;

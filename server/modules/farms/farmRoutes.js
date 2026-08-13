@@ -10,14 +10,18 @@ import { getPlanLimits, isSaasContextError } from '../utils/saasContext.js';
 import { normalizeReproMode } from '../utils/formatters.js';
 import { serializeAnimal } from '../utils/serializers.js';
 import { REPRO_WINDOW_DAYS } from '../config/env.js';
+import { calculateActivePaddockArea, hasActivePaddock, hasDuplicatePaddockNames } from './farmRules.js';
 const prisma = new PrismaClient();
 
-const findFarmByCoordinates = async ({ lat, lng, excludeFarmId = null }) => {
+const findFarmByCoordinates = async ({ req, lat, lng, excludeFarmId = null }) => {
     if (lat === null || lng === null) {
         return null;
     }
     return prisma.farm.findFirst({
         where: {
+            ...(req.saas?.organizationId
+                ? { organizationId: req.saas.organizationId }
+                : { userId: req.user.id }),
             lat,
             lng,
             ...(excludeFarmId ? { NOT: { id: excludeFarmId } } : {}),
@@ -71,10 +75,22 @@ app.post('/farms', requireNonFieldWorker, async (req, res) => {
                   const divisionType = (paddock?.divisionType || paddock?.type || '').trim() || null;
                   const capacityValue = parseNumber(paddock?.capacity);
                   const activeValue = paddock?.active === false ? false : true;
+                  const forrageira = (paddock?.forrageira || '').trim() || null;
+                  const lotacaoRaw = paddock?.lotacaoUaHa;
+                  const lotacaoUaHa = lotacaoRaw === undefined || lotacaoRaw === null || lotacaoRaw === '' ? null : Number(lotacaoRaw);
+                  const sistemaPastejo = (paddock?.sistemaPastejo || '').trim() || null;
+                  const diasRaw = paddock?.diasDescanso;
+                  const diasDescanso = diasRaw === undefined || diasRaw === null || diasRaw === '' ? null : Number(diasRaw);
                   if (!paddockName) {
                       return null;
                   }
                   if (areaValue !== null && (Number.isNaN(areaValue) || areaValue <= 0)) {
+                      return null;
+                  }
+                  if (lotacaoUaHa !== null && (!Number.isFinite(lotacaoUaHa) || lotacaoUaHa <= 0)) {
+                      return null;
+                  }
+                  if (diasDescanso !== null && (!Number.isInteger(diasDescanso) || diasDescanso <= 0)) {
                       return null;
                   }
                   return {
@@ -82,14 +98,28 @@ app.post('/farms', requireNonFieldWorker, async (req, res) => {
                       areaHa: areaValue,
                       divisionType,
                       capacity: capacityValue,
+                      forrageira,
+                      lotacaoUaHa,
+                      sistemaPastejo,
+                      diasDescanso,
                       active: activeValue,
                   };
               })
               .filter(Boolean)
         : [];
 
-    if (Array.isArray(paddocks) && paddocks.length && normalizedPaddocks.length === 0) {
+    if (Array.isArray(paddocks) && normalizedPaddocks.length !== paddocks.length) {
         return res.status(400).json({ message: 'Pastos devem ter nome e área válidos.' });
+    }
+    if (hasDuplicatePaddockNames(normalizedPaddocks)) {
+        return res.status(409).json({ message: 'Não é permitido cadastrar pastos com o mesmo nome na mesma fazenda.' });
+    }
+    const activeArea = calculateActivePaddockArea(normalizedPaddocks);
+    if (activeArea > parsedSize + 0.0001) {
+        return res.status(400).json({ message: `A área dos pastos ativos (${activeArea.toFixed(2)} ha) supera a área total da fazenda (${parsedSize.toFixed(2)} ha).` });
+    }
+    if (normalizedPaddocks.length && !hasActivePaddock(normalizedPaddocks)) {
+        return res.status(400).json({ message: 'A fazenda precisa ter ao menos um pasto ativo.' });
     }
 
     try {
@@ -118,6 +148,7 @@ app.post('/farms', requireNonFieldWorker, async (req, res) => {
         // ------------------------------------
 
         const existingFarmAtCoordinates = await findFarmByCoordinates({
+            req,
             lat: parsedLat,
             lng: parsedLng,
         });
@@ -176,6 +207,7 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
     const normalizedPaddocks = Array.isArray(paddocks)
         ? paddocks
               .map((paddock) => {
+                  const has = (key) => Object.prototype.hasOwnProperty.call(paddock || {}, key);
                   const paddockId = typeof paddock?.id === 'string' ? paddock.id.trim() : '';
                   const paddockName = (paddock?.name || paddock?.nome || '').trim();
                   const areaRaw = paddock?.areaHa ?? paddock?.size ?? paddock?.area;
@@ -183,15 +215,30 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                       ? null
                       : Number(areaRaw);
                   const divisionType = (paddock?.divisionType || paddock?.type || '').trim() || null;
-                  const forrageira = (paddock?.forrageira || '').trim() || null;
+                  const forrageira = has('forrageira') ? ((paddock?.forrageira || '').trim() || null) : undefined;
                   const lotacaoRaw = paddock?.lotacaoUaHa;
-                  const lotacaoUaHa = lotacaoRaw !== undefined && lotacaoRaw !== null && lotacaoRaw !== ''
-                      ? Number(lotacaoRaw) || null
-                      : null;
+                  const lotacaoUaHa = has('lotacaoUaHa')
+                      ? (lotacaoRaw === null || lotacaoRaw === '' ? null : Number(lotacaoRaw))
+                      : undefined;
+                  const sistemaPastejo = has('sistemaPastejo')
+                      ? ((paddock?.sistemaPastejo || '').trim() || null)
+                      : undefined;
+                  const diasRaw = paddock?.diasDescanso;
+                  const diasDescanso = has('diasDescanso')
+                      ? (diasRaw === null || diasRaw === '' ? null : Number(diasRaw))
+                      : undefined;
+                  const active = has('active') ? paddock.active !== false : undefined;
+                  const mapGeometry = has('mapGeometry') ? (paddock.mapGeometry ?? null) : undefined;
                   if (!paddockName) {
                       return null;
                   }
                   if (areaValue !== null && (Number.isNaN(areaValue) || areaValue <= 0)) {
+                      return null;
+                  }
+                  if (lotacaoUaHa !== undefined && lotacaoUaHa !== null && (!Number.isFinite(lotacaoUaHa) || lotacaoUaHa <= 0)) {
+                      return null;
+                  }
+                  if (diasDescanso !== undefined && diasDescanso !== null && (!Number.isInteger(diasDescanso) || diasDescanso <= 0)) {
                       return null;
                   }
                   return {
@@ -201,12 +248,16 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                       divisionType,
                       forrageira,
                       lotacaoUaHa,
+                      sistemaPastejo,
+                      diasDescanso,
+                      active,
+                      mapGeometry,
                   };
               })
               .filter(Boolean)
         : [];
 
-    if (Array.isArray(paddocks) && paddocks.length && normalizedPaddocks.length === 0) {
+    if (Array.isArray(paddocks) && normalizedPaddocks.length !== paddocks.length) {
         return res.status(400).json({ message: 'Divisões devem ter nome e área válidos.' });
     }
 
@@ -220,6 +271,7 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
         }
 
         const existingFarmAtCoordinates = await findFarmByCoordinates({
+            req,
             lat: parsedLat,
             lng: parsedLng,
             excludeFarmId: farm.id,
@@ -233,9 +285,51 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
         const updatedFarm = await prisma.$transaction(async (tx) => {
             const existingPaddocks = await tx.paddock.findMany({
                 where: { farmId: farm.id },
-                select: { id: true },
             });
             const existingIds = new Set(existingPaddocks.map((item) => item.id));
+            const incomingById = new Map(normalizedPaddocks.filter((item) => item.id && existingIds.has(item.id)).map((item) => [item.id, item]));
+            const mergedPaddocks = [
+                ...existingPaddocks.map((existing) => {
+                    const incoming = incomingById.get(existing.id);
+                    if (!incoming) return existing;
+                    return Object.fromEntries(Object.entries({ ...existing, ...incoming }).filter(([, value]) => value !== undefined));
+                }),
+                ...normalizedPaddocks.filter((item) => !item.id || !existingIds.has(item.id)),
+            ];
+
+            if (hasDuplicatePaddockNames(mergedPaddocks)) {
+                const error = new Error('Já existe um pasto com esse nome nesta fazenda.');
+                error.statusCode = 409;
+                throw error;
+            }
+
+            const activeArea = calculateActivePaddockArea(mergedPaddocks);
+            if (activeArea > parsedSize + 0.0001) {
+                const error = new Error(`A área dos pastos ativos (${activeArea.toFixed(2)} ha) supera a área total da fazenda (${parsedSize.toFixed(2)} ha).`);
+                error.statusCode = 400;
+                throw error;
+            }
+            if (mergedPaddocks.length && !hasActivePaddock(mergedPaddocks)) {
+                const error = new Error('A fazenda precisa ter ao menos um pasto ativo.');
+                error.statusCode = 400;
+                throw error;
+            }
+
+            const deactivatedIds = normalizedPaddocks
+                .filter((item) => item.id && item.active === false && existingPaddocks.find((current) => current.id === item.id)?.active !== false)
+                .map((item) => item.id);
+            if (deactivatedIds.length) {
+                const [commercialCount, poCount] = await Promise.all([
+                    tx.animal.count({ where: { farmId: farm.id, currentPaddockId: { in: deactivatedIds } } }),
+                    tx.poAnimal.count({ where: { farmId: farm.id, currentPaddockId: { in: deactivatedIds } } }),
+                ]);
+                if (commercialCount + poCount > 0) {
+                    const error = new Error(`Mova os ${commercialCount + poCount} animais atuais antes de desativar o pasto.`);
+                    error.statusCode = 409;
+                    error.details = { commercialAnimals: commercialCount, poAnimals: poCount };
+                    throw error;
+                }
+            }
 
             for (const division of normalizedPaddocks) {
                 if (division.id && existingIds.has(division.id)) {
@@ -245,8 +339,11 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                             name: division.name,
                             areaHa: division.areaHa,
                             divisionType: division.divisionType,
-                            forrageira: division.forrageira,
-                            lotacaoUaHa: division.lotacaoUaHa,
+                            ...(division.forrageira !== undefined ? { forrageira: division.forrageira } : {}),
+                            ...(division.lotacaoUaHa !== undefined ? { lotacaoUaHa: division.lotacaoUaHa } : {}),
+                            ...(division.sistemaPastejo !== undefined ? { sistemaPastejo: division.sistemaPastejo } : {}),
+                            ...(division.diasDescanso !== undefined ? { diasDescanso: division.diasDescanso } : {}),
+                            ...(division.active !== undefined ? { active: division.active } : {}),
                             ...(division.mapGeometry !== undefined ? { mapGeometry: division.mapGeometry } : {}),
                         },
                     });
@@ -261,8 +358,10 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                         divisionType: division.divisionType,
                         forrageira: division.forrageira,
                         lotacaoUaHa: division.lotacaoUaHa,
+                        sistemaPastejo: division.sistemaPastejo,
+                        diasDescanso: division.diasDescanso,
                         ...(division.mapGeometry !== undefined ? { mapGeometry: division.mapGeometry } : {}),
-                        active: true,
+                        active: division.active ?? true,
                     },
                 });
             }
@@ -291,6 +390,9 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
         });
     } catch (error) {
         console.error(error);
+        if (error?.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message, details: error.details });
+        }
         return res.status(500).json({ message: 'Erro ao atualizar fazenda.' });
     }
 });
@@ -328,7 +430,7 @@ app.get('/farms/:id/map-summary', async (req, res) => {
     try {
         const farm = await prisma.farm.findFirst({
             where: buildFarmScopeFilter(req, { id: String(id) }),
-            include: { paddocks: { orderBy: { createdAt: 'asc' } } },
+            include: { paddocks: { where: { active: true }, orderBy: { createdAt: 'asc' } } },
         });
         if (!farm) {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -410,7 +512,7 @@ app.get('/pastos', async (req, res) => {
 });
 
 app.post('/pastos', requireNonFieldWorker, async (req, res) => {
-    const { farmId, nome, name, areaHa, size, capacity, ativo, active, divisionType, type } = req.body || {};
+    const { farmId, nome, name, areaHa, size, capacity, ativo, active, divisionType, type, forrageira, lotacaoUaHa, sistemaPastejo, diasDescanso } = req.body || {};
     const paddockName = (nome || name || '').trim();
     if (!farmId || !paddockName) {
         return res.status(400).json({ message: 'Informe fazenda e nome do pasto.' });
@@ -426,6 +528,16 @@ app.post('/pastos', requireNonFieldWorker, async (req, res) => {
     }
     const activeValue = ativo === false || active === false ? false : true;
     const normalizedDivisionType = (divisionType || type || '').trim() || null;
+    const normalizedForrageira = (forrageira || '').trim() || null;
+    const normalizedLotacao = lotacaoUaHa === undefined || lotacaoUaHa === null || lotacaoUaHa === '' ? null : Number(lotacaoUaHa);
+    const normalizedSistema = (sistemaPastejo || '').trim() || null;
+    const normalizedDias = diasDescanso === undefined || diasDescanso === null || diasDescanso === '' ? null : Number(diasDescanso);
+    if (normalizedLotacao !== null && (!Number.isFinite(normalizedLotacao) || normalizedLotacao <= 0)) {
+        return res.status(400).json({ message: 'Lotação do pasto inválida.' });
+    }
+    if (normalizedDias !== null && (!Number.isInteger(normalizedDias) || normalizedDias <= 0)) {
+        return res.status(400).json({ message: 'Dias de descanso devem ser um número inteiro positivo.' });
+    }
     try {
         const farm = await prisma.farm.findFirst({
             where: buildFarmScopeFilter(req, { id: String(farmId) }),
@@ -434,10 +546,20 @@ app.post('/pastos', requireNonFieldWorker, async (req, res) => {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
         const existing = await prisma.paddock.findFirst({
-            where: { farmId: farm.id, name: paddockName },
+            where: { farmId: farm.id, name: { equals: paddockName, mode: 'insensitive' } },
         });
         if (existing) {
             return res.status(409).json({ message: 'Já existe um pasto com esse nome nesta fazenda.' });
+        }
+        if (activeValue && areaValue) {
+            const currentArea = await prisma.paddock.aggregate({
+                where: { farmId: farm.id, active: true },
+                _sum: { areaHa: true },
+            });
+            const activeArea = Number(currentArea._sum.areaHa || 0) + areaValue;
+            if (activeArea > Number(farm.size) + 0.0001) {
+                return res.status(400).json({ message: `A área dos pastos ativos (${activeArea.toFixed(2)} ha) supera a área total da fazenda (${Number(farm.size).toFixed(2)} ha).` });
+            }
         }
         const paddock = await prisma.paddock.create({
             data: {
@@ -446,6 +568,10 @@ app.post('/pastos', requireNonFieldWorker, async (req, res) => {
                 areaHa: areaValue,
                 divisionType: normalizedDivisionType,
                 capacity: capacityValue,
+                forrageira: normalizedForrageira,
+                lotacaoUaHa: normalizedLotacao,
+                sistemaPastejo: normalizedSistema,
+                diasDescanso: normalizedDias,
                 active: activeValue,
             },
         });
@@ -458,7 +584,7 @@ app.post('/pastos', requireNonFieldWorker, async (req, res) => {
 
 app.patch('/pastos/:id', requireNonFieldWorker, async (req, res) => {
     const { id } = req.params;
-    const { nome, name, areaHa, size, capacity, ativo, active, divisionType, type } = req.body || {};
+    const { nome, name, areaHa, size, capacity, ativo, active, divisionType, type, forrageira, lotacaoUaHa, sistemaPastejo, diasDescanso } = req.body || {};
     const paddockName = typeof nome === 'string' || typeof name === 'string' ? (nome || name).trim() : null;
     const areaRaw = areaHa ?? size;
     const areaValue = areaRaw === undefined || areaRaw === null || areaRaw === '' ? undefined : Number(areaRaw);
@@ -468,34 +594,63 @@ app.patch('/pastos/:id', requireNonFieldWorker, async (req, res) => {
         divisionType === undefined && type === undefined
             ? undefined
             : ((divisionType || type || '').trim() || null);
+    const normalizedForrageira = forrageira === undefined ? undefined : ((forrageira || '').trim() || null);
+    const normalizedLotacao = lotacaoUaHa === undefined ? undefined : (lotacaoUaHa === null || lotacaoUaHa === '' ? null : Number(lotacaoUaHa));
+    const normalizedSistema = sistemaPastejo === undefined ? undefined : ((sistemaPastejo || '').trim() || null);
+    const normalizedDias = diasDescanso === undefined ? undefined : (diasDescanso === null || diasDescanso === '' ? null : Number(diasDescanso));
     if (areaValue !== undefined && (Number.isNaN(areaValue) || areaValue <= 0)) {
         return res.status(400).json({ message: 'Área do pasto inválida.' });
     }
     if (capacityValue !== undefined && (capacityValue === null || capacityValue <= 0)) {
         return res.status(400).json({ message: 'Capacidade do pasto inválida.' });
     }
+    if (normalizedLotacao !== undefined && normalizedLotacao !== null && (!Number.isFinite(normalizedLotacao) || normalizedLotacao <= 0)) {
+        return res.status(400).json({ message: 'Lotação do pasto inválida.' });
+    }
+    if (normalizedDias !== undefined && normalizedDias !== null && (!Number.isInteger(normalizedDias) || normalizedDias <= 0)) {
+        return res.status(400).json({ message: 'Dias de descanso devem ser um número inteiro positivo.' });
+    }
     try {
         const paddock = await prisma.paddock.findFirst({
             where: { id: String(id), farm: buildFarmRelationFilter(req) },
+            include: { farm: { select: { size: true } } },
         });
         if (!paddock) {
             return res.status(404).json({ message: 'Pasto não encontrado.' });
         }
         if (paddockName) {
             const duplicate = await prisma.paddock.findFirst({
-                where: { farmId: paddock.farmId, name: paddockName, id: { not: paddock.id } },
+                where: { farmId: paddock.farmId, name: { equals: paddockName, mode: 'insensitive' }, id: { not: paddock.id } },
             });
             if (duplicate) {
                 return res.status(409).json({ message: 'Já existe um pasto com esse nome nesta fazenda.' });
             }
         }
         if (activeValue === false) {
-            const activeCount = await prisma.paddock.count({
-                where: { farmId: paddock.farmId, active: true },
-            });
-            if (activeCount <= 1) {
+            const [activeCount, commercialCount, poCount] = await Promise.all([
+                prisma.paddock.count({ where: { farmId: paddock.farmId, active: true } }),
+                prisma.animal.count({ where: { farmId: paddock.farmId, currentPaddockId: paddock.id } }),
+                prisma.poAnimal.count({ where: { farmId: paddock.farmId, currentPaddockId: paddock.id } }),
+            ]);
+            if (commercialCount + poCount > 0) {
+                return res.status(409).json({
+                    message: `Mova os ${commercialCount + poCount} animais atuais antes de desativar o pasto.`,
+                    details: { commercialAnimals: commercialCount, poAnimals: poCount },
+                });
+            }
+            if (paddock.active && activeCount <= 1) {
                 return res.status(400).json({ message: 'A fazenda precisa ter ao menos um pasto ativo.' });
             }
+        }
+        const nextArea = areaValue !== undefined ? areaValue : paddock.areaHa;
+        const nextActive = activeValue !== undefined ? activeValue : paddock.active;
+        const otherActiveArea = await prisma.paddock.aggregate({
+            where: { farmId: paddock.farmId, active: true, id: { not: paddock.id } },
+            _sum: { areaHa: true },
+        });
+        const activeArea = Number(otherActiveArea._sum.areaHa || 0) + (nextActive ? Number(nextArea || 0) : 0);
+        if (activeArea > Number(paddock.farm.size) + 0.0001) {
+            return res.status(400).json({ message: `A área dos pastos ativos (${activeArea.toFixed(2)} ha) supera a área total da fazenda (${Number(paddock.farm.size).toFixed(2)} ha).` });
         }
         const updated = await prisma.paddock.update({
             where: { id: paddock.id },
@@ -504,6 +659,10 @@ app.patch('/pastos/:id', requireNonFieldWorker, async (req, res) => {
                 ...(areaValue !== undefined ? { areaHa: areaValue } : {}),
                 ...(normalizedDivisionType !== undefined ? { divisionType: normalizedDivisionType } : {}),
                 ...(capacityValue !== undefined ? { capacity: capacityValue } : {}),
+                ...(normalizedForrageira !== undefined ? { forrageira: normalizedForrageira } : {}),
+                ...(normalizedLotacao !== undefined ? { lotacaoUaHa: normalizedLotacao } : {}),
+                ...(normalizedSistema !== undefined ? { sistemaPastejo: normalizedSistema } : {}),
+                ...(normalizedDias !== undefined ? { diasDescanso: normalizedDias } : {}),
                 ...(activeValue !== undefined ? { active: activeValue } : {}),
             },
         });

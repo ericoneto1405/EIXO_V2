@@ -282,6 +282,8 @@ model Paddock {
   divisionType         String?                     @map("division_type")
   forrageira           String?
   lotacaoUaHa          Float?
+  sistemaPastejo       String?                     @map("sistema_pastejo")
+  diasDescanso         Int?                        @map("dias_descanso")
   currentAnimals       Animal[]                    @relation("AnimalCurrentPaddock")
   fieldOccurrences     FieldOccurrence[]
   farm                 Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
