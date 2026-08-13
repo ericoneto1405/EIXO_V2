@@ -37,7 +37,6 @@ import { createWebUser } from './adapters/usersApi';
 
 const HerdModule = React.lazy(() => import('./components/HerdModule'));
 const FinanceModule = React.lazy(() => import('./components/FinanceModule'));
-const FarmMap = React.lazy(() => import('./components/FarmMap'));
 const GeneticsReproducao = React.lazy(() => import('./components/ReproModule'));
 const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'));
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
@@ -89,7 +88,7 @@ interface User {
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda', 'Rebanho Comercial', 'Plantel P.O.', 'Eixo Genetics'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Plantel P.O.', 'Eixo Genetics'],
     },
     {
         title: 'Cadastros',
@@ -113,7 +112,6 @@ const ALL_MODULES = MODULE_CATEGORIES.flatMap((category) => category.modules);
 type HerdNavigationTab = 'overview' | 'lots' | 'animals' | 'weighings' | 'settings';
 
 const SUB_VIEW_PARENT: Record<string, string> = {
-    'Mapa da Fazenda': 'Fazendas',
     'Usuários e Permissões': 'Fazendas',
     'Ocorrências do EIXO Campo': 'Operações',
 };
@@ -304,6 +302,7 @@ const AppContent: React.FC = () => {
             return ['Fazendas'];
         }
         const LEGACY_MODULE_MAP: Record<string, string> = {
+            'Mapa da Fazenda': 'Fazendas',
             'Rebanho Genética': 'Eixo Genetics',
             'Rebanho P.O.': 'Plantel P.O.',
             'Plantel P.O.': 'Plantel P.O.',
@@ -355,6 +354,7 @@ const AppContent: React.FC = () => {
     const [openFarmForm, setOpenFarmForm] = useState(false);
     const [upgradeModal, setUpgradeModal] = useState<string | null>(null); // nome do módulo bloqueado
     const [isSupportOpen, setIsSupportOpen] = useState(false);
+    const [supportDraft, setSupportDraft] = useState<string | null>(null);
     const supportRef = useRef<HTMLDivElement>(null);
     const isHandlingSessionRevokedRef = useRef(false);
 
@@ -549,7 +549,6 @@ const AppContent: React.FC = () => {
             });
             setSelectedFarmId(farm.id);
             setPaddocksRefreshNonce((current) => current + 1);
-            setActiveView('Visão Geral');
         },
         [],
     );
@@ -560,16 +559,6 @@ const AppContent: React.FC = () => {
         if (selectedFarmId === farm.id) {
             setSelectedFarmId(farm.id);
         }
-    }, [selectedFarmId]);
-
-    const handleFarmDeleted = React.useCallback((farmId: string) => {
-        setFarms((current) => {
-            const next = current.filter((item) => item.id !== farmId);
-            if (selectedFarmId === farmId) {
-                setSelectedFarmId(next[0]?.id || null);
-            }
-            return next;
-        });
     }, [selectedFarmId]);
 
     React.useEffect(() => {
@@ -1019,30 +1008,18 @@ const AppContent: React.FC = () => {
                     );
                 }
                 return <NutritionModule farmId={selectedFarmId} farmName={selectedFarm?.name} currentUser={currentUser} />;
-            case 'Mapa da Fazenda':
-                if (!hasSelectedFarm || !selectedFarm) {
-                    return (
-                        <FarmRequiredPanel
-                            title="Selecione uma fazenda para ver o mapa"
-                            actionLabel="Selecionar fazenda"
-                            onAction={() => setActiveView('Fazendas')}
-                        />
-                    );
-                }
-                return (
-                    <FarmMap
-                        farm={selectedFarm}
-                        asPage
-                        onGeometrySaved={handleFarmUpdated}
-                    />
-                );
             case 'Fazendas':
                 return (
                     <Farms
                         farms={farms}
+                        selectedFarm={selectedFarm}
                         onFarmCreated={handleFarmCreated}
                         onFarmUpdated={handleFarmUpdated}
-                        onFarmDeleted={handleFarmDeleted}
+                        onRequestFarmDeletion={(farm) => {
+                            setSelectedFarmId(farm.id);
+                            setSupportDraft(`Solicito uma análise para exclusão da fazenda "${farm.name}" (ID: ${farm.id}).`);
+                            setIsSupportOpen(true);
+                        }}
                         openForm={openFarmForm}
                         isFreePlan={isFreePlan}
                         onFormOpened={() => {
@@ -1192,15 +1169,13 @@ const AppContent: React.FC = () => {
                         />
                         <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                             <div className={
-                                activeView === 'Mapa da Fazenda'
-                                    ? 'h-full'
-                                    : activeView === 'Rebanho Comercial'
+                                activeView === 'Rebanho Comercial'
                                         ? 'h-full overflow-x-hidden overflow-y-auto px-2 py-4 lg:px-3 lg:py-5'
                                         : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'
                             }>
                                 {hasNoFarms && activeView !== 'Fazendas' && activeView !== 'EIXO HQ' && activeView !== 'EIXO Mercado' ? <FirstFarmOnboarding /> : (
                                     <>
-                                        {currentUser && activeView !== 'Mapa da Fazenda' && (
+                                        {currentUser && (
                                             <>
                                                 {(activeView === 'Rebanho Comercial' || activeView === 'Fazendas') ? (
                                                     <OnboardingChecklist
@@ -1332,9 +1307,10 @@ const AppContent: React.FC = () => {
                     {isSupportOpen && (
                         <div className="pointer-events-auto h-[560px] max-h-[calc(100dvh-140px)] w-[360px] max-w-[calc(100vw-32px)]">
                             <AssistantChat
-                                onClose={() => setIsSupportOpen(false)}
+                                onClose={() => { setIsSupportOpen(false); setSupportDraft(null); }}
                                 farmId={selectedFarmId}
                                 onNavigateToView={handleOnboardingNavigate}
+                                initialDraft={supportDraft}
                             />
                         </div>
                     )}
@@ -1344,7 +1320,7 @@ const AppContent: React.FC = () => {
                         {/* Corpo do balão */}
                         <button
                             type="button"
-                            onClick={() => setIsSupportOpen(prev => !prev)}
+                            onClick={() => { setSupportDraft(null); setIsSupportOpen(prev => !prev); }}
                             className="relative flex flex-col items-center justify-center rounded-[16px] bg-[var(--eixo-text)] px-4 py-2.5 shadow-xl transition-all duration-200 hover:bg-[var(--eixo-graphite)] active:scale-95"
                             aria-label="Abrir Eixo Suporte"
                             style={{ minWidth: '88px' }}

@@ -321,6 +321,8 @@ export function serializePaddock(paddock) {
         divisionType: paddock.divisionType ?? null,
         forrageira: paddock.forrageira ?? null,
         lotacaoUaHa: paddock.lotacaoUaHa ?? null,
+        sistemaPastejo: paddock.sistemaPastejo ?? null,
+        diasDescanso: paddock.diasDescanso ?? null,
         capacity: paddock.capacity ?? null,
         lat: paddock.lat ?? null,
         lng: paddock.lng ?? null,

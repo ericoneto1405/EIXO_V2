@@ -19,6 +19,7 @@ interface AssistantChatProps {
     onClose: () => void;
     farmId: string | null;
     onNavigateToView?: (view: string, options?: { herdTab?: 'overview' | 'animals' | 'lots' | 'weighings' | 'settings' }) => void;
+    initialDraft?: string | null;
 }
 
 const SUGESTOES = [
@@ -49,7 +50,7 @@ const SendIcon: React.FC = () => (
     </svg>
 );
 
-const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNavigateToView }) => {
+const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNavigateToView, initialDraft }) => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputMessage, setInputMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -70,12 +71,24 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
     }, []);
 
     useEffect(() => {
+        if (!initialDraft) return;
+        const created = crypto.randomUUID();
+        setConversationId(created);
+        setMessages([]);
+        setHumanStatus('none');
+        setHumanRequestError(null);
+        setInputMessage(initialDraft);
+        window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, created);
+    }, [initialDraft, farmId]);
+
+    useEffect(() => {
+        if (initialDraft) return;
         const storageKey = `eixo_support_conversation_${farmId || 'global'}`;
         const stored = window.localStorage.getItem(storageKey);
         if (stored) {
             setConversationId(stored);
         }
-    }, [farmId]);
+    }, [farmId, initialDraft]);
 
     const loadRecentConversations = async () => {
         try {

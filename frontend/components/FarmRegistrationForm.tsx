@@ -14,6 +14,7 @@ interface DivisionInput {
     sistemaPastejo: string;
     lotacaoUaHa: string;
     diasDescanso: string;
+    active: boolean;
 }
 
 interface FarmRegistrationFormProps {
@@ -127,16 +128,18 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     const [showLocation, setShowLocation] = useState(true);
     const [gpsLoading, setGpsLoading] = useState(false);
     const [paddockToDelete, setPaddockToDelete] = useState<DivisionInput | null>(null);
+    const [isDirty, setIsDirty] = useState(false);
     const nameInputRef = useRef<HTMLInputElement | null>(null);
     const divisionsRef = useRef<HTMLDivElement | null>(null);
+    const syncedFarmIdRef = useRef<string | null>(null);
 
     const totalDivisionSize = useMemo(() => {
-        return divisions.reduce((sum, division) => sum + (parseFloat(division.areaHa) || 0), 0);
+        return divisions.reduce((sum, division) => division.active ? sum + (parseFloat(division.areaHa) || 0) : sum, 0);
     }, [divisions]);
 
     const totalCapacityUa = useMemo(() => {
         return divisions.reduce((sum, division) => {
-            if (NON_GRAZING_DIVISION_TYPES.includes(division.divisionType)) return sum;
+            if (!division.active || NON_GRAZING_DIVISION_TYPES.includes(division.divisionType)) return sum;
             const area = parseFloat(division.areaHa) || 0;
             const lotacao = parseFloat(division.lotacaoUaHa) || 0;
             if (area <= 0 || lotacao <= 0) return sum;
@@ -160,6 +163,10 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         if (!initialFarm) {
             return;
         }
+        if (syncedFarmIdRef.current === initialFarm.id) {
+            return;
+        }
+        syncedFarmIdRef.current = initialFarm.id;
         const [cityPart = '', statePart = ''] = (initialFarm.city || '').split('/').map((value) => value.trim());
         setActiveFarm(initialFarm);
         setFarmName(initialFarm.name || '');
@@ -176,12 +183,14 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 areaHa: division.areaHa?.toString?.() || '',
                 divisionType: division.divisionType || 'pasto',
                 forrageira: division.forrageira || '',
-                sistemaPastejo: '',
-                lotacaoUaHa: division.lotacaoUaHa?.toString?.() || '1',
-                diasDescanso: (division as any).diasDescanso?.toString() || '',
+                sistemaPastejo: division.sistemaPastejo || '',
+                lotacaoUaHa: division.lotacaoUaHa?.toString?.() || '',
+                diasDescanso: division.diasDescanso?.toString() || '',
+                active: division.active !== false,
             })),
         );
         setCurrentStep('divisions');
+        setIsDirty(false);
     }, [initialFarm]);
 
     const handleAddDivision = () => {
@@ -195,42 +204,62 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 divisionType: 'pasto',
                 forrageira: '',
                 sistemaPastejo: '',
-                lotacaoUaHa: '1',
+                lotacaoUaHa: '',
                 diasDescanso: '',
+                active: true,
             },
         ]);
+        setIsDirty(true);
     };
 
     const handleRemoveDivision = (id: string) => {
         setDivisions(divisions.filter((division) => division.id !== id));
+        setIsDirty(true);
     };
 
     const handleDivisionSizeChange = (id: string, value: string) => {
         setDivisions(divisions.map((division) => division.id === id ? { ...division, areaHa: value } : division));
+        setIsDirty(true);
     };
 
     const handleDivisionNameChange = (id: string, value: string) => {
         setDivisions(divisions.map((division) => division.id === id ? { ...division, name: value } : division));
+        setIsDirty(true);
     };
 
     const handleDivisionTypeChange = (id: string, value: string) => {
         setDivisions(divisions.map((division) => division.id === id ? { ...division, divisionType: value } : division));
+        setIsDirty(true);
     };
 
     const handleDivisionForrageira = (id: string, value: string) => {
         setDivisions(divisions.map((division) => division.id === id ? { ...division, forrageira: value } : division));
+        setIsDirty(true);
     };
 
     const handleDivisionSistemaPastejo = (id: string, value: string) => {
         setDivisions(divisions.map((d) => d.id === id ? { ...d, sistemaPastejo: value } : d));
+        setIsDirty(true);
     };
 
     const handleDivisionDiasDescanso = (id: string, value: string) => {
         setDivisions(divisions.map((d) => d.id === id ? { ...d, diasDescanso: value } : d));
+        setIsDirty(true);
     };
 
     const handleDivisionLotacao = (id: string, value: string) => {
         setDivisions(divisions.map((division) => division.id === id ? { ...division, lotacaoUaHa: value } : division));
+        setIsDirty(true);
+    };
+
+    const handleDivisionActiveChange = (id: string, active: boolean) => {
+        setDivisions(divisions.map((division) => division.id === id ? { ...division, active } : division));
+        setIsDirty(true);
+    };
+
+    const handleCancel = () => {
+        if (isDirty && !window.confirm('Há alterações não salvas. Deseja sair mesmo assim?')) return;
+        onCancelEdit?.();
     };
 
     /** Trata colagem: se detectar par lat/lng, preenche os dois campos */
@@ -241,6 +270,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             e.preventDefault();
             setFarmLat(pair[0]);
             setFarmLng(pair[1]);
+            setIsDirty(true);
         }
     }, []);
 
@@ -250,12 +280,14 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         if (pair) {
             setFarmLat(pair[0]);
             setFarmLng(pair[1]);
+            setIsDirty(true);
             return;
         }
         const n = parseCoordStr(raw);
         const formatted = (n !== null && !isNaN(n)) ? n.toFixed(6) : raw;
         if (field === 'lat') setFarmLat(formatted);
         else setFarmLng(formatted);
+        if (formatted !== raw) setIsDirty(true);
     }, []);
 
     const handleGetGPS = () => {
@@ -265,6 +297,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             (pos) => {
                 setFarmLat(pos.coords.latitude.toFixed(6));
                 setFarmLng(pos.coords.longitude.toFixed(6));
+                setIsDirty(true);
                 setGpsLoading(false);
             },
             () => {
@@ -299,6 +332,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         if (!savedFarm) {
             return;
         }
+        syncedFarmIdRef.current = savedFarm.id;
         setActiveFarm(savedFarm);
         setFarmName(savedFarm.name || '');
         const [cityPart = '', statePart = ''] = (savedFarm.city || '').split('/').map((value) => value.trim());
@@ -315,9 +349,10 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 areaHa: division.areaHa?.toString?.() || '',
                 divisionType: division.divisionType || 'pasto',
                 forrageira: division.forrageira || '',
-                sistemaPastejo: '',
-                lotacaoUaHa: division.lotacaoUaHa?.toString?.() || '1',
-                diasDescanso: (division as any).diasDescanso?.toString() || '',
+                sistemaPastejo: division.sistemaPastejo || '',
+                lotacaoUaHa: division.lotacaoUaHa?.toString?.() || '',
+                diasDescanso: division.diasDescanso?.toString() || '',
+                active: division.active !== false,
             })),
         );
     };
@@ -348,6 +383,11 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 name: division.name.trim(),
                 areaHa: parseFloat(division.areaHa) || 0,
                 divisionType: division.divisionType,
+                forrageira: division.forrageira || null,
+                sistemaPastejo: division.sistemaPastejo || null,
+                diasDescanso: division.diasDescanso ? parseInt(division.diasDescanso, 10) : null,
+                lotacaoUaHa: division.lotacaoUaHa ? parseFloat(division.lotacaoUaHa) : null,
+                active: division.active,
             })) : [],
         });
 
@@ -385,8 +425,9 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     divisionType: 'pasto',
                     forrageira: '',
                     sistemaPastejo: '',
-                    lotacaoUaHa: '1',
+                    lotacaoUaHa: '',
                     diasDescanso: '',
+                    active: true,
                 }]);
             }
             setSubmitSuccess(activeFarm ? 'Dados da fazenda atualizados. Continue nos pastos.' : 'Fazenda salva. Agora cadastre os pastos.');
@@ -419,6 +460,19 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 const savedFarm = retryPayload?.farm || null;
                 syncSavedFarm(savedFarm);
                 setCurrentStep('divisions');
+                if (!activeFarm && divisions.length === 0) {
+                    setDivisions([{
+                        id: `div-${++divisionIdCounter}`,
+                        name: '',
+                        areaHa: '',
+                        divisionType: 'pasto',
+                        forrageira: '',
+                        sistemaPastejo: '',
+                        lotacaoUaHa: '',
+                        diasDescanso: '',
+                        active: true,
+                    }]);
+                }
                 setSubmitSuccess(activeFarm ? 'Dados da fazenda atualizados. Continue nos pastos.' : 'Fazenda salva. Agora cadastre os pastos.');
                 if (retryPayload?.farm) {
                     if (activeFarm) {
@@ -439,12 +493,55 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         }
     };
 
-    const saveDivisions = async (mode: 'complete' | 'save-and-return') => {
+    const openNewDivisionAfterSave = (savedFarm: Farm | null) => {
+        const newDivisionId = `division-${divisionIdCounter++}`;
+        setDivisions([
+            ...(savedFarm?.paddocks || []).map((division, index) => ({
+                id: division.id,
+                name: division.name || `Pasto ${index + 1}`,
+                areaHa: division.areaHa?.toString?.() || '',
+                divisionType: division.divisionType || 'pasto',
+                forrageira: division.forrageira || '',
+                sistemaPastejo: division.sistemaPastejo || '',
+                lotacaoUaHa: division.lotacaoUaHa?.toString?.() || '',
+                diasDescanso: division.diasDescanso?.toString() || '',
+                active: division.active !== false,
+            })),
+            {
+                id: newDivisionId,
+                name: `Pasto ${(savedFarm?.paddocks?.length || 0) + 1}`,
+                areaHa: '',
+                divisionType: 'pasto',
+                forrageira: '',
+                sistemaPastejo: '',
+                lotacaoUaHa: '',
+                diasDescanso: '',
+                active: true,
+            },
+        ]);
+        setIsDirty(true);
+        setSubmitSuccess('Pastos salvos. Preencha o novo pasto.');
+        requestAnimationFrame(() => {
+            document.getElementById(`division-card-${newDivisionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    };
+
+    const saveDivisions = async (mode: 'save-and-add' | 'save-and-return') => {
         setSubmitError(null);
         setSubmitSuccess(null);
 
         if (!activeFarm) {
             setSubmitError('Salve a fazenda antes de cadastrar os pastos.');
+            return;
+        }
+
+        if (mode === 'save-and-return' && divisions.length === 0) {
+            setSubmitError('Cadastre ao menos um pasto antes de salvar e fechar.');
+            return;
+        }
+
+        if (divisions.length > 0 && !divisions.some((division) => division.active)) {
+            setSubmitError('A fazenda precisa ter ao menos um pasto ativo.');
             return;
         }
 
@@ -457,6 +554,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             sistemaPastejo: division.sistemaPastejo || null,
             diasDescanso: division.diasDescanso ? parseInt(division.diasDescanso) : null,
             lotacaoUaHa: parseFloat(division.lotacaoUaHa) || null,
+            active: division.active,
         })) as any[]);
 
         const hasInvalidDivision = payloadDivisions.some(
@@ -472,7 +570,21 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
             return;
         }
 
-        // Área não precisa ser exata — o resumo é apenas informativo
+        const normalizedNames = payloadDivisions.map((division) => division.name.toLocaleLowerCase('pt-BR'));
+        if (new Set(normalizedNames).size !== normalizedNames.length) {
+            setSubmitError('Não é permitido cadastrar pastos com o mesmo nome na mesma fazenda.');
+            return;
+        }
+
+        if (payloadDivisions.some((division) => division.diasDescanso !== null && (!Number.isInteger(division.diasDescanso) || division.diasDescanso <= 0))) {
+            setSubmitError('Dias de descanso devem ser um número inteiro positivo.');
+            return;
+        }
+
+        if (totalDivisionSize > farmSizeFloat + 0.0001) {
+            setSubmitError(`A área dos pastos ativos (${totalDivisionSize.toFixed(2)} ha) supera a área total da fazenda (${farmSizeFloat.toFixed(2)} ha).`);
+            return;
+        }
 
         setIsSubmitting(true);
         // Preserva coordenadas existentes se o usuário não editou os campos de GPS
@@ -505,14 +617,16 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 return;
             }
 
-            syncSavedFarm(payload?.farm || null);
+            const savedFarm = payload?.farm || null;
+            syncSavedFarm(savedFarm);
+            setIsDirty(false);
             onFarmUpdated?.(payload.farm);
             if (mode === 'save-and-return') {
                 setSubmitSuccess('Progresso salvo com sucesso.');
                 onSaveAndReturn?.();
                 return;
             }
-            setSubmitSuccess('Pastos salvos. Continue editando ou feche quando terminar.');
+            openNewDivisionAfterSave(savedFarm);
         } catch (error) {
             console.error(error);
             try {
@@ -523,14 +637,16 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     setSubmitError(retryPayload?.message || 'Não foi possível salvar os pastos.');
                     return;
                 }
-                syncSavedFarm(retryPayload?.farm || null);
+                const savedFarm = retryPayload?.farm || null;
+                syncSavedFarm(savedFarm);
+                setIsDirty(false);
                 onFarmUpdated?.(retryPayload.farm);
                 if (mode === 'save-and-return') {
                     setSubmitSuccess('Progresso salvo com sucesso.');
                     onSaveAndReturn?.();
                     return;
                 }
-                setSubmitSuccess('Pastos salvos. Continue editando ou feche quando terminar.');
+                openNewDivisionAfterSave(savedFarm);
             } catch (retryError) {
                 console.error(retryError);
                 setSubmitError('Não foi possível salvar os pastos. Verifique sua conexão.');
@@ -551,13 +667,17 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         onClick={() => setPaddockToDelete(null)}
                     />
                     <div className="relative w-full max-w-md rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-8 shadow-2xl">
-                        <h2 className="text-xl font-bold text-[var(--eixo-text)]">Excluir pasto</h2>
+                        <h2 className="text-xl font-bold text-[var(--eixo-text)]">
+                            {activeFarm?.paddocks.some((item) => item.id === paddockToDelete.id) ? 'Desativar pasto' : 'Remover pasto'}
+                        </h2>
                         <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
-                            Tem certeza que deseja excluir o pasto{' '}
+                            Tem certeza que deseja {activeFarm?.paddocks.some((item) => item.id === paddockToDelete.id) ? 'desativar' : 'remover'} o pasto{' '}
                             <span className="font-semibold text-[var(--eixo-text)]">
                                 "{paddockToDelete.name.trim() || 'sem nome'}"
                             </span>?
-                            Essa ação não pode ser desfeita.
+                            {activeFarm?.paddocks.some((item) => item.id === paddockToDelete.id)
+                                ? ' O histórico será preservado e o pasto poderá ser reativado depois.'
+                                : ' Esse pasto ainda não foi salvo.'}
                         </p>
                         <div className="mt-6 flex justify-end gap-3">
                             <button
@@ -569,10 +689,17 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             </button>
                             <button
                                 type="button"
-                                onClick={() => { handleRemoveDivision(paddockToDelete.id); setPaddockToDelete(null); }}
+                                onClick={() => {
+                                    if (activeFarm?.paddocks.some((item) => item.id === paddockToDelete.id)) {
+                                        handleDivisionActiveChange(paddockToDelete.id, false);
+                                    } else {
+                                        handleRemoveDivision(paddockToDelete.id);
+                                    }
+                                    setPaddockToDelete(null);
+                                }}
                                 className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-5 py-2.5 text-sm font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f7ddd7]"
                             >
-                                Excluir
+                                {activeFarm?.paddocks.some((item) => item.id === paddockToDelete.id) ? 'Desativar' : 'Remover'}
                             </button>
                         </div>
                     </div>
@@ -618,18 +745,18 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             type="text"
                             id="farmName"
                             value={farmName}
-                            onChange={e => setFarmName(e.target.value)}
+                            onChange={e => { setFarmName(e.target.value); setIsDirty(true); }}
                             className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                             required
                         />
                     </div>
                     <div>
                         <label htmlFor="farmCity" className="block text-sm font-medium text-[var(--eixo-text)]">Cidade</label>
-                        <input type="text" id="farmCity" value={farmCity} onChange={e => setFarmCity(e.target.value)} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required />
+                        <input type="text" id="farmCity" value={farmCity} onChange={e => { setFarmCity(e.target.value); setIsDirty(true); }} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required />
                     </div>
                     <div>
                         <label htmlFor="farmState" className="block text-sm font-medium text-[var(--eixo-text)]">Estado</label>
-                        <select id="farmState" value={farmState} onChange={e => setFarmState(e.target.value)} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required>
+                        <select id="farmState" value={farmState} onChange={e => { setFarmState(e.target.value); setIsDirty(true); }} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required>
                             <option value="">Selecione</option>
                             {BRAZILIAN_STATES.map((state) => (
                                 <option key={state} value={state}>{state}</option>
@@ -638,11 +765,11 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     </div>
                     <div>
                         <label htmlFor="farmSize" className="block text-sm font-medium text-[var(--eixo-text)]">Tamanho Total (ha)</label>
-                        <input type="number" id="farmSize" value={farmSize} onChange={e => setFarmSize(e.target.value)} min="0" step="0.01" className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required />
+                        <input type="number" id="farmSize" value={farmSize} onChange={e => { setFarmSize(e.target.value); setIsDirty(true); }} min="0" step="0.01" className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required />
                     </div>
                     <div className="md:col-span-2">
                         <label htmlFor="farmNotes" className="block text-sm font-medium text-[var(--eixo-text)]">Observações</label>
-                        <textarea id="farmNotes" value={farmNotes} onChange={e => setFarmNotes(e.target.value)} rows={3} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"></textarea>
+                        <textarea id="farmNotes" value={farmNotes} onChange={e => { setFarmNotes(e.target.value); setIsDirty(true); }} rows={3} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"></textarea>
                     </div>
 
                     {/* ── Localização opcional ── */}
@@ -651,7 +778,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             <div className="flex items-center gap-3">
                                 <button
                                     type="button"
-                                    onClick={() => setShowLocation(true)}
+                                    onClick={() => { setShowLocation(true); setIsDirty(true); }}
                                     className="inline-flex items-center gap-2 rounded-xl border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-2.5 text-sm font-semibold text-[var(--eixo-graphite)] transition-colors hover:bg-[var(--eixo-green)]/20"
                                 >
                                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -666,7 +793,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                             <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4 space-y-3">
                                 <div className="flex items-center justify-between">
                                     <p className="text-sm font-semibold text-[var(--eixo-text)]">📍 Localização</p>
-                                    <button type="button" onClick={() => { setShowLocation(false); setFarmLat(''); setFarmLng(''); }} className="text-xs text-[var(--eixo-text-muted)] hover:text-[var(--eixo-text-muted)]">Remover</button>
+                                    <button type="button" onClick={() => { setShowLocation(false); setFarmLat(''); setFarmLng(''); setIsDirty(true); }} className="text-xs text-[var(--eixo-text-muted)] hover:text-[var(--eixo-text-muted)]">Remover</button>
                                 </div>
                                 <button
                                     type="button"
@@ -691,7 +818,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                             id="farmLat"
                                             placeholder="-12.345678"
                                             value={farmLat}
-                                            onChange={e => setFarmLat(e.target.value)}
+                                            onChange={e => { setFarmLat(e.target.value); setIsDirty(true); }}
                                             onBlur={e => normalizeAndSetCoord(e.target.value.trim(), 'lat')}
                                             onPaste={handlePasteCoord}
                                             className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
@@ -705,7 +832,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                             id="farmLng"
                                             placeholder="-39.123456"
                                             value={farmLng}
-                                            onChange={e => setFarmLng(e.target.value)}
+                                            onChange={e => { setFarmLng(e.target.value); setIsDirty(true); }}
                                             onBlur={e => normalizeAndSetCoord(e.target.value.trim(), 'lng')}
                                             onPaste={handlePasteCoord}
                                             className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
@@ -722,7 +849,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     <div className="md:col-span-2 flex justify-end pt-1">
                         <button
                             type="button"
-                            onClick={onCancelEdit}
+                            onClick={handleCancel}
                             className="mr-3 flex items-center rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-6 py-2.5 font-bold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[#ece9e6]"
                         >
                             Cancelar
@@ -775,13 +902,19 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     )}
                     <div className="mt-4 grid gap-4 md:grid-cols-2">
                         {divisions.map((division, index) => (
-                            <div key={division.id} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
+                            <div id={`division-card-${division.id}`} key={division.id} className={`rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4 ${division.active ? '' : 'opacity-65'}`}>
                                 <div className="mb-3 flex items-center gap-3">
                                     <span className="text-sm font-medium text-[var(--eixo-text)]">{divisions[index].name.trim() || `Pasto ${index + 1}`}</span>
-                                    <button type="button" onClick={() => setPaddockToDelete(division)} className="ml-auto rounded-full p-2 text-[var(--eixo-danger)] transition-colors hover:bg-[#fff2ef] hover:text-[var(--eixo-danger)]" aria-label="Remover pasto">
-                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
-                                    </button>
+                                    {!division.active && <span className="rounded-full bg-[#e7e5e4] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#57534e]">Inativo</span>}
+                                    {division.active ? (
+                                        <button type="button" onClick={() => setPaddockToDelete(division)} className="ml-auto rounded-full p-2 text-[var(--eixo-danger)] transition-colors hover:bg-[#fff2ef]" aria-label={activeFarm?.paddocks.some((item) => item.id === division.id) ? 'Desativar pasto' : 'Remover pasto'}>
+                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                                        </button>
+                                    ) : (
+                                        <button type="button" onClick={() => handleDivisionActiveChange(division.id, true)} className="ml-auto rounded-xl border border-[var(--eixo-border)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">Reativar</button>
+                                    )}
                                 </div>
+                                <fieldset disabled={!division.active} className="disabled:cursor-not-allowed">
                                 <div className="grid grid-cols-1 gap-3">
                                     <div>
                                         <label htmlFor={`division-name-${division.id}`} className="block text-sm font-medium text-[var(--eixo-text)]">Nome do Pasto</label>
@@ -925,6 +1058,7 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                                     </div>
                                     )}
                                 </div>
+                                </fieldset>
                             </div>
                         ))}
                     </div>
@@ -941,6 +1075,43 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                 </div>
                 </div>
                 </>
+                )}
+
+                {submitError && (
+                    <div className="flex items-start gap-3 rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3" role="alert">
+                        <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--eixo-danger)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <p className="text-sm font-semibold text-[var(--eixo-danger)]">{submitError}</p>
+                    </div>
+                )}
+                {submitSuccess && (
+                    <div className="flex items-start gap-3 rounded-2xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-4 py-3" role="status">
+                        <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        <p className="text-sm font-semibold text-[var(--eixo-success)]">{submitSuccess}</p>
+                    </div>
+                )}
+
+                {currentStep === 'divisions' && activeFarm && (
+                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
+                        <p className="text-sm font-semibold text-[var(--eixo-text)]">Finalize o cadastro ou adicione outro pasto.</p>
+                        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:justify-end">
+                            <button
+                                type="button"
+                                onClick={() => void saveDivisions('save-and-add')}
+                                disabled={isSaveDisabled}
+                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[#ece9e6] disabled:cursor-not-allowed disabled:bg-[#d6d3d1]"
+                            >
+                                {isSubmitting ? 'Salvando...' : 'Salvar e adicionar outro pasto'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => void saveDivisions('save-and-return')}
+                                disabled={isSaveDisabled}
+                                className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors duration-200 hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
+                            >
+                                {isSubmitting ? 'Salvando...' : 'Salvar e fechar'}
+                            </button>
+                        </div>
+                    </div>
                 )}
 
 
@@ -980,19 +1151,6 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     </div>
                 )}
 
-                {submitError && (
-                    <div className="flex items-start gap-3 rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3">
-                        <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--eixo-danger)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                        <p className="text-sm font-semibold text-[var(--eixo-danger)]">{submitError}</p>
-                    </div>
-                )}
-                {submitSuccess && (
-                    <div className="flex items-start gap-3 rounded-2xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-4 py-3">
-                        <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                        <p className="text-sm font-semibold text-[var(--eixo-success)]">{submitSuccess}</p>
-                    </div>
-                )}
-
                 {currentStep === 'divisions' && (
                     <div className="rounded-2xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--eixo-graphite)]">Capacidade total estimada</p>
@@ -1003,26 +1161,6 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                     </div>
                 )}
 
-                {currentStep === 'divisions' && activeFarm && (
-                    <div className="flex justify-end gap-3">
-                        <button
-                            type="button"
-                            onClick={() => void saveDivisions('save-and-return')}
-                            disabled={isSaveDisabled}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[#ece9e6] disabled:cursor-not-allowed disabled:bg-[#d6d3d1]"
-                        >
-                            {isSubmitting ? 'Salvando...' : 'Salvar e fechar'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => void saveDivisions('complete')}
-                            disabled={isSaveDisabled}
-                            className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors duration-200 hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
-                        >
-                            {isSubmitting ? 'Salvando...' : 'Salvar e continuar editando'}
-                        </button>
-                    </div>
-                )}
             </form>
         </div>
     );

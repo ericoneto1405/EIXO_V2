@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, GeoJSON, Marker, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import '@geoman-io/leaflet-geoman-free';
@@ -163,6 +163,7 @@ const MapCenterController: React.FC<{ lat: number; lng: number }> = ({ lat, lng 
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPage = false }) => {
+    const activePaddocks = useMemo(() => farm.paddocks.filter((paddock) => paddock.active !== false), [farm.paddocks]);
     const [editMode, setEditMode] = useState(false);
     const [selectedPaddock, setSelectedPaddock] = useState<Paddock | null>(null);
     const [summary, setSummary] = useState<Map<string, PaddockSummary>>(new Map());
@@ -176,7 +177,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
     // Local paddock geometries — starts from farm.paddocks, updated on draw/edit
     const [paddockGeometries, setPaddockGeometries] = useState<Record<string, Geometry>>(() => {
         const init: Record<string, Geometry> = {};
-        for (const p of farm.paddocks) {
+        for (const p of activePaddocks) {
             if (p.mapGeometry) init[p.id] = p.mapGeometry as Geometry;
         }
         return init;
@@ -195,12 +196,12 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
     useEffect(() => {
         setPaddockGeometries((prev: Record<string, Geometry>) => {
             const next: Record<string, Geometry> = { ...prev };
-            for (const p of farm.paddocks) {
+            for (const p of activePaddocks) {
                 if (p.mapGeometry) next[p.id] = p.mapGeometry as Geometry;
             }
             return next;
         });
-    }, [farm.paddocks]);
+    }, [activePaddocks]);
 
     // Pending drawn layer awaiting paddock assignment
     const [pendingLayer, setPendingLayer] = useState<{ layer: L.Layer; geojson: Feature } | null>(null);
@@ -229,8 +230,8 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
     const handleLayerCreated = useCallback((layer: L.Layer) => {
         const geojson = (layer as L.Polygon).toGeoJSON() as Feature;
         setPendingLayer({ layer, geojson });
-        setPendingAssignPaddockId(farm.paddocks[0]?.id ?? '');
-    }, [farm.paddocks]);
+        setPendingAssignPaddockId(activePaddocks[0]?.id ?? '');
+    }, [activePaddocks]);
 
     const handleLayerEdited = useCallback((layer: L.Layer) => {
         const geojson = (layer as L.Polygon).toGeoJSON() as Feature;
@@ -259,7 +260,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
         setSaveSuccess(null);
         setIsSaving(true);
 
-        const paddocksPayload = farm.paddocks.map((p) => ({
+        const paddocksPayload = activePaddocks.map((p) => ({
             id: p.id,
             name: p.name,
             areaHa: p.areaHa,
@@ -341,7 +342,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
             setImportedFeatures(
                 polygons.map((f, i) => ({
                     feature: f,
-                    assignedPaddockId: farm.paddocks[i]?.id ?? farm.paddocks[0]?.id ?? '',
+                    assignedPaddockId: activePaddocks[i]?.id ?? activePaddocks[0]?.id ?? '',
                 })),
             );
         } catch (err: unknown) {
@@ -452,7 +453,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                         />
 
                         {/* Paddock polygons */}
-                        {farm.paddocks.map((paddock) => {
+                        {activePaddocks.map((paddock) => {
                             const geometry = paddockGeometries[paddock.id];
                             if (!geometry) return null;
                             const featureData: Feature = {
@@ -580,7 +581,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                 onChange={(e) => setPendingAssignPaddockId(e.target.value)}
                                 className="mb-4 mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[#ffffff] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                             >
-                                {farm.paddocks.map((p) => (
+                                {activePaddocks.map((p) => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
                             </select>
@@ -669,7 +670,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                                 className="block w-36 rounded-xl border border-[var(--eixo-border)] bg-[#ffffff] px-2 py-1.5 text-xs text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
                                             >
                                                 <option value="">— ignorar —</option>
-                                                {farm.paddocks.map((p) => (
+                                                {activePaddocks.map((p) => (
                                                     <option key={p.id} value={p.id}>{p.name}</option>
                                                 ))}
                                             </select>
