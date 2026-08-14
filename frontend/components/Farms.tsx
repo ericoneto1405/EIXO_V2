@@ -4,6 +4,7 @@ import OnboardingSpotlight from './OnboardingSpotlight';
 import { Farm } from '../types';
 
 const FarmMap = React.lazy(() => import('./FarmMap'));
+const PharmacyModule = React.lazy(() => import('./PharmacyModule'));
 
 // Icons
 const PlusIcon: React.FC = () => <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>;
@@ -23,7 +24,7 @@ interface FarmsProps {
 const TABS: { key: string; label: string; comingSoon?: boolean }[] = [
     { key: 'farms', label: 'Fazendas e Pastos' },
     { key: 'map', label: 'Mapa da Fazenda' },
-    { key: 'pharmacy', label: 'Farmácia', comingSoon: true },
+    { key: 'pharmacy', label: 'Farmácia' },
     { key: 'supplies', label: 'Galpão de Suprimentos', comingSoon: true },
     { key: 'machinery', label: 'Maquinários', comingSoon: true },
 ];
@@ -147,10 +148,14 @@ const Farms: React.FC<FarmsProps> = ({
                             Estrutura da Fazenda
                         </div>
                         <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">
-                            Fazendas e Pastos
+                            {activeTab === 'pharmacy' ? 'Farmácia' : activeTab === 'map' ? 'Mapa da Fazenda' : 'Fazendas e Pastos'}
                         </h1>
                         <p className="mt-1 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
-                            Gerencie as fazendas cadastradas e a base territorial da operação.
+                            {activeTab === 'pharmacy'
+                                ? 'Controle produtos, lotes, validades e movimentações da fazenda selecionada.'
+                                : activeTab === 'map'
+                                    ? 'Visualize e organize a base territorial da fazenda selecionada.'
+                                    : 'Gerencie as fazendas cadastradas e a base territorial da operação.'}
                         </p>
                     </div>
                     {!showForm && activeTab === 'farms' && (() => {
@@ -242,6 +247,17 @@ const Farms: React.FC<FarmsProps> = ({
                     <div className="rounded-[24px] border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-12 text-center">
                         <p className="text-base font-bold text-[var(--eixo-text)]">Selecione uma fazenda para abrir o mapa</p>
                         <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Use o seletor de fazendas no topo da tela.</p>
+                    </div>
+                )
+            ) : activeTab === 'pharmacy' ? (
+                selectedFarm ? (
+                    <React.Suspense fallback={<div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-10 text-center text-sm text-[var(--eixo-text-muted)]">Carregando farmácia...</div>}>
+                        <PharmacyModule key={selectedFarm.id} farm={selectedFarm} />
+                    </React.Suspense>
+                ) : (
+                    <div className="rounded-[24px] border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-12 text-center">
+                        <p className="text-base font-bold text-[var(--eixo-text)]">Selecione uma fazenda para abrir a farmácia</p>
+                        <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">O estoque é separado por fazenda.</p>
                     </div>
                 )
             ) : (

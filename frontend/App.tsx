@@ -12,7 +12,6 @@ import Settings from './components/Settings';
 import Header from './components/Header';
 import Farms from './components/Farms';
 import Suppliers from './components/Suppliers';
-import Medicines from './components/Medicines';
 import Feeds from './components/Feeds';
 import Supplements from './components/Supplements';
 import SemenTankModule from './components/SemenTankModule';
@@ -92,7 +91,7 @@ const MODULE_CATEGORIES = [
     },
     {
         title: 'Cadastros',
-        modules: ['Fornecedores', 'Remédios', 'Rações', 'Suplementos'],
+        modules: ['Fornecedores', 'Rações', 'Suplementos'],
     },
     {
         title: 'Nutrição',
@@ -303,6 +302,7 @@ const AppContent: React.FC = () => {
         }
         const LEGACY_MODULE_MAP: Record<string, string> = {
             'Mapa da Fazenda': 'Fazendas',
+            'Remédios': 'Fazendas',
             'Rebanho Genética': 'Eixo Genetics',
             'Rebanho P.O.': 'Plantel P.O.',
             'Plantel P.O.': 'Plantel P.O.',
@@ -991,8 +991,6 @@ const AppContent: React.FC = () => {
         switch (activeView) {
             case 'Fornecedores':
                 return <Suppliers />;
-            case 'Remédios':
-                return <Medicines />;
             case 'Rações':
                 return <Feeds />;
             case 'Suplementos':
