@@ -251,6 +251,9 @@ model Farm {
   nutritionUnits          NutritionUnit[]
   paddocks                Paddock[]
   paddockMoves            PaddockMove[]
+  pharmacyProducts        PharmacyProduct[]
+  pharmacyBatches         PharmacyBatch[]
+  pharmacyMovements       PharmacyMovement[]
   poAnimals               PoAnimal[]
   poLots                  PoLot[]
   poWeighings             PoWeighing[]
@@ -2178,6 +2181,71 @@ model SanitaryRecord {
   @@index([poAnimalId])
 }
 
+model PharmacyProduct {
+  id                     String             @id @default(uuid())
+  farmId                 String
+  name                   String
+  activeIngredient       String?
+  category               String
+  manufacturer           String?
+  presentation           String?
+  unit                   String
+  applicationUnit        String?
+  minStock               Float              @default(0)
+  storageLocation        String?
+  refrigerated           Boolean            @default(false)
+  slaughterWithdrawalDays Int?
+  milkWithdrawalDays     Int?
+  notes                  String?
+  active                 Boolean            @default(true)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  farm                   Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  batches                PharmacyBatch[]
+  movements              PharmacyMovement[]
+
+  @@unique([farmId, name])
+  @@index([farmId, active])
+}
+
+model PharmacyBatch {
+  id           String             @id @default(uuid())
+  farmId       String
+  productId    String
+  lotNumber    String
+  expiresAt    DateTime?
+  quantity     Float              @default(0)
+  unitCost     Float?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  farm         Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  product      PharmacyProduct    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  movements    PharmacyMovement[]
+
+  @@unique([productId, lotNumber])
+  @@index([farmId, expiresAt])
+  @@index([productId])
+}
+
+model PharmacyMovement {
+  id        String               @id @default(uuid())
+  farmId    String
+  productId String
+  batchId   String
+  type      PharmacyMovementType
+  quantity  Float
+  unitCost  Float?
+  notes     String?
+  createdAt DateTime             @default(now())
+  farm      Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  product   PharmacyProduct      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  batch     PharmacyBatch        @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, createdAt])
+  @@index([productId, createdAt])
+  @@index([batchId, createdAt])
+}
+
 model HerdSettings {
   id                   String   @id @default(uuid())
   farmId               String   @unique
@@ -2504,6 +2572,12 @@ enum AppActivationStatus {
   CODIGO_EXPIRADO
   BLOQUEADO
   APARELHO_REVOGADO
+}
+
+enum PharmacyMovementType {
+  ENTRY
+  EXIT
+  ADJUSTMENT
 }
 
 enum FinancialTransactionType {
