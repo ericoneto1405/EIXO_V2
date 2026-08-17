@@ -761,7 +761,7 @@ const computeSelectionKpis = ({ events, animalId, seasonId, exposuresSet }) => {
 };
 
 export function registerAnimalRoutes(app) {
-app.patch('/animals/:id', async (req, res) => {
+app.patch('/animals/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { lotId, brinco, raca, sexo, categoria, dataNascimento, registro,
             nome, brincoEletronico, padraoRacial, tipoRaca, composicaoMestica, racaPredominante,
@@ -2087,7 +2087,7 @@ app.post('/animals', requireAuth, async (req, res) => {
 
 // ── Registrar nascimento — fluxo dedicado ─────────────────────────────────────
 // Cria o bezerro puxando raça e pasto da mãe automaticamente quando possível
-app.post('/animals/nascimento', async (req, res) => {
+app.post('/animals/nascimento', requireAuth, async (req, res) => {
     const { farmId, maeId, sexo, dataNascimento, pesoNascimento, nome, lotId, paddockId, origemNascimento, embryoTransferId } = req.body || {};
     const isTe = String(origemNascimento || '').toUpperCase() === 'TE' || Boolean(embryoTransferId);
 
@@ -2227,7 +2227,7 @@ app.post('/animals/nascimento', async (req, res) => {
     }
 });
 
-app.post('/animals/:id/identificacao-definitiva', async (req, res) => {
+app.post('/animals/:id/identificacao-definitiva', requireAuth, async (req, res) => {
     const identificacao = String(req.body?.identificacao || '').trim();
     if (!identificacao) return res.status(400).json({ message: 'Informe a identificação definitiva.' });
     try {
@@ -2260,7 +2260,7 @@ app.post('/animals/:id/identificacao-definitiva', async (req, res) => {
     }
 });
 
-app.post('/animals/:id/desmama', async (req, res) => {
+app.post('/animals/:id/desmama', requireAuth, async (req, res) => {
     try {
         const { error, result, previousIdentification, definitiveId } = await weanCalf({ req, animalId: req.params.id, isPo: false });
         if (error) return res.status(error.status).json({ message: error.message });
@@ -2281,7 +2281,7 @@ app.post('/animals/:id/desmama', async (req, res) => {
     }
 });
 
-app.post('/animals/:id/matriz-responsavel', async (req, res) => {
+app.post('/animals/:id/matriz-responsavel', requireAuth, async (req, res) => {
     const matrizResponsavelId = String(req.body?.matrizResponsavelId || '').trim();
     if (!matrizResponsavelId) return res.status(400).json({ message: 'Informe a matriz responsável.' });
     try {
@@ -2315,7 +2315,7 @@ app.post('/animals/:id/matriz-responsavel', async (req, res) => {
 });
 
 // ── Entrada de lote: cria múltiplos animais de uma só vez ─────────────────────
-app.post('/animals/batch', async (req, res) => {
+app.post('/animals/batch', requireAuth, async (req, res) => {
     const { farmId, paddockId, lotId, dataCompra, valorPorCabeca, animals } = req.body || {};
 
     if (!farmId || !paddockId || !Array.isArray(animals) || animals.length === 0) {
@@ -2453,7 +2453,7 @@ app.post('/animals/batch', async (req, res) => {
 
 // ── Ações em massa ────────────────────────────────────────────────────────────
 
-app.post('/animals/bulk-delete', async (req, res) => {
+app.post('/animals/bulk-delete', requireAuth, async (req, res) => {
     const { ids } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ message: 'Informe ao menos um animal.' });
@@ -2479,7 +2479,7 @@ app.post('/animals/bulk-delete', async (req, res) => {
     }
 });
 
-app.post('/animals/bulk-move-lot', async (req, res) => {
+app.post('/animals/bulk-move-lot', requireAuth, async (req, res) => {
     const { ids, lotId } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ message: 'Informe ao menos um animal.' });
@@ -2512,7 +2512,7 @@ app.post('/animals/bulk-move-lot', async (req, res) => {
     }
 });
 
-app.post('/animals/bulk-move-pasto', async (req, res) => {
+app.post('/animals/bulk-move-pasto', requireAuth, async (req, res) => {
     const { ids, pastoId, startAt, notes } = req.body || {};
     try {
         const { error, result } = await moveAnimalsBetweenPaddocks({
@@ -2531,7 +2531,7 @@ app.post('/animals/bulk-move-pasto', async (req, res) => {
     }
 });
 
-app.post('/animals/bulk-weighings', async (req, res) => {
+app.post('/animals/bulk-weighings', requireAuth, async (req, res) => {
     const { farmId, animalIds, animalCount, data, totalWeightKg, weighingSessionId } = req.body || {};
     try {
         const { error, result } = await createBulkWeighings({
@@ -2553,7 +2553,7 @@ app.post('/animals/bulk-weighings', async (req, res) => {
     }
 });
 
-app.post('/animals/bulk-transfer-farm', async (req, res) => {
+app.post('/animals/bulk-transfer-farm', requireAuth, async (req, res) => {
     const { ids, targetFarmId, targetPaddockId, transferDate, notes } = req.body || {};
     try {
         const { error, result } = await transferAnimalsToFarm({
@@ -2650,7 +2650,7 @@ app.get('/animals/:id/pesagens', async (req, res) => {
     }
 });
 
-app.post('/animals/:id/pesagens', async (req, res) => {
+app.post('/animals/:id/pesagens', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { data, peso, forceReplace } = req.body || {};
     const weighingSessionId = req.body?.weighingSessionId ?? null;
@@ -2797,7 +2797,7 @@ app.get('/animals/:id/paddock-moves', async (req, res) => {
     }
 });
 
-app.post('/animals/:id/paddock-moves', async (req, res) => {
+app.post('/animals/:id/paddock-moves', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { paddockId, startAt, notes } = req.body || {};
 
@@ -2850,7 +2850,7 @@ app.get('/po/animals/:id/paddock-moves', async (req, res) => {
     }
 });
 
-app.post('/po/animals/:id/paddock-moves', async (req, res) => {
+app.post('/po/animals/:id/paddock-moves', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { paddockId, startAt, notes } = req.body || {};
 
@@ -2879,7 +2879,7 @@ app.post('/po/animals/:id/paddock-moves', async (req, res) => {
     }
 });
 
-app.post('/animals/:id/move-pasto', async (req, res) => {
+app.post('/animals/:id/move-pasto', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { pastoId, paddockId, date, startAt, notes, farmId } = req.body || {};
     const targetPaddockId = pastoId || paddockId;

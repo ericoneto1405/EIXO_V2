@@ -97,7 +97,16 @@ export interface AnimalUI {
     gmd30?: number | null;
     lotId?: string | null;
     registro?: string | null;
+    registrationEntity?: string | null;
+    registrationNumber?: string | null;
+    registrationType?: string | null;
+    registrationCategory?: string | null;
     categoria?: string | null;
+    statusReprodutivo?: string | null;
+    previsaoParto?: string | null;
+    emTransferenciaEmbriao?: boolean;
+    marcadoDescarte?: boolean;
+    motivoDescarte?: string | null;
     selectionDecision?: string | null;
     currentPaddockId?: string | null;
     currentPaddockName?: string | null;

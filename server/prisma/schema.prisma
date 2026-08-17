@@ -642,8 +642,18 @@ model PoAnimal {
   lotId                String?
   currentPaddockId     String
   registro             String?
+  identityKey          String?
+  registrationEntity  String?
+  registrationNumber  String?
+  registrationType    String?
+  registrationCategory String?
   categoria            String?
   observacoes          String?
+  statusReprodutivo    String?
+  previsaoParto        DateTime?
+  emTransferenciaEmbriao Boolean              @default(false)
+  marcadoDescarte      Boolean                 @default(false)
+  motivoDescarte       String?
   maeId                String?
   maeNome              String?
   paiId                String?
@@ -691,6 +701,8 @@ model PoAnimal {
 
   @@unique([farmId, brinco])
   @@index([farmId])
+  @@index([identityKey])
+  @@index([registrationEntity, registrationNumber])
   @@index([lotId])
   @@index([currentPaddockId])
   @@index([maeId])
