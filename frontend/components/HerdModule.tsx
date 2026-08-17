@@ -1293,7 +1293,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     };
 
     const handleDownloadImportTemplate = async () => {
-        const url = buildApiUrl(isPoMode ? '/po/herd/import/template' : '/herd/import/template');
+        if (!farmId) throw new Error('Selecione uma fazenda para baixar a planilha modelo.');
+        const templatePath = isPoMode ? '/po/herd/import/template' : '/herd/import/template';
+        const url = buildApiUrl(`${templatePath}?farmId=${encodeURIComponent(farmId)}`);
         const res = await fetch(url, { credentials: 'include' });
         if (!res.ok) throw new Error('Erro ao baixar planilha modelo');
         const blob = await res.blob();
@@ -2143,21 +2145,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 <div className="flex flex-wrap items-start gap-[10px] xl:justify-end">
                                     <button
                                         type="button"
-                                        onClick={openAnimalForm}
-                                        className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
-                                    >
-                                        <PlusIcon className="h-[18px] w-[18px]" />
-                                        <span className="ml-2 hidden sm:block">Adicionar animal</span>
-                                    </button>
-                                    <button
-                                        type="button"
                                         onClick={() => setShowImportModal(true)}
                                         className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                                     >
                                         <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
                                         </svg>
-                                        <span className="ml-2 hidden sm:block">Importar Rebanho</span>
+                                        <span className="ml-2 hidden sm:block">Importar planilha</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={openAnimalForm}
+                                        className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-green)] bg-white px-[14px] font-bold text-[var(--eixo-green-dark)] transition-colors duration-200 hover:bg-[var(--eixo-green)]/10"
+                                    >
+                                        <PlusIcon className="h-[18px] w-[18px]" />
+                                        <span className="ml-2 hidden sm:block">Adicionar animal</span>
                                     </button>
                                     <div className="relative" ref={columnsMenuRef}>
                                         <button
@@ -3044,6 +3046,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 farmName={farmName}
                 onSuccess={loadData}
                 herdType={resolvedMode}
+                paddocks={paddocks}
+                lots={lots}
             />
 
             {embryoTransferModalOpen && (

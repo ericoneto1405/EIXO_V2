@@ -470,7 +470,7 @@ app.post('/po/animals', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/po/animals/nascimento', async (req, res) => {
+app.post('/po/animals/nascimento', requireAuth, async (req, res) => {
     const { farmId, maeId, paiId, sexo, dataNascimento, pesoNascimento, nome, lotId, paddockId, origemNascimento, embryoTransferId } = req.body || {};
     const isTe = String(origemNascimento || '').toUpperCase() === 'TE' || Boolean(embryoTransferId);
     if (!farmId || (!isTe && !maeId) || (isTe && !embryoTransferId) || !sexo || !dataNascimento) {
@@ -595,7 +595,7 @@ app.post('/po/animals/nascimento', async (req, res) => {
     }
 });
 
-app.post('/po/animals/:id/identificacao-definitiva', async (req, res) => {
+app.post('/po/animals/:id/identificacao-definitiva', requireAuth, async (req, res) => {
     const identificacao = String(req.body?.identificacao || '').trim();
     if (!identificacao) return res.status(400).json({ message: 'Informe a identificação definitiva.' });
     try {
@@ -618,7 +618,7 @@ app.post('/po/animals/:id/identificacao-definitiva', async (req, res) => {
     }
 });
 
-app.post('/po/animals/:id/desmama', async (req, res) => {
+app.post('/po/animals/:id/desmama', requireAuth, async (req, res) => {
     try {
         const { error, result, previousIdentification, definitiveId } = await weanCalf({ req, animalId: req.params.id, isPo: true });
         if (error) return res.status(error.status).json({ message: error.message });
@@ -639,7 +639,7 @@ app.post('/po/animals/:id/desmama', async (req, res) => {
     }
 });
 
-app.post('/po/animals/:id/matriz-responsavel', async (req, res) => {
+app.post('/po/animals/:id/matriz-responsavel', requireAuth, async (req, res) => {
     const matrizResponsavelId = String(req.body?.matrizResponsavelId || '').trim();
     if (!matrizResponsavelId) return res.status(400).json({ message: 'Informe a matriz responsável P.O.' });
     try {
@@ -669,7 +669,7 @@ app.post('/po/animals/:id/matriz-responsavel', async (req, res) => {
     }
 });
 
-app.post('/po/animals/:id/genealogia', async (req, res) => {
+app.post('/po/animals/:id/genealogia', requireAuth, async (req, res) => {
     const maeId = req.body?.maeId ? String(req.body.maeId) : null;
     const paiId = req.body?.paiId ? String(req.body.paiId) : null;
     try {
@@ -707,7 +707,7 @@ app.post('/po/animals/:id/genealogia', async (req, res) => {
     }
 });
 
-app.post('/po/animals/batch', async (req, res) => {
+app.post('/po/animals/batch', requireAuth, async (req, res) => {
     const { farmId, paddockId, lotId, dataCompra, valorPorCabeca, animals } = req.body || {};
     if (!farmId || !paddockId || !Array.isArray(animals) || !animals.length) {
         return res.status(400).json({ message: 'Informe fazenda, pasto e animais P.O.' });
@@ -767,7 +767,7 @@ app.post('/po/animals/batch', async (req, res) => {
     }
 });
 
-app.patch('/po/animals/:id', async (req, res) => {
+app.patch('/po/animals/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { lotId, brinco, nome, raca, sexo, dataNascimento, registro, categoria, observacoes } = req.body || {};
 
@@ -863,7 +863,7 @@ app.patch('/po/animals/:id', async (req, res) => {
     }
 });
 
-app.delete('/po/animals/:id', async (req, res) => {
+app.delete('/po/animals/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
     try {
         const animal = await prisma.poAnimal.findFirst({
@@ -968,10 +968,10 @@ app.delete('/po/lots/:id', requireNonFieldWorker, async (req, res) => {
     }
 });
 app.get('/po/animals/:id/pesagens', (req, res) => listPoWeighings(req, res, 'pesagens'));
-app.post('/po/animals/:id/pesagens', (req, res) => createPoWeighing(req, res, 'pesagem'));
+app.post('/po/animals/:id/pesagens', requireAuth, (req, res) => createPoWeighing(req, res, 'pesagem'));
 
 app.get('/po/animals/:id/weighings', (req, res) => listPoWeighings(req, res, 'weighings'));
-app.post('/po/animals/:id/weighings', (req, res) => createPoWeighing(req, res, 'weighing'));
+app.post('/po/animals/:id/weighings', requireAuth, (req, res) => createPoWeighing(req, res, 'weighing'));
 app.get('/po/semen', async (req, res) => {
     const { farmId } = req.query || {};
     if (!farmId) {
@@ -1805,7 +1805,7 @@ app.delete('/po/embryos/:id', async (req, res) => {
         return res.status(500).json({ message: 'Erro ao excluir lote de embriões.' });
     }
 });
-app.post('/po/animals/bulk-delete', async (req, res) => {
+app.post('/po/animals/bulk-delete', requireAuth, async (req, res) => {
     const { ids } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ message: 'Informe ao menos um animal P.O.' });
@@ -1830,7 +1830,7 @@ app.post('/po/animals/bulk-delete', async (req, res) => {
     }
 });
 
-app.post('/po/animals/bulk-move-lot', async (req, res) => {
+app.post('/po/animals/bulk-move-lot', requireAuth, async (req, res) => {
     const { ids, lotId } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ message: 'Informe ao menos um animal P.O.' });
@@ -1863,7 +1863,7 @@ app.post('/po/animals/bulk-move-lot', async (req, res) => {
     }
 });
 
-app.post('/po/animals/bulk-move-pasto', async (req, res) => {
+app.post('/po/animals/bulk-move-pasto', requireAuth, async (req, res) => {
     const { ids, pastoId, startAt, notes } = req.body || {};
     try {
         const { error, result } = await moveAnimalsBetweenPaddocks({
@@ -1882,7 +1882,7 @@ app.post('/po/animals/bulk-move-pasto', async (req, res) => {
     }
 });
 
-app.post('/po/animals/bulk-weighings', async (req, res) => {
+app.post('/po/animals/bulk-weighings', requireAuth, async (req, res) => {
     const { farmId, animalIds, animalCount, data, totalWeightKg, weighingSessionId } = req.body || {};
     try {
         const { error, result } = await createBulkWeighings({
@@ -1904,7 +1904,7 @@ app.post('/po/animals/bulk-weighings', async (req, res) => {
     }
 });
 
-app.post('/po/animals/bulk-transfer-farm', async (req, res) => {
+app.post('/po/animals/bulk-transfer-farm', requireAuth, async (req, res) => {
     const { ids, targetFarmId, targetPaddockId, transferDate, notes } = req.body || {};
     try {
         const { error, result } = await transferAnimalsToFarm({
@@ -1950,7 +1950,7 @@ app.get('/po/animals/:id/paddock-moves', async (req, res) => {
     }
 });
 
-app.post('/po/animals/:id/paddock-moves', async (req, res) => {
+app.post('/po/animals/:id/paddock-moves', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { paddockId, startAt, notes } = req.body || {};
 
@@ -1979,7 +1979,7 @@ app.post('/po/animals/:id/paddock-moves', async (req, res) => {
     }
 });
 
-app.post('/animals/:id/move-pasto', async (req, res) => {
+app.post('/animals/:id/move-pasto', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { pastoId, paddockId, date, startAt, notes, farmId } = req.body || {};
     const targetPaddockId = pastoId || paddockId;
@@ -2016,7 +2016,7 @@ app.post('/animals/:id/move-pasto', async (req, res) => {
     }
 });
 
-app.post('/po/animals/:id/move-pasto', async (req, res) => {
+app.post('/po/animals/:id/move-pasto', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { pastoId, paddockId, date, startAt, notes, farmId } = req.body || {};
     const targetPaddockId = pastoId || paddockId;

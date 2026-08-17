@@ -18,6 +18,10 @@ dist-ssr
 
 server/backups/
 
+# Chaves de deploy devem permanecer fora do repositório
+github-deploy-key*
+eixo-github-actions-deploy*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
