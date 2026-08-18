@@ -9,6 +9,7 @@ import { logActivity } from '../utils/activityLog.js';
 import { serializeHerdEvent, serializeSanitaryRecord } from '../utils/serializers.js';
 import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../config/env.js';
 import { createIntegratedTransaction, upsertAutomaticResult } from '../financial/financialService.js';
+import { normalizeImportText, normalizeSexoImport, normalizeTipoRacaImport } from './herdImportRules.js';
 const prisma = new PrismaClient();
 
 const VALID_EVENT_TYPES = ['NASCIMENTO', 'COMPRA', 'VENDA', 'MORTE'];
@@ -746,18 +747,19 @@ function validateUploadRow(row, line) {
   const sexo = normalizeSexoImport(row.sexo);
   if (!sexo) errs.push('Sexo é obrigatório (MACHO ou FEMEA)');
 
-  const tipoRaca = String(row.tipo_raca || '').trim().toLowerCase();
+  const tipoRacaInformado = normalizeImportText(row.tipo_raca);
+  const tipoRaca = normalizeTipoRacaImport(row.tipo_raca);
   const racaPreenchida = String(row.raca || '').trim();
   const composicaoPreenchida = String(row.composicao_mestica || '').trim();
 
-  if (!tipoRaca) {
+  if (!tipoRacaInformado) {
     errs.push('Tipo de Raça é obrigatório (Pura ou Mestiça)');
-  } else if (!['pura', 'mestica', 'mestiça'].includes(tipoRaca)) {
+  } else if (!tipoRaca) {
     errs.push('Tipo de Raça deve ser "Pura" ou "Mestiça"');
-  } else if (tipoRaca === 'pura' && !racaPreenchida) {
+  } else if (tipoRaca === 'Pura' && !racaPreenchida) {
     errs.push('Raça (se Pura) precisa ser preenchida');
   } else if (
-    (tipoRaca === 'mestica' || tipoRaca === 'mestiça')
+    tipoRaca === 'Mestiça'
     && !composicaoPreenchida
     && !racaPreenchida
   ) {
@@ -817,77 +819,72 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const line = row.__line || i + 1;
-      const err = validateUploadRow(row, line);
-      if (err) { erros.push(err); continue; }
-      const brinco = String(row.identificacao).trim();
-      const identityKey = normalizeAnimalIdentityKey(brinco);
-      if (identityLines.has(identityKey)) {
-        erros.push({ line, identificacao: brinco, motivos: [`Identificação duplicada na planilha (também na linha ${identityLines.get(identityKey)})`], dados: { ...row } });
+      const validationError = validateUploadRow(row, line);
+      const rowReasons = [...(validationError?.motivos || [])];
+      const brinco = String(row.identificacao || '').trim();
+      const identityKey = brinco ? normalizeAnimalIdentityKey(brinco) : null;
+      if (identityKey && identityLines.has(identityKey)) {
+        rowReasons.push(`Identificação duplicada na planilha (também na linha ${identityLines.get(identityKey)})`);
+      } else if (identityKey) {
+        identityLines.set(identityKey, line);
+      }
+      const sexo = normalizeSexoImport(row.sexo);
+      const tipoRacaNormalizado = normalizeTipoRacaImport(row.tipo_raca);
+      const isPura = tipoRacaNormalizado === 'Pura';
+
+      // Tolerância: se Mestiça e só Raça foi preenchida (sem Composição),
+      // marca Composição como "Comercial / Sem definição" e usa Raça como predominante
+      const racaInput = String(row.raca || '').trim();
+      const composicaoInput = String(row.composicao_mestica || '').trim();
+      const racaPredominanteInput = String(row.raca_predominante || '').trim();
+      let composicaoFinal = composicaoInput;
+      let racaPredominanteFinal = racaPredominanteInput;
+      if (!isPura && !composicaoInput && racaInput) {
+        composicaoFinal = 'Comercial / Sem definição';
+        racaPredominanteFinal = racaPredominanteFinal || racaInput;
+      }
+
+      const dataNascimento = parseImportDate(row.data_nascimento);
+      const previsaoParto = parseImportDate(row.previsao_parto);
+      const dataPesagem = parseImportDate(row.data_pesagem);
+      const pesoAtual = parseNumber(row.ultimo_peso_kg);
+      if (row.data_nascimento && !dataNascimento) rowReasons.push('Data de nascimento inválida');
+      if (row.data_pesagem && !dataPesagem) rowReasons.push('Data da pesagem inválida');
+      if (row.ultimo_peso_kg && (!pesoAtual || pesoAtual <= 0)) rowReasons.push('Último peso deve ser maior que zero');
+      if (row.previsao_parto && !previsaoParto) rowReasons.push('Previsão de parto inválida');
+      const destinationReasons = [];
+      const paddock = resolveImportDestination(row.pasto_destino, defaultPaddock, paddockLookup, 'Pasto de destino', destinationReasons);
+      const lot = resolveImportDestination(row.lote_destino, defaultLot, lotLookup, 'Lote de destino', destinationReasons);
+      rowReasons.push(...destinationReasons);
+      if (rowReasons.length) {
+        erros.push({ line, identificacao: brinco || null, motivos: [...new Set(rowReasons)], dados: { ...row } });
         continue;
       }
-      identityLines.set(identityKey, line);
-        const sexo = normalizeSexoImport(row.sexo);
-        const tipoRacaRaw = String(row.tipo_raca || '').trim().toLowerCase();
-        const isPura = tipoRacaRaw === 'pura';
-        const tipoRacaNormalizado = isPura ? 'Pura' : (tipoRacaRaw ? 'Mestiça' : null);
-
-        // Tolerância: se Mestiça e só Raça foi preenchida (sem Composição),
-        // marca Composição como "Comercial / Sem definição" e usa Raça como predominante
-        const racaInput = String(row.raca || '').trim();
-        const composicaoInput = String(row.composicao_mestica || '').trim();
-        const racaPredominanteInput = String(row.raca_predominante || '').trim();
-        let composicaoFinal = composicaoInput;
-        let racaPredominanteFinal = racaPredominanteInput;
-        if (!isPura && !composicaoInput && racaInput) {
-          composicaoFinal = 'Comercial / Sem definição';
-          racaPredominanteFinal = racaPredominanteFinal || racaInput;
-        }
-
-        const dataNascimento = parseImportDate(row.data_nascimento);
-        const previsaoParto = parseImportDate(row.previsao_parto);
-        const dataPesagem = parseImportDate(row.data_pesagem);
-        const pesoAtual = parseNumber(row.ultimo_peso_kg);
-        const fieldReasons = [];
-        if (row.data_nascimento && !dataNascimento) fieldReasons.push('Data de nascimento inválida');
-        if (row.data_pesagem && !dataPesagem) fieldReasons.push('Data da pesagem inválida');
-        if (row.ultimo_peso_kg && (!pesoAtual || pesoAtual <= 0)) fieldReasons.push('Último peso deve ser maior que zero');
-        if (row.previsao_parto && !previsaoParto) fieldReasons.push('Previsão de parto inválida');
-        if (fieldReasons.length) {
-          erros.push({ line, identificacao: brinco, motivos: fieldReasons, dados: { ...row } });
-          continue;
-        }
-        const destinationReasons = [];
-        const paddock = resolveImportDestination(row.pasto_destino, defaultPaddock, paddockLookup, 'Pasto de destino', destinationReasons);
-        const lot = resolveImportDestination(row.lote_destino, defaultLot, lotLookup, 'Lote de destino', destinationReasons);
-        if (destinationReasons.length) {
-          erros.push({ line, identificacao: brinco, motivos: destinationReasons, dados: { ...row } });
-          continue;
-        }
-        prepared.push({ line, brinco, identityKey, dataPesagem, pesoAtual, paddock, raw: { ...row }, data: {
-            farmId,
-            brinco,
-            identityKey,
-            nome: String(row.nome || '').trim() || null,
-            brincoEletronico: String(row.brinco_eletronico || '').trim() || null,
-            tipoRaca: tipoRacaNormalizado,
-            raca: isPura ? (racaInput || null) : null,
-            padraoRacial: isPura ? (String(row.padrao_racial || '').trim() || null) : null,
-            composicaoMestica: !isPura ? (composicaoFinal || null) : null,
-            racaPredominante: !isPura ? (racaPredominanteFinal || null) : null,
-            tipoCadastro: 'MESTICO', // refinado depois pela tela de animal
-            sexo,
-            dataNascimento,
-            pesoAtual,
-            statusReprodutivo: String(row.status_reprodutivo || '').trim() || null,
-            previsaoParto,
-            registro: String(row.registro || '').trim() || null,
-            paiNome: String(row.pai_nome || '').trim() || null,
-            maeNome: String(row.mae_nome || '').trim() || null,
-            observacoes: String(row.observacoes || '').trim() || null,
-            categoria: String(row.categoria || '').trim() || null,
-            currentPaddockId: paddock?.id || null,
-            lotId: lot?.id || null,
-        } });
+      prepared.push({ line, brinco, identityKey, dataPesagem, pesoAtual, paddock, raw: { ...row }, data: {
+          farmId,
+          brinco,
+          identityKey,
+          nome: String(row.nome || '').trim() || null,
+          brincoEletronico: String(row.brinco_eletronico || '').trim() || null,
+          tipoRaca: tipoRacaNormalizado,
+          raca: isPura ? (racaInput || null) : null,
+          padraoRacial: isPura ? (String(row.padrao_racial || '').trim() || null) : null,
+          composicaoMestica: !isPura ? (composicaoFinal || null) : null,
+          racaPredominante: !isPura ? (racaPredominanteFinal || null) : null,
+          tipoCadastro: 'MESTICO', // refinado depois pela tela de animal
+          sexo,
+          dataNascimento,
+          pesoAtual,
+          statusReprodutivo: String(row.status_reprodutivo || '').trim() || null,
+          previsaoParto,
+          registro: String(row.registro || '').trim() || null,
+          paiNome: String(row.pai_nome || '').trim() || null,
+          maeNome: String(row.mae_nome || '').trim() || null,
+          observacoes: String(row.observacoes || '').trim() || null,
+          categoria: String(row.categoria || '').trim() || null,
+          currentPaddockId: paddock?.id || null,
+          lotId: lot?.id || null,
+      } });
     }
 
     if (prepared.length) {
@@ -1419,14 +1416,6 @@ const OPTIONAL_COLUMNS = [
   'ultimo_tratamento', 'data_ultimo_tratamento', 'carencia_ate',
   'observacao_geral',
 ];
-
-function normalizeSexoImport(value) {
-  if (typeof value !== 'string') return null;
-  const v = value.trim().toLowerCase();
-  if (v === 'macho' || v === 'm') return 'MACHO';
-  if (v === 'femea' || v === 'fêmea' || v === 'f') return 'FEMEA';
-  return null;
-}
 
 function normalizeTipoCadastroImport(value) {
   if (typeof value !== 'string') return null;

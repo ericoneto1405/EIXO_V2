@@ -176,12 +176,19 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 body: JSON.stringify({ erros, linhasCorrecao: result?.detalhes?.linhasCorrecao }),
             });
             if (!res.ok) throw new Error('Erro ao gerar planilha de erros');
+            const contentType = res.headers.get('content-type') || '';
+            if (!contentType.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+                throw new Error('Resposta inválida ao gerar planilha de erros');
+            }
             const blob = await res.blob();
+            const objectUrl = URL.createObjectURL(blob);
             const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
+            link.href = objectUrl;
             link.download = `[EIXO] ${farmName || 'Fazenda'} - Planilha completa para correção.xlsx`;
+            document.body.appendChild(link);
             link.click();
-            URL.revokeObjectURL(link.href);
+            link.remove();
+            window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
             setDownloadMessage('Planilha completa baixada. Corrija as linhas indicadas e envie novamente.');
         } catch (err) {
             console.error(err);
@@ -445,7 +452,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             onClick={handlePickCorrectedFile}
                             className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
                         >
-                            Enviar planilha corrigida
+                            Selecionar planilha corrigida
                         </button>
                     )}
                     {status === 'done' && result && result.criados > 0 && (

@@ -2,6 +2,50 @@ import { upsertSystemAccountCategories } from '../../accountCategoryDefaults.js'
 
 const toMoney = (value) => Math.round(Number(value || 0) * 100) / 100;
 
+const addMonthsClamped = (date, months) => {
+    const source = new Date(date);
+    const day = source.getUTCDate();
+    const target = new Date(Date.UTC(source.getUTCFullYear(), source.getUTCMonth() + months, 1));
+    const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+    target.setUTCDate(Math.min(day, lastDay));
+    return target;
+};
+
+export const buildPurchasePaymentSchedule = ({ amount, condition, purchaseDate, dueDate, installments }) => {
+    const totalCents = Math.round(Number(amount || 0) * 100);
+    if (!(totalCents > 0)) throw new Error('Informe um valor de compra válido.');
+
+    const normalizedCondition = String(condition || 'PAGO').toUpperCase();
+    const baseDate = purchaseDate instanceof Date ? purchaseDate : new Date(purchaseDate);
+    if (Number.isNaN(baseDate.getTime())) throw new Error('Data da compra inválida.');
+
+    if (normalizedCondition === 'PAGO') {
+        return [{ amount: totalCents / 100, status: 'PAGO', dueDate: null, settledAt: baseDate, installment: 1, installments: 1 }];
+    }
+
+    const firstDueDate = dueDate instanceof Date ? dueDate : new Date(dueDate);
+    if (Number.isNaN(firstDueDate.getTime())) throw new Error('Informe a data do primeiro vencimento.');
+
+    const count = normalizedCondition === 'PARCELADO' ? Number(installments) : 1;
+    if (!Number.isInteger(count) || count < 1 || count > 60 || (normalizedCondition === 'PARCELADO' && count < 2)) {
+        throw new Error('Informe uma quantidade de parcelas entre 2 e 60.');
+    }
+    if (!['A_PAGAR', 'PARCELADO'].includes(normalizedCondition)) {
+        throw new Error('Condição de pagamento inválida.');
+    }
+
+    const baseCents = Math.floor(totalCents / count);
+    const remainder = totalCents - baseCents * count;
+    return Array.from({ length: count }, (_, index) => ({
+        amount: (baseCents + (index < remainder ? 1 : 0)) / 100,
+        status: 'PENDENTE',
+        dueDate: addMonthsClamped(firstDueDate, index),
+        settledAt: null,
+        installment: index + 1,
+        installments: count,
+    }));
+};
+
 export const RESULT_CLASS_LABELS = {
     OPERATING_REVENUE: 'Receita operacional',
     PRODUCTION_COST: 'Custo de produção',

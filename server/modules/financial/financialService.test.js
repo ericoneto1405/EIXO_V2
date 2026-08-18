@@ -1,6 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { resolveAllocations, summarizeCashFlow, summarizeIncomeStatement, syncTransactionResult, upsertAutomaticResult } from './financialService.js';
+import { buildPurchasePaymentSchedule, resolveAllocations, summarizeCashFlow, summarizeIncomeStatement, syncTransactionResult, upsertAutomaticResult } from './financialService.js';
+
+test('compra paga gera um único lançamento realizado', () => {
+    const schedule = buildPurchasePaymentSchedule({ amount: 1500, condition: 'PAGO', purchaseDate: '2026-08-18' });
+    assert.equal(schedule.length, 1);
+    assert.equal(schedule[0].amount, 1500);
+    assert.equal(schedule[0].status, 'PAGO');
+    assert.equal(schedule[0].dueDate, null);
+});
+
+test('compra parcelada preserva o total e vencimentos mensais', () => {
+    const schedule = buildPurchasePaymentSchedule({ amount: 100, condition: 'PARCELADO', purchaseDate: '2026-08-18', dueDate: '2026-08-31', installments: 3 });
+    assert.deepEqual(schedule.map((item) => item.amount), [33.34, 33.33, 33.33]);
+    assert.deepEqual(schedule.map((item) => item.dueDate.toISOString().slice(0, 10)), ['2026-08-31', '2026-09-30', '2026-10-31']);
+    assert.equal(schedule.reduce((sum, item) => sum + item.amount, 0), 100);
+});
 
 test('DRE separa receita, custo, despesa e resultados financeiros', () => {
     const result = summarizeIncomeStatement([

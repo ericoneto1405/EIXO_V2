@@ -16,7 +16,7 @@ import {
     serializeEmbryoBatch, serializePaddock, getOccurrenceAnimalLabel,
 } from '../utils/serializers.js';
 import { REPRO_WINDOW_DAYS, DEFAULT_THRESHOLDS, HERD_EVENT_CATEGORY_MAP } from '../config/env.js';
-import { createIntegratedTransaction } from '../financial/financialService.js';
+import { buildPurchasePaymentSchedule, createIntegratedTransaction } from '../financial/financialService.js';
 import { buildProvisionalIdentification, buildTeProvisionalIdentification } from './herdIntegrityService.js';
 import { registerNutritionModuleRoutes } from '../../nutritionModule.js';
 import { registerAcasalamentoRoutes } from '../../acasalamentoModule.js';
@@ -2215,6 +2215,38 @@ app.post('/animals/nascimento', requireAuth, async (req, res) => {
                 },
             });
 
+            const existingBirthEvent = await tx.reproEvent.findFirst({
+                where: { farmId, animalId: maeAnimal.id, type: 'PARTO', date: birthDate },
+                select: { id: true, payload: true },
+            });
+            const birthPayload = {
+                ...(existingBirthEvent?.payload && typeof existingBirthEvent.payload === 'object' ? existingBirthEvent.payload : {}),
+                calfSex: formatSexoLabel(sexoEnum),
+                calfAnimalId: created.id,
+                birthOrigin: isTe ? 'TE' : 'NATURAL',
+            };
+            if (existingBirthEvent) {
+                await tx.reproEvent.update({ where: { id: existingBirthEvent.id }, data: { payload: birthPayload } });
+            } else {
+                await tx.reproEvent.create({
+                    data: {
+                        farmId,
+                        animalId: maeAnimal.id,
+                        type: 'PARTO',
+                        date: birthDate,
+                        payload: birthPayload,
+                        notes: isTe
+                            ? `Parto com cria por TE — ${created.brinco}`
+                            : `Parto com cria cadastrada — ${created.brinco}`,
+                    },
+                });
+            }
+
+            await tx.animal.update({
+                where: { id: maeAnimal.id },
+                data: { statusReprodutivo: 'VAZIA', previsaoParto: null, emTransferenciaEmbriao: false },
+            });
+
             return created;
         });
 
@@ -2316,7 +2348,7 @@ app.post('/animals/:id/matriz-responsavel', requireAuth, async (req, res) => {
 
 // ── Entrada de lote: cria múltiplos animais de uma só vez ─────────────────────
 app.post('/animals/batch', requireAuth, async (req, res) => {
-    const { farmId, paddockId, lotId, dataCompra, valorPorCabeca, animals } = req.body || {};
+    const { farmId, paddockId, lotId, dataCompra, valorPorCabeca, fornecedor, condicaoPagamento, vencimento, parcelas, animals } = req.body || {};
 
     if (!farmId || !paddockId || !Array.isArray(animals) || animals.length === 0) {
         return res.status(400).json({ message: 'farmId, paddockId e animais são obrigatórios.' });
@@ -2337,9 +2369,10 @@ app.post('/animals/batch', requireAuth, async (req, res) => {
 
     const compraDate = dataCompra ? parseDateValue(dataCompra) : new Date();
     const parsedValor = valorPorCabeca ? parseNumber(valorPorCabeca) : null;
+    const supplier = String(fornecedor || '').trim();
     const catMap = HERD_EVENT_CATEGORY_MAP['COMPRA'];
-    if (!compraDate || (valorPorCabeca !== undefined && valorPorCabeca !== '' && (parsedValor === null || parsedValor <= 0))) {
-        return res.status(400).json({ message: 'Data ou valor de compra inválido.' });
+    if (!compraDate || !supplier || parsedValor === null || parsedValor <= 0) {
+        return res.status(400).json({ message: 'Informe fornecedor, data e valor por cabeça válidos.' });
     }
 
     const normalizedAnimals = animals.map((animal, index) => ({
@@ -2371,9 +2404,23 @@ app.post('/animals/batch', requireAuth, async (req, res) => {
         return res.status(409).json({ message: `Brinco já cadastrado: ${existing.brinco}` });
     }
 
+    let paymentSchedule;
+    try {
+        paymentSchedule = buildPurchasePaymentSchedule({
+            amount: parsedValor * normalizedAnimals.length,
+            condition: condicaoPagamento,
+            purchaseDate: compraDate,
+            dueDate: vencimento,
+            installments: parcelas,
+        });
+    } catch (error) {
+        return res.status(400).json({ message: error.message });
+    }
+
     try {
         const created = await prisma.$transaction(async (tx) => {
             const results = [];
+            const purchaseEvents = [];
             for (const item of normalizedAnimals) {
                 const animal = await tx.animal.create({
                     data: {
@@ -2416,26 +2463,28 @@ app.post('/animals/batch', requireAuth, async (req, res) => {
                         date: compraDate,
                         peso: item.peso,
                         valor: parsedValor,
-                        observacoes: `Entrada de lote — brinco ${item.brinco}`,
+                        observacoes: `Compra de ${supplier} — brinco ${item.brinco}`,
                         purchasePurpose: 'PRODUCTION',
                     },
                 });
-                if (parsedValor && parsedValor > 0) {
-                    await createIntegratedTransaction(tx, {
-                        farmId,
-                        type: catMap.type,
-                        categoria: catMap.categoria,
-                        accountCategoryId: 'sys-compra-animais-producao',
-                        amount: parsedValor,
-                        competenceDate: compraDate,
-                        description: `Compra de animal — ${item.brinco}`,
-                        herdEventId: herdEvent.id,
-                        animalId: animal.id,
-                        allocations: [{ lotId: lotId || null, paddockId }],
-                    });
-                }
-
+                purchaseEvents.push(herdEvent);
                 results.push(animal);
+            }
+            for (const installment of paymentSchedule) {
+                await createIntegratedTransaction(tx, {
+                    farmId,
+                    type: catMap.type,
+                    categoria: catMap.categoria,
+                    accountCategoryId: 'sys-compra-animais-producao',
+                    amount: installment.amount,
+                    competenceDate: compraDate,
+                    settledAt: installment.settledAt,
+                    status: installment.status,
+                    dueDate: installment.dueDate,
+                    description: `Compra de ${results.length} animal(is) — ${supplier}${installment.installments > 1 ? ` — parcela ${installment.installment}/${installment.installments}` : ''}`,
+                    herdEventId: purchaseEvents[0]?.id || null,
+                    allocations: [{ lotId: validLotId, paddockId }],
+                });
             }
             return results;
         });

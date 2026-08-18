@@ -77,6 +77,10 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
     // ── campos gerais ──
     const [dataCompra, setDataCompra] = useState(today);
     const [valorPorCabeca, setValorPorCabeca] = useState('');
+    const [fornecedor, setFornecedor] = useState('');
+    const [condicaoPagamento, setCondicaoPagamento] = useState<'PAGO' | 'A_PAGAR' | 'PARCELADO'>('PAGO');
+    const [vencimento, setVencimento] = useState('');
+    const [parcelas, setParcelas] = useState('2');
     const [paddockId, setPaddockId] = useState('');
     const [lotId, setLotId] = useState('');
     const [racaPadrao, setRacaPadrao] = useState('');
@@ -93,6 +97,10 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
         if (!isOpen) return;
         setDataCompra(today);
         setValorPorCabeca('');
+        setFornecedor('');
+        setCondicaoPagamento('PAGO');
+        setVencimento('');
+        setParcelas('2');
         setPaddockId(paddocks[0]?.id ?? '');
         setLotId('');
         setRacaPadrao('');
@@ -120,14 +128,19 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
         );
     };
 
-    const valorTotal =
-        rows.length * (parseFloat(valorPorCabeca.replace(',', '.')) || 0);
+    const valorTotal = rows.filter((row) => row.brinco.trim()).length * (parseImportNumber(valorPorCabeca) || 0);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
 
         if (!paddockId) { setError('Selecione o pasto de destino.'); return; }
+        if (!fornecedor.trim()) { setError('Informe o fornecedor da compra.'); return; }
+        if ((parseImportNumber(valorPorCabeca) ?? 0) <= 0) { setError('Informe um valor por cabeça válido.'); return; }
+        if (condicaoPagamento !== 'PAGO' && !vencimento) { setError('Informe a data do primeiro vencimento.'); return; }
+        if (condicaoPagamento === 'PARCELADO' && (Number(parcelas) < 2 || Number(parcelas) > 60)) {
+            setError('Informe uma quantidade de parcelas entre 2 e 60.'); return;
+        }
 
         const validRows = rows.filter((r) => r.brinco.trim());
         if (validRows.length === 0) { setError('Informe pelo menos um brinco.'); return; }
@@ -170,6 +183,10 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                     valorPorCabeca: valorPorCabeca
                         ? parseImportNumber(valorPorCabeca) ?? undefined
                         : undefined,
+                    fornecedor: fornecedor.trim(),
+                    condicaoPagamento,
+                    vencimento: condicaoPagamento === 'PAGO' ? undefined : vencimento,
+                    parcelas: condicaoPagamento === 'PARCELADO' ? Number(parcelas) : undefined,
                     animals,
                 }),
             });
@@ -203,7 +220,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                         <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--eixo-text-muted)]">
                             Manejo do Rebanho
                         </p>
-                        <h3 className="text-xl font-extrabold text-[var(--eixo-text)]">Entrada de lote</h3>
+                        <h3 className="text-xl font-extrabold text-[var(--eixo-text)]">Registrar compra de animais</h3>
                     </div>
                     <button
                         type="button"
@@ -227,6 +244,17 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                             </p>
                             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                                 <div>
+                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Fornecedor</label>
+                                    <input
+                                        type="text"
+                                        value={fornecedor}
+                                        onChange={(e) => setFornecedor(e.target.value)}
+                                        placeholder="Nome do vendedor"
+                                        className={`mt-1 ${inputCls}`}
+                                        required
+                                    />
+                                </div>
+                                <div>
                                     <label className="block text-sm font-medium text-[var(--eixo-text)]">Data da compra</label>
                                     <input
                                         type="date"
@@ -248,8 +276,29 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                                         onChange={(e) => setValorPorCabeca(e.target.value)}
                                         placeholder="0,00"
                                         className={`mt-1 ${inputCls}`}
+                                        required
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Pagamento</label>
+                                    <select value={condicaoPagamento} onChange={(e) => setCondicaoPagamento(e.target.value as typeof condicaoPagamento)} className={`mt-1 ${inputCls}`}>
+                                        <option value="PAGO">Pago</option>
+                                        <option value="A_PAGAR">A pagar</option>
+                                        <option value="PARCELADO">Parcelado</option>
+                                    </select>
+                                </div>
+                                {condicaoPagamento !== 'PAGO' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Primeiro vencimento</label>
+                                        <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} className={`mt-1 ${inputCls}`} required />
+                                    </div>
+                                )}
+                                {condicaoPagamento === 'PARCELADO' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Parcelas</label>
+                                        <input type="number" min="2" max="60" value={parcelas} onChange={(e) => setParcelas(e.target.value)} className={`mt-1 ${inputCls}`} required />
+                                    </div>
+                                )}
                                 <div>
                                     <label className="block text-sm font-medium text-[var(--eixo-text)]">Raça padrão</label>
                                     <input
@@ -419,7 +468,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                             disabled={saving}
                             className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-60"
                         >
-                            {saving ? 'Salvando...' : `Salvar ${rows.filter((r) => r.brinco.trim()).length} animal(is)`}
+                            {saving ? 'Registrando...' : `Registrar compra de ${rows.filter((r) => r.brinco.trim()).length} animal(is)`}
                         </button>
                     </div>
                 </form>
