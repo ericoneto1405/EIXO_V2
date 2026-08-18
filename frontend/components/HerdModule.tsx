@@ -318,6 +318,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [visibleColumns, setVisibleColumns] = useState<Set<string>>(new Set(HERD_TABLE_COLUMN_KEYS));
     const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
     const columnsMenuRef = useRef<HTMLDivElement | null>(null);
+    const [entriesMenuOpen, setEntriesMenuOpen] = useState(false);
+    const entriesMenuRef = useRef<HTMLDivElement | null>(null);
     const [healthQuickFilter, setHealthQuickFilter] = useState<HealthQuickFilter>('none');
     const [currentPage, setCurrentPage] = useState(1);
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
@@ -346,18 +348,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [lotFormError, setLotFormError] = useState<string | null>(null);
     const headerFilterRef = useRef<HTMLDivElement | null>(null);
 
-    // Modal de nascimento
+    // Mantidos temporariamente para compatibilidade do formulário legado, sem atalho na aba Animais.
     const [nascimentoModalOpen, setNascimentoModalOpen] = useState(false);
-    const [nascimentoForm, setNascimentoForm] = useState({
-        sexo: 'Fêmea',
-        dataNascimento: new Date().toISOString().slice(0, 10),
-        pesoNascimento: '',
-        nome: '',
-        maeId: '',
-        maeNome: '',
-        paiId: '',
-        paiNome: '',
-    });
+    const [nascimentoForm, setNascimentoForm] = useState({ sexo: 'Fêmea', dataNascimento: new Date().toISOString().slice(0, 10), pesoNascimento: '', nome: '', maeId: '', maeNome: '', paiId: '', paiNome: '' });
     const [nascimentoError, setNascimentoError] = useState<string | null>(null);
     const [nascimentoSuccess, setNascimentoSuccess] = useState<string | null>(null);
     const [nascimentoSaving, setNascimentoSaving] = useState(false);
@@ -369,6 +362,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [embryoTransferForm, setEmbryoTransferForm] = useState({ embryoBatchId: '', recipientId: '', transferredAt: new Date().toISOString().slice(0, 10), notes: '' });
     const [embryoTransferError, setEmbryoTransferError] = useState<string | null>(null);
     const [embryoTransferSaving, setEmbryoTransferSaving] = useState(false);
+
     const [identificationAnimal, setIdentificationAnimal] = useState<HerdAnimal | null>(null);
     const [definitiveIdentification, setDefinitiveIdentification] = useState('');
     const [newResponsibleMotherId, setNewResponsibleMotherId] = useState('');
@@ -507,32 +501,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         }
     }, [farmId, resolvedMode]);
 
-    const openBirthModal = async () => {
-        setNascimentoModalOpen(true);
-        setNascimentoError(null);
-        setNascimentoSuccess(null);
-        if (!farmId) return;
-        try {
-            setEmbryoTransfers(await listEmbryoTransfers(farmId, resolvedMode));
-        } catch (error: any) {
-            setNascimentoError(error?.message || 'Não foi possível carregar as transferências pendentes.');
-        }
-    };
-
-    const openEmbryoTransferModal = async () => {
-        setEmbryoTransferModalOpen(true);
-        setEmbryoTransferError(null);
-        if (!farmId) return;
-        try {
-            const response = await fetch(buildApiUrl(`/po/embryos?farmId=${encodeURIComponent(farmId)}`), { credentials: 'include' });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data?.message || 'Erro ao carregar lotes de embrião.');
-            setEmbryoBatches((data.batches || []).filter((batch: any) => batch.tecnica === 'TE' && batch.quantidadeDisponivel > 0));
-        } catch (error: any) {
-            setEmbryoTransferError(error?.message || 'Não foi possível carregar os lotes de embrião.');
-        }
-    };
-
     useEffect(() => {
         loadData();
     }, [loadData]);
@@ -566,11 +534,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkTargetLotId('');
         setBulkTargetPastoId('');
         setBulkError(null);
-        setNascimentoModalOpen(false);
-        setEmbryoTransferModalOpen(false);
-        setBirthOrigin('NATURAL');
-        setSelectedEmbryoTransferId('');
-        setEmbryoTransfers([]);
         setIdentificationAnimal(null);
         setIdentificationError(null);
     }, [farmId, resolvedMode]);
@@ -645,6 +608,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             document.removeEventListener('mousedown', handleOutsideColumns);
         };
     }, [columnsMenuOpen]);
+
+    useEffect(() => {
+        const handleOutsideEntries = (event: MouseEvent) => {
+            if (!entriesMenuRef.current?.contains(event.target as Node)) setEntriesMenuOpen(false);
+        };
+        if (entriesMenuOpen) document.addEventListener('mousedown', handleOutsideEntries);
+        return () => document.removeEventListener('mousedown', handleOutsideEntries);
+    }, [entriesMenuOpen]);
 
     const toggleHerdColumn = (key: string) => {
         setVisibleColumns((prev) => {
@@ -2153,84 +2124,29 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         </svg>
                                         <span className="ml-2 hidden sm:block">Importar planilha</span>
                                     </button>
-                                    <button
-                                        type="button"
-                                        onClick={openAnimalForm}
-                                        className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-green)] bg-white px-[14px] font-bold text-[var(--eixo-green-dark)] transition-colors duration-200 hover:bg-[var(--eixo-green)]/10"
-                                    >
-                                        <PlusIcon className="h-[18px] w-[18px]" />
-                                        <span className="ml-2 hidden sm:block">Adicionar animal</span>
-                                    </button>
-                                    <div className="relative" ref={columnsMenuRef}>
+                                    <div className="relative" ref={entriesMenuRef}>
                                         <button
                                             type="button"
-                                            onClick={() => setColumnsMenuOpen((prev) => !prev)}
-                                            className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-border)] bg-white px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
+                                            onClick={() => setEntriesMenuOpen((prev) => !prev)}
+                                            className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-green)] bg-white px-[14px] font-bold text-[var(--eixo-green-dark)] transition-colors duration-200 hover:bg-[var(--eixo-green)]/10"
+                                            aria-expanded={entriesMenuOpen}
+                                            aria-haspopup="menu"
                                         >
-                                            <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 6a2 2 0 100-4 2 2 0 000 4zm0 12a2 2 0 100-4 2 2 0 000 4zm0 0h16M9 12h11M4 12a2 2 0 100-4 2 2 0 000 4z" />
-                                            </svg>
-                                            <span className="ml-2 hidden sm:block">Colunas</span>
+                                            <PlusIcon className="h-[18px] w-[18px]" />
+                                            <span className="ml-2">Adicionar animais</span>
+                                            <span className="ml-2 text-xs">▾</span>
                                         </button>
-                                        {columnsMenuOpen && (
-                                            <div className="absolute right-0 top-12 z-20 w-56 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-2 shadow-lg">
-                                                <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Mostrar colunas</p>
-                                                <label className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--eixo-text-muted)] opacity-60">
-                                                    <input type="checkbox" checked disabled className="h-4 w-4 rounded border-[var(--eixo-border)]" />
-                                                    ID <span className="ml-auto text-[10px]">fixo</span>
-                                                </label>
-                                                <div className="my-1 border-t border-[var(--eixo-border)]" />
-                                                {HERD_TABLE_COLUMNS.map((col) => (
-                                                    <label key={col.key} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)] cursor-pointer">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={visibleColumns.has(col.key)}
-                                                            onChange={() => toggleHerdColumn(col.key)}
-                                                            className="h-4 w-4 rounded border-[var(--eixo-border)] accent-[#B6E23A] cursor-pointer"
-                                                        />
-                                                        {col.label}
-                                                    </label>
-                                                ))}
-                                                <div className="my-1 border-t border-[var(--eixo-border)]" />
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        setVisibleColumns(new Set(HERD_TABLE_COLUMN_KEYS));
-                                                        updateMyHerdColumns(HERD_TABLE_COLUMN_KEYS).catch(() => {});
-                                                    }}
-                                                    className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
-                                                >
-                                                    Restaurar padrão
+                                        {entriesMenuOpen && (
+                                            <div role="menu" className="absolute right-0 top-12 z-20 w-64 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-2 shadow-lg">
+                                                <button type="button" role="menuitem" onClick={() => { setEntriesMenuOpen(false); openAnimalForm(); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                                                    Adicionar um animal
+                                                </button>
+                                                <button type="button" role="menuitem" onClick={() => { setEntriesMenuOpen(false); setLoteModalOpen(true); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                                                    Registrar compra de animais
                                                 </button>
                                             </div>
                                         )}
                                     </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => { void openBirthModal(); }}
-                                        className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-border)] bg-white px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
-                                    >
-                                        <span className="mr-1.5">🐄</span>
-                                        <span className="hidden sm:block">Registrar nascimento</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => { void openEmbryoTransferModal(); }}
-                                        className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-border)] bg-white px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
-                                    >
-                                        <span className="mr-1.5">🧬</span>
-                                        <span className="hidden sm:block">Registrar TE</span>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setLoteModalOpen(true)}
-                                        className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-border)] bg-white px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
-                                    >
-                                        <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        <span className="ml-2 hidden sm:block">Entrada de lote</span>
-                                    </button>
                                 </div>
                             </>
                         )}
@@ -2398,6 +2314,47 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             )}
                             Exportar ({sortedAnimals.length})
                         </button>
+                        <div className="relative" ref={columnsMenuRef}>
+                            <button
+                                type="button"
+                                onClick={() => setColumnsMenuOpen((prev) => !prev)}
+                                className="flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                                aria-expanded={columnsMenuOpen}
+                                aria-haspopup="menu"
+                            >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                                Personalizar colunas
+                            </button>
+                            {columnsMenuOpen && (
+                                <div role="menu" className="absolute right-0 top-11 z-20 w-56 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-2 shadow-lg">
+                                    <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Mostrar colunas</p>
+                                    <label className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--eixo-text-muted)] opacity-60">
+                                        <input type="checkbox" checked disabled className="h-4 w-4 rounded border-[var(--eixo-border)]" />
+                                        ID <span className="ml-auto text-[10px]">fixo</span>
+                                    </label>
+                                    <div className="my-1 border-t border-[var(--eixo-border)]" />
+                                    {HERD_TABLE_COLUMNS.map((col) => (
+                                        <label key={col.key} className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                                            <input type="checkbox" checked={visibleColumns.has(col.key)} onChange={() => toggleHerdColumn(col.key)} className="h-4 w-4 cursor-pointer rounded border-[var(--eixo-border)] accent-[#B6E23A]" />
+                                            {col.label}
+                                        </label>
+                                    ))}
+                                    <div className="my-1 border-t border-[var(--eixo-border)]" />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setVisibleColumns(new Set(HERD_TABLE_COLUMN_KEYS));
+                                            updateMyHerdColumns(HERD_TABLE_COLUMN_KEYS).catch(() => {});
+                                        }}
+                                        className="w-full rounded-lg px-2 py-1.5 text-left text-xs font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                                    >
+                                        Restaurar padrão
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

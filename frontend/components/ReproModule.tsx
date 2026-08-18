@@ -9,7 +9,6 @@ import {
     getReproKpis,
     getReproFarol,
     listPartos,
-    createParto,
     deleteParto,
     listDesmamas,
     createDesmama,
@@ -22,8 +21,9 @@ import {
     NewCheckupRecord,
 } from '../adapters/reproApi';
 import { createBirthAnimal } from '../adapters/herdApi';
+import { BirthRegistrationPanel, EmbryoTransferPanel } from './ReproBirthAndTe';
 
-type TabKey = 'indicadores' | 'avaliacoes' | 'nova' | 'partos' | 'desmama';
+type TabKey = 'indicadores' | 'avaliacoes' | 'nova' | 'te' | 'partos' | 'desmama';
 
 interface Season {
     id: string;
@@ -78,10 +78,6 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
 
     // Partos
     const [partos, setPartos] = useState<ReproParto[]>([]);
-    const [partoForm, setPartoForm] = useState({ animalId: '', date: todayISO(), calfSex: '', notes: '' });
-    const [partoError, setPartoError] = useState<string | null>(null);
-    const [partoOk, setPartoOk] = useState<string | null>(null);
-    const [savingParto, setSavingParto] = useState(false);
 
     // Desmamas
     const [desmamas, setDesmamas] = useState<ReproDesmama[]>([]);
@@ -303,37 +299,6 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
         }
     };
 
-    const handleSaveParto = async () => {
-        setPartoError(null);
-        setPartoOk(null);
-        if (!farmId) return;
-        if (!partoForm.animalId) {
-            setPartoError('Escolha a vaca.');
-            return;
-        }
-        if (!partoForm.date) {
-            setPartoError('Informe a data do parto.');
-            return;
-        }
-        setSavingParto(true);
-        try {
-            await createParto({
-                farmId,
-                animalId: partoForm.animalId,
-                date: partoForm.date,
-                calfSex: partoForm.calfSex || null,
-                notes: partoForm.notes || null,
-            });
-            setPartoOk('Parto registrado. A vaca foi atualizada no Rebanho.');
-            setPartoForm({ animalId: '', date: todayISO(), calfSex: '', notes: '' });
-            await Promise.all([loadPartos(), loadKpis()]);
-        } catch (err) {
-            setPartoError(err instanceof Error ? err.message : 'Erro ao registrar parto.');
-        } finally {
-            setSavingParto(false);
-        }
-    };
-
     const handleDeleteParto = async (id: string) => {
         try {
             await deleteParto(id);
@@ -439,7 +404,8 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
         { key: 'indicadores', label: 'Indicadores' },
         { key: 'avaliacoes', label: 'Avaliações' },
         { key: 'nova', label: 'Nova avaliação' },
-        { key: 'partos', label: 'Partos' },
+        { key: 'te', label: 'TE e Embriões' },
+        { key: 'partos', label: 'Partos e nascimentos' },
         { key: 'desmama', label: 'Desmama' },
     ];
 
@@ -827,74 +793,19 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                 </div>
             )}
 
-            {/* ── Partos ── */}
+            {activeTab === 'te' && farmId && (
+                <div className={cardClass}>
+                    <EmbryoTransferPanel farmId={farmId} />
+                </div>
+            )}
+
+            {/* ── Partos e nascimentos ── */}
             {activeTab === 'partos' && (
                 <div className={cardClass}>
-                    <h3 className="text-sm font-semibold text-[var(--eixo-text)]">Registrar parto</h3>
-
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <div>
-                            <label className={labelClass}>Vaca</label>
-                            <select
-                                value={partoForm.animalId}
-                                onChange={(e) => setPartoForm({ ...partoForm, animalId: e.target.value })}
-                                className={inputClass}
-                            >
-                                <option value="">Selecione</option>
-                                {femaleAnimals.map((animal) => (
-                                    <option key={animal.id} value={animal.id}>
-                                        {animal.brinco || animal.id}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className={labelClass}>Data do parto</label>
-                            <input
-                                type="date"
-                                value={partoForm.date}
-                                onChange={(e) => setPartoForm({ ...partoForm, date: e.target.value })}
-                                className={inputClass}
-                            />
-                        </div>
-                        <div>
-                            <label className={labelClass}>Sexo do bezerro</label>
-                            <select
-                                value={partoForm.calfSex}
-                                onChange={(e) => setPartoForm({ ...partoForm, calfSex: e.target.value })}
-                                className={inputClass}
-                            >
-                                <option value="">Opcional</option>
-                                <option value="Macho">Macho</option>
-                                <option value="Fêmea">Fêmea</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className={labelClass}>Observações</label>
-                            <input
-                                type="text"
-                                value={partoForm.notes}
-                                onChange={(e) => setPartoForm({ ...partoForm, notes: e.target.value })}
-                                placeholder="Opcional"
-                                className={inputClass}
-                            />
-                        </div>
-                    </div>
-
-                    {partoError && <p className="text-sm text-[var(--eixo-danger)]">{partoError}</p>}
-                    {partoOk && <p className="text-sm text-[var(--eixo-green)]">{partoOk}</p>}
-
-                    <button
-                        type="button"
-                        onClick={handleSaveParto}
-                        disabled={savingParto || !partoForm.animalId}
-                        className="w-full rounded-xl bg-primary text-[#1a1a1a] font-semibold py-2 transition-colors hover:bg-primary-dark disabled:opacity-50"
-                    >
-                        {savingParto ? 'Salvando…' : 'Registrar parto'}
-                    </button>
+                    {farmId && <BirthRegistrationPanel farmId={farmId} onRegistered={() => { void Promise.all([loadPartos(), loadKpis()]); }} />}
 
                     <div className="border-t border-[var(--eixo-border)] pt-4">
-                        <h3 className="text-sm font-semibold text-[var(--eixo-text)]">Partos registrados</h3>
+                        <h3 className="text-sm font-semibold text-[var(--eixo-text)]">Partos registrados no rebanho comercial</h3>
                         {partos.length === 0 ? (
                             <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Nenhum parto registrado ainda.</p>
                         ) : (
