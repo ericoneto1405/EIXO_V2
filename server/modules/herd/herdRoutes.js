@@ -9,7 +9,7 @@ import { logActivity } from '../utils/activityLog.js';
 import { serializeHerdEvent, serializeSanitaryRecord } from '../utils/serializers.js';
 import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../config/env.js';
 import { createIntegratedTransaction, upsertAutomaticResult } from '../financial/financialService.js';
-import { normalizeImportText, normalizeSexoImport, normalizeTipoRacaImport } from './herdImportRules.js';
+import { normalizeImportText, normalizeSexoImport, normalizeTipoRacaImport, parseImportDate } from './herdImportRules.js';
 const prisma = new PrismaClient();
 
 const VALID_EVENT_TYPES = ['NASCIMENTO', 'COMPRA', 'VENDA', 'MORTE'];
@@ -816,6 +816,7 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
     const erros = [];
     const prepared = [];
     const identityLines = new Map();
+    const registroLines = new Map();
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const line = row.__line || i + 1;
@@ -823,10 +824,18 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
       const rowReasons = [...(validationError?.motivos || [])];
       const brinco = String(row.identificacao || '').trim();
       const identityKey = brinco ? normalizeAnimalIdentityKey(brinco) : null;
-      if (identityKey && identityLines.has(identityKey)) {
-        rowReasons.push(`Identificação duplicada na planilha (também na linha ${identityLines.get(identityKey)})`);
-      } else if (identityKey) {
-        identityLines.set(identityKey, line);
+      const identityLookupKey = identityKey ? normalizeHeader(identityKey) : null;
+      if (identityLookupKey && identityLines.has(identityLookupKey)) {
+        rowReasons.push(`Identificação duplicada na planilha (também na linha ${identityLines.get(identityLookupKey)})`);
+      } else if (identityLookupKey) {
+        identityLines.set(identityLookupKey, line);
+      }
+      const registro = String(row.registro || '').trim() || null;
+      const registroLookupKey = registro ? normalizeHeader(registro) : null;
+      if (registroLookupKey && registroLines.has(registroLookupKey)) {
+        rowReasons.push(`Registro duplicado na planilha (também na linha ${registroLines.get(registroLookupKey)})`);
+      } else if (registroLookupKey) {
+        registroLines.set(registroLookupKey, line);
       }
       const sexo = normalizeSexoImport(row.sexo);
       const tipoRacaNormalizado = normalizeTipoRacaImport(row.tipo_raca);
@@ -852,6 +861,15 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
       if (row.data_pesagem && !dataPesagem) rowReasons.push('Data da pesagem inválida');
       if (row.ultimo_peso_kg && (!pesoAtual || pesoAtual <= 0)) rowReasons.push('Último peso deve ser maior que zero');
       if (row.previsao_parto && !previsaoParto) rowReasons.push('Previsão de parto inválida');
+      // Peso preenchido sem data: usa a data da importação para não perder o registro de pesagem.
+      // Data preenchida sem peso: não há o que registrar, segue sem pesagem (sem erro).
+      const dataPesagemEfetiva = dataPesagem || (pesoAtual ? new Date() : null);
+      const categoriaInput = String(row.categoria || '').trim();
+      // Campo opcional: se não bater com a lista oficial, ignora o valor (fica em branco)
+      // em vez de bloquear a linha inteira.
+      const categoriaNormalizada = categoriaInput
+        ? CATEGORIAS.find((opt) => normalizeHeader(opt) === normalizeHeader(categoriaInput)) || null
+        : null;
       const destinationReasons = [];
       const paddock = resolveImportDestination(row.pasto_destino, defaultPaddock, paddockLookup, 'Pasto de destino', destinationReasons);
       const lot = resolveImportDestination(row.lote_destino, defaultLot, lotLookup, 'Lote de destino', destinationReasons);
@@ -860,7 +878,7 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
         erros.push({ line, identificacao: brinco || null, motivos: [...new Set(rowReasons)], dados: { ...row } });
         continue;
       }
-      prepared.push({ line, brinco, identityKey, dataPesagem, pesoAtual, paddock, raw: { ...row }, data: {
+      prepared.push({ line, brinco, identityKey, dataPesagem: dataPesagemEfetiva, pesoAtual, paddock, raw: { ...row }, data: {
           farmId,
           brinco,
           identityKey,
@@ -877,11 +895,11 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
           pesoAtual,
           statusReprodutivo: String(row.status_reprodutivo || '').trim() || null,
           previsaoParto,
-          registro: String(row.registro || '').trim() || null,
+          registro,
           paiNome: String(row.pai_nome || '').trim() || null,
           maeNome: String(row.mae_nome || '').trim() || null,
           observacoes: String(row.observacoes || '').trim() || null,
-          categoria: String(row.categoria || '').trim() || null,
+          categoria: categoriaNormalizada,
           currentPaddockId: paddock?.id || null,
           lotId: lot?.id || null,
       } });
@@ -1434,30 +1452,6 @@ function normalizeReproEventTypeImport(value) {
   if (v.includes('diagn') || v.includes('prenhez')) return 'DIAGNOSTICO_PRENHEZ';
   if (v.includes('desmam')) return 'DESMAME';
   return null;
-}
-
-function parseImportDate(value) {
-  if (!value) return null;
-  if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
-  if (typeof value === 'number') {
-    const excelEpoch = new Date(1899, 11, 30);
-    const d = new Date(excelEpoch.getTime() + value * 86400000);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-  const s = String(value).trim();
-  // Formato brasileiro DD/MM/AAAA (ou DD-MM-AAAA)
-  const brMatch = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
-  if (brMatch) {
-    const day = parseInt(brMatch[1], 10);
-    const month = parseInt(brMatch[2], 10) - 1;
-    let year = parseInt(brMatch[3], 10);
-    if (year < 100) year += year < 50 ? 2000 : 1900; // 26→2026, 99→1999
-    const d = new Date(year, month, day);
-    return Number.isNaN(d.getTime()) ? null : d;
-  }
-  // Fallback: tenta ISO (AAAA-MM-DD) ou qualquer outro formato reconhecido
-  const d = new Date(s);
-  return Number.isNaN(d.getTime()) ? null : d;
 }
 
 function validateImportRows(rows) {
