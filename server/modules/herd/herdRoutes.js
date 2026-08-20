@@ -204,7 +204,7 @@ const CATEGORIAS = ['Bezerro', 'Bezerra', 'Novilho', 'Novilha', 'Boi', 'Vaca', '
 const TEMPLATE_COLUMNS = [
   // --- Identidade ---
   { key: 'identificacao',      label: 'Identificação',           tier: 'required',     type: 'text',   example: 'EXEMPLO-1',                  description: 'Brinco, tatuagem ou número que identifica o animal de forma única.' },
-  { key: 'sexo',               label: 'Sexo',                    tier: 'required',     type: 'list',   options: ['MACHO', 'FEMEA'],            example: 'MACHO',                      description: 'MACHO ou FEMEA.' },
+  { key: 'sexo',               label: 'Sexo (MACHO ou FÊMEA)',   tier: 'required',     type: 'list',   options: ['MACHO', 'FEMEA'],            example: 'MACHO',                      description: 'MACHO ou FEMEA.' },
   // --- Raça ---
   { key: 'tipo_raca',          label: 'Tipo de Raça',            tier: 'required',     type: 'list',   options: ['Pura', 'Mestiça'],           example: 'Pura',                       description: 'Pura = animal de uma raça só. Mestiça = cruzamento entre raças.' },
   { key: 'raca',               label: 'Raça (se Pura)',          tier: 'conditional',  type: 'list',   options: RACAS_PURAS,                   example: 'Nelore',                     description: 'Preencha se Tipo de Raça = Pura. Deixe em branco se Tipo = Mestiça.' },
@@ -535,6 +535,8 @@ const LABEL_TO_KEY = (() => {
   map[normalizeHeader('Raça *')] = 'raca';
   map[normalizeHeader('Composição Mestiça')] = 'composicao_mestica';
   map[normalizeHeader('Composição Mestiça *')] = 'composicao_mestica';
+  map[normalizeHeader('Sexo')] = 'sexo';
+  map[normalizeHeader('Sexo *')] = 'sexo';
   return map;
 })();
 
@@ -739,6 +741,22 @@ function parseSpreadsheet(buffer, originalName) {
   return rows;
 }
 
+// Planilhas coladas em massa raramente têm a coluna "Tipo de Raça" (é um conceito
+// só do EIXO). Se ela vier em branco (ou com valor não reconhecido), deduz a partir
+// da Raça: bateu com uma raça pura da lista, é Pura; senão, Mestiça.
+function resolveImportTipoRaca(row) {
+  const explicit = normalizeTipoRacaImport(row.tipo_raca);
+  if (explicit) return explicit;
+  const racaInput = String(row.raca || '').trim();
+  const composicaoInput = String(row.composicao_mestica || '').trim();
+  if (!racaInput && !composicaoInput) return null;
+  if (racaInput) {
+    const isRacaPura = RACAS_PURAS.some((opt) => normalizeHeader(opt) === normalizeHeader(racaInput));
+    return isRacaPura ? 'Pura' : 'Mestiça';
+  }
+  return 'Mestiça';
+}
+
 function validateUploadRow(row, line) {
   const errs = [];
   if (!row.identificacao || !String(row.identificacao).trim()) {
@@ -747,15 +765,12 @@ function validateUploadRow(row, line) {
   const sexo = normalizeSexoImport(row.sexo);
   if (!sexo) errs.push('Sexo é obrigatório (MACHO ou FEMEA)');
 
-  const tipoRacaInformado = normalizeImportText(row.tipo_raca);
-  const tipoRaca = normalizeTipoRacaImport(row.tipo_raca);
+  const tipoRaca = resolveImportTipoRaca(row);
   const racaPreenchida = String(row.raca || '').trim();
   const composicaoPreenchida = String(row.composicao_mestica || '').trim();
 
-  if (!tipoRacaInformado) {
-    errs.push('Tipo de Raça é obrigatório (Pura ou Mestiça)');
-  } else if (!tipoRaca) {
-    errs.push('Tipo de Raça deve ser "Pura" ou "Mestiça"');
+  if (!tipoRaca) {
+    errs.push('Preencha Raça, Composição ou Tipo de Raça (Pura ou Mestiça)');
   } else if (tipoRaca === 'Pura' && !racaPreenchida) {
     errs.push('Raça (se Pura) precisa ser preenchida');
   } else if (
@@ -838,7 +853,7 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
         registroLines.set(registroLookupKey, line);
       }
       const sexo = normalizeSexoImport(row.sexo);
-      const tipoRacaNormalizado = normalizeTipoRacaImport(row.tipo_raca);
+      const tipoRacaNormalizado = resolveImportTipoRaca(row);
       const isPura = tipoRacaNormalizado === 'Pura';
 
       // Tolerância: se Mestiça e só Raça foi preenchida (sem Composição),
@@ -905,6 +920,9 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
       } });
     }
 
+    // Linhas com identificação/registro que já existem na organização também viram
+    // erro (não bloqueiam mais as demais linhas — só ficam de fora da criação).
+    const conflictedLines = new Set();
     if (prepared.length) {
       const organizationReferences = await loadOrganizationAnimalReferences(farm);
       prepared.forEach((item) => {
@@ -914,6 +932,7 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
           : null;
         const conflict = identityConflict || registrationConflict;
         if (conflict) {
+          conflictedLines.add(item.line);
           erros.push({
             line: item.line,
             identificacao: item.brinco,
@@ -923,35 +942,46 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
         }
       });
     }
-    if (erros.length) {
-      const linhasCorrecao = buildImportCorrectionRows(rows, erros);
-      const linhasComErro = linhasCorrecao.filter((item) => item.motivos.length > 0);
-      return res.status(422).json({ total: rows.length, criados: 0, ignorados: 0, erros: linhasComErro.length, detalhes: { criados: [], ignorados: [], erros: linhasComErro, linhasCorrecao } });
+
+    // Importação parcial: cada linha válida é criada mesmo que outras linhas da
+    // mesma planilha tenham erro. Cada animal entra em sua própria transação —
+    // assim um problema numa linha não desfaz o que já foi criado nas anteriores.
+    const toCreate = prepared.filter((item) => !conflictedLines.has(item.line));
+    const criados = [];
+    for (const item of toCreate) {
+      try {
+        const created = await prisma.$transaction(async (tx) => {
+          const animal = await tx.animal.create({ data: item.data });
+          if (item.paddock) {
+            await tx.paddockMove.create({
+              data: { farmId: String(farmId), paddockId: item.paddock.id, animalId: animal.id, startAt: item.dataPesagem || new Date() },
+            });
+          }
+          if (item.dataPesagem && item.pesoAtual) {
+            await tx.weighing.create({ data: { animalId: animal.id, data: item.dataPesagem, peso: item.pesoAtual, gmd: 0, source: 'MANUAL' } });
+          }
+          return { line: item.line, id: animal.id, identificacao: item.brinco };
+        });
+        criados.push(created);
+      } catch (error) {
+        console.error(`Importação linha ${item.line}:`, error.message);
+        erros.push({
+          line: item.line,
+          identificacao: item.brinco,
+          motivos: ['Erro inesperado ao criar este animal. Tente novamente ou contate o suporte.'],
+          dados: { ...item.raw },
+        });
+      }
     }
 
-    const criados = await prisma.$transaction(async (tx) => {
-      const result = [];
-      for (const item of prepared) {
-        const animal = await tx.animal.create({ data: item.data });
-        if (item.paddock) {
-          await tx.paddockMove.create({
-            data: { farmId: String(farmId), paddockId: item.paddock.id, animalId: animal.id, startAt: item.dataPesagem || new Date() },
-          });
-        }
-        if (item.dataPesagem && item.pesoAtual) {
-          await tx.weighing.create({ data: { animalId: animal.id, data: item.dataPesagem, peso: item.pesoAtual, gmd: 0, source: 'MANUAL' } });
-        }
-        result.push({ line: item.line, id: animal.id, identificacao: item.brinco });
-      }
-      return result;
-    });
-
+    const linhasCorrecao = buildImportCorrectionRows(rows, erros);
+    const linhasComErro = linhasCorrecao.filter((item) => item.motivos.length > 0);
     return res.json({
       total: rows.length,
       criados: criados.length,
       ignorados: 0,
-      erros: 0,
-      detalhes: { criados, ignorados: [], erros: [] },
+      erros: linhasComErro.length,
+      detalhes: { criados, ignorados: [], erros: linhasComErro, linhasCorrecao },
     });
   } catch (error) {
     console.error('Erro no upload de rebanho:', error);

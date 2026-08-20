@@ -116,8 +116,10 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file || !farmId) return;
-        if (!file.name.toLowerCase().endsWith('.xlsx')) {
-            setErrorMessage('Use a planilha modelo oficial no formato .xlsx.');
+        const fileNameLower = file.name.toLowerCase();
+        const isSupportedFormat = fileNameLower.endsWith('.xlsx') || fileNameLower.endsWith('.xls') || fileNameLower.endsWith('.csv');
+        if (!isSupportedFormat) {
+            setErrorMessage('Use a planilha modelo oficial nos formatos .xlsx, .xls ou .csv.');
             setStatus('error');
             e.target.value = '';
             return;
@@ -240,7 +242,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".xlsx"
+                    accept=".xlsx,.xls,.csv"
                     className="hidden"
                     onChange={handleFileChange}
                 />
@@ -318,7 +320,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             <div>
                                 <p className="text-sm font-semibold text-[var(--eixo-text)]">Enviar planilha preenchida</p>
                                 <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
-                                    Selecione a planilha modelo preenchida no formato .xlsx.
+                                    Selecione a planilha modelo preenchida (.xlsx, .xls ou .csv).
                                 </p>
                             </div>
                         </button>
@@ -360,29 +362,45 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 )}
 
                 {/* DONE — Resumo */}
-                {status === 'done' && result && (
+                {status === 'done' && result && (() => {
+                    const isFullFailure = result.criados === 0 && result.erros > 0;
+                    const isPartial = result.criados > 0 && result.erros > 0;
+                    const toneClass = isFullFailure
+                        ? 'bg-[var(--eixo-danger)]/10 text-[var(--eixo-danger)]'
+                        : isPartial
+                        ? 'bg-[var(--eixo-warning)]/10 text-[var(--eixo-warning)]'
+                        : 'bg-[var(--eixo-green)]/10 text-[var(--eixo-green)]';
+                    const title = isFullFailure
+                        ? 'Importação não realizada'
+                        : isPartial
+                        ? 'Importação concluída com erros'
+                        : 'Importação concluída';
+                    return (
                     <div className="px-6 py-5">
                         <div className="text-center">
-                            <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${result.erros > 0 ? 'bg-[var(--eixo-danger)]/10 text-[var(--eixo-danger)]' : 'bg-[var(--eixo-green)]/10 text-[var(--eixo-green)]'}`}>
+                            <div className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${toneClass}`}>
                                 <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={result.erros > 0 ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7'} />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isFullFailure ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7'} />
                                 </svg>
                             </div>
                             <p className="mt-3 text-base font-semibold text-[var(--eixo-text)]">
-                                {result.erros > 0 ? 'Importação não realizada' : 'Importação concluída'}
+                                {title}
                             </p>
                             <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
                                 {fileName} · {result.total} linhas validadas
                             </p>
-                            {result.erros > 0 && (
-                                <p className="mt-2 text-xs font-semibold text-[var(--eixo-danger)]">Nenhum animal foi criado. Corrija todas as linhas e envie novamente.</p>
+                            {isFullFailure && (
+                                <p className="mt-2 text-xs font-semibold text-[var(--eixo-danger)]">Nenhum animal foi criado. Corrija as linhas indicadas e envie novamente.</p>
+                            )}
+                            {isPartial && (
+                                <p className="mt-2 text-xs font-semibold text-[var(--eixo-warning)]">As linhas sem erro já foram cadastradas. Corrija as linhas indicadas para completar o restante.</p>
                             )}
                         </div>
 
                         <div className={`mt-5 grid gap-2 ${result.erros > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                             <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-3 text-center">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">{result.erros > 0 ? 'Linhas validadas' : 'Cadastrados'}</p>
-                                <p className="mt-1 text-2xl font-bold text-[var(--eixo-green)]">{result.erros > 0 ? result.total : result.criados}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Cadastrados</p>
+                                <p className="mt-1 text-2xl font-bold text-[var(--eixo-green)]">{result.criados}</p>
                             </div>
                             {result.erros > 0 && (
                                 <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-3 text-center">
@@ -421,7 +439,8 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             </p>
                         )}
                     </div>
-                )}
+                    );
+                })()}
 
                 {/* Footer */}
                 <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--eixo-border)] px-6 py-4">

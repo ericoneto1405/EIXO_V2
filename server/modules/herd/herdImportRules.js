@@ -17,8 +17,13 @@ export function normalizeTipoRacaImport(value) {
 
 export function normalizeSexoImport(value) {
   const normalized = normalizeImportText(value);
-  if (normalized === 'macho' || normalized === 'm') return 'MACHO';
-  if (normalized === 'femea' || normalized === 'f') return 'FEMEA';
+  if (!normalized) return null;
+  if (['macho', 'm', 'masculino', 'male'].includes(normalized)) return 'MACHO';
+  if (['femea', 'f', 'feminino', 'female'].includes(normalized)) return 'FEMEA';
+  // Tolera erro de digitação/variação não prevista: qualquer texto que comece
+  // com M ou F continua sendo reconhecido (ex.: "masculiono", "fem").
+  if (normalized.startsWith('m')) return 'MACHO';
+  if (normalized.startsWith('f')) return 'FEMEA';
   return null;
 }
 

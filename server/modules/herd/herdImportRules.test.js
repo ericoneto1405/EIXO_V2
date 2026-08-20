@@ -24,3 +24,14 @@ test('rejeita dias inexistentes e aceita datas reais, inclusive ano bissexto', (
   assert.equal(parseImportDate('data-invalida'), null);
   assert.equal(parseImportDate('29/02/2024')?.toISOString().slice(0, 10), '2024-02-29');
 });
+
+test('aceita sinônimos de Sexo em português e inglês, e corrige erro de digitação pela primeira letra', () => {
+  assert.equal(normalizeSexoImport('Masculino'), 'MACHO');
+  assert.equal(normalizeSexoImport('Male'), 'MACHO');
+  assert.equal(normalizeSexoImport('Feminino'), 'FEMEA');
+  assert.equal(normalizeSexoImport('Female'), 'FEMEA');
+  assert.equal(normalizeSexoImport('masculiono'), 'MACHO');
+  assert.equal(normalizeSexoImport('fem'), 'FEMEA');
+  assert.equal(normalizeSexoImport(''), null);
+  assert.equal(normalizeSexoImport(null), null);
+});
