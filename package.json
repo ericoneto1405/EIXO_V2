@@ -29,5 +29,10 @@
     "@prisma/client": "^6.19.3",
     "prisma": "^6.19.3",
     "resend": "^6.12.2"
+  },
+  "overrides": {
+    "undici": "~7.29.0",
+    "body-parser": "~1.20.6",
+    "brace-expansion": "~1.1.18"
   }
 }
