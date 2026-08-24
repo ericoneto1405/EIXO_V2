@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { UUID_REGEX, allowXUserId } from '../config/constants.js';
 import { extractSessionTokenFromRequest, hashSessionToken, getSessionFromRequest } from './session.js';
-import { ensureSaasContextForUser, ensureFieldWorkerFarmAccess, isSaasContextError, BILLING_BLOCKED_STATES } from '../utils/saasContext.js';
+import { ensureSaasContextForUser, ensureFieldWorkerFarmAccess, isSaasContextError, BILLING_BLOCKED_STATES, buildAllowedModulesFromPlan } from '../utils/saasContext.js';
 
 const prisma = new PrismaClient();
 
@@ -25,6 +25,25 @@ export const requireBillingAccess = (req, res, next) => {
 export const requireNonFieldWorker = (req, res, next) => {
     if (isFieldWorkerRequest(req)) {
         return res.status(403).json({ message: 'Ação não permitida para operação de campo.' });
+    }
+    return next();
+};
+
+// Trava por módulo liberado à PESSOA (checkbox em Equipe > Permissões), não
+// pelo plano da conta — requireEntitlement já cobre o plano. SUPER_ADMIN
+// sempre passa.
+export const requireModule = (moduleName) => (req, res, next) => {
+    if (req.user?.roles?.includes('SUPER_ADMIN')) {
+        return next();
+    }
+    const allowedModules = buildAllowedModulesFromPlan(
+        req.user?.modules,
+        req.saas?.entitlements,
+        req.user?.roles,
+        req.user?.accessType,
+    );
+    if (!allowedModules.includes(moduleName)) {
+        return res.status(403).json({ message: `Módulo "${moduleName}" não liberado para este usuário.` });
     }
     return next();
 };
@@ -116,7 +135,7 @@ export const requireAuth = async (req, res, next) => {
         return res.status(401).json({ message: 'Usuário não autenticado.' });
     } catch (error) {
         if (isSaasContextError(error)) {
-            return res.status(403).json({ message: 'Conta sem vínculo válido com uma organização.' });
+            return res.status(403).json({ message: error.message });
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao validar usuário.' });
@@ -124,13 +143,6 @@ export const requireAuth = async (req, res, next) => {
 };
 
 export const requireSuperAdmin = (req, res, next) => {
-    if (!req.user?.roles?.includes('SUPER_ADMIN')) {
-        return res.status(403).json({ message: 'Acesso negado.' });
-    }
-    return next();
-};
-
-export const requireMarketAdmin = (req, res, next) => {
     if (!req.user?.roles?.includes('SUPER_ADMIN')) {
         return res.status(403).json({ message: 'Acesso negado.' });
     }

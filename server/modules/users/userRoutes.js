@@ -8,7 +8,7 @@ import { logActivity } from '../utils/activityLog.js';
 import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
 import {
     canManageOrganizationUsers, serializeManagedUser,
-    isFieldAppUser, hasUserRole,
+    isFieldAppUser,
     ensureSaasContextForUser, ensureFieldWorkerFarmAccess,
     normalizeUserModules as normalizeUserModulesFn,
     getPlanLimits,

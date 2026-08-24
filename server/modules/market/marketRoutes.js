@@ -1,5 +1,5 @@
 import { UUID_REGEX } from '../config/constants.js';
-import { requireAuth, requireMarketAdmin } from '../middlewares/requireAuth.js';
+import { requireAuth, requireSuperAdmin } from '../middlewares/requireAuth.js';
 import { parseNumber } from '../utils/formatters.js';
 import { runMarketCapture } from '../../market/services/marketCaptureService.js';
 import { publishNormalizedPrice, rejectNormalizedPrice } from '../../market/services/marketPublishService.js';
@@ -16,7 +16,7 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export function registerMarketRoutes(app) {
-    app.get('/market/sources', requireAuth, requireMarketAdmin, async (_req, res) => {
+    app.get('/market/sources', requireAuth, requireSuperAdmin, async (_req, res) => {
         try {
             if (!hasMarketModelDelegates()) {
                 return res.status(503).json({
@@ -34,7 +34,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.post('/market/sources', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.post('/market/sources', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketModelDelegates()) {
                 return res.status(503).json({
@@ -65,7 +65,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.patch('/market/sources/:id', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.patch('/market/sources/:id', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketModelDelegates()) {
                 return res.status(503).json({
@@ -101,7 +101,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.get('/market/regions', requireAuth, requireMarketAdmin, async (_req, res) => {
+    app.get('/market/regions', requireAuth, requireSuperAdmin, async (_req, res) => {
         try {
             if (!hasMarketModelDelegates()) {
                 return res.status(503).json({
@@ -119,7 +119,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.post('/market/regions', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.post('/market/regions', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketModelDelegates()) {
                 return res.status(503).json({
@@ -149,7 +149,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.patch('/market/regions/:id', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.patch('/market/regions/:id', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketModelDelegates()) {
                 return res.status(503).json({
@@ -189,7 +189,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.get('/market/prices', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.get('/market/prices', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketModelDelegates()) {
                 return res.status(503).json({
@@ -231,7 +231,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.post('/market/prices', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.post('/market/prices', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketModelDelegates()) {
                 return res.status(503).json({
@@ -295,7 +295,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.patch('/market/prices/:id', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.patch('/market/prices/:id', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketModelDelegates()) {
                 return res.status(503).json({
@@ -371,7 +371,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.post('/market/jobs/run-mock-national', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.post('/market/jobs/run-mock-national', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketPipelineDelegates()) {
                 return res.status(503).json({
@@ -404,7 +404,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.get('/market/jobs', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.get('/market/jobs', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketPipelineDelegates()) {
                 return res.status(503).json({
@@ -439,7 +439,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.get('/market/raw-captures', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.get('/market/raw-captures', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketPipelineDelegates()) {
                 return res.status(503).json({
@@ -466,7 +466,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.get('/market/normalized-prices', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.get('/market/normalized-prices', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketPipelineDelegates()) {
                 return res.status(503).json({
@@ -493,7 +493,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.post('/market/normalized-prices/:id/publish', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.post('/market/normalized-prices/:id/publish', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketPipelineDelegates()) {
                 return res.status(503).json({
@@ -511,7 +511,7 @@ export function registerMarketRoutes(app) {
         }
     });
 
-    app.post('/market/normalized-prices/:id/reject', requireAuth, requireMarketAdmin, async (req, res) => {
+    app.post('/market/normalized-prices/:id/reject', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             if (!hasMarketPipelineDelegates()) {
                 return res.status(503).json({

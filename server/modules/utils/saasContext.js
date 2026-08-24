@@ -205,7 +205,7 @@ export const buildAllowedModulesFromPlan = (modules, entitlements, roles = [], a
 
 export const canManageOrganizationUsers = (req) => {
     const membershipRole = String(req.saas?.membershipRole || '').trim().toUpperCase();
-    return hasUserRole(req.user, 'admin') || ORGANIZATION_ADMIN_ROLES.has(membershipRole);
+    return ORGANIZATION_ADMIN_ROLES.has(membershipRole);
 };
 
 export const serializeManagedUser = (user, membershipRole = null) => ({

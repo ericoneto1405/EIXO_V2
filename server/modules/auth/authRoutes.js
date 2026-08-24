@@ -41,7 +41,7 @@ import {
     serializeAuthUser, serializeAuthUserWithContext,
     buildAllowedModulesFromPlan,
 } from '../utils/saasContext.js';
-import { requireAuth, requireBillingAccess, requireEntitlement } from '../middlewares/requireAuth.js';
+import { requireAuth, requireBillingAccess, requireEntitlement, requireModule } from '../middlewares/requireAuth.js';
 
 const prisma = new PrismaClient();
 const resend = process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_...' ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -407,6 +407,14 @@ app.use(
     requireAuth,
     requireBillingAccess,
     requireEntitlement('NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'),
+);
+
+// Financeiro: liberado por plano (requireBillingAccess já roda em cada rota
+// do módulo) e por pessoa — checkbox em Equipe > Permissões.
+app.use(
+    ['/account-categories', '/financial'],
+    requireAuth,
+    requireModule('Financeiro'),
 );
 
 app.post('/billing/plan-interest', requireAuth, async (req, res) => {

@@ -79,7 +79,7 @@ import {
 } from './modules/middlewares/session.js';
 import {
     isFieldWorkerRequest, requireBillingAccess, requireNonFieldWorker, requireEntitlement,
-    requireAuth, requireSuperAdmin, requireMarketAdmin,
+    requireAuth, requireSuperAdmin,
 } from './modules/middlewares/requireAuth.js';
 
 const __filename = fileURLToPath(import.meta.url);
