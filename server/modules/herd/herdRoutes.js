@@ -405,9 +405,19 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
     };
     dados.getRow(2).height = 32;
 
-    // Linha 3 — Cabeçalhos
+    // Linha 3 — Selo de obrigatoriedade (pequeno, acima do cabeçalho)
     TEMPLATE_COLUMNS.forEach((col, idx) => {
-      const cell = dados.getCell(3, idx + 1);
+      const selo = dados.getCell(3, idx + 1);
+      selo.value = TIER_LABELS[col.tier];
+      selo.font = { size: 8, italic: true, color: TIER_COLORS[col.tier], name: 'Arial' };
+      selo.alignment = { vertical: 'middle', horizontal: 'center' };
+      selo.protection = { locked: true };
+    });
+    dados.getRow(3).height = 14;
+
+    // Linha 4 — Cabeçalhos
+    TEMPLATE_COLUMNS.forEach((col, idx) => {
+      const cell = dados.getCell(4, idx + 1);
       const label = (col.tier === 'required' || col.tier === 'conditional') ? `${col.label} *` : col.label;
       cell.value = label;
       cell.font = {
@@ -430,10 +440,10 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
       // Largura da coluna baseada no tipo
       dados.getColumn(idx + 1).width = IMPORT_COLUMN_WIDTHS[col.type] || 18;
     });
-    dados.getRow(3).height = 44;
+    dados.getRow(4).height = 44;
 
-    // Mantém título, orientação e cabeçalho visíveis
-    dados.views = [{ state: 'frozen', xSplit: 0, ySplit: 3 }];
+    // Mantém título, orientação, selo e cabeçalho visíveis
+    dados.views = [{ state: 'frozen', xSplit: 0, ySplit: 4 }];
 
     // =============================================
     // ABA 3 — LISTAS (oculta, usada pelos dropdowns)
@@ -458,7 +468,7 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
     TEMPLATE_COLUMNS.forEach((col, idx) => {
       const colChar = String.fromCharCode(64 + idx + 1);
       const horizontal = (col.type === 'date' || col.type === 'number') ? 'center' : 'left';
-      for (let row = 4; row <= 1003; row++) {
+      for (let row = 5; row <= 1004; row++) {
         const cell = dados.getCell(`${colChar}${row}`);
         cell.font = { name: 'Arial', size: 10, color: { argb: '1F2937' }, italic: false };
         cell.alignment = { vertical: 'middle', horizontal, wrapText: true };
@@ -471,7 +481,7 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
     TEMPLATE_COLUMNS.forEach((col, idx) => {
       if (col.type === 'list' && listColumnsMap[col.key]) {
         const colChar = String.fromCharCode(64 + idx + 1);
-        for (let row = 4; row <= 1003; row++) { // permite até 1000 linhas de dados
+        for (let row = 5; row <= 1004; row++) { // permite até 1000 linhas de dados
           dados.getCell(`${colChar}${row}`).dataValidation = {
             type: 'list',
             allowBlank: true,
@@ -485,13 +495,13 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
       }
       if (col.type === 'date') {
         const colChar = String.fromCharCode(64 + idx + 1);
-        for (let row = 4; row <= 1003; row++) {
+        for (let row = 5; row <= 1004; row++) {
           dados.getCell(`${colChar}${row}`).numFmt = 'dd/mm/yyyy';
         }
       }
       if (col.type === 'number') {
         const colChar = String.fromCharCode(64 + idx + 1);
-        for (let row = 4; row <= 1003; row++) {
+        for (let row = 5; row <= 1004; row++) {
           dados.getCell(`${colChar}${row}`).numFmt = '0.##';
         }
       }
@@ -501,14 +511,14 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
       // dois meses de erro silencioso na idade, que realimenta a categoria.
       if (col.key === 'data_nascimento') {
         const colChar = String.fromCharCode(64 + idx + 1);
-        for (let row = 4; row <= 1003; row++) {
+        for (let row = 5; row <= 1004; row++) {
           dados.getCell(`${colChar}${row}`).numFmt = '@';
         }
       }
     });
 
     const destinationRanges = addFarmDestinationCatalog(workbook, paddocks, lots);
-    applyFarmDestinationValidations(dados, TEMPLATE_COLUMNS, destinationRanges);
+    applyFarmDestinationValidations(dados, TEMPLATE_COLUMNS, destinationRanges, 5, 1004);
 
     await dados.protect('', {
       selectLockedCells: false,
