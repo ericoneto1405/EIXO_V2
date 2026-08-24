@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Animal, Paddock, PaddockMove, WeighingHistory } from '../types';
+import { CATEGORIAS_ANIMAL } from '../constants/animalCategories';
 import {
     HerdAnimal,
     HerdEvent,
@@ -265,7 +266,9 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             setEditBrinco(a.brinco ?? '');
             setEditRaca(a.raca ?? '');
             setEditSexo((a as any).sexoRaw ?? (a.sexo === 'Macho' ? 'MACHO' : a.sexo === 'Fêmea' ? 'FEMEA' : ''));
-            setEditCategoria(a.categoria ?? '');
+            // Usa o que está gravado, não o valor deduzido: abrir e salvar o
+            // animal não pode congelar uma categoria que o sistema calculou.
+            setEditCategoria((a as any).categoriaDefinida ?? '');
             setEditDataNasc(a.dataNascimento ? a.dataNascimento.slice(0, 10) : '');
             setEditRegistro(a.registro ?? '');
             setEditMsg(null);
@@ -721,13 +724,20 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                         </div>
                                         <div>
                                             <label className={labelClass}>Categoria</label>
-                                            <input
-                                                type="text"
+                                            <select
                                                 value={editCategoria}
                                                 onChange={e => setEditCategoria(e.target.value)}
                                                 className={`${inputClass} w-full`}
-                                                placeholder="Ex: Boi, Vaca, Novilha…"
-                                            />
+                                            >
+                                                <option value="">Deixar o EIXO deduzir pela idade</option>
+                                                {/* valor antigo fora da lista continua visível para não sumir sem aviso */}
+                                                {editCategoria && !CATEGORIAS_ANIMAL.some((opcao) => opcao === editCategoria) && (
+                                                    <option value={editCategoria}>{editCategoria}</option>
+                                                )}
+                                                {CATEGORIAS_ANIMAL.map((opcao) => (
+                                                    <option key={opcao} value={opcao}>{opcao}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                         <div>
                                             <label className={labelClass}>Data de Nascimento</label>

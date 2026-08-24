@@ -1,8 +1,13 @@
 import { formatSexoLabel, escapeHtml } from './formatters.js';
+import { resolverCategoria } from '../herd/animalCategories.js';
 
 // ─── Serializadores de Entidades ───────────────────────────────────────────────
 
 export function serializeAnimal(animal) {
+    // A categoria é resolvida na LEITURA, não guardada pronta no banco: assim o
+    // bezerro vira novilho sozinho com o passar do tempo, sem rotina noturna.
+    // O que o produtor escolheu na mão sempre ganha da dedução.
+    const categoriaResolvida = resolverCategoria(animal);
     return {
         id: animal.id,
         brinco: animal.brinco,
@@ -10,8 +15,14 @@ export function serializeAnimal(animal) {
         tipoCadastro: animal.tipoCadastro,
         raca: animal.raca,
         sexo: formatSexoLabel(animal.sexo),
-        categoria: animal.categoria,
+        categoria: categoriaResolvida.categoria,
+        /** true = veio da dedução do sistema, não da escolha do produtor. */
+        categoriaAutomatica: categoriaResolvida.automatica,
+        /** o que está realmente gravado, para o formulário de edição. */
+        categoriaDefinida: animal.categoria ?? null,
         dataNascimento: animal.dataNascimento ? animal.dataNascimento.toISOString() : null,
+        /** true = a data veio de safra informada na importação, não de nascimento anotado. */
+        dataNascimentoEstimada: animal.dataNascimentoEstimada ?? false,
         ultimoPeso: animal.pesagens?.[0]?.peso ?? animal.pesoAtual ?? null,
         gmd: animal.gmd ?? null,
         gmdLast: animal.gmd ?? null,
@@ -130,6 +141,10 @@ export function serializeCheckupSession(session) {
 }
 
 export function serializePoAnimal(animal) {
+    // Plantel P.O. NÃO deduz categoria: o model não guarda `funcaoReprodutiva`,
+    // então um touro de 8 anos sem categoria seria classificado como "Boi". Aqui
+    // a categoria é só o que o produtor gravou.
+    const categoriaResolvida = resolverCategoria(animal, { deduzir: false });
     return {
         id: animal.id,
         farmId: animal.farmId,
@@ -151,7 +166,9 @@ export function serializePoAnimal(animal) {
         registrationNumber: animal.registrationNumber || null,
         registrationType: animal.registrationType || null,
         registrationCategory: animal.registrationCategory || null,
-        categoria: animal.categoria,
+        categoria: categoriaResolvida.categoria,
+        categoriaAutomatica: categoriaResolvida.automatica,
+        categoriaDefinida: animal.categoria ?? null,
         observacoes: animal.observacoes,
         statusReprodutivo: animal.statusReprodutivo || null,
         previsaoParto: animal.previsaoParto ? animal.previsaoParto.toISOString() : null,

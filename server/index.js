@@ -95,7 +95,21 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(createCorsMiddleware(IS_PROD, CORS_ORIGIN));
 app.use(createSecurityHeadersMiddleware(IS_PROD, CORS_ORIGIN));
-app.use(express.json());
+// A confirmação da prévia de importação envia até 1000 linhas de animais em JSON,
+// bem acima do limite padrão de 100 kb. O parser maior NÃO fica aqui: montado
+// como middleware global ele rodaria antes do requireAuth, e um request anônimo
+// faria o servidor bufferizar 10 MB só para levar 401 depois. O parser grande
+// está na própria rota, depois da autenticação (ver herdRoutes.js).
+const parserJsonPadrao = express.json();
+const ROTAS_JSON_GRANDE = new Set(['/herd/import/confirmar']);
+app.use((req, res, next) => {
+    // O roteamento do Express ignora barra final e caixa, então a comparação
+    // aqui precisa fazer o mesmo — senão "/herd/import/confirmar/" chega na rota
+    // com o corpo já recusado pelo parser de 100 kb.
+    const caminho = req.path.toLowerCase().replace(/\/+$/, '') || '/';
+    if (ROTAS_JSON_GRANDE.has(caminho)) return next();
+    return parserJsonPadrao(req, res, next);
+});
 app.use(cookieParser());
 
 let activePort = Number(PORT) || 3001;

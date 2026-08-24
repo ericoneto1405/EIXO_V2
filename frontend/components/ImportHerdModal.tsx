@@ -1,9 +1,21 @@
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { buildApiUrl } from '../api';
 import type { HerdType } from '../adapters/herdApi';
 import type { Lot, Paddock } from '../types';
+import ImportPreviewTable, { contarLinhas } from './ImportPreviewTable';
+import type { PreviewCatalogos, PreviewLinha } from './ImportPreviewTable';
 
-type Status = 'idle' | 'uploading' | 'done' | 'error';
+// preview = arquivo conferido e mostrado na tela, ainda SEM gravar nada.
+// saving  = o produtor confirmou e o servidor está criando os animais.
+type Status = 'idle' | 'uploading' | 'preview' | 'saving' | 'done' | 'error';
+
+interface ValidacaoResposta {
+    total: number;
+    prontos: number;
+    comErro: number;
+    linhas: PreviewLinha[];
+    catalogos: PreviewCatalogos;
+}
 
 interface ErrorRow {
     line: number;
@@ -61,6 +73,13 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
     const [lotId, setLotId] = useState('');
     const [isDownloadingErrors, setIsDownloadingErrors] = useState(false);
     const [downloadMessage, setDownloadMessage] = useState('');
+    const [racaPadrao, setRacaPadrao] = useState('');
+    const [previewLinhas, setPreviewLinhas] = useState<PreviewLinha[]>([]);
+    const [catalogos, setCatalogos] = useState<PreviewCatalogos | null>(null);
+
+    // O Plantel P.O. ainda não tem as rotas de prévia — segue no envio direto.
+    const temPrevia = herdType !== 'PO';
+    const contagem = useMemo(() => contarLinhas(previewLinhas), [previewLinhas]);
 
     if (!open) return null;
 
@@ -71,13 +90,16 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
         setErrorMessage('');
         setPaddockId('');
         setLotId('');
+        setRacaPadrao('');
         setIsDownloadingErrors(false);
         setDownloadMessage('');
+        setPreviewLinhas([]);
+        setCatalogos(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const handleClose = () => {
-        if (status === 'uploading') return;
+        if (status === 'uploading' || status === 'saving') return;
         reset();
         onClose();
     };
@@ -88,6 +110,8 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
         setResult(null);
         setErrorMessage('');
         setDownloadMessage('');
+        setPreviewLinhas([]);
+        setCatalogos(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -133,7 +157,11 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
             formData.append('farmId', farmId);
             if (paddockId) formData.append('paddockId', paddockId);
             if (lotId) formData.append('lotId', lotId);
-            const uploadPath = herdType === 'PO' ? '/po/herd/import/upload' : '/herd/import/upload';
+            if (racaPadrao) formData.append('racaPadrao', racaPadrao);
+
+            // Rebanho comercial: só CONFERE. Nada é gravado até o produtor
+            // olhar a prévia e confirmar. O Plantel P.O. segue no fluxo antigo.
+            const uploadPath = temPrevia ? '/herd/import/validar' : '/po/herd/import/upload';
             const res = await fetch(buildApiUrl(uploadPath), {
                 method: 'POST',
                 credentials: 'include',
@@ -150,6 +178,13 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 setStatus('error');
                 return;
             }
+            if (temPrevia) {
+                const validacao = data as ValidacaoResposta;
+                setPreviewLinhas(validacao.linhas || []);
+                setCatalogos(validacao.catalogos || null);
+                setStatus('preview');
+                return;
+            }
             setResult(data as UploadResult);
             setStatus('done');
         } catch (err) {
@@ -157,6 +192,49 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
             setErrorMessage('Erro de rede ao enviar planilha.');
             setStatus('error');
         }
+    };
+
+    // Manda as linhas corrigidas para gravar. O servidor confere tudo de novo —
+    // o que volta do navegador nunca é tratado como confiável.
+    const handleConfirmarImportacao = async () => {
+        if (!farmId || previewLinhas.length === 0) return;
+        setStatus('saving');
+        setErrorMessage('');
+        try {
+            const res = await fetch(buildApiUrl('/herd/import/confirmar'), {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    farmId,
+                    paddockId: paddockId || undefined,
+                    lotId: lotId || undefined,
+                    racaPadrao: racaPadrao || undefined,
+                    linhas: previewLinhas.map((linha) => ({ line: linha.line, dados: linha.dados })),
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setErrorMessage(data?.message || 'Erro ao gravar os animais.');
+                setStatus('error');
+                return;
+            }
+            setResult(data as UploadResult);
+            setStatus('done');
+        } catch (err) {
+            console.error(err);
+            setErrorMessage('Erro de rede ao gravar os animais.');
+            setStatus('error');
+        }
+    };
+
+    // Volta da prévia para escolher outro arquivo, sem perder pasto/lote/raça.
+    const handleVoltarParaArquivo = () => {
+        setPreviewLinhas([]);
+        setCatalogos(null);
+        setFileName('');
+        setStatus('idle');
+        if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
     const handleSeeAnimals = () => {
@@ -210,25 +288,37 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 aria-modal="true"
                 aria-labelledby="import-herd-title"
                 aria-busy={status === 'uploading'}
-                className="relative max-h-[calc(100vh-2rem)] w-full max-w-xl overflow-y-auto rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
+                className={`relative max-h-[calc(100vh-2rem)] w-full overflow-y-auto rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl ${
+                    status === 'preview' || status === 'saving' ? 'max-w-6xl' : 'max-w-xl'
+                }`}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
                     <div>
-                        <h3 id="import-herd-title" className="text-base font-bold text-[var(--eixo-text)]">Importar planilha</h3>
+                        <h3 id="import-herd-title" className="text-base font-bold text-[var(--eixo-text)]">
+                            {status === 'preview' || status === 'saving' ? 'Conferir antes de importar' : 'Importar planilha'}
+                        </h3>
                         <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">
                             {status === 'done'
-                                ? result?.erros ? 'Arquivo validado com erros. Nenhum animal foi criado.' : 'Importação concluída.'
+                                ? !result?.erros
+                                    ? 'Importação concluída.'
+                                    : result?.criados
+                                    ? `${result.criados} animais criados · ${result.erros} linhas ficaram de fora.`
+                                    : 'Nenhum animal foi criado. Corrija as linhas indicadas.'
+                                : status === 'preview'
+                                ? `${fileName} · ${contagem.total} linhas · nada foi gravado ainda`
+                                : status === 'saving'
+                                ? 'Gravando os animais…'
                                 : status === 'uploading'
-                                ? 'Processando planilha…'
+                                ? 'Conferindo a planilha…'
                                 : 'Baixe o modelo, preencha e envie a planilha.'}
                         </p>
                     </div>
                     <button
                         type="button"
                         onClick={handleClose}
-                        disabled={status === 'uploading'}
+                        disabled={status === 'uploading' || status === 'saving'}
                         className="rounded-lg p-1 text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-green)] disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label="Fechar"
                     >
@@ -283,6 +373,20 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                         </select>
                                     </label>
                                 </div>
+                                <label className="mt-3 block text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                    Raça padrão do rebanho (opcional)
+                                    <input
+                                        type="text"
+                                        value={racaPadrao}
+                                        onChange={(event) => setRacaPadrao(event.target.value)}
+                                        placeholder="Nelore, Anelorado, Angus…"
+                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]"
+                                    />
+                                    <span className="mt-1 block font-normal text-[var(--eixo-text-soft)]">
+                                        Em fazenda comercial a raça costuma ser a mesma do lote inteiro. Preencha aqui
+                                        e deixe a coluna da planilha em branco — só as exceções precisam ser digitadas.
+                                    </span>
+                                </label>
                                 {paddocks.length === 0 && (
                                     <p className="mt-2 text-xs font-semibold text-[var(--eixo-text-muted)]">
                                         Nenhum pasto cadastrado nesta fazenda. No Plantel P.O., o pasto é obrigatório para concluir a importação.
@@ -327,6 +431,18 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                     </div>
                 )}
 
+                {/* PREVIEW — tabela editável, nada gravado ainda */}
+                {(status === 'preview' || status === 'saving') && catalogos && (
+                    <div className="px-6 py-5">
+                        <ImportPreviewTable
+                            linhas={previewLinhas}
+                            catalogos={catalogos}
+                            onChange={setPreviewLinhas}
+                            disabled={status === 'saving'}
+                        />
+                    </div>
+                )}
+
                 {/* UPLOADING */}
                 {status === 'uploading' && (
                     <div className="px-6 py-12 text-center" role="status" aria-live="polite">
@@ -336,8 +452,13 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                             </svg>
                         </div>
-                        <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">Processando planilha…</p>
+                        <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">
+                            {temPrevia ? 'Conferindo a planilha…' : 'Processando planilha…'}
+                        </p>
                         <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">{fileName}</p>
+                        {temPrevia && (
+                            <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Nenhum animal é criado nesta etapa.</p>
+                        )}
                     </div>
                 )}
 
@@ -444,14 +565,35 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
 
                 {/* Footer */}
                 <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--eixo-border)] px-6 py-4">
+                    {status === 'preview' && contagem.erro > 0 && (
+                        <p className="mr-auto text-xs text-[var(--eixo-text-muted)]">
+                            {contagem.erro === 1
+                                ? '1 linha com erro fica de fora.'
+                                : `${contagem.erro} linhas com erro ficam de fora.`}
+                        </p>
+                    )}
                     <button
                         type="button"
-                        onClick={handleClose}
-                        disabled={status === 'uploading'}
+                        onClick={status === 'preview' ? handleVoltarParaArquivo : handleClose}
+                        disabled={status === 'uploading' || status === 'saving'}
                         className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-medium text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                        Fechar
+                        {status === 'preview' ? 'Trocar arquivo' : 'Fechar'}
                     </button>
+                    {(status === 'preview' || status === 'saving') && (
+                        <button
+                            type="button"
+                            onClick={handleConfirmarImportacao}
+                            disabled={status === 'saving' || contagem.prontos + contagem.revisao === 0}
+                            className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                            {status === 'saving'
+                                ? 'Gravando…'
+                                : contagem.prontos + contagem.revisao === 1
+                                ? 'Importar 1 animal'
+                                : `Importar ${contagem.prontos + contagem.revisao} animais`}
+                        </button>
+                    )}
                     {status === 'done' && result && result.erros > 0 && (
                         <button
                             type="button"

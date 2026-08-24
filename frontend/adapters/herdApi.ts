@@ -136,7 +136,13 @@ const normalizeAnimal = (animal: any): HerdAnimal => {
         registrationNumber: animal.registrationNumber || null,
         registrationType: animal.registrationType || null,
         registrationCategory: animal.registrationCategory || null,
+        // true = a data veio de safra na importação; a tela mostra "~" na idade.
+        dataNascimentoEstimada: Boolean(animal.dataNascimentoEstimada),
         categoria: animal.categoria || null,
+        // true = o servidor deduziu por sexo + idade; o produtor não escolheu.
+        categoriaAutomatica: Boolean(animal.categoriaAutomatica),
+        // o que está realmente gravado no banco (null quando é dedução).
+        categoriaDefinida: animal.categoriaDefinida || null,
         statusReprodutivo: animal.statusReprodutivo || null,
         previsaoParto: animal.previsaoParto || null,
         emTransferenciaEmbriao: Boolean(animal.emTransferenciaEmbriao),

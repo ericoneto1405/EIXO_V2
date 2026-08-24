@@ -23,6 +23,7 @@ import {
     updateResponsibleMother,
 } from '../adapters/herdApi';
 import { getMyHerdColumns, updateMyHerdColumns } from '../adapters/usersApi';
+import { CATEGORIAS_ANIMAL } from '../constants/animalCategories';
 import { buildApiUrl } from '../api';
 import type { Paddock } from '../types';
 
@@ -639,7 +640,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             const lastWeighingAgeDays = animal.dataUltimaPesagem
                 ? Math.floor((Date.now() - new Date(animal.dataUltimaPesagem).getTime()) / 86400000)
                 : null;
-            const hasCategory = Boolean(String(animal.categoria || '').trim());
+            // Olha o que está GRAVADO, não o deduzido: a pendência é o produtor
+            // confirmar a categoria, e a dedução preencheria o card com tudo verde.
+            const hasCategory = Boolean(String(animal.categoriaDefinida || '').trim());
             const hasPaddock = Boolean(animal.currentPaddockId || animal.currentPaddockName);
             const currentGmd = typeof animal.gmd30 === 'number'
                 ? animal.gmd30
@@ -779,7 +782,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             const hasPaddock = Boolean(animal.currentPaddockId || animal.currentPaddockName);
             if (!hasPaddock) withoutPaddock++;
 
-            const hasCategory = Boolean(String(animal.categoria || '').trim());
+            // Olha o que está GRAVADO, não o deduzido: a pendência é o produtor
+            // confirmar a categoria, e a dedução preencheria o card com tudo verde.
+            const hasCategory = Boolean(String(animal.categoriaDefinida || '').trim());
             if (!hasCategory) withoutCategory++;
 
             if (animal.dataUltimaPesagem) {
@@ -1348,18 +1353,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 {column === 'categoria' && (
                     <select value={filterCategoria} onChange={(event) => setFilterCategoria(event.target.value)} className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)]">
                         <option value="">Todas as categorias</option>
-                        <option value="Bezerro">Bezerro</option>
-                        <option value="Bezerra">Bezerra</option>
-                        <option value="Novilho">Novilho</option>
-                        <option value="Novilha">Novilha</option>
-                        <option value="Garrote">Garrote</option>
-                        <option value="Garrota">Garrota</option>
-                        <option value="Boi">Boi</option>
-                        <option value="Vaca">Vaca</option>
-                        <option value="Vaca de cria">Vaca de cria</option>
-                        <option value="Vaca seca">Vaca seca</option>
-                        <option value="Vaca de descarte">Vaca de descarte</option>
-                        <option value="Touro">Touro</option>
+                        {CATEGORIAS_ANIMAL.map((opcao) => (
+                            <option key={opcao} value={opcao}>{opcao}</option>
+                        ))}
                     </select>
                 )}
                 {column === 'peso' && (
@@ -1684,7 +1680,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">{animal.sexo}</td>
                                         )}
                                         {visibleColumns.has('idade') && (
-                                        <td className="border-r border-[var(--eixo-border)] px-4 py-3">{calculateAge(animal.dataNascimento)}</td>
+                                        <td
+                                            className="border-r border-[var(--eixo-border)] px-4 py-3"
+                                            title={animal.dataNascimentoEstimada ? 'Idade estimada pela safra informada na importação' : undefined}
+                                        >
+                                            {animal.dataNascimentoEstimada ? '~' : ''}{calculateAge(animal.dataNascimento)}
+                                        </td>
                                         )}
                                         {visibleColumns.has('pasto') && (
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
@@ -1714,7 +1715,17 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={lots.find((l) => l.id === animal.lotId)?.name || ''}>{lots.find((l) => l.id === animal.lotId)?.name || '—'}</td>
                                         )}
                                         {visibleColumns.has('categoria') && (
-                                        <td className="truncate border-r border-[var(--eixo-border)] px-4 py-3" title={animal.categoria || ''}>{animal.categoria || '—'}</td>
+                                        <td
+                                            className="truncate border-r border-[var(--eixo-border)] px-4 py-3"
+                                            title={animal.categoriaAutomatica
+                                                ? `${animal.categoria} — deduzido por sexo e idade. Edite o animal para fixar.`
+                                                : (animal.categoria || '')}
+                                        >
+                                            {animal.categoria || '—'}
+                                            {animal.categoriaAutomatica && (
+                                                <span className="ml-1 text-[10px] font-semibold uppercase text-[var(--eixo-text-soft)]">auto</span>
+                                            )}
+                                        </td>
                                         )}
                                         {visibleColumns.has('peso') && (
                                         <td className="border-r border-[var(--eixo-border)] px-4 py-3">
@@ -2250,9 +2261,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
                         }`}
                     >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Sem categoria</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Categoria não confirmada</p>
                         <p className="mt-1 text-2xl font-extrabold text-[#7a5e2b]">{healthOverview.withoutCategory}</p>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Organizar classificação</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Deduzida pela idade — confirme se quiser fixar</p>
                     </button>
                     <button
                         type="button"
@@ -2801,20 +2812,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, categoria: event.target.value }))}
                                     className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
                                 >
-                                    <option value="">Selecionar...</option>
-                                    <option value="Bezerro">Bezerro</option>
-                                    <option value="Bezerra">Bezerra</option>
-                                    <option value="Novilho">Novilho</option>
-                                    <option value="Novilha">Novilha</option>
-                                    <option value="Garrote">Garrote</option>
-                                    <option value="Garrota">Garrota</option>
-                                    <option value="Boi">Boi</option>
-                                    <option value="Vaca">Vaca</option>
-                                    <option value="Vaca de cria">Vaca de cria</option>
-                                    <option value="Vaca seca">Vaca seca</option>
-                                    <option value="Vaca de descarte">Vaca de descarte</option>
-                                    <option value="Touro">Touro</option>
+                                    <option value="">Deixar o EIXO deduzir pela idade</option>
+                                    {CATEGORIAS_ANIMAL.map((opcao) => (
+                                        <option key={opcao} value={opcao}>{opcao}</option>
+                                    ))}
                                 </select>
+                                <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                                    Em branco, o EIXO deduz por sexo e idade e mantém atualizado sozinho.
+                                </p>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-[var(--eixo-text)]">Observações</label>

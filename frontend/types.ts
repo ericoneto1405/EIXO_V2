@@ -101,7 +101,14 @@ export interface AnimalUI {
     registrationNumber?: string | null;
     registrationType?: string | null;
     registrationCategory?: string | null;
+    /** true quando a data de nascimento veio de safra, não de nascimento anotado */
+    dataNascimentoEstimada?: boolean;
+    /** categoria já resolvida: a que o produtor escolheu ou, na falta, a deduzida */
     categoria?: string | null;
+    /** true quando a categoria veio da dedução por sexo + idade */
+    categoriaAutomatica?: boolean;
+    /** o que está gravado no banco; null quando a categoria é deduzida */
+    categoriaDefinida?: string | null;
     statusReprodutivo?: string | null;
     previsaoParto?: string | null;
     emTransferenciaEmbriao?: boolean;
