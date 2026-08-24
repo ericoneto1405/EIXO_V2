@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
 import { buildEmptyMarketReplacementSnapshot, buildMarketReplacementSnapshot, resolveFarmMarketRegion } from '../market/marketHelpers.js';
+import { resolverCategoria } from '../herd/animalCategories.js';
 const prisma = new PrismaClient();
 
 export function registerOverviewRoutes(app) {
@@ -65,7 +66,11 @@ export function registerOverviewRoutes(app) {
                     farmId: { in: farmIds },
                     farm: buildFarmRelationFilter(req),
                 },
-                select: { id: true, categoria: true, dataNascimento: true },
+                select: {
+                    id: true, categoria: true, dataNascimento: true,
+                    // Necessários para deduzir a categoria igual à aba Animais.
+                    sexo: true, desmamadoEm: true, statusReprodutivo: true, funcaoReprodutiva: true,
+                },
             });
 
             const totalAnimais = animals.length;
@@ -76,9 +81,15 @@ export function registerOverviewRoutes(app) {
                 return birthDate.getMonth() + 1 === mes && birthDate.getFullYear() === ano;
             }).length;
 
+            // Passa pela MESMA resolução do serializer. Sem isso o card mostraria
+            // "Sem categoria: 1200" enquanto a aba Animais lista Novilho/Boi/Vaca
+            // para os mesmos bichos — dois números para o mesmo banco.
+            // Aqui não há o enriquecimento de "já pariu" (custaria outra consulta
+            // num endpoint de resumo), então fêmea sem status reprodutivo conta
+            // como Novilha. A aba Animais, que tem o dado, é a fonte precisa.
             const catMap = new Map();
             for (const animal of animals) {
-                const cat = animal.categoria || 'Sem categoria';
+                const cat = resolverCategoria(animal).categoria || 'Sem categoria';
                 catMap.set(cat, (catMap.get(cat) || 0) + 1);
             }
             const categorias = Array.from(catMap.entries())

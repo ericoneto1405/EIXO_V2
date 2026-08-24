@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import { requireAuth, requireNonFieldWorker } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import { parseNumber, parseDateValue, parseInteger, normalizeSexo, normalizeSemenMoveType, normalizeEmbryoMoveType } from '../utils/formatters.js';
+import { normalizarCategoriaParaGravar } from '../herd/animalCategories.js';
 import { logActivity } from '../utils/activityLog.js';
 import {
     serializePoAnimal, serializeSemenBatch, serializeEmbryoBatch,
@@ -354,7 +355,10 @@ app.post('/po/animals', requireAuth, async (req, res) => {
 
     const trimmedBrinco = typeof brinco === 'string' ? brinco.trim() : '';
     const trimmedRegistro = typeof registro === 'string' ? registro.trim() : '';
-    const trimmedCategoria = typeof categoria === 'string' ? categoria.trim() : '';
+    // Normaliza contra a lista única, mas SEM apagar o que não reconhece: o
+    // Plantel P.O. usa categorias próprias ("Doadora", "Receptora") que não
+    // estão na lista comercial e não podem sumir ao salvar.
+    const trimmedCategoria = normalizarCategoriaParaGravar(categoria);
     const trimmedObservacoes = typeof observacoes === 'string' ? observacoes.trim() : '';
     let parsedPesoAtual = 0;
     if (ultimoPeso !== undefined && ultimoPeso !== null && ultimoPeso !== '') {
@@ -856,8 +860,7 @@ app.patch('/po/animals/:id', requireAuth, async (req, res) => {
         }
 
         if (categoria !== undefined) {
-            const trimmedCategoria = typeof categoria === 'string' ? categoria.trim() : '';
-            updates.categoria = trimmedCategoria || null;
+            updates.categoria = normalizarCategoriaParaGravar(categoria);
         }
 
         if (observacoes !== undefined) {

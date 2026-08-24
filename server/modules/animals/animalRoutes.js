@@ -18,6 +18,7 @@ import {
 import { REPRO_WINDOW_DAYS, DEFAULT_THRESHOLDS, HERD_EVENT_CATEGORY_MAP } from '../config/env.js';
 import { buildPurchasePaymentSchedule, createIntegratedTransaction } from '../financial/financialService.js';
 import { buildProvisionalIdentification, buildTeProvisionalIdentification } from './herdIntegrityService.js';
+import { normalizarCategoriaParaGravar } from '../herd/animalCategories.js';
 import { registerNutritionModuleRoutes } from '../../nutritionModule.js';
 import { registerAcasalamentoRoutes } from '../../acasalamentoModule.js';
 const prisma = new PrismaClient();
@@ -804,9 +805,21 @@ app.patch('/animals/:id', requireAuth, async (req, res) => {
             const validSexo = ['MACHO', 'FEMEA'];
             updateData.sexo = validSexo.includes(sexo) ? sexo : null;
         }
-        if (categoria !== undefined) updateData.categoria = categoria ? String(categoria).trim() : null;
+        // Normaliza contra a lista única, mas SEM apagar texto que não reconhece
+        // (ex.: "Doadora", "Boi magro"). Em branco volta a null de propósito: é
+        // assim que o produtor devolve o animal para a dedução automática.
+        if (categoria !== undefined) updateData.categoria = normalizarCategoriaParaGravar(categoria);
         if (dataNascimento !== undefined) {
-            updateData.dataNascimento = dataNascimento ? new Date(dataNascimento) : null;
+            const novaData = dataNascimento ? new Date(dataNascimento) : null;
+            updateData.dataNascimento = novaData;
+            // A flag de safra só cai quando a data MUDA de verdade. O modal manda
+            // o campo em todo salvamento, mesmo sem edição — zerar aqui de forma
+            // incondicional apagaria o "~" da idade estimada de um animal cuja
+            // data continua sendo o chute do 1º de outubro. Flag que mente é
+            // pior que flag nenhuma.
+            const atual = animal.dataNascimento ? new Date(animal.dataNascimento).getTime() : null;
+            const proxima = novaData ? novaData.getTime() : null;
+            if (atual !== proxima) updateData.dataNascimentoEstimada = false;
         }
         if (registro !== undefined) updateData.registro = registro ? String(registro).trim() : null;
         if (nome !== undefined) updateData.nome = nome ? String(nome).trim() : null;
@@ -1892,6 +1905,20 @@ app.get('/animals', requireAuth, async (req, res) => {
             });
         }
 
+        // Vaca é fêmea que pariu, não fêmea velha. Aqui o sistema descobre quem
+        // pariu de verdade: uma consulta em lote para todas as fêmeas da página,
+        // não uma por animal. Sem isso a dedução cai no status reprodutivo.
+        const femeaIds = animals.filter((animal) => animal.sexo === 'FEMEA').map((animal) => animal.id);
+        let matrizesComParto = new Set();
+        if (femeaIds.length) {
+            const crias = await prisma.animal.findMany({
+                where: { maeId: { in: femeaIds } },
+                select: { maeId: true },
+                distinct: ['maeId'],
+            });
+            matrizesComParto = new Set(crias.map((cria) => cria.maeId));
+        }
+
         const enriched = animals.map((animal) => {
             const direct = nutritionByAnimal.get(animal.id);
             const lot = animal.lotId ? nutritionByLot.get(animal.lotId) : null;
@@ -1899,6 +1926,7 @@ app.get('/animals', requireAuth, async (req, res) => {
             return {
                 ...animal,
                 currentNutritionPlan: plan ? serializeNutritionPlan(plan) : null,
+                jaPariu: matrizesComParto.has(animal.id),
             };
         });
 
@@ -1913,7 +1941,7 @@ app.post('/animals', requireAuth, async (req, res) => {
     const { farmId, lotId, brinco, raca, sexo, dataNascimento, ultimoPeso, paddockId, paddockStartAt, valorCompra, dataCompra, tipoCadastro,
             tatuagem, sisbov, maeId, maeNome, paiId, paiNome,
             nome, brincoEletronico, padraoRacial, tipoRaca, composicaoMestica, racaPredominante,
-            funcaoReprodutiva, statusReprodutivo, previsaoParto, observacoes } = req.body || {};
+            funcaoReprodutiva, statusReprodutivo, previsaoParto, observacoes, categoria } = req.body || {};
     if (Object.prototype.hasOwnProperty.call(req.body || {}, 'pesoAtual')) {
         return res.status(400).json({ message: 'Campo inválido: use "ultimoPeso" no lugar de "pesoAtual".' });
     }
@@ -2024,6 +2052,10 @@ app.post('/animals', requireAuth, async (req, res) => {
                     statusReprodutivo: statusReprodutivo?.trim() || null,
                     previsaoParto: previsaoParto ? parseDateValue(previsaoParto) : null,
                     observacoes: observacoes?.trim() || null,
+                    // A categoria vinha do formulário e era descartada aqui: o campo
+                    // não estava no destructuring nem neste create. Em branco fica
+                    // null de propósito, para a dedução por idade assumir na leitura.
+                    categoria: normalizarCategoriaParaGravar(categoria),
                 },
             });
             if (parsedPesoAtual) {

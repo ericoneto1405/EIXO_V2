@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { buildApiUrl } from '../api';
+import { CATEGORIAS_PESO_ALVO } from '../constants/animalCategories';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -19,15 +20,11 @@ interface HerdSettingsTabProps {
 }
 
 // ─── Categorias padrão do sistema ─────────────────────────────────────────────
+// Vem da lista única. Esta tela usava grafias próprias ("Bezerro(a)") que não
+// existiam em nenhuma outra parte do sistema. Metas já salvas com os nomes
+// antigos continuam aparecendo — o merge abaixo preserva o que veio do banco.
 
-const DEFAULT_CATEGORIES = [
-    'Touro',
-    'Vaca',
-    'Novilha',
-    'Novilho',
-    'Bezerro(a)',
-    'Boi',
-];
+const DEFAULT_CATEGORIES = CATEGORIAS_PESO_ALVO;
 
 // ─── Componente ───────────────────────────────────────────────────────────────
 

@@ -330,6 +330,9 @@ model Animal {
   sexo                 AnimalSexo?
   categoria            String?
   dataNascimento       DateTime?
+  // true quando a data veio de safra informada na importação, e não de um
+  // nascimento anotado. A tela mostra "estimado" em vez de fingir precisão.
+  dataNascimentoEstimada Boolean             @default(false)
   pesoAtual            Float?
   gmd                  Float?
   gmd30                Float?
