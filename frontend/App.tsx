@@ -41,6 +41,7 @@ const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
 const HQPage = React.lazy(() => import('./components/HQPage'));
 const MarketAdmin = React.lazy(() => import('./components/MarketAdmin'));
+const CommercialManagement = React.lazy(() => import('./components/CommercialManagement'));
 
 const WEB_DEVICE_KEY_STORAGE = 'eixo:web:device-key';
 const getWebDeviceKey = () => {
@@ -250,6 +251,15 @@ const AppContent: React.FC = () => {
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
     const isPlansRoute = location.pathname === '/planos';
     const [activeView, setActiveView] = useState('Visão Geral');
+    const contentScrollRef = useRef<HTMLDivElement>(null);
+
+    // Cada módulo (Financeiro, Rebanho, Usuários...) renderiza dentro da
+    // mesma div rolável — sem isso, trocar de módulo mantém a posição de
+    // rolagem de onde a pessoa estava antes, então uma tela mais curta
+    // parece abrir "no final".
+    useEffect(() => {
+        contentScrollRef.current?.scrollTo(0, 0);
+    }, [activeView]);
     const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number; openAnimalForm?: boolean } | null>(null);
     const [financeOnboardingAction, setFinanceOnboardingAction] = useState<{ action: 'SAIDA' | 'ENTRADA' | 'RESULTADO'; nonce: number } | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -1116,6 +1126,8 @@ const AppContent: React.FC = () => {
                 return <HQPage />;
             case 'EIXO Mercado':
                 return isSuperAdmin ? <MarketAdmin /> : <Navigate to="/" replace />;
+            case 'Gestão Comercial':
+                return <CommercialManagement />;
             case 'Visão Geral':
             default:
                 return <Dashboard
@@ -1166,7 +1178,9 @@ const AppContent: React.FC = () => {
                             onAlertAction={handleHeaderAlertAction}
                         />
                         <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
-                            <div className={
+                            <div
+                                ref={contentScrollRef}
+                                className={
                                 activeView === 'Rebanho Comercial'
                                         ? 'h-full overflow-x-hidden overflow-y-auto px-2 py-4 lg:px-3 lg:py-5'
                                         : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'

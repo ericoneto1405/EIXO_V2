@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export const SUPER_ADMIN_ALL_MODULES = [
     'Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda',
-    'Rebanho Comercial', 'Eixo Genetics',
+    'Rebanho Comercial', 'Eixo Genetics', 'Gestão Comercial',
     'Fornecedores', 'Remédios', 'Rações', 'Suplementos',
     'Nutrição', 'Financeiro',
     'Operações', 'Configurações', 'Registro de Atividades',
@@ -20,7 +20,7 @@ export const PLAN_ENTITLEMENTS = {
 export const PLAN_MODULES = {
     GRATIS: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'],
     EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades'],
-    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics'],
+    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics', 'Gestão Comercial'],
 };
 
 export const PLAN_LIMITS = {
@@ -198,6 +198,9 @@ export const buildAllowedModulesFromPlan = (modules, entitlements, roles = [], a
     }
     if (codes.has('EIXO_GESTAO') || codes.has('EIXO_DECISAO')) {
         nextModules.add('Registro de Atividades');
+    }
+    if (codes.has('EIXO_DECISAO')) {
+        nextModules.add('Gestão Comercial');
     }
 
     return Array.from(nextModules);
