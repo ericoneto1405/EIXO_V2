@@ -380,7 +380,6 @@ const navSections: NavSection[] = [
         sectionLabel: 'Produção',
         items: [
             { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição', allowedLabels: ['Nutrição'], requiredPlanBadge: 'PRO' },
-            { label: 'Plantel P.O.', icon: <HerdPoIcon />, value: 'Plantel P.O.', allowedLabels: ['Plantel P.O.'] },
             { label: 'Eixo Acasalamento', icon: <HerdGeneticIcon />, value: 'Eixo Acasalamento', path: '/genetics/acasalamento', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
             { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Reprodução', path: '/genetics/reproducao', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
             { label: 'Confinamento e Contratos', icon: <OperationsIcon />, value: 'Confinamento e Contratos' },
