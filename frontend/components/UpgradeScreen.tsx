@@ -1,8 +1,8 @@
 import React from 'react';
 
 const PLAN_NAMES: Record<string, string> = {
-    PRO: 'Eixo Gestão',
-    PLUS: 'Eixo Decisão',
+    PRO: 'EIXO Gestão',
+    PLUS: 'EIXO Performance',
 };
 
 interface UpgradeScreenProps {

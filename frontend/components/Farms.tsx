@@ -177,13 +177,13 @@ const Farms: React.FC<FarmsProps> = ({
                                         <div className="absolute right-0 z-20 mt-2 w-[320px] rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4 text-left shadow-xl">
                                             <p className="text-sm font-semibold text-[var(--eixo-text)]">Eleve o nível da gestão</p>
                                             <p className="mt-1 text-xs leading-relaxed text-[var(--eixo-text-muted)]">
-                                                Com o Plano Gestão, você acompanha mais fazendas e expande o controle da operação.
+                                                Com o EIXO Gestão, você acompanha mais fazendas e expande o controle da operação.
                                             </p>
                                             <a
                                                 href="/planos"
                                                 className="mt-3 inline-flex rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
                                             >
-                                                Conhecer Plano Gestão
+                                                Conhecer EIXO Gestão
                                             </a>
                                         </div>
                                     )}

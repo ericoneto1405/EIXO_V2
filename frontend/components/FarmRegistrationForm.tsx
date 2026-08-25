@@ -1117,9 +1117,9 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
 
                 {farmLimitReached && (
                     <div className="rounded-2xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] p-4">
-                        <p className="text-sm font-semibold text-[var(--eixo-graphite)]">🔒 Limite do plano gratuito</p>
+                        <p className="text-sm font-semibold text-[var(--eixo-graphite)]">🔒 Limite do EIXO Essencial</p>
                         <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">
-                            O plano gratuito permite apenas <strong>1 fazenda</strong>. Para cadastrar mais fazendas, faça upgrade do seu plano.
+                            O EIXO Essencial permite apenas <strong>1 fazenda</strong>. Para cadastrar mais fazendas, faça upgrade do seu plano.
                         </p>
                         <button
                             type="button"

@@ -386,7 +386,7 @@ app.post('/register', async (req, res) => {
                 subject: 'Bem-vindo ao EIXO 🌿',
                 html: `
                     <p>Olá, ${safeName}!</p>
-                    <p>Sua conta no <strong>EIXO</strong> foi criada com sucesso. Você está no <strong>Plano Grátis</strong> — sem cartão, sem prazo.</p>
+                    <p>Sua conta no <strong>EIXO</strong> foi criada com sucesso. Você está no <strong>EIXO Essencial</strong> — sem cartão, sem prazo.</p>
                     <p>Com ele você já pode:</p>
                     <ul>
                         <li>Cadastrar e importar seu rebanho</li>

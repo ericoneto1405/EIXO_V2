@@ -24,7 +24,7 @@ export const PLAN_MODULES = {
 };
 
 export const PLAN_LIMITS = {
-    GRATIS: { farms: 1, users: 3, label: 'plano gratuito' },
+    GRATIS: { farms: 1, users: 3, label: 'plano EIXO Essencial' },
     EIXO_GESTAO: { farms: 3, users: 5, label: 'plano EIXO Gestão' },
     EIXO_DECISAO: { farms: null, users: null, label: 'plano EIXO Performance' },
 };

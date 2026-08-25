@@ -13,7 +13,7 @@ test('aplica os limites prometidos para Essencial e Gestão', () => {
         code: 'GRATIS',
         farms: 1,
         users: 3,
-        label: 'plano gratuito',
+        label: 'plano EIXO Essencial',
     });
     assert.deepEqual(getPlanLimits('EIXO_GESTAO'), {
         code: 'EIXO_GESTAO',

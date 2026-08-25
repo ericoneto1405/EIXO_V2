@@ -48,7 +48,7 @@ Cada conta está vinculada a um e-mail. Não é permitido compartilhar contas en
 
 ## 1.5 Planos e pagamentos
 
-O EIXO oferece um plano gratuito e planos pagos com funcionalidades avançadas. Os valores, formas de cobrança e condições de cada plano estão descritos na página de planos dentro da plataforma.
+O EIXO oferece o plano gratuito EIXO Essencial e planos pagos com funcionalidades avançadas. Os valores, formas de cobrança e condições de cada plano estão descritos na página de planos dentro da plataforma.
 
 O pagamento dos planos pagos é processado pela plataforma **Asaas**. O EIXO não armazena dados do seu cartão de crédito.
 
@@ -301,7 +301,7 @@ Os planos disponíveis, seus valores e funcionalidades estão descritos na pági
 
 ## 4.3 Período de teste e garantia
 
-- O plano gratuito é disponibilizado sem prazo de expiração;
+- O EIXO Essencial é disponibilizado sem prazo de expiração;
 - Planos pagos têm **garantia de reembolso de 7 dias** a partir da primeira cobrança, conforme o Código de Defesa do Consumidor (art. 49 do CDC — direito de arrependimento em compras online);
 - Solicitações de reembolso após esse prazo serão avaliadas caso a caso.
 

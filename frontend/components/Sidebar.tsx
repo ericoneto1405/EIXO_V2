@@ -16,51 +16,51 @@ interface ModuleInfo {
 const MODULE_INFO: Record<string, ModuleInfo> = {
     'Visão Geral': {
         plan: 'PRO',
-        title: 'Disponível no Plano Gestão',
+        title: 'Disponível no EIXO Gestão',
         description: 'Este módulo faz parte dos recursos avançados para gestão da fazenda.',
-        cta: 'Conhecer Plano Gestão',
+        cta: 'Conhecer EIXO Gestão',
     },
     'Nutrição': {
         plan: 'PRO',
-        title: 'Disponível no Plano Gestão',
+        title: 'Disponível no EIXO Gestão',
         description: 'Este módulo faz parte dos recursos avançados para gestão da fazenda.',
-        cta: 'Conhecer Plano Gestão',
+        cta: 'Conhecer EIXO Gestão',
     },
     'Registro de Atividades': {
         plan: 'PRO',
-        title: 'Disponível no Plano Gestão',
+        title: 'Disponível no EIXO Gestão',
         description: 'Este módulo faz parte dos recursos avançados para gestão da fazenda.',
-        cta: 'Conhecer Plano Gestão',
+        cta: 'Conhecer EIXO Gestão',
     },
     'Confinamento e Contratos': {
         plan: 'PLUS',
-        title: 'Disponível no Plano Decisão',
+        title: 'Disponível no EIXO Performance',
         description: 'Este módulo faz parte dos recursos avançados para análise e decisão.',
-        cta: 'Conhecer Plano Decisão',
+        cta: 'Conhecer EIXO Performance',
     },
     'Reprodução': {
         plan: 'PLUS',
-        title: 'Disponível no Plano Decisão',
+        title: 'Disponível no EIXO Performance',
         description: 'Este módulo faz parte dos recursos avançados para análise e decisão.',
-        cta: 'Conhecer Plano Decisão',
+        cta: 'Conhecer EIXO Performance',
     },
     'Eixo Acasalamento': {
         plan: 'PLUS',
-        title: 'Disponível no Plano Decisão',
+        title: 'Disponível no EIXO Performance',
         description: 'Este módulo faz parte dos recursos avançados para análise e decisão.',
-        cta: 'Conhecer Plano Decisão',
+        cta: 'Conhecer EIXO Performance',
     },
     'Estoque e Equipamentos': {
         plan: 'PLUS',
-        title: 'Disponível no Plano Decisão',
+        title: 'Disponível no EIXO Performance',
         description: 'Controle botijão de sêmen e estoque técnico usado nas decisões do EIXO.',
-        cta: 'Conhecer Plano Decisão',
+        cta: 'Conhecer EIXO Performance',
     },
     'Gestão Comercial': {
         plan: 'PLUS',
-        title: 'Disponível no Plano Decisão',
+        title: 'Disponível no EIXO Performance',
         description: 'Este módulo faz parte dos recursos avançados para análise e decisão.',
-        cta: 'Conhecer Plano Decisão',
+        cta: 'Conhecer EIXO Performance',
     },
 };
 
@@ -106,7 +106,7 @@ const StatusPopover: React.FC<StatusPopoverProps> = ({ state, pos, onClose, popo
     // Ajusta verticalmente se sair da tela
     const adjustedTop = Math.min(pos.top, window.innerHeight - 320);
     const badgeLabel = state.type === 'plan_locked'
-        ? state.plan === 'PRO' ? 'Plano Gestão' : 'Plano Decisão'
+        ? state.plan === 'PRO' ? 'EIXO Gestão' : 'EIXO Performance'
         : state.type === 'coming_soon'
             ? 'Em breve'
             : 'Primeiros passos';

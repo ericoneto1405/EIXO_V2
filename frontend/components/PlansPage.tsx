@@ -223,7 +223,7 @@ const PlansPage: React.FC<PlansPageProps> = ({
                     ACESSO ANTECIPADO
                 </div>
                 <h1 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] md:text-4xl">
-                    Comece gratuitamente no Plano Essencial. Evolua quando precisar avançar!
+                    Comece gratuitamente no EIXO Essencial. Evolua quando precisar avançar!
                 </h1>
                 <p className="mt-3 text-base text-[var(--eixo-text-muted)] max-w-md mx-auto">
                     O plano mais completo do mercado para quem quer sair das planilhas e cadernos, e elevar o nível de Gestão da sua Fazenda.

@@ -217,9 +217,9 @@ const SUPPORT_INTERNAL_LINKS = [
 ];
 
 const SUPPORT_PLAN_LABELS = {
-    GRATIS: 'Grátis',
+    GRATIS: 'EIXO Essencial',
     EIXO_GESTAO: 'EIXO Gestão',
-    EIXO_DECISAO: 'EIXO Decisão',
+    EIXO_DECISAO: 'EIXO Performance',
 };
 
 const hasSupportModuleAccess = (module, entitlements) => {
