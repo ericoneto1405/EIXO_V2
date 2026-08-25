@@ -8,7 +8,7 @@ interface OnboardingChecklistProps {
     userId: string;
     farmId: string | null;
     farms: Farm[];
-    onNavigate: (view: string, options?: { herdTab?: 'animals' | 'weighings'; openAnimalForm?: boolean }) => void;
+    onNavigate: (view: string, options?: { herdTab?: 'animals' | 'weighings'; openAnimalForm?: boolean; openImportModal?: boolean }) => void;
     onboardingCompletedAt?: string | null;
 }
 
@@ -139,7 +139,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
         : !steps.paddocks
             ? { label: 'Cadastrar pastos', onClick: () => onNavigate('Fazendas') }
             : !steps.animals
-                ? { label: 'Adicionar animal', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'animals', openAnimalForm: true }) }
+                ? { label: 'Importar planilha', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'animals', openImportModal: true }) }
                 : { label: 'Registrar pesagem', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'weighings' }) };
 
     return (

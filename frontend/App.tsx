@@ -88,7 +88,7 @@ interface User {
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Plantel P.O.', 'Eixo Genetics'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Eixo Genetics'],
     },
     {
         title: 'Cadastros',
@@ -260,7 +260,7 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         contentScrollRef.current?.scrollTo(0, 0);
     }, [activeView]);
-    const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number; openAnimalForm?: boolean } | null>(null);
+    const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number; openAnimalForm?: boolean; openImportModal?: boolean } | null>(null);
     const [financeOnboardingAction, setFinanceOnboardingAction] = useState<{ action: 'SAIDA' | 'ENTRADA' | 'RESULTADO'; nonce: number } | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -314,8 +314,6 @@ const AppContent: React.FC = () => {
             'Mapa da Fazenda': 'Fazendas',
             'Remédios': 'Fazendas',
             'Rebanho Genética': 'Eixo Genetics',
-            'Rebanho P.O.': 'Plantel P.O.',
-            'Plantel P.O.': 'Plantel P.O.',
             'Contas a Pagar': 'Financeiro',
             'Contas a Receber': 'Financeiro',
             'Fluxo de Caixa': 'Financeiro',
@@ -817,9 +815,9 @@ const AppContent: React.FC = () => {
         return false;
     }, []);
 
-    const handleOnboardingNavigate = React.useCallback((view: string, options?: { herdTab?: HerdNavigationTab; openAnimalForm?: boolean }) => {
+    const handleOnboardingNavigate = React.useCallback((view: string, options?: { herdTab?: HerdNavigationTab; openAnimalForm?: boolean; openImportModal?: boolean }) => {
         if (options?.herdTab) {
-            setHerdTabRequest({ tab: options.herdTab, nonce: Date.now(), openAnimalForm: options.openAnimalForm });
+            setHerdTabRequest({ tab: options.herdTab, nonce: Date.now(), openAnimalForm: options.openAnimalForm, openImportModal: options.openImportModal });
         }
         setActiveView(view);
     }, []);
@@ -1076,27 +1074,6 @@ const AppContent: React.FC = () => {
                         onUpgradeRequest={() => setUpgradeModal('Exportação de dados')}
                     />
                 );
-            case 'Plantel P.O.':
-                if (!hasSelectedFarm) {
-                    return (
-                        <FarmRequiredPanel
-                            title="Cadastre uma fazenda para começar"
-                            actionLabel="Cadastrar fazenda"
-                            onAction={handleRegisterFarmView}
-                        />
-                    );
-                }
-                return (
-                    <HerdModule
-                        farmId={selectedFarmId}
-                        farmName={selectedFarm?.name}
-                        herdType="PO"
-                        paddocksRefreshNonce={paddocksRefreshNonce}
-                        isFreePlan={isFreePlan}
-                        initialTabRequest={herdTabRequest}
-                        onUpgradeRequest={() => setUpgradeModal('Exportação de dados')}
-                    />
-                );
             case 'Eixo Genetics':
                 return <Navigate to="/genetics/acasalamento" replace />;
             case 'Financeiro':
@@ -1189,7 +1166,7 @@ const AppContent: React.FC = () => {
                                     <>
                                         {currentUser && (
                                             <>
-                                                {(activeView === 'Rebanho Comercial' || activeView === 'Fazendas') ? (
+                                                {(activeView === 'Visão Geral' || activeView === 'Rebanho Comercial' || activeView === 'Fazendas') ? (
                                                     <OnboardingChecklist
                                                         userId={currentUser.id}
                                                         farmId={selectedFarmId}

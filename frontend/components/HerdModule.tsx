@@ -157,7 +157,7 @@ interface HerdModuleProps {
     herdType?: HerdType;
     isFreePlan?: boolean;
     onUpgradeRequest?: (animalCount?: number) => void;
-    initialTabRequest?: { tab: TabKey; nonce: number; openAnimalForm?: boolean } | null;
+    initialTabRequest?: { tab: TabKey; nonce: number; openAnimalForm?: boolean; openImportModal?: boolean } | null;
     weighingOnlyMode?: boolean;
 }
 
@@ -562,6 +562,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             if (initialTabRequest.openAnimalForm) {
                 setAnimalFormError(null);
                 setAnimalFormOpen(true);
+            }
+            if (initialTabRequest.openImportModal) {
+                setShowImportModal(true);
             }
         }
     }, [initialTabRequest?.nonce]);
