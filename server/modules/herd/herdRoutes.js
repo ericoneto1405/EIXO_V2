@@ -199,6 +199,14 @@ const COMPOSICOES_MESTICAS = [
 
 const STATUS_REPRODUTIVOS = ['PRENHE', 'VAZIA', 'CICLANDO', 'RECRIA'];
 
+// Faixa de peso de um bovino vivo, do bezerro recém-nascido ao touro adulto.
+// Serve para pegar erro de digitação de curral (520 → 5200), não para julgar o animal.
+const PESO_MIN_KG = 15;
+const PESO_MAX_KG = 1400;
+// Vaca que pariu na semana passada ainda não teve a previsão atualizada: só é erro
+// quando a data está claramente errada (ano trocado), não quando acabou de vencer.
+const TOLERANCIA_PARTO_VENCIDO_DIAS = 30;
+
 // Lista única do sistema — antes esta constante tinha 8 valores próprios,
 // enquanto o formulário de cadastro oferecia 12. O que o produtor escolhia na
 // tela ("Garrote", "Vaca seca"…) era apagado em silêncio na importação.
@@ -956,6 +964,34 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
     if (row.data_pesagem && !dataPesagem) rowReasons.push('Data da pesagem inválida');
     if (row.ultimo_peso_kg && (!pesoAtual || pesoAtual <= 0)) rowReasons.push('Último peso deve ser maior que zero');
     if (row.previsao_parto && !previsaoParto) rowReasons.push('Previsão de parto inválida');
+    // Coerência: formato válido não basta — o valor precisa fazer sentido num bovino.
+    // Antes disso, peso de 5000 kg e nascimento em 2099 entravam calados e contaminavam
+    // GMD, arroba do rebanho e o custo/@ do Financeiro.
+    const agora = new Date();
+    if (pesoAtual && (pesoAtual < PESO_MIN_KG || pesoAtual > PESO_MAX_KG)) {
+      rowReasons.push(`Peso de ${pesoAtual} kg está fora da faixa de um bovino (${PESO_MIN_KG} a ${PESO_MAX_KG} kg) — confira a digitação`);
+    }
+    if (dataNascimento && dataNascimento > agora) rowReasons.push('Data de nascimento está no futuro');
+    if (dataPesagem && dataPesagem > agora) rowReasons.push('Data da pesagem está no futuro');
+    if (dataNascimento && dataPesagem && dataPesagem < dataNascimento) {
+      rowReasons.push('Data da pesagem é anterior ao nascimento do animal');
+    }
+    if (previsaoParto) {
+      const limiteParto = new Date(agora.getTime() - TOLERANCIA_PARTO_VENCIDO_DIAS * 24 * 60 * 60 * 1000);
+      if (previsaoParto < limiteParto) rowReasons.push('Previsão de parto já passou — confira o ano');
+    }
+    // Status reprodutivo é campo de lista e alimenta a dedução de categoria
+    // (RECRIA segura a novilha). Texto livre aqui quebrava essa regra em silêncio.
+    const statusInformado = String(row.status_reprodutivo || '').trim();
+    const statusNormalizado = statusInformado
+      ? (STATUS_REPRODUTIVOS.find((opcao) => normalizeHeader(opcao) === normalizeHeader(statusInformado)) || null)
+      : null;
+    if (statusInformado && !statusNormalizado) {
+      rowReasons.push(`Status reprodutivo "${statusInformado}" não existe — use ${STATUS_REPRODUTIVOS.join(', ')}`);
+    }
+    if (statusNormalizado && sexo === 'MACHO') {
+      rowReasons.push('Status reprodutivo é só para fêmeas');
+    }
     // Peso preenchido sem data: usa a data da importação para não perder o registro de pesagem.
     // Data preenchida sem peso: não há o que registrar, segue sem pesagem (sem erro).
     const dataPesagemEfetiva = dataPesagem || (pesoAtual ? new Date() : null);
@@ -990,7 +1026,7 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
         // (estimado)" em vez de fingir que existe uma data anotada.
         dataNascimentoEstimada: nascimento.estimada,
         pesoAtual,
-        statusReprodutivo: String(row.status_reprodutivo || '').trim() || null,
+        statusReprodutivo: statusNormalizado,
         previsaoParto,
         registro,
         paiNome: String(row.pai_nome || '').trim() || null,

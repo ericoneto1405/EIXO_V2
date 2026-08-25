@@ -20,10 +20,11 @@ export function normalizeSexoImport(value) {
   if (!normalized) return null;
   if (['macho', 'm', 'masculino', 'male'].includes(normalized)) return 'MACHO';
   if (['femea', 'f', 'feminino', 'female'].includes(normalized)) return 'FEMEA';
-  // Tolera erro de digitação/variação não prevista: qualquer texto que comece
-  // com M ou F continua sendo reconhecido (ex.: "masculiono", "fem").
-  if (normalized.startsWith('m')) return 'MACHO';
-  if (normalized.startsWith('f')) return 'FEMEA';
+  // Tolera erro de digitação ("masculiono", "fem", "macha"), mas exige um começo
+  // reconhecível. Aceitar qualquer palavra com M ou F fazia "Mestiça" virar MACHO:
+  // uma coluna desalinhada transformava o rebanho inteiro em macho, em silêncio.
+  if (['mac', 'mas', 'mal'].some((prefixo) => normalized.startsWith(prefixo))) return 'MACHO';
+  if (['fem', 'fea'].some((prefixo) => normalized.startsWith(prefixo))) return 'FEMEA';
   return null;
 }
 
