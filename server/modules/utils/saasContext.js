@@ -195,6 +195,7 @@ export const buildAllowedModulesFromPlan = (modules, entitlements, roles = [], a
     }
     if (codes.has('GENETICS') || codes.has('PO') || codes.has('EIXO_GENETICS') || codes.has('EIXO_DECISAO')) {
         nextModules.add('Eixo Genetics');
+        nextModules.add('Plantel P.O.');
     }
     if (codes.has('EIXO_GESTAO') || codes.has('EIXO_DECISAO')) {
         nextModules.add('Registro de Atividades');
