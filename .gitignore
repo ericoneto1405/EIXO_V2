@@ -32,3 +32,4 @@ eixo-github-actions-deploy*
 *.njsproj
 *.sln
 *.sw?
+_to_delete/
