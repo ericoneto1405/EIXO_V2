@@ -226,6 +226,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
     const [phoneEditCount, setPhoneEditCount] = useState(0);
     const lastAutoFetchedCnpjRef = useRef<string | null>(null);
     const lastDocumentCheckRef = useRef<string | null>(null);
+    const lastAutoVerifiedCodeRef = useRef<string | null>(null);
 
     const docDigits = docValue.replace(/\D/g, '');
     const cnpjIsActive = cnpjResult?.descricao_situacao_cadastral === 'ATIVA';
@@ -472,6 +473,14 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
             setIsVerifyingOtp(false);
         }
     };
+
+    useEffect(() => {
+        if (!otpSent || phoneVerified || isVerifyingOtp) return;
+        if (otpCode.length !== 6) return;
+        if (lastAutoVerifiedCodeRef.current === otpCode) return;
+        lastAutoVerifiedCodeRef.current = otpCode;
+        void handleVerifyOtp();
+    }, [otpCode, otpSent, phoneVerified, isVerifyingOtp]);
 
     const handleResendOtp = async () => {
         if (isSendingOtp || resendCooldown > 0) return;
@@ -861,10 +870,14 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                 }}
                                                 className={inputClass}
                                                 placeholder="nome@fazenda.com"
+                                                autoCapitalize="none"
+                                                autoCorrect="off"
+                                                autoComplete="email"
+                                                spellCheck={false}
                                                 required
                                             />
-                                            {emailError && (
-                                                <p className="mt-2 text-xs text-[var(--eixo-danger)]">{emailError}</p>
+                                            {(emailError || (email.trim().length > 0 && !isRegisterEmailValid)) && (
+                                                <p className="mt-2 text-xs text-[var(--eixo-danger)]">{emailError || 'E-mail inválido. Verifique se não há espaços ou caracteres a mais.'}</p>
                                             )}
                                             {isCheckingEmail && (
                                                 <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">Validando se este e-mail já está cadastrado...</p>
