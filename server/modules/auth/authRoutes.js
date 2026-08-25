@@ -108,6 +108,16 @@ app.post('/auth/send-otp', async (req, res) => {
         return res.status(400).json({ message: 'Informe um celular válido com DDD.' });
     }
 
+    try {
+        const phoneExists = await prisma.user.findFirst({ where: { phone: digits } });
+        if (phoneExists) {
+            return res.status(409).json({ message: 'Este celular já está vinculado a outra conta. Recupere sua conta.' });
+        }
+    } catch (error) {
+        console.error('send-otp phone check error:', error);
+        return res.status(500).json({ message: 'Não foi possível validar o celular agora.' });
+    }
+
     if (isWindowRateLimited(otpSendAttempts, ipKey, OTP_SEND_MAX_PER_IP, OTP_SEND_WINDOW_MS)
         || isWindowRateLimited(otpSendAttempts, phoneKey, OTP_SEND_MAX_PER_PHONE, OTP_SEND_WINDOW_MS)) {
         return res.status(429).json({ message: 'Muitas tentativas de envio. Aguarde alguns minutos antes de tentar novamente.' });
@@ -203,6 +213,26 @@ app.post('/auth/register/check-document', async (req, res) => {
     }
 });
 
+app.post('/auth/register/check-email', async (req, res) => {
+    const { email } = req.body || {};
+    const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
+
+    if (!isEmailValid(normalizedEmail)) {
+        return res.status(400).json({ message: 'Informe um e-mail válido.' });
+    }
+
+    try {
+        const emailExists = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (emailExists) {
+            return res.status(409).json({ message: 'Este e-mail já está cadastrado. Faça login ou recupere sua senha.', exists: true });
+        }
+        return res.json({ exists: false });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Não foi possível validar o e-mail agora.' });
+    }
+});
+
 // ─── Consulta pública de CNPJ (Receita Federal) ──────────────────────────────
 app.get('/public/cnpj/:cnpj', async (req, res) => {
     const cnpj = req.params.cnpj.replace(/\D/g, '');
@@ -277,7 +307,7 @@ app.post('/register', async (req, res) => {
         // Verifica se celular já está em uso por outro usuário
         const phoneAlreadyUsed = await prisma.user.findFirst({ where: { phone: normalizedPhone } });
         if (phoneAlreadyUsed) {
-            return res.status(400).json({ message: 'Este celular já está vinculado a outra conta. Use outro número ou recupere sua conta.' });
+            return res.status(400).json({ message: 'Este celular já está vinculado a outra conta. Recupere sua conta.' });
         }
 
         let trustedCnpjData = undefined;
@@ -376,7 +406,7 @@ app.post('/register', async (req, res) => {
             return res.status(409).json({ message: `${documentType} já está cadastrado em outra conta.` });
         }
         if (error?.code === 'P2002' && Array.isArray(error?.meta?.target) && error.meta.target.includes('phone')) {
-            return res.status(400).json({ message: 'Este celular já está vinculado a outra conta. Use outro número ou recupere sua conta.' });
+            return res.status(400).json({ message: 'Este celular já está vinculado a outra conta. Recupere sua conta.' });
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao criar conta.' });

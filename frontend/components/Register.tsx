@@ -191,6 +191,10 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
     const EDIT_PHONE_COOLDOWN_SECONDS = 5 * 60;
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
+    const [emailAlreadyExists, setEmailAlreadyExists] = useState(false);
+    const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+    const [emailError, setEmailError] = useState<string | null>(null);
+    const lastEmailCheckRef = useRef<string | null>(null);
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -235,6 +239,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
         : docDigits.length === 11 && validateCPF(docDigits);
     const canSubmit = isNameValid
         && isRegisterEmailValid
+        && !emailAlreadyExists
         && isPasswordValid
         && isPasswordConfirmationValid
         && docVerified
@@ -280,6 +285,34 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
             } else {
                 setCpfValid(false);
             }
+        }
+    };
+
+    const checkEmailAvailability = async (value: string) => {
+        if (lastEmailCheckRef.current === value) return;
+        lastEmailCheckRef.current = value;
+        setIsCheckingEmail(true);
+        try {
+            const response = await fetch(buildApiUrl('/auth/register/check-email'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: value }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (response.status === 409) {
+                setEmailAlreadyExists(true);
+                setEmailError(payload?.message || 'Este e-mail já está cadastrado. Faça login ou recupere sua senha.');
+                return;
+            }
+            if (!response.ok) {
+                setEmailError(payload?.message || 'Não foi possível validar este e-mail agora.');
+                return;
+            }
+            setEmailAlreadyExists(Boolean(payload?.exists));
+        } catch {
+            setEmailError('Não foi possível validar este e-mail agora.');
+        } finally {
+            setIsCheckingEmail(false);
         }
     };
 
@@ -341,6 +374,18 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
 
         return () => window.clearTimeout(timeoutId);
     }, [docType, docDigits, isCnpjLoading]);
+
+    useEffect(() => {
+        if (!isEmailValid(email)) {
+            lastEmailCheckRef.current = null;
+            return;
+        }
+        const normalized = email.trim().toLowerCase();
+        const timeoutId = window.setTimeout(() => {
+            void checkEmailAvailability(normalized);
+        }, 350);
+        return () => window.clearTimeout(timeoutId);
+    }, [email]);
 
     useEffect(() => {
         if (docType !== 'CPF') return;
@@ -479,6 +524,10 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
             return;
         }
         if (!canSubmit) {
+            if (emailAlreadyExists) {
+                setError('Este e-mail já está cadastrado. Faça login ou recupere sua senha.');
+                return;
+            }
             if (documentAlreadyExists) {
                 setError(`${docType} já está cadastrado em outra conta.`);
                 return;
@@ -804,11 +853,22 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                 id="register-email"
                                                 type="email"
                                                 value={email}
-                                                onChange={(e) => setEmail(e.target.value)}
+                                                onChange={(e) => {
+                                                    setEmail(e.target.value);
+                                                    setEmailAlreadyExists(false);
+                                                    setEmailError(null);
+                                                    lastEmailCheckRef.current = null;
+                                                }}
                                                 className={inputClass}
                                                 placeholder="nome@fazenda.com"
                                                 required
                                             />
+                                            {emailError && (
+                                                <p className="mt-2 text-xs text-[var(--eixo-danger)]">{emailError}</p>
+                                            )}
+                                            {isCheckingEmail && (
+                                                <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">Validando se este e-mail já está cadastrado...</p>
+                                            )}
                                         </div>
                                         <div>
                                             <label htmlFor="register-password" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
