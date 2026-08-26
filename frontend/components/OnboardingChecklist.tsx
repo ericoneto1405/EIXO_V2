@@ -139,7 +139,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
         : !steps.paddocks
             ? { label: 'Cadastrar pastos', onClick: () => onNavigate('Fazendas') }
             : !steps.animals
-                ? { label: 'Importar planilha', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'animals', openImportModal: true }) }
+                ? { label: 'Importar planilha do Rebanho para o EIXO', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'animals', openImportModal: true }) }
                 : { label: 'Registrar pesagem', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'weighings' }) };
 
     return (
