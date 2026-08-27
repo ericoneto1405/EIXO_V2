@@ -33,6 +33,8 @@ export interface PreviewLinha {
     line: number;
     identificacao?: string | null;
     motivos: string[];
+    /** avisos não bloqueiam a linha — informam algo que o sistema assumiu (ex.: dia da pesagem). */
+    avisos?: string[];
     dados: Record<string, unknown>;
     /** marcada localmente quando o usuário edita alguma célula */
     editada?: boolean;
@@ -367,9 +369,7 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                                             </td>
                                         ))}
                                         <td className="px-3 py-2 text-xs">
-                                            {linha.motivos.length === 0 ? (
-                                                <span className="text-[var(--eixo-text-soft)]">—</span>
-                                            ) : (
+                                            {linha.motivos.length > 0 ? (
                                                 <ul className={`min-w-[12rem] space-y-0.5 ${
                                                     status === 'revisao' ? 'text-[var(--eixo-text-muted)] line-through' : 'text-[var(--eixo-danger)]'
                                                 }`}>
@@ -377,6 +377,14 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                                                         <li key={i}>{motivo}</li>
                                                     ))}
                                                 </ul>
+                                            ) : linha.avisos && linha.avisos.length > 0 ? (
+                                                <ul className="min-w-[12rem] space-y-0.5 text-[var(--eixo-text-muted)]">
+                                                    {linha.avisos.map((aviso, i) => (
+                                                        <li key={i}>{aviso}</li>
+                                                    ))}
+                                                </ul>
+                                            ) : (
+                                                <span className="text-[var(--eixo-text-soft)]">—</span>
                                             )}
                                         </td>
                                     </tr>

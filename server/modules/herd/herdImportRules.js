@@ -41,17 +41,32 @@ function buildExactDate(year, monthIndex, day) {
   return date;
 }
 
+// Converte o serial de data do Excel (dias desde 30/12/1899) num Date real.
+function serialExcelParaData(valorNumerico) {
+  if (!Number.isFinite(valorNumerico)) return null;
+  const excelEpoch = new Date(1899, 11, 30);
+  const date = new Date(excelEpoch.getTime() + valorNumerico * 86400000);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export function parseImportDate(value) {
   if (!value) return null;
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value;
   if (typeof value === 'number') {
-    if (!Number.isFinite(value)) return null;
-    const excelEpoch = new Date(1899, 11, 30);
-    const date = new Date(excelEpoch.getTime() + value * 86400000);
-    return Number.isNaN(date.getTime()) ? null : date;
+    return serialExcelParaData(value);
   }
 
   const text = String(value).trim();
+
+  // Número puro de 5+ dígitos, sem barra nem traço: a célula perdeu a
+  // formatação de data no Excel (comum ao colar de outra planilha) e o
+  // arquivo exporta o serial ("45366") em vez do texto "15/03/2024". Sem
+  // isso, new Date("45366") lia como se fosse o ano 45366 e a linha virava
+  // "data no futuro" — um erro que não tem nada a ver com o que o cliente fez.
+  if (/^\d{5,}$/.test(text)) {
+    return serialExcelParaData(Number(text));
+  }
+
   const brMatch = text.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
   if (brMatch) {
     const day = Number(brMatch[1]);
@@ -66,8 +81,11 @@ export function parseImportDate(value) {
     return buildExactDate(Number(isoMatch[1]), Number(isoMatch[2]) - 1, Number(isoMatch[3]));
   }
 
-  const date = new Date(text);
-  return Number.isNaN(date.getTime()) ? null : date;
+  // Só os formatos acima. O fallback solto do `new Date()` aceitava "03/24"
+  // (mês/ano, sem dia) como se fosse 24/03/2001 — a linha entrava com uma
+  // data errada e ninguém percebia. Recusar e pedir para corrigir é melhor
+  // que inventar um dia e um século que o cliente nunca digitou.
+  return null;
 }
 
 // =============================================
@@ -152,10 +170,47 @@ export function parseNascimentoImport(valor) {
   // Só os formatos de data que sabemos ler. O fallback solto do `new Date()`
   // aceitaria "março de 2023" como data exata — precisão inventada é pior que
   // recusar a linha e pedir para o produtor escrever de novo.
+  // O terceiro padrão (5+ dígitos sem separador) é o serial do Excel quando a
+  // célula perdeu a formatação de data — mesma situação tratada em parseImportDate.
   const soData = /^\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2,4}$/.test(texto)
-    || /^\d{4}-\d{1,2}-\d{1,2}$/.test(texto);
+    || /^\d{4}-\d{1,2}-\d{1,2}$/.test(texto)
+    || /^\d{5,}$/.test(texto);
   if (!soData) return { data: null, estimada: false, erro: true };
 
   const data = parseImportDate(texto);
   return { data, estimada: false, erro: data === null };
+}
+
+// =============================================
+// PESAGEM SEM O DIA
+//
+// O produtor às vezes só lembra o mês da pesagem ("foi em março"). Em vez de
+// recusar a linha, assume o dia 15 (meio do mês): erra no máximo ±15 dias,
+// contra até 30 se assumisse o dia 1. Diferente da safra do nascimento, aqui
+// não tem estação que justifique um mês "mais provável" — é só o meio do
+// próprio mês informado.
+//
+// Devolve { data, diaEstimado, erro }:
+//   diaEstimado — true quando o dia veio assumido (mês/ano, sem dia)
+// =============================================
+export function parsePesagemImport(valor) {
+  const vazio = { data: null, diaEstimado: false, erro: false };
+  if (valor === null || valor === undefined || valor === '') return vazio;
+
+  const texto = String(valor).trim();
+  if (!texto) return vazio;
+
+  // "03/24", "3/24", "03/2024", "03-2024": só mês e ano, um separador só.
+  const mesAno = texto.match(/^(\d{1,2})[/\-.](\d{2,4})$/);
+  if (mesAno) {
+    const mes = Number(mesAno[1]);
+    let ano = Number(mesAno[2]);
+    if (ano < 100) ano += ano < 50 ? 2000 : 1900;
+    if (mes < 1 || mes > 12) return { data: null, diaEstimado: false, erro: true };
+    const data = buildExactDate(ano, mes - 1, 15);
+    return { data, diaEstimado: data !== null, erro: data === null };
+  }
+
+  const data = parseImportDate(valor);
+  return { data, diaEstimado: false, erro: data === null };
 }

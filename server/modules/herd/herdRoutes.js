@@ -10,8 +10,8 @@ import { logActivity } from '../utils/activityLog.js';
 import { serializeHerdEvent, serializeSanitaryRecord } from '../utils/serializers.js';
 import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../config/env.js';
 import { createIntegratedTransaction, upsertAutomaticResult } from '../financial/financialService.js';
-import { normalizeSexoImport, normalizeTipoRacaImport, parseImportDate, parseNascimentoImport } from './herdImportRules.js';
-import { CATEGORIAS_ANIMAL, normalizarCategoriaParaGravar } from './animalCategories.js';
+import { normalizeSexoImport, normalizeTipoRacaImport, parseImportDate, parseNascimentoImport, parsePesagemImport } from './herdImportRules.js';
+import { normalizarCategoriaParaGravar } from './animalCategories.js';
 const prisma = new PrismaClient();
 
 const VALID_EVENT_TYPES = ['NASCIMENTO', 'COMPRA', 'VENDA', 'MORTE'];
@@ -207,17 +207,12 @@ const PESO_MAX_KG = 1400;
 // quando a data está claramente errada (ano trocado), não quando acabou de vencer.
 const TOLERANCIA_PARTO_VENCIDO_DIAS = 30;
 
-// Lista única do sistema — antes esta constante tinha 8 valores próprios,
-// enquanto o formulário de cadastro oferecia 12. O que o produtor escolhia na
-// tela ("Garrote", "Vaca seca"…) era apagado em silêncio na importação.
-const CATEGORIAS = CATEGORIAS_ANIMAL;
-
 // Uma lista só para a raça: puras e mestiças no mesmo dropdown. O produtor não
 // precisa saber se o EIXO chama aquilo de "tipo" ou de "composição" — ele sabe
 // que o bicho é Nelore ou Anelorado, e é isso que a planilha pergunta.
 const RACAS_E_COMPOSICOES = [...RACAS_PURAS, ...COMPOSICOES_MESTICAS];
 
-// ─── Estrutura do template (12 colunas) ────────────────────────────────────
+// ─── Estrutura do template (11 colunas) ────────────────────────────────────
 // tier: required | conditional | recommended | optional
 //
 // Antes eram 19 colunas com 4 obrigatórias. O corte partiu de uma pergunta:
@@ -231,7 +226,6 @@ const TEMPLATE_COLUMNS = [
   // --- O que todo mundo tem ---
   { key: 'identificacao',      label: 'Identificação',           tier: 'required',     type: 'text',   example: 'EXEMPLO-1',                  description: 'Brinco, tatuagem ou número que identifica o animal de forma única.' },
   { key: 'sexo',               label: 'Sexo (MACHO ou FÊMEA)',   tier: 'required',     type: 'list',   options: ['MACHO', 'FEMEA'],            example: 'MACHO',                      description: 'MACHO ou FEMEA.' },
-  { key: 'categoria',          label: 'Categoria',               tier: 'recommended',  type: 'list',   options: CATEGORIAS,                    example: 'Novilho',                    description: 'Em branco, o EIXO deduz por sexo e idade — e mantém atualizado sozinho conforme o animal cresce.' },
   // --- Idade e peso ---
   { key: 'data_nascimento',    label: 'Nascimento ou safra',     tier: 'recommended',  type: 'text',   example: 'safra 2023',                 description: 'Aceita a data exata (15/03/2021) ou só a safra ("safra 2023"). Safra entra como estimativa e o EIXO mostra a idade como aproximada — melhor que inventar uma data.' },
   { key: 'ultimo_peso_kg',     label: 'Último Peso (kg)',        tier: 'recommended',  type: 'number', example: '520',                        description: 'Peso registrado mais recente, em kg.' },
@@ -251,6 +245,10 @@ const TEMPLATE_COLUMNS = [
 // Colunas que saíram do modelo mas continuam sendo LIDAS. Quem já baixou a
 // planilha antiga e preencheu não pode perder dado ao enviar.
 const LEGACY_TEMPLATE_COLUMNS = [
+  // Saiu do modelo novo: deixar em branco já basta pro EIXO deduzir a
+  // categoria por sexo e idade. Continua sendo lida para quem já baixou a
+  // planilha antiga e preencheu essa coluna.
+  { key: 'categoria',          labels: ['Categoria'] },
   { key: 'tipo_raca',          labels: ['Tipo de Raça'] },
   { key: 'composicao_mestica', labels: ['Composição (se Mestiça)', 'Composição Mestiça', 'Composição'] },
   { key: 'padrao_racial',      labels: ['Padrão Racial'] },
@@ -657,22 +655,30 @@ function buildDestinationLookup(items) {
   return lookup;
 }
 
-function resolveImportDestination(value, fallback, lookup, label, reasons) {
+// TEMPORÁRIO: log de diagnóstico para o relato de clientes de que um pasto/lote
+// já cadastrado "some" na importação sem erro. Ajuda a comparar o que o
+// cliente digitou com o que está de fato cadastrado, na próxima ocorrência.
+// Pode ser removido quando o caso for entendido.
+function resolveImportDestination(value, fallback, lookup, label, reasons, logCtx) {
   const rawValue = String(value || '').trim();
+  const ctx = logCtx ? ` farm=${logCtx.farmId} linha=${logCtx.line}` : '';
   if (!rawValue) return fallback || null;
   const matches = lookup.get(normalizeHeader(rawValue)) || [];
   if (matches.length === 0) {
     reasons.push(`${label} "${rawValue}" não encontrado nesta fazenda`);
+    console.log(`[import-destino] não encontrado —${ctx} campo="${label}" valor="${rawValue}" cadastrados=${JSON.stringify([...lookup.keys()])}`);
     return null;
   }
   if (matches.length > 1) {
     reasons.push(`${label} "${rawValue}" está duplicado nos cadastros da fazenda`);
+    console.log(`[import-destino] duplicado —${ctx} campo="${label}" valor="${rawValue}" ids=${matches.map((m) => m.id).join(',')}`);
     return null;
   }
+  console.log(`[import-destino] ok —${ctx} campo="${label}" valor="${rawValue}" -> id=${matches[0].id}`);
   return matches[0];
 }
 
-function buildImportCorrectionRows(rows, errors) {
+function buildImportCorrectionRows(rows, errors, warnings = []) {
   const errorsByLine = new Map();
   errors.forEach((error) => {
     const line = Number(error.line);
@@ -682,6 +688,14 @@ function buildImportCorrectionRows(rows, errors) {
     errorsByLine.set(line, current);
   });
 
+  const warningsByLine = new Map();
+  warnings.forEach((warning) => {
+    const line = Number(warning.line);
+    const current = warningsByLine.get(line) || [];
+    current.push(...(warning.motivos || []));
+    warningsByLine.set(line, current);
+  });
+
   return rows.map((row, index) => {
     const line = Number(row.__line || index + 1);
     const error = errorsByLine.get(line);
@@ -689,6 +703,9 @@ function buildImportCorrectionRows(rows, errors) {
       line,
       identificacao: error?.identificacao || row.identificacao || null,
       motivos: [...new Set(error?.motivos || [])],
+      // Avisos não bloqueiam a linha (por isso ficam fora de `motivos`) — só
+      // avisam o produtor de algo que o sistema assumiu no lugar dele.
+      avisos: [...new Set(warningsByLine.get(line) || [])],
       dados: { ...row },
     };
   });
@@ -927,6 +944,7 @@ async function carregarContextoImportacao(req, { farmId, paddockId, lotId, racaP
 async function analisarLinhasImportacao(rows, contexto, farmId) {
   const { farm, defaultPaddock, defaultLot, paddockLookup, lotLookup } = contexto;
   const erros = [];
+  const avisos = [];
   const prepared = [];
   const identityLines = new Map();
   const registroLines = new Map();
@@ -935,6 +953,7 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
     const line = row.__line || i + 1;
     const validationError = validateUploadRow(row, line);
     const rowReasons = [...(validationError?.motivos || [])];
+    const rowAvisos = [];
     const brinco = String(row.identificacao || '').trim();
     const identityKey = brinco ? normalizeAnimalIdentityKey(brinco) : null;
     const identityLookupKey = identityKey ? normalizeHeader(identityKey) : null;
@@ -958,10 +977,12 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
     const nascimento = parseNascimentoImport(row.data_nascimento);
     const dataNascimento = nascimento.data;
     const previsaoParto = parseImportDate(row.previsao_parto);
-    const dataPesagem = parseImportDate(row.data_pesagem);
+    const pesagem = parsePesagemImport(row.data_pesagem);
+    const dataPesagem = pesagem.data;
     const pesoAtual = parseNumber(row.ultimo_peso_kg);
     if (nascimento.erro) rowReasons.push('Nascimento inválido — use a data (15/03/2021) ou a safra ("safra 2023")');
-    if (row.data_pesagem && !dataPesagem) rowReasons.push('Data da pesagem inválida');
+    if (pesagem.erro) rowReasons.push('Data da pesagem inválida');
+    if (pesagem.diaEstimado) rowAvisos.push('Dia da pesagem não informado — considerando o dia 15 do mês.');
     if (row.ultimo_peso_kg && (!pesoAtual || pesoAtual <= 0)) rowReasons.push('Último peso deve ser maior que zero');
     if (row.previsao_parto && !previsaoParto) rowReasons.push('Previsão de parto inválida');
     // Coerência: formato válido não basta — o valor precisa fazer sentido num bovino.
@@ -1001,12 +1022,15 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
     // branco não é perda: a categoria passa a ser deduzida por sexo + idade.
     const categoriaNormalizada = normalizarCategoriaParaGravar(row.categoria);
     const destinationReasons = [];
-    const paddock = resolveImportDestination(row.pasto_destino, defaultPaddock, paddockLookup, 'Pasto de destino', destinationReasons);
-    const lot = resolveImportDestination(row.lote_destino, defaultLot, lotLookup, 'Lote de destino', destinationReasons);
+    const paddock = resolveImportDestination(row.pasto_destino, defaultPaddock, paddockLookup, 'Pasto de destino', destinationReasons, { farmId, line });
+    const lot = resolveImportDestination(row.lote_destino, defaultLot, lotLookup, 'Lote de destino', destinationReasons, { farmId, line });
     rowReasons.push(...destinationReasons);
     if (rowReasons.length) {
       erros.push({ line, identificacao: brinco || null, motivos: [...new Set(rowReasons)], dados: { ...row } });
       continue;
+    }
+    if (rowAvisos.length) {
+      avisos.push({ line, identificacao: brinco || null, motivos: [...new Set(rowAvisos)], dados: { ...row } });
     }
     prepared.push({ line, brinco, identityKey, dataPesagem: dataPesagemEfetiva, pesoAtual, paddock, raw: { ...row }, data: {
         farmId,
@@ -1061,7 +1085,7 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
     });
   }
 
-  return { erros, prontos: prepared.filter((item) => !conflictedLines.has(item.line)) };
+  return { erros, avisos, prontos: prepared.filter((item) => !conflictedLines.has(item.line)) };
 }
 
 // Grava os animais já conferidos por analisarLinhasImportacao.
@@ -1203,8 +1227,8 @@ app.post('/herd/import/validar', requireAuth, uploadHerdImportFile, async (req, 
       return res.status(contexto.erro.status).json({ message: contexto.erro.message });
     }
 
-    const { erros } = await analisarLinhasImportacao(rows, contexto, farmId);
-    const linhas = buildImportCorrectionRows(rows, erros);
+    const { erros, avisos } = await analisarLinhasImportacao(rows, contexto, farmId);
+    const linhas = buildImportCorrectionRows(rows, erros, avisos);
     const comErro = linhas.filter((item) => item.motivos.length > 0).length;
 
     return res.json({
@@ -1629,8 +1653,8 @@ app.post('/po/herd/import/upload', requireAuth, uploadHerdImportFile, async (req
       if (row.status_reprodutivo && !['RECRIA', 'CICLANDO', 'VAZIA', 'PRENHE', 'PARIDA'].includes(reproductiveStatus)) reasons.push('Status reprodutivo inválido');
       if (embryoTransferValue === undefined) reasons.push('Em TE? deve ser SIM ou NÃO');
       if (markedForDiscardValue === undefined) reasons.push('Marcado para descarte? deve ser SIM ou NÃO');
-      const paddock = resolveImportDestination(row.pasto_destino, defaultPaddock, paddockLookup, 'Pasto de destino', reasons);
-      const lot = resolveImportDestination(row.lote_destino, defaultLot, lotLookup, 'Lote de destino', reasons);
+      const paddock = resolveImportDestination(row.pasto_destino, defaultPaddock, paddockLookup, 'Pasto de destino', reasons, { farmId, line });
+      const lot = resolveImportDestination(row.lote_destino, defaultLot, lotLookup, 'Lote de destino', reasons, { farmId, line });
       if (!paddock && !String(row.pasto_destino || '').trim() && !defaultPaddock) {
         reasons.push('Informe o pasto de destino na planilha ou escolha um pasto padrão no EIXO');
       }
