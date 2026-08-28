@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { buildApiUrl } from '../api';
+import { getMyHeaderShortcuts, updateMyHeaderShortcuts } from '../adapters/usersApi';
 
 // ---- Icons ----
 const ChevronDownIcon: React.FC<{ isOpen: boolean }> = ({ isOpen }) => (
@@ -261,6 +262,23 @@ interface Farm {
     name: string;
 }
 
+const SHORTCUT_CATALOG: { key: string; label: string; icon: React.ReactNode }[] = [
+    { key: 'pesagem', label: 'Registrar pesagem', icon: '⚖️' },
+    { key: 'nascimento', label: 'Registrar nascimento', icon: '🐄' },
+    { key: 'trato', label: 'Registrar trato realizado', icon: '🌾' },
+    { key: 'animais', label: 'Ver animais', icon: '🐮' },
+    { key: 'financeiro', label: 'Novo lançamento financeiro', icon: '💰' },
+];
+const DEFAULT_SHORTCUT_KEYS = SHORTCUT_CATALOG.map((s) => s.key);
+const HEADER_SHORTCUTS_MAX = 5;
+
+const GearIcon: React.FC = () => (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
 interface HeaderProps {
     farms: Farm[];
     selectedFarmId: string | null;
@@ -273,6 +291,7 @@ interface HeaderProps {
     farmCity?: string | null;
     farmLat?: number | null;
     farmLng?: number | null;
+    onShortcut: (key: string) => void;
 }
 
 // ---- Header ----
@@ -288,9 +307,51 @@ const Header: React.FC<HeaderProps> = ({
     farmCity,
     farmLat,
     farmLng,
+    onShortcut,
 }) => {
     const [farmOpen, setFarmOpen] = useState(false);
     const [userOpen, setUserOpen] = useState(false);
+    const [savedShortcuts, setSavedShortcuts] = useState<string[] | null>(null);
+    const [shortcutsMenuOpen, setShortcutsMenuOpen] = useState(false);
+    const [shortcutsDraft, setShortcutsDraft] = useState<string[]>([]);
+    const [shortcutsSaving, setShortcutsSaving] = useState(false);
+    const shortcutsMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        let active = true;
+        getMyHeaderShortcuts()
+            .then((keys) => { if (active) setSavedShortcuts(keys); })
+            .catch(() => { if (active) setSavedShortcuts(null); });
+        return () => { active = false; };
+    }, []);
+
+    const activeShortcutKeys = savedShortcuts && savedShortcuts.length > 0 ? savedShortcuts : DEFAULT_SHORTCUT_KEYS;
+
+    const openShortcutsMenu = () => {
+        setShortcutsDraft(activeShortcutKeys);
+        setShortcutsMenuOpen(true);
+    };
+
+    const toggleShortcutDraft = (key: string) => {
+        setShortcutsDraft((prev) => {
+            if (prev.includes(key)) return prev.filter((k) => k !== key);
+            if (prev.length >= HEADER_SHORTCUTS_MAX) return prev;
+            return [...prev, key];
+        });
+    };
+
+    const saveShortcuts = async () => {
+        setShortcutsSaving(true);
+        try {
+            const updated = await updateMyHeaderShortcuts(shortcutsDraft);
+            setSavedShortcuts(updated);
+            setShortcutsMenuOpen(false);
+        } catch {
+            // Falha ao salvar não deve travar o header — o cliente tenta de novo depois.
+        } finally {
+            setShortcutsSaving(false);
+        }
+    };
 
     const farmRef = useRef<HTMLDivElement>(null);
     const userRef = useRef<HTMLDivElement>(null);
@@ -320,6 +381,7 @@ const Header: React.FC<HeaderProps> = ({
         const handle = (e: MouseEvent) => {
             if (farmRef.current && !farmRef.current.contains(e.target as Node)) setFarmOpen(false);
             if (userRef.current && !userRef.current.contains(e.target as Node)) setUserOpen(false);
+            if (shortcutsMenuRef.current && !shortcutsMenuRef.current.contains(e.target as Node)) setShortcutsMenuOpen(false);
         };
         document.addEventListener('mousedown', handle);
         return () => document.removeEventListener('mousedown', handle);
@@ -399,11 +461,6 @@ const Header: React.FC<HeaderProps> = ({
                     )}
                 </div>
 
-                {/* Widget de previsão de chuva — usa coordenadas ou fallback por cidade */}
-                {(farmLat != null && farmLng != null) || farmCity?.trim() ? (
-                    <RainWidget lat={farmLat} lng={farmLng} city={farmCity ?? null} />
-                ) : null}
-
                 {/* Spacer */}
                 <div className="flex-1" />
 
@@ -471,6 +528,83 @@ const Header: React.FC<HeaderProps> = ({
                         )}
                     </div>
                 )}
+            </div>
+
+            {/* Atalhos rápidos — o cliente escolhe até 5 pelo botão de engrenagem; linha própria pra não disputar espaço com fazenda/usuário */}
+            <div className="flex flex-wrap items-center gap-2 border-t border-[var(--eixo-border)] px-4 py-2.5 lg:px-6">
+                {activeShortcutKeys.map((key) => {
+                    const item = SHORTCUT_CATALOG.find((c) => c.key === key);
+                    if (!item) return null;
+                    return (
+                        <button
+                            key={item.key}
+                            type="button"
+                            onClick={() => onShortcut(item.key)}
+                            className="flex h-9 items-center gap-1.5 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface)]"
+                        >
+                            <span>{item.icon}</span>
+                            <span>{item.label}</span>
+                        </button>
+                    );
+                })}
+
+                <div className="relative ml-auto shrink-0" ref={shortcutsMenuRef}>
+                    <button
+                        type="button"
+                        onClick={() => (shortcutsMenuOpen ? setShortcutsMenuOpen(false) : openShortcutsMenu())}
+                        aria-label="Personalizar atalhos"
+                        aria-expanded={shortcutsMenuOpen}
+                        aria-haspopup="menu"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface)]"
+                    >
+                        <GearIcon />
+                    </button>
+                    {shortcutsMenuOpen && (
+                        <div role="menu" className="absolute right-0 top-11 z-30 w-72 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 shadow-2xl">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">
+                                Atalhos do header ({shortcutsDraft.length}/{HEADER_SHORTCUTS_MAX})
+                            </p>
+                            <ul className="mb-3 flex flex-col gap-1">
+                                {SHORTCUT_CATALOG.map((item) => {
+                                    const checked = shortcutsDraft.includes(item.key);
+                                    const disabled = !checked && shortcutsDraft.length >= HEADER_SHORTCUTS_MAX;
+                                    return (
+                                        <li key={item.key}>
+                                            <label className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-[var(--eixo-text)] ${disabled ? 'opacity-40' : 'cursor-pointer hover:bg-[var(--eixo-surface-soft)]'}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={checked}
+                                                    disabled={disabled}
+                                                    onChange={() => toggleShortcutDraft(item.key)}
+                                                    className="h-4 w-4 rounded border-[var(--eixo-border)] accent-[var(--eixo-green)]"
+                                                />
+                                                <span>{item.icon}</span>
+                                                <span className="font-medium">{item.label}</span>
+                                            </label>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                            <div className="flex items-center justify-end gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShortcutsMenuOpen(false)}
+                                    className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={saveShortcuts}
+                                    disabled={shortcutsSaving}
+                                    className="rounded-lg bg-[var(--eixo-green)] px-3 py-1.5 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-50"
+                                >
+                                    {shortcutsSaving ? 'Salvando…' : 'Salvar'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </header>
     );

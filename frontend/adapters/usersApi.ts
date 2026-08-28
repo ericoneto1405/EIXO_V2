@@ -144,6 +144,31 @@ export const updateMyHerdColumns = async (columns: string[]): Promise<string[]> 
   return payload.herdTableColumns || [];
 };
 
+export const getMyHeaderShortcuts = async (): Promise<string[] | null> => {
+  const response = await fetch(buildApiUrl('/auth/me/header-shortcuts'), {
+    credentials: 'include',
+  });
+  const payload = await readJson(response);
+  if (!response.ok) {
+    throw new Error(payload?.message || 'Erro ao carregar atalhos.');
+  }
+  return payload.headerShortcuts || null;
+};
+
+export const updateMyHeaderShortcuts = async (shortcuts: string[]): Promise<string[]> => {
+  const response = await fetch(buildApiUrl('/auth/me/header-shortcuts'), {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ shortcuts }),
+  });
+  const payload = await readJson(response);
+  if (!response.ok) {
+    throw new Error(payload?.message || 'Erro ao salvar atalhos.');
+  }
+  return payload.headerShortcuts || [];
+};
+
 export const deleteUser = async (userId: string): Promise<void> => {
   const response = await fetch(buildApiUrl(`/users/${userId}`), {
     method: 'DELETE',

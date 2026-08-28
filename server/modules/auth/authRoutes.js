@@ -995,4 +995,40 @@ app.patch('/auth/me/herd-columns', requireAuth, async (req, res) => {
         return res.status(500).json({ message: 'Erro ao salvar preferência de colunas.' });
     }
 });
+
+// GET /auth/me/header-shortcuts — lê os atalhos fixados no header
+const HEADER_SHORTCUT_KEYS = ['pesagem', 'nascimento', 'trato', 'animais', 'financeiro'];
+const HEADER_SHORTCUTS_MAX = 5;
+app.get('/auth/me/header-shortcuts', requireAuth, async (req, res) => {
+    try {
+        const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { headerShortcuts: true } });
+        return res.json({ headerShortcuts: user?.headerShortcuts || null });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao carregar atalhos do header.' });
+    }
+});
+
+// PATCH /auth/me/header-shortcuts — salva os atalhos fixados no header (até 5)
+app.patch('/auth/me/header-shortcuts', requireAuth, async (req, res) => {
+    try {
+        const { shortcuts } = req.body || {};
+        if (
+            !Array.isArray(shortcuts)
+            || shortcuts.length > HEADER_SHORTCUTS_MAX
+            || shortcuts.some((s) => typeof s !== 'string' || !HEADER_SHORTCUT_KEYS.includes(s))
+            || new Set(shortcuts).size !== shortcuts.length
+        ) {
+            return res.status(400).json({ message: 'Lista de atalhos inválida.' });
+        }
+        const updated = await prisma.user.update({
+            where: { id: req.user.id },
+            data: { headerShortcuts: shortcuts },
+        });
+        return res.json({ headerShortcuts: updated.headerShortcuts });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Erro ao salvar atalhos do header.' });
+    }
+});
 }

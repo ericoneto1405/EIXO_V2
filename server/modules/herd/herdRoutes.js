@@ -236,8 +236,6 @@ const TEMPLATE_COLUMNS = [
   { key: 'status_reprodutivo', label: 'Status Reprodutivo',      tier: 'optional',     type: 'list',   options: STATUS_REPRODUTIVOS,           example: 'CICLANDO',                   description: 'Só para fêmeas. PRENHE, VAZIA, CICLANDO ou RECRIA.' },
   { key: 'previsao_parto',     label: 'Previsão de Parto',       tier: 'optional',     type: 'date',   example: '15/01/2027',                 description: 'Só preencher se Status Reprodutivo = PRENHE.' },
   // --- Destino ---
-  { key: 'pasto_destino',      label: 'Pasto de destino',        tier: 'optional',     type: 'destination', example: 'Pasto 1',                  description: 'Escolha um pasto cadastrado no EIXO. Em branco, usa o pasto padrão escolhido na tela.' },
-  { key: 'lote_destino',       label: 'Lote de destino',         tier: 'optional',     type: 'destination', example: 'Lote Recria',              description: 'Escolha um lote cadastrado no EIXO. Em branco, usa o lote padrão escolhido na tela.' },
   // --- Livre ---
   { key: 'observacoes',        label: 'Observações',             tier: 'optional',     type: 'text',   example: 'Comprado da Fazenda Boa Vista.', description: 'Qualquer informação adicional sobre o animal.' },
 ];
@@ -260,6 +258,11 @@ const LEGACY_TEMPLATE_COLUMNS = [
   { key: 'data_nascimento',    labels: ['Data de Nascimento'] },
   { key: 'brinco_eletronico',  labels: ['Brinco Eletrônico'] },
   { key: 'raca_predominante',  labels: ['Raça Predominante'] },
+  // Saíram do modelo em 27/08/2026: cliente já escolhe pasto/lote padrão na
+  // tela de importação; a coluna só servia para exceções raras. Continua
+  // sendo lida para quem já preencheu a planilha antiga.
+  { key: 'pasto_destino',      labels: ['Pasto de destino'] },
+  { key: 'lote_destino',       labels: ['Lote de destino'] },
 ];
 
 // Cores por tier (para cabeçalhos e legenda)

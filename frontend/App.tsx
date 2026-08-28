@@ -1,7 +1,7 @@
 import React, { Suspense, useState, useRef, useEffect } from 'react';
 import AssistantChat from './components/AssistantChat';
 import ActivityModule from './components/ActivityModule';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { buildApiUrl } from './api';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -248,6 +248,7 @@ const UPGRADE_CONTENT: Record<string, {
 
 const AppContent: React.FC = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const isGeneticsRoute = location.pathname.startsWith('/genetics');
     const isPlansRoute = location.pathname === '/planos';
     const [activeView, setActiveView] = useState('Visão Geral');
@@ -822,6 +823,37 @@ const AppContent: React.FC = () => {
         setActiveView(view);
     }, []);
 
+    // Atalhos fixos do header — cada chave leva direto pro módulo/aba certa.
+    // Nutrição e Financeiro já abrem na aba certa por padrão; Rebanho reaproveita
+    // o herdTabRequest que já existe; Reprodução usa query param porque é rota própria.
+    const handleHeaderShortcut = React.useCallback((key: string) => {
+        if (isGeneticsRoute && key !== 'nascimento') {
+            navigate('/');
+        }
+        switch (key) {
+            case 'pesagem':
+                setHerdTabRequest({ tab: 'weighings', nonce: Date.now() });
+                setActiveView('Rebanho Comercial');
+                break;
+            case 'animais':
+                setHerdTabRequest({ tab: 'animals', nonce: Date.now() });
+                setActiveView('Rebanho Comercial');
+                break;
+            case 'nascimento':
+                setActiveView('Reprodução');
+                navigate('/genetics/reproducao?tab=partos');
+                break;
+            case 'trato':
+                setActiveView('Nutrição');
+                break;
+            case 'financeiro':
+                setActiveView('Financeiro');
+                break;
+            default:
+                break;
+        }
+    }, [isGeneticsRoute, navigate]);
+
     const handleFinanceOnboardingAction = React.useCallback((action: 'SAIDA' | 'ENTRADA' | 'RESULTADO') => {
         setFinanceOnboardingAction({ action, nonce: Date.now() });
         setActiveView('Financeiro');
@@ -1135,6 +1167,7 @@ const AppContent: React.FC = () => {
                             farms={farms}
                             selectedFarmId={selectedFarmId}
                             onSelectFarm={setSelectedFarmId}
+                            onShortcut={handleHeaderShortcut}
                             currentUser={currentUser}
                             onLogout={handleLogout}
                             canRegisterUsers={canManageUsers}

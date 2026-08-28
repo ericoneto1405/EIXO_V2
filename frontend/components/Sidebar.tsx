@@ -294,6 +294,13 @@ const UsersIcon: React.FC = () => (
     </svg>
 );
 
+const SanidadeIcon: React.FC = () => (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16M4 12h16" />
+        <rect x="3" y="3" width="18" height="18" rx="4" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+    </svg>
+);
+
 const NutritionIcon: React.FC = () => (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 4h8" />
@@ -379,6 +386,7 @@ const navSections: NavSection[] = [
     {
         sectionLabel: 'Produção',
         items: [
+            { label: 'Sanidade', icon: <SanidadeIcon />, value: 'Sanidade', status: 'coming_soon' },
             { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição', allowedLabels: ['Nutrição'], requiredPlanBadge: 'PRO' },
             { label: 'Eixo Acasalamento', icon: <HerdGeneticIcon />, value: 'Eixo Acasalamento', path: '/genetics/acasalamento', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
             { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Reprodução', path: '/genetics/reproducao', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },

@@ -74,21 +74,13 @@ Antes de rodar deploy, confirme:
 
 ## Importação de rebanho
 
-O sistema aceita qualquer planilha do produtor. Não é necessário usar um modelo específico.
+Não há importação automática por planilha (parse/upload). O usuário baixa uma planilha modelo em branco e preenche manualmente.
 
-Na importação, o usuário mapeia as colunas da própria planilha para os campos do EIXO.
-
-Modelos de exemplo ficam em:
-
-```txt
-frontend/public/
-```
-
-Esses modelos são apenas uma conveniência para quem não tem planilha própria.
+Planilha modelo disponível via `GET /herd/import/template`, acionada pelo botão "Planilha modelo" no `HerdModule.tsx`.
 
 ## Planos
 
-### Plano Grátis
+### EIXO Essencial
 
 - 1 fazenda
 - Até 3 usuários
@@ -98,7 +90,7 @@ Esses modelos são apenas uma conveniência para quem não tem planilha própria
 - Financeiro
 - Visão Geral
 
-### Eixo Gestão
+### EIXO Gestão
 
 - Até 3 fazendas
 - Até 5 usuários
@@ -108,7 +100,7 @@ Esses modelos são apenas uma conveniência para quem não tem planilha própria
 - Pesagens avançadas
 - Exportação Excel/PDF
 
-### Eixo Decisão
+### EIXO Performance
 
 - Fazendas ilimitadas
 - Usuários ilimitados

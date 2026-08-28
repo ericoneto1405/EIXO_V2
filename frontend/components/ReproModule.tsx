@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Animal, AnimalSexo } from '../types';
 import { buildApiUrl } from '../api';
 import {
@@ -53,8 +54,15 @@ const formatDate = (value?: string | null) => {
     return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString('pt-BR');
 };
 
+const REPRO_TAB_KEYS: TabKey[] = ['indicadores', 'avaliacoes', 'nova', 'te', 'partos', 'desmama'];
+
 const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
-    const [activeTab, setActiveTab] = useState<TabKey>('indicadores');
+    const [searchParams] = useSearchParams();
+    // Permite abrir direto numa aba (ex.: atalho "Registrar nascimento" do header) via ?tab=partos
+    const [activeTab, setActiveTab] = useState<TabKey>(() => {
+        const requested = searchParams.get('tab');
+        return (REPRO_TAB_KEYS as string[]).includes(requested || '') ? (requested as TabKey) : 'indicadores';
+    });
     const [animals, setAnimals] = useState<Animal[]>([]);
     const [seasons, setSeasons] = useState<Season[]>([]);
     const [sessions, setSessions] = useState<ReproCheckupSession[]>([]);

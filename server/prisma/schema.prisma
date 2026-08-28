@@ -26,6 +26,7 @@ model User {
   termsVersion                   String?
   onboardingCompletedAt          DateTime?
   herdTableColumns               Json?
+  headerShortcuts                Json?
   accessType                     AppAccessType                  @default(WEB)
   appActivationStatus            AppActivationStatus?
   fieldProfile                   FieldProfile?
