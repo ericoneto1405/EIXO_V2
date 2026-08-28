@@ -262,12 +262,48 @@ interface Farm {
     name: string;
 }
 
+const ScaleIcon: React.FC = () => (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v18M7 21h10M5 7h14M5 7l-2.5 5a3 3 0 006 0L5 7zM19 7l-2.5 5a3 3 0 006 0L19 7z" />
+    </svg>
+);
+
+const CalendarPlusIcon: React.FC = () => (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <rect x="3" y="5" width="18" height="16" rx="2" strokeWidth={2} />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M8 3v4M16 3v4M12 14v4M10 16h4" />
+    </svg>
+);
+
+const TroughIcon: React.FC = () => (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 11h16l-1.5 6.2a2 2 0 01-1.94 1.53H7.44A2 2 0 015.5 17.2L4 11z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V8a4 4 0 018 0v3" />
+    </svg>
+);
+
+const RecordsGridIcon: React.FC = () => (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1.5" strokeWidth={2} />
+        <rect x="14" y="3" width="7" height="7" rx="1.5" strokeWidth={2} />
+        <rect x="3" y="14" width="7" height="7" rx="1.5" strokeWidth={2} />
+        <rect x="14" y="14" width="7" height="7" rx="1.5" strokeWidth={2} />
+    </svg>
+);
+
+const CoinIcon: React.FC = () => (
+    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" strokeWidth={2} />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 7v10M15 9.3c0-1.4-1.4-2.3-3-2.3s-3 .8-3 2.1c0 1.3 1.2 1.7 3 2.2s3 .9 3 2.2c0 1.3-1.4 2.1-3 2.1s-3-.9-3-2.3" />
+    </svg>
+);
+
 const SHORTCUT_CATALOG: { key: string; label: string; icon: React.ReactNode }[] = [
-    { key: 'pesagem', label: 'Registrar pesagem', icon: '⚖️' },
-    { key: 'nascimento', label: 'Registrar nascimento', icon: '🐄' },
-    { key: 'trato', label: 'Registrar trato realizado', icon: '🌾' },
-    { key: 'animais', label: 'Ver animais', icon: '🐮' },
-    { key: 'financeiro', label: 'Novo lançamento financeiro', icon: '💰' },
+    { key: 'pesagem', label: 'Registrar pesagem', icon: <ScaleIcon /> },
+    { key: 'nascimento', label: 'Registrar nascimento', icon: <CalendarPlusIcon /> },
+    { key: 'trato', label: 'Registrar trato realizado', icon: <TroughIcon /> },
+    { key: 'animais', label: 'Ver animais', icon: <RecordsGridIcon /> },
+    { key: 'financeiro', label: 'Novo lançamento financeiro', icon: <CoinIcon /> },
 ];
 const DEFAULT_SHORTCUT_KEYS = SHORTCUT_CATALOG.map((s) => s.key);
 const HEADER_SHORTCUTS_MAX = 5;

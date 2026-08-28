@@ -458,7 +458,7 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
             ? ''
             :
         isActive
-            ? 'translate-y-[2px] border border-transparent bg-[var(--eixo-green)] text-[#1a1a1a] font-bold'
+            ? 'border border-transparent bg-[var(--eixo-green)] text-[#1a1a1a] font-bold'
             : 'border border-transparent text-white/75 hover:translate-y-[2px] hover:border-transparent hover:bg-white/8 hover:text-white active:bg-white/8'
     }`;
 
