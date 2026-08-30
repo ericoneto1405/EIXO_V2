@@ -1612,13 +1612,25 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     <td colSpan={12} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         <div className="flex flex-col items-center gap-3 py-4">
                                             <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum animal cadastrado ainda. Importe uma planilha ou cadastre manualmente.</p>
-                                            <button
-                                                type="button"
-                                                onClick={openAnimalForm}
-                                                className="rounded-xl border-2 border-[#5a8c00] bg-[#B6E23A] px-3.5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130]"
-                                            >
-                                                Adicionar animal
-                                            </button>
+                                            <div className="flex flex-wrap items-center justify-center gap-[10px]">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowImportModal(true)}
+                                                    className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                                                >
+                                                    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                                                    </svg>
+                                                    <span className="ml-2">Importar planilha</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={openAnimalForm}
+                                                    className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-green)] bg-white px-[14px] font-bold text-[var(--eixo-green-dark)] transition-colors duration-200 hover:bg-[var(--eixo-green)]/10"
+                                                >
+                                                    Adicionar animal
+                                                </button>
+                                            </div>
                                         </div>
                                     </td>
                                 </tr>
