@@ -791,12 +791,12 @@ app.patch('/animals/:id', requireAuth, async (req, res) => {
         // Campos básicos editáveis
         if (brinco !== undefined) {
             const trimmed = String(brinco).trim();
-            if (!trimmed) return res.status(400).json({ message: 'Brinco não pode ser vazio.' });
+            if (!trimmed) return res.status(400).json({ message: 'Identificação não pode ser vazia.' });
             // Verificar duplicidade dentro da fazenda (exceto o próprio animal)
             const duplicate = await prisma.animal.findFirst({
                 where: { farmId: animal.farmId, brinco: trimmed, id: { not: id } },
             });
-            if (duplicate) return res.status(409).json({ message: `Já existe um animal com o brinco "${trimmed}" nesta fazenda.` });
+            if (duplicate) return res.status(409).json({ message: `Já existe um animal com a identificação "${trimmed}" nesta fazenda.` });
             updateData.brinco = trimmed;
             updateData.identityKey = normalizeAnimalIdentityKey(trimmed);
         }
@@ -2085,7 +2085,7 @@ app.post('/animals', requireAuth, async (req, res) => {
                         date: compraDate,
                         peso: parsedPesoAtual ?? null,
                         valor: parsedValorCompra,
-                        observacoes: `Compra registrada no cadastro — brinco ${brinco.trim()}`,
+                        observacoes: `Compra registrada no cadastro — identificação ${brinco.trim()}`,
                         purchasePurpose: 'PRODUCTION',
                     },
                 });
@@ -2110,7 +2110,7 @@ app.post('/animals', requireAuth, async (req, res) => {
         return res.status(201).json({ animal: serializeAnimal(animal) });
     } catch (error) {
         if (error?.code === 'P2002') {
-            return res.status(409).json({ message: 'Brinco já cadastrado para esta fazenda.' });
+            return res.status(409).json({ message: 'Identificação já cadastrada para esta fazenda.' });
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar animal.' });
@@ -2282,10 +2282,10 @@ app.post('/animals/nascimento', requireAuth, async (req, res) => {
             return created;
         });
 
-        await logActivity(prisma, req, { action: 'NASCIMENTO_REGISTRADO', entity: 'Animal', entityId: bezerro.id, description: `Registrou nascimento — brinco ${bezerro.brinco}`, farmId });
+        await logActivity(prisma, req, { action: 'NASCIMENTO_REGISTRADO', entity: 'Animal', entityId: bezerro.id, description: `Registrou nascimento — identificação ${bezerro.brinco}`, farmId });
         return res.status(201).json({ animal: serializeAnimal(bezerro), brincoProvisorio: bezerro.identificacaoProvisoria });
     } catch (error) {
-        if (error?.code === 'P2002') return res.status(409).json({ message: 'Brinco já cadastrado para esta fazenda.' });
+        if (error?.code === 'P2002') return res.status(409).json({ message: 'Identificação já cadastrada para esta fazenda.' });
         console.error(error);
         return res.status(500).json({ message: 'Erro ao registrar nascimento.' });
     }
@@ -2419,21 +2419,21 @@ app.post('/animals/batch', requireAuth, async (req, res) => {
     }));
     const invalidAnimal = normalizedAnimals.find((animal) => animal.invalidField || !animal.brinco || !animal.raca || !animal.sexo || (animal.peso !== null && animal.peso <= 0));
     if (invalidAnimal) {
-        return res.status(400).json({ message: `Linha ${invalidAnimal.line}: preencha brinco, raça, sexo e peso com valores válidos.` });
+        return res.status(400).json({ message: `Linha ${invalidAnimal.line}: preencha identificação, raça, sexo e peso com valores válidos.` });
     }
 
     // Valida brincos duplicados no banco
     const brincos = normalizedAnimals.map((animal) => animal.brinco);
     if (new Set(brincos).size !== brincos.length) {
-        return res.status(400).json({ message: 'Há brincos duplicados na lista.' });
+        return res.status(400).json({ message: 'Há identificações duplicadas na lista.' });
     }
     if (brincos.length !== animals.length) {
-        return res.status(400).json({ message: 'Todos os animais devem ter brinco informado.' });
+        return res.status(400).json({ message: 'Todos os animais devem ter identificação informada.' });
     }
 
     const existing = await prisma.animal.findFirst({ where: { farmId, brinco: { in: brincos } } });
     if (existing) {
-        return res.status(409).json({ message: `Brinco já cadastrado: ${existing.brinco}` });
+        return res.status(409).json({ message: `Identificação já cadastrada: ${existing.brinco}` });
     }
 
     let paymentSchedule;
@@ -2495,7 +2495,7 @@ app.post('/animals/batch', requireAuth, async (req, res) => {
                         date: compraDate,
                         peso: item.peso,
                         valor: parsedValor,
-                        observacoes: `Compra de ${supplier} — brinco ${item.brinco}`,
+                        observacoes: `Compra de ${supplier} — identificação ${item.brinco}`,
                         purchasePurpose: 'PRODUCTION',
                     },
                 });
@@ -2525,7 +2525,7 @@ app.post('/animals/batch', requireAuth, async (req, res) => {
         return res.status(201).json({ count: created.length, message: `${created.length} animal(is) cadastrado(s) com sucesso.` });
     } catch (error) {
         if (error?.code === 'P2002') {
-            return res.status(409).json({ message: 'Um ou mais brincos já estão cadastrados nesta fazenda.' });
+            return res.status(409).json({ message: 'Uma ou mais identificações já estão cadastradas nesta fazenda.' });
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar lote de animais.' });

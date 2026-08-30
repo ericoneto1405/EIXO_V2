@@ -1014,8 +1014,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         if (!animalForm.brinco.trim() || !racaEffetiva || !animalForm.dataNascimento) {
             setAnimalFormError(
                 isPura
-                    ? 'Preencha brinco, raça e data de nascimento.'
-                    : 'Preencha brinco, composição mestiça e data de nascimento.',
+                    ? 'Preencha identificação, raça e data de nascimento.'
+                    : 'Preencha identificação, composição mestiça e data de nascimento.',
             );
             return;
         }
@@ -1246,7 +1246,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         }
         const dateStr = new Date().toISOString().slice(0, 10);
         const fileName = `rebanho_${(farmName || 'fazenda').replace(/\s+/g, '_')}_${dateStr}.xlsx`;
-        const headers = ['ID / Brinco', 'Raça', 'Sexo', 'Categoria', 'Pasto', 'Lote', 'Peso (kg)', 'Peso (@)', 'GMD (kg/dia)', 'Última pesagem'];
+        const headers = ['ID / Identificação', 'Raça', 'Sexo', 'Categoria', 'Pasto', 'Lote', 'Peso (kg)', 'Peso (@)', 'GMD (kg/dia)', 'Última pesagem'];
         const rows: Array<Array<string | number>> = [headers];
         for (const a of sortedAnimals) {
             const lotName = lots.find((l) => l.id === a.lotId)?.name || '';
@@ -2613,7 +2613,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 </p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Brinco</label>
+                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Identificação</label>
                                 <input
                                     type="text"
                                     value={animalForm.brinco}
@@ -3106,7 +3106,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 setNascimentoForm({ sexo: 'Fêmea', dataNascimento: new Date().toISOString().slice(0, 10), pesoNascimento: '', nome: '', maeId: '', maeNome: '', paiId: '', paiNome: '' });
                                 setSelectedEmbryoTransferId('');
                                 if (data.brincoProvisorio) {
-                                    setNascimentoSuccess(`Nascimento registrado. Brinco provisório: ${data.animal?.brinco || 'não informado'}.`);
+                                    setNascimentoSuccess(`Nascimento registrado. Identificação provisória: ${data.animal?.brinco || 'não informado'}.`);
                                 } else {
                                     setNascimentoSuccess('Nascimento registrado com sucesso.');
                                 }
@@ -3128,10 +3128,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             </div>
 
                             {birthOrigin === 'NATURAL' ? <div>
-                                <label className="block text-sm font-semibold text-[#2F2F2F]">Mãe (brinco ou nome)</label>
+                                <label className="block text-sm font-semibold text-[#2F2F2F]">Mãe (identificação ou nome)</label>
                                 <input
                                     type="text"
-                                    placeholder="Digite o brinco da mãe..."
+                                    placeholder="Digite a identificação da mãe..."
                                     value={nascimentoForm.maeNome}
                                     list="mae-suggestions"
                                     onChange={(e) => {
@@ -3282,7 +3282,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 type="text"
                                 value={definitiveIdentification}
                                 onChange={(event) => setDefinitiveIdentification(event.target.value)}
-                                placeholder="Novo brinco ou identificação"
+                                placeholder="Nova identificação"
                                 className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm"
                             />
                             <button
@@ -3309,7 +3309,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
                         {identificationAnimal.identificacaoProvisoria && !identificationAnimal.desmamadoEm && <div className="mt-5 space-y-2 border-t border-[var(--eixo-border)] pt-4">
                             <label className="block text-sm font-semibold text-[#2F2F2F]">Registrar desmama</label>
-                            <p className="text-xs text-[#5E5E5E]">O ID definitivo é opcional. Sem ele, o brinco provisório será mantido.</p>
+                            <p className="text-xs text-[#5E5E5E]">O ID definitivo é opcional. Sem ele, a identificação provisória será mantida.</p>
                             <div className="grid grid-cols-2 gap-2">
                                 <input type="date" value={weaningForm.date} onChange={(event) => setWeaningForm((prev) => ({ ...prev, date: event.target.value }))} className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm" />
                                 <input type="number" min="0.1" step="0.1" value={weaningForm.peso} onChange={(event) => setWeaningForm((prev) => ({ ...prev, peso: event.target.value }))} placeholder="Peso (kg)" className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm" />

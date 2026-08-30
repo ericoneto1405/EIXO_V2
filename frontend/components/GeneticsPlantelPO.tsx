@@ -741,7 +741,7 @@ const GeneticsPlantelPO: React.FC<GeneticsPlantelPOProps> = ({ farmId, mode = 'f
                                 </select>
                                 <input
                                     className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-sm"
-                                    placeholder="Brinco"
+                                    placeholder="Identificação"
                                     value={animalForm.brinco}
                                     onChange={(event) => setAnimalForm((prev) => ({ ...prev, brinco: event.target.value }))}
                                 />

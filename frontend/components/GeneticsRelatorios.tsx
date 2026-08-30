@@ -295,7 +295,7 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                         <table className="w-full text-sm text-left text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
                             <thead className="text-xs text-[var(--eixo-text)] uppercase bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-surface-soft)] dark:text-[var(--eixo-text-soft)]">
                                 <tr>
-                                    <th className="px-4 py-2">Brinco</th>
+                                    <th className="px-4 py-2">Identificação</th>
                                     <th className="px-4 py-2">Raça</th>
                                     <th className="px-4 py-2">Status</th>
                                     <th className="px-4 py-2">Dias em aberto</th>
@@ -356,7 +356,7 @@ const GeneticsRelatorios: React.FC<GeneticsRelatoriosProps> = ({ farmId }) => {
                         <table className="w-full text-sm text-left text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
                             <thead className="text-xs text-[var(--eixo-text)] uppercase bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-surface-soft)] dark:text-[var(--eixo-text-soft)]">
                                 <tr>
-                                    <th className="px-4 py-2">Brinco</th>
+                                    <th className="px-4 py-2">Identificação</th>
                                     <th className="px-4 py-2">Decisão</th>
                                     <th className="px-4 py-2">Motivo</th>
                                     <th className="px-4 py-2">Atualizado</th>

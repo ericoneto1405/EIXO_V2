@@ -143,14 +143,14 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
         }
 
         const validRows = rows.filter((r) => r.brinco.trim());
-        if (validRows.length === 0) { setError('Informe pelo menos um brinco.'); return; }
+        if (validRows.length === 0) { setError('Informe pelo menos uma identificação.'); return; }
         if (herdType === 'PO' && validRows.some((row) => !row.nome.trim() || !(row.raca.trim() || racaPadrao.trim()))) {
             setError('No Plantel P.O., informe nome e raça de todos os animais.'); return;
         }
 
         const dupBrincos = validRows.map((r) => r.brinco.trim().toLowerCase());
         if (new Set(dupBrincos).size !== dupBrincos.length) {
-            setError('Há brincos duplicados na lista.'); return;
+            setError('Há identificações duplicadas na lista.'); return;
         }
 
         const invalidWeightRow = validRows.find((r) => r.peso.trim() && ((parseImportNumber(r.peso) ?? 0) <= 0));
@@ -363,7 +363,7 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                             {/* cabeçalho da tabela */}
                             <div className={`grid ${herdType === 'PO' ? 'grid-cols-[1.4fr_1.4fr_1.1fr_1fr_1.2fr_1fr_32px]' : 'grid-cols-[2fr_1.2fr_1.5fr_1fr_32px]'} gap-2 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]`}>
                                 {herdType === 'PO' && <span>Nome</span>}
-                                <span>Brinco</span>
+                                <span>Identificação</span>
                                 {herdType === 'PO' && <span>Registro</span>}
                                 <span>Sexo</span>
                                 <span>Raça</span>

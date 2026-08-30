@@ -496,7 +496,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         if (!animalId) return;
         setEditMsg(null);
         if (!editBrinco.trim()) {
-            setEditMsg({ text: 'O brinco não pode ser vazio.', type: 'error' });
+            setEditMsg({ text: 'A identificação não pode ser vazia.', type: 'error' });
             return;
         }
         setIsSavingEdit(true);
@@ -672,7 +672,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                     )}
                                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                         <div>
-                                            <label className={labelClass}>Brinco *</label>
+                                            <label className={labelClass}>Identificação *</label>
                                             <input
                                                 type="text"
                                                 value={editBrinco}

@@ -303,7 +303,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
 
             <div className="mt-6 grid gap-3 lg:grid-cols-4">
                 <div className="lg:col-span-2">
-                    <label className="text-xs uppercase text-[var(--eixo-text-muted)]">Buscar por brinco</label>
+                    <label className="text-xs uppercase text-[var(--eixo-text-muted)]">Buscar por identificação</label>
                     <input
                         className="mt-1 w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-text)] focus:ring-[var(--eixo-graphite)]/10 dark:border-[var(--eixo-border)] dark:bg-[var(--eixo-surface)] dark:text-[var(--eixo-text)]"
                         placeholder="Ex: F001"
@@ -357,7 +357,7 @@ const GeneticsSelecao: React.FC<GeneticsSelecaoProps> = ({ farmId }) => {
                 <table className="w-full text-sm text-left text-[var(--eixo-text-muted)] dark:text-[var(--eixo-text-soft)]">
                     <thead className="text-xs text-[var(--eixo-text)] uppercase bg-[var(--eixo-surface-soft)] dark:bg-[var(--eixo-surface-soft)] dark:text-[var(--eixo-text-soft)]">
                         <tr>
-                            <th className="px-4 py-3">Brinco</th>
+                            <th className="px-4 py-3">Identificação</th>
                             <th className="px-4 py-3">Raça</th>
                             <th className="px-4 py-3">Idade</th>
                             <th className="px-4 py-3">Status</th>

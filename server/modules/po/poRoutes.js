@@ -446,7 +446,7 @@ app.post('/po/animals', requireAuth, async (req, res) => {
             if (parsedValorCompra) {
                 const category = HERD_EVENT_CATEGORY_MAP.COMPRA;
                 const event = await tx.herdEvent.create({
-                    data: { farmId: farm.id, poAnimalId: created.id, type: 'COMPRA', date: purchaseDate, peso: parsedPesoAtual, valor: parsedValorCompra, purchasePurpose: 'BREEDING', observacoes: `Compra P.O. registrada no cadastro — brinco ${trimmedBrinco || created.nome}` },
+                    data: { farmId: farm.id, poAnimalId: created.id, type: 'COMPRA', date: purchaseDate, peso: parsedPesoAtual, valor: parsedValorCompra, purchasePurpose: 'BREEDING', observacoes: `Compra P.O. registrada no cadastro — identificação ${trimmedBrinco || created.nome}` },
                 });
                 await createIntegratedTransaction(tx, {
                     farmId: farm.id,
@@ -467,7 +467,7 @@ app.post('/po/animals', requireAuth, async (req, res) => {
         return res.status(201).json({ animal: serializePoAnimal(animal) });
     } catch (error) {
         if (error?.code === 'P2002') {
-            return res.status(409).json({ message: 'Brinco já cadastrado para esta fazenda.' });
+            return res.status(409).json({ message: 'Identificação já cadastrada para esta fazenda.' });
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar animal P.O.' });
@@ -740,11 +740,11 @@ app.post('/po/animals/batch', requireAuth, async (req, res) => {
         peso: animal?.ultimoPeso === undefined || animal?.ultimoPeso === '' ? null : parseNumber(animal.ultimoPeso),
     }));
     const invalid = normalized.find((animal) => !animal.nome || !animal.brinco || !animal.raca || !animal.sexo || (animal.peso !== null && animal.peso <= 0));
-    if (invalid) return res.status(400).json({ message: `Linha ${invalid.line}: preencha nome, brinco, raça e sexo com valores válidos.` });
+    if (invalid) return res.status(400).json({ message: `Linha ${invalid.line}: preencha nome, identificação, raça e sexo com valores válidos.` });
     const brincos = normalized.map((animal) => animal.brinco);
-    if (new Set(brincos).size !== brincos.length) return res.status(400).json({ message: 'Há brincos duplicados na lista.' });
+    if (new Set(brincos).size !== brincos.length) return res.status(400).json({ message: 'Há identificações duplicadas na lista.' });
     const existing = await prisma.poAnimal.findFirst({ where: { farmId: farm.id, brinco: { in: brincos } } });
-    if (existing) return res.status(409).json({ message: `Brinco P.O. já cadastrado: ${existing.brinco}` });
+    if (existing) return res.status(409).json({ message: `Identificação P.O. já cadastrada: ${existing.brinco}` });
     const purchaseDate = dataCompra ? parseDateValue(dataCompra) : new Date();
     const unitValue = valorPorCabeca ? parseNumber(valorPorCabeca) : null;
     const supplier = String(fornecedor || '').trim();
@@ -764,7 +764,7 @@ app.post('/po/animals/batch', requireAuth, async (req, res) => {
                 });
                 if (item.peso) await tx.poWeighing.create({ data: { farmId: farm.id, poAnimalId: animal.id, data: purchaseDate, peso: item.peso, gmd: 0 } });
                 await tx.paddockMove.create({ data: { farmId: farm.id, paddockId: paddock.id, poAnimalId: animal.id, startAt: purchaseDate } });
-                const event = await tx.herdEvent.create({ data: { farmId: farm.id, poAnimalId: animal.id, type: 'COMPRA', date: purchaseDate, peso: item.peso, valor: unitValue, purchasePurpose: 'BREEDING', observacoes: `Compra P.O. de ${supplier} — brinco ${item.brinco}` } });
+                const event = await tx.herdEvent.create({ data: { farmId: farm.id, poAnimalId: animal.id, type: 'COMPRA', date: purchaseDate, peso: item.peso, valor: unitValue, purchasePurpose: 'BREEDING', observacoes: `Compra P.O. de ${supplier} — identificação ${item.brinco}` } });
                 purchaseEvents[item.sexo].push(event);
                 result.push(animal);
             }
@@ -795,7 +795,7 @@ app.post('/po/animals/batch', requireAuth, async (req, res) => {
         await logActivity(prisma, req, { action: 'LOTE_PO_CRIADO', entity: 'PoAnimal', description: `Cadastrou lote P.O. de ${created.length} animal(is)`, farmId: farm.id });
         return res.status(201).json({ count: created.length, message: `${created.length} animal(is) P.O. cadastrado(s) com sucesso.` });
     } catch (error) {
-        if (error?.code === 'P2002') return res.status(409).json({ message: 'Um ou mais brincos P.O. já estão cadastrados.' });
+        if (error?.code === 'P2002') return res.status(409).json({ message: 'Uma ou mais identificações P.O. já estão cadastradas.' });
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar lote de animais P.O.' });
     }
@@ -889,7 +889,7 @@ app.patch('/po/animals/:id', requireAuth, async (req, res) => {
         return res.json({ animal: serializePoAnimal(updated) });
     } catch (error) {
         if (error?.code === 'P2002') {
-            return res.status(409).json({ message: 'Brinco já cadastrado para esta fazenda.' });
+            return res.status(409).json({ message: 'Identificação já cadastrada para esta fazenda.' });
         }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao atualizar animal P.O.' });
