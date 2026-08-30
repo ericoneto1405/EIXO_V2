@@ -83,6 +83,12 @@ app.post('/animals/:id/eventos', requireAuth, async (req, res) => {
                     allocations: (animal.lotId || animal.currentPaddockId) ? [{ lotId: animal.lotId, paddockId: animal.currentPaddockId }] : [],
                 });
             }
+            if (eventType === 'VENDA' || eventType === 'MORTE') {
+                await tx.animal.update({
+                    where: { id: animal.id },
+                    data: { status: eventType === 'MORTE' ? 'MORTO' : 'VENDIDO' },
+                });
+            }
             return createdEvent;
         });
 

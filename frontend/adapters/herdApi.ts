@@ -170,12 +170,19 @@ const normalizeAnimal = (animal: any): HerdAnimal => {
         embryoTransferId: animal.embryoTransferId || null,
         desmamadoEm: animal.desmamadoEm || null,
         pesoDesmamaKg: typeof animal.pesoDesmamaKg === 'number' ? animal.pesoDesmamaKg : null,
+        status: animal.status || 'VIVO',
         nutritionPlan: animal.nutritionPlan || null,
     };
 };
 
-export const listAnimals = async (farmId: string, herdType: HerdType): Promise<HerdAnimal[]> => {
-    const endpoint = `${getAnimalsBasePath(herdType)}?farmId=${farmId}`;
+export type AnimalStatusFilter = 'VIVO' | 'ARQUIVADOS' | 'TODOS';
+
+export const listAnimals = async (
+    farmId: string,
+    herdType: HerdType,
+    statusFilter: AnimalStatusFilter = 'VIVO',
+): Promise<HerdAnimal[]> => {
+    const endpoint = `${getAnimalsBasePath(herdType)}?farmId=${farmId}&status=${statusFilter}`;
     const response = await fetch(buildApiUrl(endpoint), { credentials: 'include' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {

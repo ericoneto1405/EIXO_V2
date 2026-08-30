@@ -136,6 +136,8 @@ export interface AnimalUI {
     embryoTransferId?: string | null;
     desmamadoEm?: string | null;
     pesoDesmamaKg?: number | null;
+    /** VIVO (padrão) | VENDIDO | MORTO — animal nunca é apagado, só arquivado */
+    status?: 'VIVO' | 'VENDIDO' | 'MORTO' | string | null;
     nutritionPlan?: {
         id: string;
         nome: string;

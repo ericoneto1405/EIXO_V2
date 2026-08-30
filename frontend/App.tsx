@@ -87,7 +87,7 @@ interface User {
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Eixo Genetics'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics'],
     },
     {
         title: 'Cadastros',

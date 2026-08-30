@@ -7,6 +7,7 @@ import HerdSettingsTab from './HerdSettingsTab';
 import OnboardingSpotlight from './OnboardingSpotlight';
 import ImportHerdModal from './ImportHerdModal';
 import {
+    AnimalStatusFilter,
     HerdAnimal,
     HerdLot,
     HerdType,
@@ -302,6 +303,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [lots, setLots] = useState<HerdLot[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
+    // Por padrão só mostra animais vivos — vendidos/mortos ficam guardados,
+    // mas saem da lista principal a menos que o produtor peça pra ver.
+    const [animalStatusFilter, setAnimalStatusFilter] = useState<AnimalStatusFilter>('VIVO');
     const [searchTerm, setSearchTerm] = useState('');
     const [lotFilter, setLotFilter] = useState('');
     const [filterRaca, setFilterRaca] = useState('');
@@ -489,7 +493,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setLoadError(null);
         try {
             const [animalsResult, lotsResult] = await Promise.all([
-                listAnimals(farmId, resolvedMode),
+                listAnimals(farmId, resolvedMode, resolvedMode === 'PO' ? 'TODOS' : animalStatusFilter),
                 listLots(farmId, resolvedMode),
             ]);
             setAnimals(animalsResult);
@@ -500,7 +504,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         } finally {
             setIsLoading(false);
         }
-    }, [farmId, resolvedMode]);
+    }, [farmId, resolvedMode, animalStatusFilter]);
 
     useEffect(() => {
         loadData();
@@ -2303,6 +2307,28 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] py-2 pl-9 pr-3 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
                         />
                     </div>
+                    {resolvedMode !== 'PO' && (
+                        <div className="flex gap-1.5 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-1 w-fit">
+                            {([
+                                { key: 'VIVO', label: 'Rebanho ativo' },
+                                { key: 'ARQUIVADOS', label: 'Vendidos/mortos' },
+                                { key: 'TODOS', label: 'Todos' },
+                            ] as { key: AnimalStatusFilter; label: string }[]).map((opt) => (
+                                <button
+                                    key={opt.key}
+                                    type="button"
+                                    onClick={() => setAnimalStatusFilter(opt.key)}
+                                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                                        animalStatusFilter === opt.key
+                                            ? 'bg-[var(--eixo-green)] text-[#1a1a1a]'
+                                            : 'text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface)]'
+                                    }`}
+                                >
+                                    {opt.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
                         <button
                             type="button"

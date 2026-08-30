@@ -66,6 +66,7 @@ export function serializeAnimal(animal) {
         embryoTransferId: animal.embryoTransferId || null,
         desmamadoEm: animal.desmamadoEm ? animal.desmamadoEm.toISOString() : null,
         pesoDesmamaKg: animal.pesoDesmamaKg ?? null,
+        status: animal.status || 'VIVO',
         createdAt: animal.createdAt.toISOString(),
         updatedAt: animal.updatedAt.toISOString(),
     };
