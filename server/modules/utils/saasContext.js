@@ -212,6 +212,25 @@ export const canManageOrganizationUsers = (req) => {
     return ORGANIZATION_ADMIN_ROLES.has(membershipRole);
 };
 
+// Dono da conta sempre vê o log de atividades de todo mundo. Outras pessoas só
+// veem quando o dono libera o módulo "Ver Atividades de Todos" para elas.
+export const canSeeAllActivityLogs = (req) => {
+    if (req.user?.roles?.includes('SUPER_ADMIN')) {
+        return true;
+    }
+    const membershipRole = String(req.saas?.membershipRole || '').trim().toUpperCase();
+    if (membershipRole === 'OWNER') {
+        return true;
+    }
+    const allowedModules = buildAllowedModulesFromPlan(
+        req.user?.modules,
+        req.saas?.entitlements,
+        req.user?.roles,
+        req.user?.accessType,
+    );
+    return allowedModules.includes('Ver Atividades de Todos');
+};
+
 export const serializeManagedUser = (user, membershipRole = null) => ({
     id: user.id,
     name: user.name,

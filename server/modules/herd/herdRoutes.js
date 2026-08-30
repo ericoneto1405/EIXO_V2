@@ -83,13 +83,19 @@ app.post('/animals/:id/eventos', requireAuth, async (req, res) => {
                     allocations: (animal.lotId || animal.currentPaddockId) ? [{ lotId: animal.lotId, paddockId: animal.currentPaddockId }] : [],
                 });
             }
+            if (eventType === 'VENDA' || eventType === 'MORTE') {
+                await tx.animal.update({
+                    where: { id: animal.id },
+                    data: { status: eventType === 'MORTE' ? 'MORTO' : 'VENDIDO' },
+                });
+            }
             return createdEvent;
         });
 
         const eventLabels = { COMPRA: 'Registrou compra', VENDA: 'Registrou venda', MORTE: 'Registrou morte', NASCIMENTO: 'Registrou nascimento' };
         const label = eventLabels[eventType] || 'Registrou evento';
         const valorStr = parseNumber(valor) ? ` por R$ ${Number(parseNumber(valor)).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '';
-        logActivity(req, { action: `ANIMAL_${eventType}`, entity: 'Animal', entityId: id, description: `${label} do animal ${animal.brinco || id}${valorStr}`, farmId: animal.farmId });
+        logActivity(prisma, req, { action: `ANIMAL_${eventType}`, entity: 'Animal', entityId: id, description: `${label} do animal ${animal.brinco || id}${valorStr}`, farmId: animal.farmId });
         return res.status(201).json({ event: serializeHerdEvent(event) });
     } catch (error) {
         console.error(error);
@@ -163,6 +169,14 @@ app.post('/animals/:id/sanitario', requireAuth, async (req, res) => {
                 });
             }
             return createdRecord;
+        });
+
+        await logActivity(prisma, req, {
+            action: `SANITARIO_${tipoUpper}`,
+            entity: 'SanitaryRecord',
+            entityId: record.id,
+            description: `Registrou ${tipoUpper.toLowerCase()} (${produto.trim()}) no animal ${animal.brinco || id}`,
+            farmId: animal.farmId,
         });
 
         return res.status(201).json({ record: serializeSanitaryRecord(record) });
@@ -2094,7 +2108,7 @@ app.post('/herd/import', requireAuth, async (req, res) => {
     errors: results.filter(r => r.status === 'error').length,
   };
 
-  logActivity(req, {
+  logActivity(prisma, req, {
     action: 'HERD_IMPORT',
     entity: 'Animal',
     description: `Importação em lote: ${summary.created} criados, ${summary.skipped} ignorados, ${summary.errors} erros`,
@@ -2249,6 +2263,14 @@ app.post('/po/animals/:id/sanitario', requireAuth, async (req, res) => {
                 });
             }
             return createdRecord;
+        });
+
+        await logActivity(prisma, req, {
+            action: `SANITARIO_PO_${tipoUpper}`,
+            entity: 'SanitaryRecord',
+            entityId: record.id,
+            description: `Registrou ${tipoUpper.toLowerCase()} (${produto.trim()}) no animal P.O. ${animal.brinco || animal.nome || id}`,
+            farmId: animal.farmId,
         });
 
         return res.status(201).json({ record: serializeSanitaryRecord(record) });

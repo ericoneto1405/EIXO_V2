@@ -183,7 +183,7 @@ export function registerHQRoutes(app) {
                 return updatedSubscription;
             });
 
-            logActivity(req, {
+            logActivity(prisma, req, {
                 action: 'HQ_ORG_PLAN_UPDATED',
                 entity: 'Organization',
                 entityId: organization.id,

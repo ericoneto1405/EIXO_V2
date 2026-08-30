@@ -67,7 +67,7 @@ import {
     SUPER_ADMIN_ALL_MODULES, BILLING_BLOCKED_STATES, PLAN_ENTITLEMENTS, PLAN_MODULES, ORGANIZATION_ADMIN_ROLES,
     buildLegacyEntitlements, hasUserRole, isFieldWorkerUser, isFieldAdminUser, isFieldAppUser,
     getDerivedFieldProfile, getDerivedAccessType, getDerivedActivationStatus, buildManagedUserSummaries,
-    normalizeUserModules, buildAllowedModulesFromPlan, canManageOrganizationUsers, serializeManagedUser,
+    normalizeUserModules, buildAllowedModulesFromPlan, canManageOrganizationUsers, canSeeAllActivityLogs, serializeManagedUser,
     normalizeOrganizationSlug, ensureFieldWorkerFarmAccess, SaasContextError, isSaasContextError,
     ensureSaasContextForUser, serializeAuthUser, serializeAuthUserWithContext,
 } from './modules/utils/saasContext.js';
@@ -79,7 +79,7 @@ import {
 } from './modules/middlewares/session.js';
 import {
     isFieldWorkerRequest, requireBillingAccess, requireNonFieldWorker, requireEntitlement,
-    requireAuth, requireSuperAdmin,
+    requireAuth, requireSuperAdmin, requireModule,
 } from './modules/middlewares/requireAuth.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -130,8 +130,24 @@ app.get('/health', (_req, res) => {
 
 
 // ── Logs de Atividade ───────────────────────────────────────────────────────
-app.get('/activity-logs', requireAuth, async (req, res) => {
-    const { farmId: rawFarmId, limit = 100, offset = 0 } = req.query;
+// Agrupa os valores técnicos de "entity" em categorias que fazem sentido pra
+// quem está usando o sistema, pro filtro de "módulo" do Registro de Atividades.
+const ACTIVITY_MODULE_FILTERS = {
+    'Rebanho Comercial': ['Animal', 'Weighing', 'Lot'],
+    'Sanidade': ['SanitaryRecord'],
+    'Farmácia': ['PharmacyBatch', 'PharmacyMovement', 'PharmacyProduct'],
+    'Reprodução': ['ReproEvent', 'ReproCheckupSession', 'EmbryoTransfer'],
+    'Nutrição': ['NutritionPlan', 'NutritionAssignment'],
+    'Financeiro': ['FinancialTransaction', 'AccountCategory'],
+    'Plantel P.O.': ['PoAnimal', 'PoWeighing'],
+    'Fazendas': ['Farm'],
+    'Usuários e Permissões': ['User'],
+    'Ocorrências de Campo': ['FieldOccurrence'],
+    'Conta': ['Organization', 'BillingSubscription'],
+};
+
+app.get('/activity-logs', requireAuth, requireModule('Registro de Atividades'), async (req, res) => {
+    const { farmId: rawFarmId, limit = 100, offset = 0, userId: rawUserId, modulo, de, ate } = req.query;
     const organizationId = req.saas?.organizationId;
     const farmId = req.access?.restrictToFarmIds?.length
         ? (rawFarmId ? String(rawFarmId) : req.access.restrictToFarmIds[0])
@@ -139,24 +155,97 @@ app.get('/activity-logs', requireAuth, async (req, res) => {
     if (farmId && req.access?.restrictToFarmIds?.length && !req.access.restrictToFarmIds.includes(String(farmId))) {
         return res.status(403).json({ message: 'Acesso negado para essa fazenda.' });
     }
+
+    // Regra de visibilidade: por padrão cada pessoa só vê o próprio log.
+    // Quem tem permissão de ver tudo (dono da conta ou liberado por ele)
+    // pode filtrar por usuário ou ver todo mundo junto.
+    const canSeeAll = canSeeAllActivityLogs(req);
+    let targetUserId = req.user?.id || null;
+    if (canSeeAll) {
+        targetUserId = rawUserId ? String(rawUserId) : null;
+    }
+
+    const entities = modulo && ACTIVITY_MODULE_FILTERS[modulo] ? ACTIVITY_MODULE_FILTERS[modulo] : null;
+    const dateFrom = parseDateValue(de);
+    const dateTo = parseDateValue(ate);
+    if (dateTo) {
+        dateTo.setHours(23, 59, 59, 999);
+    }
+
+    const params = [organizationId];
+    const conditions = ['al."organizationId" = $1', 'al.description IS NOT NULL'];
+
+    if (farmId) {
+        params.push(farmId);
+        conditions.push(`al."farmId" = $${params.length}`);
+    }
+    if (targetUserId) {
+        params.push(targetUserId);
+        conditions.push(`al."userId" = $${params.length}`);
+    }
+    if (entities) {
+        params.push(entities);
+        conditions.push(`al.entity = ANY($${params.length}::text[])`);
+    }
+    if (dateFrom) {
+        params.push(dateFrom);
+        conditions.push(`al."createdAt" >= $${params.length}`);
+    }
+    if (dateTo) {
+        params.push(dateTo);
+        conditions.push(`al."createdAt" <= $${params.length}`);
+    }
+
+    params.push(Number(limit));
+    const limitIndex = params.length;
+    params.push(Number(offset));
+    const offsetIndex = params.length;
+
     try {
         const rows = await prisma.$queryRawUnsafe(`
             SELECT al.id, al.action, al.entity, al."entityId", al.description,
-                   al."farmId", al."createdAt",
+                   al."farmId", al."createdAt", al."userId",
                    u.name AS "userName", u.email AS "userEmail"
             FROM "ActivityLog" al
             JOIN "User" u ON u.id = al."userId"
-            WHERE al."organizationId" = $1
-              AND al.description IS NOT NULL
-              ${farmId ? 'AND al."farmId" = $4' : ''}
+            WHERE ${conditions.join(' AND ')}
             ORDER BY al."createdAt" DESC
-            LIMIT $2 OFFSET $3
-        `, organizationId, Number(limit), Number(offset), ...(farmId ? [farmId] : []));
-        res.json({ logs: rows });
+            LIMIT $${limitIndex} OFFSET $${offsetIndex}
+        `, ...params);
+        res.json({ logs: rows, canSeeAll });
     } catch (e) {
         console.error(e);
         res.status(500).json({ message: 'Erro ao carregar logs.' });
     }
+});
+
+// Endpoint leve só pra alimentar os filtros da tela (quem pode ver tudo,
+// lista de pessoas e de módulos). Não é o mesmo gate de "gerenciar equipe",
+// porque uma pessoa pode ter só a permissão de ver os logs.
+app.get('/activity-logs/meta', requireAuth, requireModule('Registro de Atividades'), async (req, res) => {
+    const canSeeAll = canSeeAllActivityLogs(req);
+    const organizationId = req.saas?.organizationId;
+    let users = [];
+    if (canSeeAll && organizationId) {
+        try {
+            const memberships = await prisma.organizationMembership.findMany({
+                where: { organizationId },
+                include: { user: { select: { id: true, name: true, email: true } } },
+            });
+            users = memberships
+                .map((m) => m.user)
+                .filter(Boolean)
+                .map((u) => ({ id: u.id, name: u.name || u.email || 'Usuário' }))
+                .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    res.json({
+        canSeeAll,
+        users,
+        modules: Object.keys(ACTIVITY_MODULE_FILTERS).map((key) => ({ key, label: key })),
+    });
 });
 
 // ─── Registro de Módulos Extraídos (Fase 3) ──────────────────────────────────

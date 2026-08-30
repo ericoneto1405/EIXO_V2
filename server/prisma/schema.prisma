@@ -50,6 +50,7 @@ model User {
   farmAccesses                   UserFarmAccess[]
   reproCheckupSessions           ReproCheckupSession[]          @relation("ReproCheckupCreatedBy")
   marketPricesCreated            MarketPrice[]                  @relation("MarketPriceCreatedBy")
+  animalEditLogs                 AnimalEditLog[]
 
   @@index([phone])
 }
@@ -236,6 +237,7 @@ model Farm {
   geneticsAnalysisRuns    GeneticsAnalysisRun[]
   herdCategoryTargets     HerdCategoryTarget[]
   herdEvents              HerdEvent[]
+  animalEditLogs          AnimalEditLog[]
   herdImportPendings      HerdImportPending[]
   herdSettings            HerdSettings?
   lots                    Lot[]
@@ -373,6 +375,7 @@ model Animal {
   embryoTransferId        String?              @unique
   desmamadoEm             DateTime?
   pesoDesmamaKg           Float?
+  status               AnimalStatus          @default(VIVO)
   currentPaddock       Paddock?              @relation("AnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
   farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
   lot                  Lot?                  @relation(fields: [lotId], references: [id])
@@ -400,6 +403,7 @@ model Animal {
   semenBatches         SemenBatch[]          @relation("SemenBullAnimal")
   embryoDonorBatches   EmbryoBatch[]         @relation("EmbryoDonorAnimal")
   embryoSireBatches    EmbryoBatch[]         @relation("EmbryoSireAnimal")
+  editLogs             AnimalEditLog[]
 
   @@unique([farmId, identityKey])
   @@index([farmId, brinco])
@@ -413,6 +417,24 @@ model Animal {
   @@index([receptoraGestacionalId])
   @@index([desmamadoEm])
   @@index([farmId, identificacaoProvisoria])
+  @@index([farmId, status])
+}
+
+model AnimalEditLog {
+  id            String   @id @default(uuid())
+  animalId      String
+  farmId        String
+  userId        String
+  changes       Json
+  justificativa String
+  createdAt     DateTime @default(now())
+  animal        Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  farm          Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([animalId])
+  @@index([farmId])
+  @@index([userId])
 }
 
 model Weighing {
@@ -2466,6 +2488,12 @@ enum FeedlotSettlementType {
 enum ReproMode {
   CONTINUO
   ESTACAO
+}
+
+enum AnimalStatus {
+  VIVO
+  VENDIDO
+  MORTO
 }
 
 enum FieldOccurrenceType {

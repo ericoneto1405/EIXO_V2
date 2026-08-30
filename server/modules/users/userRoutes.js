@@ -238,7 +238,7 @@ app.post('/users', requireAuth, async (req, res) => {
             }
             return createdUser;
         });
-        logActivity(req, { action: 'USUARIO_CRIADO', entity: 'User', entityId: newUser.id, description: `Cadastrou o usuário ${newUser.name}` });
+        logActivity(prisma, req, { action: 'USUARIO_CRIADO', entity: 'User', entityId: newUser.id, description: `Cadastrou o usuário ${newUser.name}` });
         const accessContext = await ensureFieldWorkerFarmAccess(newUser, req.saas);
         return res.status(201).json({
             user: {
@@ -379,7 +379,7 @@ app.patch('/users/:id', requireAuth, async (req, res) => {
             return savedUser;
         });
 
-        logActivity(req, { action: 'USUARIO_EDITADO', entity: 'User', entityId: updatedUser.id, description: `Editou o usuário ${updatedUser.name}` });
+        logActivity(prisma, req, { action: 'USUARIO_EDITADO', entity: 'User', entityId: updatedUser.id, description: `Editou o usuário ${updatedUser.name}` });
         const accessContext = await ensureFieldWorkerFarmAccess(updatedUser, req.saas);
         return res.json({
             user: {
@@ -514,7 +514,7 @@ app.patch('/users/:id/app-access', requireAuth, async (req, res) => {
             return savedUser;
         });
 
-        logActivity(req, { action: 'COLABORADOR_APP_EDITADO', entity: 'User', entityId: updatedUser.id, description: `Editou o colaborador ${updatedUser.name}` });
+        logActivity(prisma, req, { action: 'COLABORADOR_APP_EDITADO', entity: 'User', entityId: updatedUser.id, description: `Editou o colaborador ${updatedUser.name}` });
         const accessContext = await ensureFieldWorkerFarmAccess(updatedUser, req.saas);
         return res.json({
             user: {
@@ -575,7 +575,7 @@ app.delete('/users/:id', requireAuth, async (req, res) => {
             await tx.user.delete({ where: { id: targetUser.id } });
         });
 
-        logActivity(req, { action: 'USUARIO_EXCLUIDO', entity: 'User', entityId: targetUser.id, description: `Excluiu o usuário ${targetUser.name}` });
+        logActivity(prisma, req, { action: 'USUARIO_EXCLUIDO', entity: 'User', entityId: targetUser.id, description: `Excluiu o usuário ${targetUser.name}` });
         return res.status(204).send();
     } catch (error) {
         console.error(error);

@@ -176,7 +176,7 @@ app.post('/farms', requireNonFieldWorker, async (req, res) => {
             },
             include: { paddocks: true },
         });
-        logActivity(req, { action: 'FAZENDA_CRIADA', entity: 'Farm', entityId: newFarm.id, description: `Cadastrou a fazenda ${newFarm.name}`, farmId: newFarm.id });
+        logActivity(prisma, req, { action: 'FAZENDA_CRIADA', entity: 'Farm', entityId: newFarm.id, description: `Cadastrou a fazenda ${newFarm.name}`, farmId: newFarm.id });
         return res.status(201).json({
             farm: {
                 ...newFarm,
@@ -1067,7 +1067,7 @@ app.post('/lots', requireNonFieldWorker, async (req, res) => {
                 startDate: parsedStartDate,
             },
         });
-        logActivity(req, { action: 'LOTE_CRIADO', entity: 'Lot', entityId: lot.id, description: `Criou o lote "${lot.name}"`, farmId: lot.farmId });
+        logActivity(prisma, req, { action: 'LOTE_CRIADO', entity: 'Lot', entityId: lot.id, description: `Criou o lote "${lot.name}"`, farmId: lot.farmId });
         return res.status(201).json({ lot });
     } catch (error) {
         console.error(error);

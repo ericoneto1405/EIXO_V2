@@ -397,7 +397,7 @@ const navSections: NavSection[] = [
         sectionLabel: 'Gestão',
         items: [
             { label: 'Gestão Comercial', icon: <ChartIcon />, value: 'Gestão Comercial', allowedLabels: ['Gestão Comercial'], requiredPlanBadge: 'PLUS' },
-            { label: 'Registro de Atividades', icon: <ReportIcon />, value: 'Registro de Atividades', status: 'coming_soon' },
+            { label: 'Registro de Atividades', icon: <ReportIcon />, value: 'Registro de Atividades', allowedLabels: ['Registro de Atividades'], requiredPlanBadge: 'PRO' },
             { label: 'Ocorrências do EIXO Campo', icon: <ReportIcon />, value: 'Ocorrências do EIXO Campo', allowedLabels: ['Operações'] },
             { label: 'Botijão de Sêmen', icon: <SuppliersIcon />, value: 'Estoque e Equipamentos' },
             { label: 'Usuários e Permissões', icon: <UsersIcon />, value: 'Usuários e Permissões', allowedLabels: ['Fazendas'] },

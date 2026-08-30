@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { requireAuth, requireNonFieldWorker } from '../middlewares/requireAuth.js';
+import { requireAuth, requireNonFieldWorker, requireModule } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import {
     parseNumber, parseDateValue, parseInteger,
@@ -9,6 +9,7 @@ import {
     normalizeSelectionDecision, normalizeAnimalTipoCadastro, normalizeAnimalIdentityKey,
 } from '../utils/formatters.js';
 import { logActivity } from '../utils/activityLog.js';
+import { findDuplicateIdentityInOrganization, findDuplicateIdentitiesInOrganization } from '../utils/animalIdentity.js';
 import {
     serializeAnimal, serializePoAnimal, serializeSeason,
     serializeReproEvent, serializePaddockMove,
@@ -762,11 +763,11 @@ const computeSelectionKpis = ({ events, animalId, seasonId, exposuresSet }) => {
 };
 
 export function registerAnimalRoutes(app) {
-app.patch('/animals/:id', requireAuth, async (req, res) => {
+app.patch('/animals/:id', requireAuth, requireModule('Editar Animais'), async (req, res) => {
     const { id } = req.params;
     const { lotId, brinco, raca, sexo, categoria, dataNascimento, registro,
             nome, brincoEletronico, padraoRacial, tipoRaca, composicaoMestica, racaPredominante,
-            funcaoReprodutiva, statusReprodutivo, previsaoParto, observacoes } = req.body || {};
+            funcaoReprodutiva, statusReprodutivo, previsaoParto, observacoes, justificativa } = req.body || {};
     try {
         const animal = await prisma.animal.findFirst({
             where: { id, farm: buildFarmRelationFilter(req) },
@@ -775,7 +776,8 @@ app.patch('/animals/:id', requireAuth, async (req, res) => {
 
         const updateData = {};
 
-        // lotId
+        // lotId — trocar de lote NÃO exige justificativa, só fica no log de
+        // atividades (é uma movimentação de rotina, não uma correção de dado).
         if (lotId !== undefined) {
             if (lotId) {
                 const lot = await prisma.lot.findFirst({
@@ -791,14 +793,18 @@ app.patch('/animals/:id', requireAuth, async (req, res) => {
         // Campos básicos editáveis
         if (brinco !== undefined) {
             const trimmed = String(brinco).trim();
-            if (!trimmed) return res.status(400).json({ message: 'Brinco não pode ser vazio.' });
-            // Verificar duplicidade dentro da fazenda (exceto o próprio animal)
-            const duplicate = await prisma.animal.findFirst({
-                where: { farmId: animal.farmId, brinco: trimmed, id: { not: id } },
-            });
-            if (duplicate) return res.status(409).json({ message: `Já existe um animal com o brinco "${trimmed}" nesta fazenda.` });
+            if (!trimmed) return res.status(400).json({ message: 'Identificação não pode ser vazia.' });
+            const identityKey = normalizeAnimalIdentityKey(trimmed);
+            // Verificar duplicidade em TODA a organização (não só nesta fazenda):
+            // o mesmo número não pode ser reaproveitado por outro animal, nem em
+            // outra fazenda da mesma conta.
+            const duplicate = await findDuplicateIdentityInOrganization(prisma, req, { identityKey, excludeAnimalId: id });
+            if (duplicate) {
+                const ondeMsg = duplicate.farmId === animal.farmId ? 'nesta fazenda' : `na fazenda "${duplicate.farmName || 'outra fazenda'}"`;
+                return res.status(409).json({ message: `Já existe um animal com a identificação "${trimmed}" ${ondeMsg}.` });
+            }
             updateData.brinco = trimmed;
-            updateData.identityKey = normalizeAnimalIdentityKey(trimmed);
+            updateData.identityKey = identityKey;
         }
         if (raca !== undefined) updateData.raca = raca ? String(raca).trim() : null;
         if (sexo !== undefined) {
@@ -833,10 +839,55 @@ app.patch('/animals/:id', requireAuth, async (req, res) => {
         if (previsaoParto !== undefined) updateData.previsaoParto = previsaoParto ? new Date(previsaoParto) : null;
         if (observacoes !== undefined) updateData.observacoes = observacoes ? String(observacoes).trim() : null;
 
+        // Monta o "antes/depois" de tudo que mudou de verdade, exceto lote e o
+        // identityKey (que é só um espelho técnico do brinco, não precisa
+        // aparecer duas vezes no motivo da edição).
+        const changes = {};
+        for (const [key, newValue] of Object.entries(updateData)) {
+            if (key === 'lotId' || key === 'identityKey' || key === 'dataNascimentoEstimada') continue;
+            const oldValue = animal[key] ?? null;
+            const normalizedNew = newValue ?? null;
+            const oldComparable = oldValue instanceof Date ? oldValue.toISOString() : oldValue;
+            const newComparable = normalizedNew instanceof Date ? normalizedNew.toISOString() : normalizedNew;
+            if (oldComparable !== newComparable) {
+                changes[key] = { de: oldValue, para: normalizedNew };
+            }
+        }
+        const hasFieldChanges = Object.keys(changes).length > 0;
+        const justificativaTrimmed = String(justificativa || '').trim();
+        if (hasFieldChanges && !justificativaTrimmed) {
+            return res.status(400).json({ message: 'Informe uma justificativa para editar dados do animal.' });
+        }
+
         const updated = await prisma.animal.update({
             where: { id },
             data: updateData,
         });
+
+        // Toda edição de dado do animal (fora troca de lote) fica registrada com
+        // quem editou, o que mudou e por quê — pra sempre, mesmo que o dado seja
+        // corrigido de novo depois.
+        if (hasFieldChanges) {
+            await prisma.animalEditLog.create({
+                data: {
+                    animalId: id,
+                    farmId: animal.farmId,
+                    userId: req.user.id,
+                    changes,
+                    justificativa: justificativaTrimmed,
+                },
+            });
+        }
+        if (updateData.lotId !== undefined) {
+            await logActivity(prisma, req, {
+                action: 'ANIMAL_LOTE_ALTERADO',
+                entity: 'Animal',
+                entityId: id,
+                description: `Alterou o lote do animal ${animal.brinco || id}`,
+                farmId: animal.farmId,
+            });
+        }
+
         return res.json({ animal: updated });
     } catch (error) {
         console.error(error);
@@ -960,6 +1011,14 @@ app.post('/repro-events', async (req, res) => {
                 bullId: bullId?.trim() || null,
                 protocol: protocol?.trim() || null,
             },
+        });
+
+        await logActivity(prisma, req, {
+            action: `REPRO_${eventType}`,
+            entity: 'ReproEvent',
+            entityId: event.id,
+            description: `Registrou evento reprodutivo (${eventType}) no animal ${animal.brinco || animalId}`,
+            farmId,
         });
 
         return res.status(201).json({ event: serializeReproEvent(event) });
@@ -1572,6 +1631,13 @@ app.post('/nutrition/plans', async (req, res) => {
                 observacoes: typeof observacoes === 'string' && observacoes.trim() ? observacoes.trim() : null,
             },
         });
+        await logActivity(prisma, req, {
+            action: 'PLANO_NUTRICAO_CRIADO',
+            entity: 'NutritionPlan',
+            entityId: plan.id,
+            description: `Criou o plano de nutrição "${plan.nome}"`,
+            farmId: farm.id,
+        });
         return res.status(201).json({ plan: serializeNutritionPlan(plan) });
     } catch (error) {
         console.error(error);
@@ -1638,6 +1704,13 @@ app.patch('/nutrition/plans/:id', async (req, res) => {
             where: { id: plan.id },
             data: updates,
         });
+        await logActivity(prisma, req, {
+            action: 'PLANO_NUTRICAO_EDITADO',
+            entity: 'NutritionPlan',
+            entityId: updated.id,
+            description: `Editou o plano de nutrição "${updated.nome}"`,
+            farmId: updated.farmId,
+        });
         return res.json({ plan: serializeNutritionPlan(updated) });
     } catch (error) {
         console.error(error);
@@ -1655,6 +1728,13 @@ app.delete('/nutrition/plans/:id', async (req, res) => {
             return res.status(404).json({ message: 'Plano não encontrado.' });
         }
         await prisma.nutritionPlan.delete({ where: { id: plan.id } });
+        await logActivity(prisma, req, {
+            action: 'PLANO_NUTRICAO_EXCLUIDO',
+            entity: 'NutritionPlan',
+            entityId: plan.id,
+            description: `Excluiu o plano de nutrição "${plan.nome}"`,
+            farmId: plan.farmId,
+        });
         return res.json({ ok: true });
     } catch (error) {
         console.error(error);
@@ -1738,6 +1818,13 @@ app.post('/nutrition/assignments', async (req, res) => {
                 startAt: parsedStart,
                 endAt: parsedEnd,
             },
+        });
+        await logActivity(prisma, req, {
+            action: 'PLANO_NUTRICAO_ATRIBUIDO',
+            entity: 'NutritionAssignment',
+            entityId: assignment.id,
+            description: `Atribuiu o plano de nutrição "${plan.nome}"`,
+            farmId: farm.id,
         });
         return res.status(201).json({ assignment: serializeNutritionAssignment(assignment), plan: serializeNutritionPlan(plan) });
     } catch (error) {
@@ -1840,7 +1927,7 @@ registerAcasalamentoRoutes({
 });
 
 app.get('/animals', requireAuth, async (req, res) => {
-    const { farmId, lotId } = req.query || {};
+    const { farmId, lotId, status: statusFilter } = req.query || {};
     if (!farmId) {
         return res.status(400).json({ message: 'Informe a fazenda para listar animais.' });
     }
@@ -1853,11 +1940,22 @@ app.get('/animals', requireAuth, async (req, res) => {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
 
+        // Por padrão só mostra animais vivos. "ARQUIVADOS" mostra vendidos/mortos
+        // e "TODOS" mostra tudo — o histórico nunca é apagado, só sai da lista
+        // ativa por padrão.
+        const normalizedStatusFilter = String(statusFilter || 'VIVO').toUpperCase();
+        const statusWhere = normalizedStatusFilter === 'TODOS'
+            ? {}
+            : normalizedStatusFilter === 'ARQUIVADOS'
+                ? { status: { in: ['VENDIDO', 'MORTO'] } }
+                : { status: 'VIVO' };
+
         const animals = await prisma.animal.findMany({
             where: {
                 farmId: String(farmId),
                 farm: buildFarmRelationFilter(req),
                 ...(lotId ? { lotId: String(lotId) } : {}),
+                ...statusWhere,
             },
             include: {
                 currentPaddock: true,
@@ -2021,13 +2119,23 @@ app.post('/animals', requireAuth, async (req, res) => {
             if (paiAnimal) resolvedPaiId = paiAnimal.id;
         }
 
+        // A identificação não pode se repetir em nenhuma fazenda da mesma
+        // organização, não só nesta.
+        const brincoTrimmed = brinco.trim();
+        const identityKey = normalizeAnimalIdentityKey(brincoTrimmed);
+        const duplicateIdentity = await findDuplicateIdentityInOrganization(prisma, req, { identityKey });
+        if (duplicateIdentity) {
+            const ondeMsg = duplicateIdentity.farmId === farmId ? 'nesta fazenda' : `na fazenda "${duplicateIdentity.farmName || 'outra fazenda'}"`;
+            return res.status(409).json({ message: `Já existe um animal com a identificação "${brincoTrimmed}" ${ondeMsg}.` });
+        }
+
         const animal = await prisma.$transaction(async (tx) => {
             const created = await tx.animal.create({
                 data: {
                     farmId,
                     lotId: validLotId,
-                    brinco: brinco.trim(),
-                    identityKey: normalizeAnimalIdentityKey(brinco),
+                    brinco: brincoTrimmed,
+                    identityKey,
                     raca: raca.trim(),
                     tipoCadastro: normalizeAnimalTipoCadastro(tipoCadastro),
                     sexo: sexoEnum,
@@ -2300,18 +2408,21 @@ app.post('/animals/:id/identificacao-definitiva', requireAuth, async (req, res) 
         });
         if (!animal) return res.status(404).json({ message: 'Animal não encontrado.' });
         if (!animal.identificacaoProvisoria) return res.status(409).json({ message: 'O animal já possui identificação definitiva.' });
-        const duplicate = await prisma.animal.findFirst({
-            where: { farmId: animal.farmId, OR: [{ brinco: identificacao }, { identityKey: identificacao }], NOT: { id: animal.id } },
-            select: { id: true },
-        });
+        const identityKey = normalizeAnimalIdentityKey(identificacao);
+        // A identificação definitiva também não pode repetir em nenhuma
+        // fazenda da mesma organização.
+        const duplicate = await findDuplicateIdentityInOrganization(prisma, req, { identityKey, excludeAnimalId: animal.id });
         const duplicatePo = await prisma.poAnimal.findFirst({ where: { farmId: animal.farmId, brinco: identificacao }, select: { id: true } });
-        if (duplicate || duplicatePo) return res.status(409).json({ message: 'Identificação já cadastrada nesta fazenda.' });
+        if (duplicate || duplicatePo) {
+            const ondeMsg = duplicate && duplicate.farmId !== animal.farmId ? `na fazenda "${duplicate.farmName || 'outra fazenda'}"` : 'nesta fazenda';
+            return res.status(409).json({ message: `Identificação já cadastrada ${ondeMsg}.` });
+        }
         const updated = await prisma.animal.update({
             where: { id: animal.id },
             data: {
                 identificacaoAnterior: animal.brinco,
                 brinco: identificacao,
-                identityKey: identificacao,
+                identityKey,
                 identificacaoProvisoria: false,
             },
         });
@@ -2431,9 +2542,13 @@ app.post('/animals/batch', requireAuth, async (req, res) => {
         return res.status(400).json({ message: 'Todos os animais devem ter brinco informado.' });
     }
 
-    const existing = await prisma.animal.findFirst({ where: { farmId, brinco: { in: brincos } } });
-    if (existing) {
-        return res.status(409).json({ message: `Brinco já cadastrado: ${existing.brinco}` });
+    // Não pode repetir nem nesta fazenda, nem em nenhuma outra da mesma organização.
+    const identityKeys = normalizedAnimals.map((animal) => normalizeAnimalIdentityKey(animal.brinco));
+    const duplicates = await findDuplicateIdentitiesInOrganization(prisma, req, { identityKeys });
+    if (duplicates.length) {
+        const primeiro = duplicates[0];
+        const ondeMsg = primeiro.farmId === farmId ? 'nesta fazenda' : `na fazenda "${primeiro.farmName || 'outra fazenda'}"`;
+        return res.status(409).json({ message: `Identificação já cadastrada ${ondeMsg}: ${primeiro.brinco}` });
     }
 
     let paymentSchedule;
@@ -2626,6 +2741,13 @@ app.post('/animals/bulk-weighings', requireAuth, async (req, res) => {
             isPo: false,
         });
         if (error) return res.status(error.status).json({ message: error.message });
+        await logActivity(prisma, req, {
+            action: 'PESAGEM_LOTE_REGISTRADA',
+            entity: 'Weighing',
+            entityId: null,
+            description: `Registrou pesagem em grupo de ${result.created} animal(is) — média ${result.averageWeightKg} kg`,
+            farmId: String(farmId),
+        });
         return res.status(201).json(result);
     } catch (error) {
         if (error?.code === 'P2002') return res.status(409).json({ message: 'Já existe pesagem nesta data para um ou mais animais.' });
@@ -2819,6 +2941,14 @@ app.post('/animals/:id/pesagens', requireAuth, async (req, res) => {
             });
 
             return createdWeighing;
+        });
+
+        await logActivity(prisma, req, {
+            action: 'PESAGEM_REGISTRADA',
+            entity: 'Weighing',
+            entityId: pesagem.id,
+            description: `Registrou pesagem de ${parsedPeso} kg do animal ${animal.brinco || id}`,
+            farmId: animal.farmId,
         });
 
         return res.status(201).json({

@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import FarmRegistrationForm from './FarmRegistrationForm';
-import OnboardingSpotlight from './OnboardingSpotlight';
 import { Farm } from '../types';
 
 const FarmMap = React.lazy(() => import('./FarmMap'));
@@ -509,16 +508,18 @@ const Farms: React.FC<FarmsProps> = ({
 
                     {/* Estado vazio de pastos */}
                     {!showForm && firstFarmWithoutPaddocks && (
-                        <div className="mt-4 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
-                            <OnboardingSpotlight
-                                step={2}
-                                totalSteps={3}
-                                title="Cadastre os pastos da fazenda"
-                                description={`Organize lotação, manejo e pesagens. Fazenda: ${firstFarmWithoutPaddocks.name}`}
-                                actionLabel="Cadastrar pasto"
-                                onAction={handleRegisterPaddock}
-                                iconPath="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"
-                            />
+                        <div className="mt-4 flex items-center justify-between gap-4 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
+                            <div>
+                                <p className="text-sm font-semibold text-[var(--eixo-text)]">Cadastre os pastos de {firstFarmWithoutPaddocks.name}</p>
+                                <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Organize lotação, manejo e pesagens.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleRegisterPaddock}
+                                className="flex-shrink-0 rounded-xl border-2 border-[#5a8c00] bg-[#B6E23A] px-3.5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130]"
+                            >
+                                Cadastrar pasto
+                            </button>
                         </div>
                     )}
             </>

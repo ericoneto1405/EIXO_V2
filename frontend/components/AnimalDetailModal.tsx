@@ -158,6 +158,11 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const [editRegistro, setEditRegistro] = useState('');
     const [isSavingEdit, setIsSavingEdit] = useState(false);
     const [editMsg, setEditMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+    // Toda edição de dado do animal (fora troca de lote) pede o motivo antes de
+    // salvar — fica registrado quem editou, o que mudou e por quê.
+    const [showJustificativaModal, setShowJustificativaModal] = useState(false);
+    const [justificativaText, setJustificativaText] = useState('');
+    const [justificativaError, setJustificativaError] = useState<string | null>(null);
 
     const animalId = animal?.id;
 
@@ -499,6 +504,19 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             setEditMsg({ text: 'O brinco não pode ser vazio.', type: 'error' });
             return;
         }
+        // No Rebanho Comercial, editar um animal exige justificativa (fica no
+        // histórico). No Plantel P.O. isso ainda não se aplica.
+        if (resolvedMode !== 'PO') {
+            setJustificativaText('');
+            setJustificativaError(null);
+            setShowJustificativaModal(true);
+            return;
+        }
+        await persistAnimalEdit(null);
+    };
+
+    const persistAnimalEdit = async (justificativa: string | null) => {
+        if (!animalId) return;
         setIsSavingEdit(true);
         try {
             const res = await fetch(buildApiUrl(`${animalBasePath}/${animalId}`), {
@@ -512,17 +530,33 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                     categoria: editCategoria || null,
                     dataNascimento: editDataNasc || null,
                     registro: editRegistro || null,
+                    ...(justificativa !== null ? { justificativa } : {}),
                 }),
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data?.message || 'Erro ao salvar.');
             setEditMsg({ text: 'Dados atualizados com sucesso!', type: 'success' });
+            setShowJustificativaModal(false);
             onAnimalUpdated?.();
         } catch (err: any) {
-            setEditMsg({ text: err?.message ?? 'Erro ao salvar.', type: 'error' });
+            if (showJustificativaModal) {
+                setJustificativaError(err?.message ?? 'Erro ao salvar.');
+            } else {
+                setEditMsg({ text: err?.message ?? 'Erro ao salvar.', type: 'error' });
+            }
         } finally {
             setIsSavingEdit(false);
         }
+    };
+
+    const handleConfirmJustificativa = async () => {
+        const trimmed = justificativaText.trim();
+        if (!trimmed) {
+            setJustificativaError('Explique o motivo da alteração.');
+            return;
+        }
+        setJustificativaError(null);
+        await persistAnimalEdit(trimmed);
     };
 
     if (!animal) return null;
@@ -1108,6 +1142,59 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                     </section>
                 </div>
             </div>
+
+            {/* Justificativa obrigatória para editar dados do animal (fora troca de lote) */}
+            {showJustificativaModal && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4"
+                    onClick={() => !isSavingEdit && setShowJustificativaModal(false)}
+                    aria-modal="true"
+                    role="dialog"
+                >
+                    <div
+                        className="w-full max-w-md rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-2xl"
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ animation: 'scale-in 0.18s ease-out forwards' }}
+                    >
+                        <h3 className="font-brand text-lg font-extrabold text-[var(--eixo-text)]">Motivo da alteração</h3>
+                        <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">
+                            Conte rapidamente por que está mudando os dados deste animal. Isso fica guardado no histórico, junto com seu nome.
+                        </p>
+                        {justificativaError && (
+                            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                                {justificativaError}
+                            </div>
+                        )}
+                        <textarea
+                            className={`${inputClass} mt-3 w-full`}
+                            rows={3}
+                            autoFocus
+                            placeholder="Ex.: raça anotada errada no cadastro, corrigido após conferência no curral."
+                            value={justificativaText}
+                            onChange={(e) => setJustificativaText(e.target.value)}
+                        />
+                        <div className="mt-4 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setShowJustificativaModal(false)}
+                                disabled={isSavingEdit}
+                                className="h-10 rounded-xl border border-[var(--eixo-border)] px-4 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)] disabled:cursor-not-allowed disabled:opacity-70"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmJustificativa}
+                                disabled={isSavingEdit}
+                                className={btnPrimary}
+                            >
+                                {isSavingEdit ? 'Salvando…' : 'Confirmar e salvar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <style>{`
                 @keyframes scale-in {
                     from { transform: scale(0.95); opacity: 0; }
