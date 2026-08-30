@@ -57,6 +57,20 @@ const RainIcon: React.FC = () => (
 const getInitials = (name: string) =>
     name.split(' ').slice(0, 2).map((w) => w[0]?.toUpperCase() || '').join('');
 
+// Paleta de cores do avatar — cor derivada do nome, consistente entre sessões
+const AVATAR_PALETTE = ['#2F2F2F', '#4f9f2f', '#3f6f8f', '#c58a20', '#b84232', '#6b4e71', '#4a6b5a', '#7a6a4f'];
+const getAvatarColor = (name: string) => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return AVATAR_PALETTE[Math.abs(hash) % AVATAR_PALETTE.length];
+};
+
+const ROLE_LABEL: Record<string, string> = {
+    OWNER: 'Proprietário',
+    ADMIN: 'Gestor',
+    MEMBER: 'Operador',
+};
+
 const DIAS_PT = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const getDayLabel = (offsetDays: number) => {
     if (offsetDays === 0) return 'Hoje';
@@ -319,7 +333,7 @@ interface HeaderProps {
     farms: Farm[];
     selectedFarmId: string | null;
     onSelectFarm: (farmId: string | null) => void;
-    currentUser?: { name: string; email: string; phone?: string | null; avatarUrl?: string | null } | null;
+    currentUser?: { name: string; email: string; phone?: string | null; avatarUrl?: string | null; membershipRole?: string | null; roles?: string[] } | null;
     onLogout?: () => void;
     canRegisterUsers?: boolean;
     onOpenUserRegister?: () => void;
@@ -411,6 +425,10 @@ const Header: React.FC<HeaderProps> = ({
     ) : (
         <LocationIcon />
     );
+
+    const roleBadge = currentUser?.roles?.includes('SUPER_ADMIN')
+        ? 'Super Admin'
+        : ROLE_LABEL[String(currentUser?.membershipRole || '').toUpperCase()] ?? null;
 
     // Fechar dropdowns ao clicar fora
     useEffect(() => {
@@ -505,21 +523,34 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="relative shrink-0" ref={userRef}>
                         <button
                             onClick={() => setUserOpen((v) => !v)}
-                            className="flex items-center gap-2.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                            className="flex items-center gap-2.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 transition-colors hover:bg-[var(--eixo-surface-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-green)] focus-visible:ring-offset-2"
                         >
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--eixo-text)] text-xs font-bold text-[#f5f0e8]">
+                            <div
+                                className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-[#f5f0e8]"
+                                style={currentUser.avatarUrl ? undefined : { backgroundColor: getAvatarColor(currentUser.name) }}
+                            >
                                 {currentUser.avatarUrl
                                     ? <img src={currentUser.avatarUrl} alt={currentUser.name} className="h-full w-full object-cover" />
                                     : getInitials(currentUser.name)
                                 }
                             </div>
+                            <span className="hidden max-w-[120px] truncate text-sm font-semibold text-[var(--eixo-text)] sm:block">
+                                {currentUser.name.split(' ')[0]}
+                            </span>
                             <ChevronDownIcon isOpen={userOpen} />
                         </button>
 
                         {userOpen && (
                             <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
                                 <div className="border-b border-[var(--eixo-border)] px-4 py-3">
-                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{currentUser.name}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm font-semibold text-[var(--eixo-text)]">{currentUser.name}</p>
+                                        {roleBadge && (
+                                            <span className="rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">
+                                                {roleBadge}
+                                            </span>
+                                        )}
+                                    </div>
                                     <p className="truncate text-xs text-[var(--eixo-text-muted)]">{currentUser.email}</p>
                                 </div>
                                 <ul className="py-2">
