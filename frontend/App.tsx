@@ -29,7 +29,6 @@ import UserRegisterModal from './components/UserRegisterModal';
 import UpgradeScreen from './components/UpgradeScreen';
 import TeamPermissions from './components/TeamPermissions';
 import ProfileModal from './components/ProfileModal';
-import OnboardingSpotlight from './components/OnboardingSpotlight';
 import AlertsBar from './components/AlertsBar';
 import { Alert, Farm, WebUserCreatePayload } from './types';
 import { createWebUser } from './adapters/usersApi';
@@ -364,6 +363,10 @@ const AppContent: React.FC = () => {
     const [upgradeModal, setUpgradeModal] = useState<string | null>(null); // nome do módulo bloqueado
     const [isSupportOpen, setIsSupportOpen] = useState(false);
     const [supportDraft, setSupportDraft] = useState<string | null>(null);
+    const [deleteFarmTarget, setDeleteFarmTarget] = useState<Farm | null>(null);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [isDeletingFarm, setIsDeletingFarm] = useState(false);
     const supportRef = useRef<HTMLDivElement>(null);
     const isHandlingSessionRevokedRef = useRef(false);
 
@@ -459,15 +462,10 @@ const AppContent: React.FC = () => {
     );
 
     const FirstFarmOnboarding: React.FC = () => (
-        <OnboardingSpotlight
-            step={1}
-            totalSteps={3}
+        <FarmRequiredPanel
             title="Cadastre sua primeira fazenda"
-            description="Esse é o primeiro passo para usar o sistema com rebanho, financeiro e operação."
             actionLabel="Cadastrar fazenda"
             onAction={handleRegisterFarmView}
-            hint="Leva menos de 1 minuto"
-            iconPath="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
         />
     );
 
@@ -569,6 +567,47 @@ const AppContent: React.FC = () => {
             setSelectedFarmId(farm.id);
         }
     }, [selectedFarmId]);
+
+    const handleConfirmFarmDeletion = React.useCallback(async () => {
+        if (!deleteFarmTarget) return;
+        setIsDeletingFarm(true);
+        setDeleteError(null);
+        try {
+            const response = await fetch(buildApiUrl(`/farms/${deleteFarmTarget.id}`), {
+                method: 'DELETE',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: deletePassword }),
+            });
+            const payload = await response.json().catch(() => null);
+
+            if (response.status === 423) {
+                const target = deleteFarmTarget;
+                setDeleteFarmTarget(null);
+                setDeletePassword('');
+                setSelectedFarmId(target.id);
+                setSupportDraft(`Solicito uma análise para exclusão da fazenda "${target.name}" (ID: ${target.id}).`);
+                setIsSupportOpen(true);
+                return;
+            }
+
+            if (!response.ok) {
+                setDeleteError(payload?.message || 'Não foi possível excluir a fazenda.');
+                return;
+            }
+
+            setFarms((current) => current.filter((item) => item.id !== deleteFarmTarget.id));
+            if (selectedFarmId === deleteFarmTarget.id) {
+                setSelectedFarmId(null);
+            }
+            setDeleteFarmTarget(null);
+            setDeletePassword('');
+        } catch (error) {
+            setDeleteError('Erro de conexão ao excluir a fazenda.');
+        } finally {
+            setIsDeletingFarm(false);
+        }
+    }, [deleteFarmTarget, deletePassword, selectedFarmId]);
 
     React.useEffect(() => {
         let active = true;
@@ -1054,9 +1093,9 @@ const AppContent: React.FC = () => {
                         onFarmCreated={handleFarmCreated}
                         onFarmUpdated={handleFarmUpdated}
                         onRequestFarmDeletion={(farm) => {
-                            setSelectedFarmId(farm.id);
-                            setSupportDraft(`Solicito uma análise para exclusão da fazenda "${farm.name}" (ID: ${farm.id}).`);
-                            setIsSupportOpen(true);
+                            setDeleteFarmTarget(farm);
+                            setDeletePassword('');
+                            setDeleteError(null);
                         }}
                         openForm={openFarmForm}
                         isFreePlan={isFreePlan}
@@ -1321,6 +1360,49 @@ const AppContent: React.FC = () => {
             )}
 
             {/* ── Modal de lock-in de exportação ── */}
+
+            {/* ── Modal de confirmação de exclusão de fazenda (senha do proprietário) ── */}
+            {deleteFarmTarget && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+                    onClick={() => { if (!isDeletingFarm) { setDeleteFarmTarget(null); setDeletePassword(''); setDeleteError(null); } }}>
+                    <div className="w-full max-w-sm rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
+                        onClick={e => e.stopPropagation()}>
+                        <div className="p-6">
+                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">
+                                Excluir fazenda "{deleteFarmTarget.name}"
+                            </h3>
+                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
+                                Essa ação não pode ser desfeita. Digite a senha do proprietário da conta para confirmar.
+                            </p>
+                            <input
+                                type="password"
+                                value={deletePassword}
+                                onChange={(e) => setDeletePassword(e.target.value)}
+                                placeholder="Senha do proprietário"
+                                autoFocus
+                                className="mt-4 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]"
+                            />
+                            {deleteError && (
+                                <p className="mt-2 text-sm text-[var(--eixo-danger)]">{deleteError}</p>
+                            )}
+                            <div className="mt-5 flex gap-3">
+                                <button type="button"
+                                    disabled={isDeletingFarm}
+                                    onClick={() => { setDeleteFarmTarget(null); setDeletePassword(''); setDeleteError(null); }}
+                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50">
+                                    Cancelar
+                                </button>
+                                <button type="button"
+                                    disabled={isDeletingFarm || !deletePassword}
+                                    onClick={handleConfirmFarmDeletion}
+                                    className="flex-1 rounded-xl bg-[var(--eixo-danger)] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                                    {isDeletingFarm ? 'Excluindo...' : 'Excluir fazenda'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ── Eixo Suporte — botão flutuante + painel ── */}
             {isAuthenticated && (

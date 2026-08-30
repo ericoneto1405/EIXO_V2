@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 import { requireAuth, requireNonFieldWorker } from '../middlewares/requireAuth.js';
 import { requireBillingAccess } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
@@ -407,18 +408,84 @@ app.delete('/farms/:id', requireNonFieldWorker, async (req, res) => {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
 
-        await recordActivityLog(req, {
-            statusCode: 423,
+        const [
+            animalCount,
+            payableCount,
+            receivableCount,
+            transactionCount,
+            herdEventCount,
+            sanitaryCount,
+            reproCount,
+            weighingCount,
+        ] = await Promise.all([
+            prisma.animal.count({ where: { farmId: farm.id } }),
+            prisma.financialPayable.count({ where: { farmId: farm.id } }),
+            prisma.financialReceivable.count({ where: { farmId: farm.id } }),
+            prisma.financialTransaction.count({ where: { farmId: farm.id } }),
+            prisma.herdEvent.count({ where: { farmId: farm.id } }),
+            prisma.sanitaryRecord.count({ where: { farmId: farm.id } }),
+            prisma.reproEvent.count({ where: { farmId: farm.id } }),
+            prisma.weighingSession.count({ where: { farmId: farm.id } }),
+        ]);
+        const hasData = [
+            animalCount,
+            payableCount,
+            receivableCount,
+            transactionCount,
+            herdEventCount,
+            sanitaryCount,
+            reproCount,
+            weighingCount,
+        ].some((count) => count > 0);
+
+        if (hasData) {
+            await recordActivityLog(prisma, req, {
+                statusCode: 423,
+                requestMeta: {
+                    action: 'farm_delete_blocked',
+                    targetType: 'farm',
+                    targetId: farm.id,
+                    result: 'blocked',
+                },
+            });
+            return res.status(423).json({
+                message: 'A exclusão direta de fazendas está temporariamente desativada por segurança.',
+            });
+        }
+
+        const { password } = req.body || {};
+        if (!password) {
+            return res.status(400).json({ message: 'Informe a senha do proprietário para confirmar a exclusão.' });
+        }
+
+        const owner = await prisma.user.findUnique({ where: { id: farm.userId } });
+        const passwordValid = owner ? await bcrypt.compare(String(password), owner.password) : false;
+        if (!passwordValid) {
+            await recordActivityLog(prisma, req, {
+                statusCode: 401,
+                requestMeta: {
+                    action: 'farm_delete_invalid_password',
+                    targetType: 'farm',
+                    targetId: farm.id,
+                    result: 'blocked',
+                },
+            });
+            return res.status(401).json({ message: 'Senha do proprietário incorreta.' });
+        }
+
+        await prisma.farm.delete({ where: { id: farm.id } });
+
+        await recordActivityLog(prisma, req, {
+            statusCode: 200,
             requestMeta: {
-                action: 'farm_delete_blocked',
+                action: 'farm_deleted',
                 targetType: 'farm',
                 targetId: farm.id,
-                result: 'blocked',
+                result: 'success',
             },
         });
-        return res.status(423).json({
-            message: 'A exclusão direta de fazendas está temporariamente desativada por segurança.',
-        });
+
+        return res.json({ message: 'Fazenda excluída com sucesso.' });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao excluir fazenda.' });
