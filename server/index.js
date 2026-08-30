@@ -79,7 +79,7 @@ import {
 } from './modules/middlewares/session.js';
 import {
     isFieldWorkerRequest, requireBillingAccess, requireNonFieldWorker, requireEntitlement,
-    requireAuth, requireSuperAdmin,
+    requireAuth, requireSuperAdmin, requireModule,
 } from './modules/middlewares/requireAuth.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -130,7 +130,7 @@ app.get('/health', (_req, res) => {
 
 
 // ── Logs de Atividade ───────────────────────────────────────────────────────
-app.get('/activity-logs', requireAuth, async (req, res) => {
+app.get('/activity-logs', requireAuth, requireModule('Registro de Atividades'), async (req, res) => {
     const { farmId: rawFarmId, limit = 100, offset = 0 } = req.query;
     const organizationId = req.saas?.organizationId;
     const farmId = req.access?.restrictToFarmIds?.length

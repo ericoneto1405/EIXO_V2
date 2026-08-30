@@ -405,7 +405,7 @@ export function registerFieldRoutes(app) {
                 },
             });
 
-            await logActivity(req, {
+            await logActivity(prisma, req, {
                 action: 'OCORRENCIA_CAMPO_CRIADA',
                 entity: 'FieldOccurrence',
                 entityId: occurrence.id,

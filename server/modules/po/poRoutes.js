@@ -198,6 +198,14 @@ const createPoWeighing = async (req, res, responseKey) => {
             return createdWeighing;
         });
 
+        await logActivity(prisma, req, {
+            action: 'PESAGEM_PO_REGISTRADA',
+            entity: 'PoWeighing',
+            entityId: pesagem.id,
+            description: `Registrou pesagem P.O. de ${parsedPeso} kg do animal ${animal.brinco || id}`,
+            farmId: animal.farmId,
+        });
+
         if (responseKey === 'pesagem') {
             return res.status(201).json({
                 pesagem: {
@@ -1929,6 +1937,13 @@ app.post('/po/animals/bulk-weighings', requireAuth, async (req, res) => {
             isPo: true,
         });
         if (error) return res.status(error.status).json({ message: error.message });
+        await logActivity(prisma, req, {
+            action: 'PESAGEM_PO_LOTE_REGISTRADA',
+            entity: 'PoWeighing',
+            entityId: null,
+            description: `Registrou pesagem P.O. em grupo de ${result.created} animal(is) — média ${result.averageWeightKg} kg`,
+            farmId: String(farmId),
+        });
         return res.status(201).json(result);
     } catch (error) {
         if (error?.code === 'P2002') return res.status(409).json({ message: 'Já existe pesagem nesta data para um ou mais animais P.O.' });

@@ -241,6 +241,14 @@ export function registerReproRoutes(app) {
                     prisma.animal.update({ where: { id: animalId }, data })),
             ]);
 
+            await logActivity(prisma, req, {
+                action: 'AVALIACAO_REPRODUTIVA_REGISTRADA',
+                entity: 'ReproCheckupSession',
+                entityId: session.id,
+                description: `Registrou avaliação reprodutiva de ${recordsData.length} animal(is)`,
+                farmId: String(farmId),
+            });
+
             return res.status(201).json({ session: serializeCheckupSession(session) });
         } catch (error) {
             console.error(error);
@@ -672,6 +680,14 @@ export function registerReproRoutes(app) {
                 }),
             ]);
 
+            await logActivity(prisma, req, {
+                action: 'PARTO_REGISTRADO',
+                entity: 'ReproEvent',
+                entityId: event.id,
+                description: `Registrou parto do animal ${event.animal?.brinco || event.animal?.nome || animalId}`,
+                farmId: String(farmId),
+            });
+
             return res.status(201).json({ parto: serializeParto(event) });
         } catch (error) {
             console.error(error);
@@ -715,6 +731,13 @@ export function registerReproRoutes(app) {
                 return res.status(404).json({ message: 'Parto não encontrado.' });
             }
             await prisma.reproEvent.delete({ where: { id } });
+            await logActivity(prisma, req, {
+                action: 'PARTO_EXCLUIDO',
+                entity: 'ReproEvent',
+                entityId: id,
+                description: `Excluiu registro de parto do animal ${event.animalId}`,
+                farmId: event.farmId,
+            });
             return res.json({ ok: true });
         } catch (error) {
             console.error(error);
@@ -777,6 +800,14 @@ export function registerReproRoutes(app) {
                     notes: cleanText(notes),
                 },
                 include: { animal: { select: { id: true, brinco: true, nome: true } } },
+            });
+
+            await logActivity(prisma, req, {
+                action: 'DESMAMA_REPRO_REGISTRADA',
+                entity: 'ReproEvent',
+                entityId: event.id,
+                description: `Registrou desmama do animal ${event.animal?.brinco || event.animal?.nome || animalId}`,
+                farmId: String(farmId),
             });
 
             return res.status(201).json({ desmama: serializeDesmama(event) });

@@ -16,18 +16,90 @@ interface ActivityModuleProps {
     farmName?: string | null;
 }
 
+// Mapa exato pras ações mais comuns — o que não estiver aqui cai no
+// reconhecimento por palavra-chave logo abaixo (getActionIcon), pra nunca
+// mais ficar "desatualizado" quando uma ação nova for registrada.
 const ACTION_ICON: Record<string, { icon: string; color: string }> = {
-    ANIMAL_CRIADO:      { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    LOTE_CRIADO:        { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    ANIMAL_COMPRA:      { icon: '💰', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    ANIMAL_VENDA:       { icon: '💵', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    ANIMAL_MORTE:       { icon: '📋', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
-    ANIMAL_NASCIMENTO:  { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    TRANSACAO_CRIADA:   { icon: '📊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    TRANSACAO_PAGA:     { icon: '✅', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    USUARIO_CRIADO:     { icon: '👤', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    FAZENDA_CRIADA:     { icon: '🏡', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    ANIMAL_CRIADO:              { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
+    ANIMAL_NASCIMENTO:          { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
+    ANIMAL_COMPRA:              { icon: '💰', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
+    ANIMAL_VENDA:               { icon: '💵', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
+    ANIMAL_MORTE:               { icon: '📋', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
+    ANIMAL_LOTE_ALTERADO:       { icon: '🔀', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    NASCIMENTO_REGISTRADO:      { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
+    IDENTIFICACAO_DEFINITIVA:   { icon: '🏷️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    DESMAMA_REGISTRADA:         { icon: '🐮', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
+    LOTE_CRIADO:                { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
+    FAZENDA_CRIADA:             { icon: '🏡', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    HERD_IMPORT:                { icon: '📥', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    TRANSACAO_CRIADA:           { icon: '📊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
+    TRANSACAO_EDITADA:          { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    TRANSACAO_PAGA:             { icon: '✅', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
+    USUARIO_CRIADO:             { icon: '👤', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    USUARIO_EDITADO:            { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    USUARIO_EXCLUIDO:           { icon: '🗑️', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
+    COLABORADOR_APP_EDITADO:    { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    OCORRENCIA_CAMPO_CRIADA:    { icon: '📍', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    PESAGEM_REGISTRADA:         { icon: '⚖️', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
+    PESAGEM_LOTE_REGISTRADA:    { icon: '⚖️', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
+    PESAGEM_PO_REGISTRADA:      { icon: '⚖️', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
+    PESAGEM_PO_LOTE_REGISTRADA: { icon: '⚖️', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
+    AVALIACAO_REPRODUTIVA_REGISTRADA: { icon: '🩺', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
+    PARTO_REGISTRADO:           { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
+    PARTO_EXCLUIDO:             { icon: '🗑️', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
+    DESMAMA_REPRO_REGISTRADA:   { icon: '🐮', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
+    TRANSFERENCIA_EMBRIAO_REGISTRADA: { icon: '🧬', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
+    PLANO_NUTRICAO_CRIADO:      { icon: '🌾', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
+    PLANO_NUTRICAO_EDITADO:     { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    PLANO_NUTRICAO_EXCLUIDO:    { icon: '🗑️', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
+    PLANO_NUTRICAO_ATRIBUIDO:  { icon: '🌾', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
+    HQ_ORG_PLAN_UPDATED:        { icon: '⚙️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
 };
+
+const DEFAULT_ICON = { icon: '📝', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' };
+
+// Palavras-chave em ordem de prioridade — cobre ações dinâmicas (que têm um
+// pedaço variável no nome, tipo `SANITARIO_${tipo}` ou `REPRO_${evento}`)
+// sem precisar listar cada combinação possível uma por uma.
+const KEYWORD_ICON: [string, { icon: string; color: string }][] = [
+    ['EXCLU', { icon: '🗑️', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' }],
+    ['MORTE', { icon: '📋', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' }],
+    ['BLOQUE', { icon: '🚫', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' }],
+    ['SENHA', { icon: '🔒', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' }],
+    ['VACINA', { icon: '💉', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
+    ['VERMIFUGO', { icon: '💊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
+    ['TRATAMENTO', { icon: '🩹', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
+    ['SANITARIO', { icon: '💉', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
+    ['PESAGEM', { icon: '⚖️', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
+    ['NUTRICAO', { icon: '🌾', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['REPRO', { icon: '🩺', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
+    ['PARTO', { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['NASCIMENTO', { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['DESMAMA', { icon: '🐮', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['VENDA', { icon: '💵', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['COMPRA', { icon: '💰', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
+    ['PAG', { icon: '✅', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['TRANSACAO', { icon: '📊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
+    ['FINANCEIR', { icon: '📊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
+    ['FARMACIA', { icon: '🧴', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
+    ['USUARIO', { icon: '👤', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' }],
+    ['COLABORADOR', { icon: '👤', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' }],
+    ['FAZENDA', { icon: '🏡', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' }],
+    ['LOTE', { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['ANIMAL', { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['EDITAD', { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' }],
+    ['ALTERAD', { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' }],
+    ['CRIAD', { icon: '➕', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['REGISTRAD', { icon: '➕', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['ATRIBUID', { icon: '➕', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+];
+
+function getActionIcon(action: string | null): { icon: string; color: string } {
+    if (!action) return DEFAULT_ICON;
+    if (ACTION_ICON[action]) return ACTION_ICON[action];
+    const found = KEYWORD_ICON.find(([keyword]) => action.includes(keyword));
+    return found ? found[1] : DEFAULT_ICON;
+}
 
 function formatRelativeDate(dateStr: string): string {
     const date = new Date(dateStr);
@@ -132,7 +204,7 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
                 {logs.length > 0 && (
                     <ul className="divide-y divide-[var(--eixo-border)]">
                         {logs.map((log) => {
-                            const iconData = ACTION_ICON[log.action ?? ''] ?? { icon: '📝', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' };
+                            const iconData = getActionIcon(log.action);
                             return (
                                 <li key={log.id} className="flex items-start gap-4 px-6 py-4 hover:bg-[var(--eixo-surface-soft)]">
                                     {/* Ícone da ação */}

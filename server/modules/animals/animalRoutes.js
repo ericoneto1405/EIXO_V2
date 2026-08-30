@@ -1013,6 +1013,14 @@ app.post('/repro-events', async (req, res) => {
             },
         });
 
+        await logActivity(prisma, req, {
+            action: `REPRO_${eventType}`,
+            entity: 'ReproEvent',
+            entityId: event.id,
+            description: `Registrou evento reprodutivo (${eventType}) no animal ${animal.brinco || animalId}`,
+            farmId,
+        });
+
         return res.status(201).json({ event: serializeReproEvent(event) });
     } catch (error) {
         console.error(error);
@@ -1623,6 +1631,13 @@ app.post('/nutrition/plans', async (req, res) => {
                 observacoes: typeof observacoes === 'string' && observacoes.trim() ? observacoes.trim() : null,
             },
         });
+        await logActivity(prisma, req, {
+            action: 'PLANO_NUTRICAO_CRIADO',
+            entity: 'NutritionPlan',
+            entityId: plan.id,
+            description: `Criou o plano de nutrição "${plan.nome}"`,
+            farmId: farm.id,
+        });
         return res.status(201).json({ plan: serializeNutritionPlan(plan) });
     } catch (error) {
         console.error(error);
@@ -1689,6 +1704,13 @@ app.patch('/nutrition/plans/:id', async (req, res) => {
             where: { id: plan.id },
             data: updates,
         });
+        await logActivity(prisma, req, {
+            action: 'PLANO_NUTRICAO_EDITADO',
+            entity: 'NutritionPlan',
+            entityId: updated.id,
+            description: `Editou o plano de nutrição "${updated.nome}"`,
+            farmId: updated.farmId,
+        });
         return res.json({ plan: serializeNutritionPlan(updated) });
     } catch (error) {
         console.error(error);
@@ -1706,6 +1728,13 @@ app.delete('/nutrition/plans/:id', async (req, res) => {
             return res.status(404).json({ message: 'Plano não encontrado.' });
         }
         await prisma.nutritionPlan.delete({ where: { id: plan.id } });
+        await logActivity(prisma, req, {
+            action: 'PLANO_NUTRICAO_EXCLUIDO',
+            entity: 'NutritionPlan',
+            entityId: plan.id,
+            description: `Excluiu o plano de nutrição "${plan.nome}"`,
+            farmId: plan.farmId,
+        });
         return res.json({ ok: true });
     } catch (error) {
         console.error(error);
@@ -1789,6 +1818,13 @@ app.post('/nutrition/assignments', async (req, res) => {
                 startAt: parsedStart,
                 endAt: parsedEnd,
             },
+        });
+        await logActivity(prisma, req, {
+            action: 'PLANO_NUTRICAO_ATRIBUIDO',
+            entity: 'NutritionAssignment',
+            entityId: assignment.id,
+            description: `Atribuiu o plano de nutrição "${plan.nome}"`,
+            farmId: farm.id,
         });
         return res.status(201).json({ assignment: serializeNutritionAssignment(assignment), plan: serializeNutritionPlan(plan) });
     } catch (error) {
@@ -2705,6 +2741,13 @@ app.post('/animals/bulk-weighings', requireAuth, async (req, res) => {
             isPo: false,
         });
         if (error) return res.status(error.status).json({ message: error.message });
+        await logActivity(prisma, req, {
+            action: 'PESAGEM_LOTE_REGISTRADA',
+            entity: 'Weighing',
+            entityId: null,
+            description: `Registrou pesagem em grupo de ${result.created} animal(is) — média ${result.averageWeightKg} kg`,
+            farmId: String(farmId),
+        });
         return res.status(201).json(result);
     } catch (error) {
         if (error?.code === 'P2002') return res.status(409).json({ message: 'Já existe pesagem nesta data para um ou mais animais.' });
@@ -2898,6 +2941,14 @@ app.post('/animals/:id/pesagens', requireAuth, async (req, res) => {
             });
 
             return createdWeighing;
+        });
+
+        await logActivity(prisma, req, {
+            action: 'PESAGEM_REGISTRADA',
+            entity: 'Weighing',
+            entityId: pesagem.id,
+            description: `Registrou pesagem de ${parsedPeso} kg do animal ${animal.brinco || id}`,
+            farmId: animal.farmId,
         });
 
         return res.status(201).json({
