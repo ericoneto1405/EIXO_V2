@@ -7,8 +7,15 @@ interface ActivityLog {
     description: string;
     farmId: string | null;
     createdAt: string;
+    userId: string;
     userName: string;
     userEmail: string;
+}
+
+interface ActivityLogMeta {
+    canSeeAll: boolean;
+    users: { id: string; name: string }[];
+    modules: { key: string; label: string }[];
 }
 
 interface ActivityModuleProps {
@@ -129,7 +136,31 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
+    const [meta, setMeta] = useState<ActivityLogMeta>({ canSeeAll: false, users: [], modules: [] });
+    const [filterModulo, setFilterModulo] = useState('');
+    const [filterUserId, setFilterUserId] = useState('');
+    const [filterDe, setFilterDe] = useState('');
+    const [filterAte, setFilterAte] = useState('');
     const PAGE_SIZE = 50;
+
+    // Carrega uma vez quem pode ver o quê (se dá pra filtrar por pessoa) e as
+    // opções de módulo pro filtro.
+    useEffect(() => {
+        (async () => {
+            try {
+                const resp = await fetch(buildApiUrl('/activity-logs/meta'), { credentials: 'include' });
+                if (!resp.ok) return;
+                const data = await resp.json();
+                setMeta({
+                    canSeeAll: Boolean(data.canSeeAll),
+                    users: Array.isArray(data.users) ? data.users : [],
+                    modules: Array.isArray(data.modules) ? data.modules : [],
+                });
+            } catch {
+                // Se falhar, a tela continua funcionando sem o filtro de usuário.
+            }
+        })();
+    }, []);
 
     const loadLogs = useCallback(async (reset = false) => {
         setLoading(true);
@@ -138,6 +169,10 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
         try {
             const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
             if (farmId) params.set('farmId', farmId);
+            if (filterModulo) params.set('modulo', filterModulo);
+            if (filterUserId) params.set('userId', filterUserId);
+            if (filterDe) params.set('de', filterDe);
+            if (filterAte) params.set('ate', filterAte);
             const resp = await fetch(buildApiUrl(`/activity-logs?${params}`), { credentials: 'include' });
             if (!resp.ok) throw new Error('Erro ao carregar histórico.');
             const data = await resp.json();
@@ -150,13 +185,13 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
         } finally {
             setLoading(false);
         }
-    }, [farmId, page]);
+    }, [farmId, page, filterModulo, filterUserId, filterDe, filterAte]);
 
     useEffect(() => {
         setPage(0);
         setLogs([]);
         loadLogs(true);
-    }, [farmId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [farmId, filterModulo, filterUserId, filterDe, filterAte]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <div className="space-y-4">
@@ -181,6 +216,74 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
                         Atualizar
                     </button>
                 </div>
+            </div>
+
+            {/* Filtros */}
+            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-4">
+                <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">Módulo</label>
+                        <select
+                            value={filterModulo}
+                            onChange={(e) => setFilterModulo(e.target.value)}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                        >
+                            <option value="">Todos</option>
+                            {meta.modules.map((m) => (
+                                <option key={m.key} value={m.key}>{m.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">De</label>
+                        <input
+                            type="date"
+                            value={filterDe}
+                            onChange={(e) => setFilterDe(e.target.value)}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                        />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">Até</label>
+                        <input
+                            type="date"
+                            value={filterAte}
+                            onChange={(e) => setFilterAte(e.target.value)}
+                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                        />
+                    </div>
+
+                    {meta.canSeeAll && (
+                        <div className="flex flex-col gap-1">
+                            <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">Usuário</label>
+                            <select
+                                value={filterUserId}
+                                onChange={(e) => setFilterUserId(e.target.value)}
+                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                            >
+                                <option value="">Todos</option>
+                                {meta.users.map((u) => (
+                                    <option key={u.id} value={u.id}>{u.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    {(filterModulo || filterDe || filterAte || filterUserId) && (
+                        <button
+                            type="button"
+                            onClick={() => { setFilterModulo(''); setFilterDe(''); setFilterAte(''); setFilterUserId(''); }}
+                            className="rounded-xl px-3 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:underline"
+                        >
+                            Limpar filtros
+                        </button>
+                    )}
+                </div>
+                {!meta.canSeeAll && (
+                    <p className="mt-3 text-xs text-[var(--eixo-text-muted)]">Você está vendo somente as suas próprias atividades.</p>
+                )}
             </div>
 
             {/* Lista */}

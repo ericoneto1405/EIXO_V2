@@ -103,7 +103,7 @@ const MODULE_CATEGORIES = [
     },
     {
         title: 'Operação',
-        modules: ['Operações', 'Configurações', 'Registro de Atividades'],
+        modules: ['Operações', 'Configurações', 'Registro de Atividades', 'Ver Atividades de Todos'],
     },
 ];
 
