@@ -101,7 +101,7 @@ export interface AnimalUI {
     registrationNumber?: string | null;
     registrationType?: string | null;
     registrationCategory?: string | null;
-    /** true quando a data de nascimento veio de safra, não de nascimento anotado */
+    /** true quando a data de nascimento veio sem o dia exato (só mês/ano) na importação */
     dataNascimentoEstimada?: boolean;
     /** categoria já resolvida: a que o produtor escolheu ou, na falta, a deduzida */
     categoria?: string | null;

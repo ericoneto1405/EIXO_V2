@@ -229,7 +229,14 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
     };
 
     // Volta da prévia para escolher outro arquivo, sem perder pasto/lote/raça.
+    // Se já tem linha carregada (inclusive corrigida na tela), confirma antes de descartar.
     const handleVoltarParaArquivo = () => {
+        if (contagem.total > 0) {
+            const confirmar = window.confirm(
+                `Isso vai descartar as ${contagem.total} linhas desta planilha, incluindo o que já foi corrigido aqui. Trocar de arquivo mesmo assim?`
+            );
+            if (!confirmar) return;
+        }
         setPreviewLinhas([]);
         setCatalogos(null);
         setFileName('');
@@ -578,9 +585,14 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                         type="button"
                         onClick={status === 'preview' ? handleVoltarParaArquivo : handleClose}
                         disabled={status === 'uploading' || status === 'saving'}
-                        className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-medium text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex flex-col items-center rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-medium text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                        {status === 'preview' ? 'Trocar arquivo' : 'Fechar'}
+                        <span>{status === 'preview' ? 'Trocar arquivo' : 'Fechar'}</span>
+                        {status === 'preview' && (
+                            <span className="text-[10px] font-normal leading-tight text-[var(--eixo-text-muted)]/70">
+                                descarta esta planilha
+                            </span>
+                        )}
                     </button>
                     {(status === 'preview' || status === 'saving') && (
                         <button

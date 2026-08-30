@@ -36,7 +36,7 @@ test('aceita sinônimos de Sexo em português e inglês, e corrige erro de digit
   assert.equal(normalizeSexoImport(null), null);
 });
 
-// ─── Nascimento por safra ─────────────────────────────────────────────────────
+// ─── Nascimento: data exata ou mês/ano ───────────────────────────────────────
 
 test('parseNascimentoImport aceita data exata e não marca como estimada', () => {
   const r = parseNascimentoImport('15/03/2021');
@@ -53,40 +53,48 @@ test('parseNascimentoImport aceita ISO', () => {
   assert.equal(r.data.getFullYear(), 2021);
 });
 
-test('safra com a palavra vira 1º de outubro e marca estimada', () => {
-  for (const entrada of ['safra 2023', 'Safra 2023', 'SAFRA 2023', 'safra: 2023', 'safra2023']) {
+test('parseNascimentoImport aceita DD-MM-AAAA com hífen igual à barra', () => {
+  const r = parseNascimentoImport('15-03-2021');
+  assert.equal(r.estimada, false);
+  assert.equal(r.erro, false);
+  assert.equal(r.data.getFullYear(), 2021);
+  assert.equal(r.data.getMonth(), 2);
+  assert.equal(r.data.getDate(), 15);
+});
+
+test('mês/ano vira dia 15 do mês e marca estimada', () => {
+  for (const entrada of ['03/2021', '3/2021', '03-2021', '03.2021']) {
     const r = parseNascimentoImport(entrada);
     assert.equal(r.estimada, true, entrada);
     assert.equal(r.erro, false, entrada);
-    assert.equal(r.data.getFullYear(), 2023, entrada);
-    assert.equal(r.data.getMonth(), 9, entrada);
-    assert.equal(r.data.getDate(), 1, entrada);
+    assert.equal(r.data.getFullYear(), 2021, entrada);
+    assert.equal(r.data.getMonth(), 2, entrada);
+    assert.equal(r.data.getDate(), 15, entrada);
   }
 });
 
-test('safra com ano de dois dígitos', () => {
-  const r = parseNascimentoImport('safra 23');
-  assert.equal(r.data.getFullYear(), 2023);
+test('mês/ano com ano de dois dígitos', () => {
+  const r = parseNascimentoImport('03/21');
+  assert.equal(r.data.getFullYear(), 2021);
   assert.equal(r.estimada, true);
 });
 
-test('safra com intervalo usa o primeiro ano', () => {
-  assert.equal(parseNascimentoImport('safra 2023/2024').data.getFullYear(), 2023);
-  assert.equal(parseNascimentoImport('2023/24').data.getFullYear(), 2023);
-  assert.equal(parseNascimentoImport('safra 2022-2023').data.getFullYear(), 2022);
+test('mês/ano com mês inválido vira erro', () => {
+  assert.equal(parseNascimentoImport('13/2021').erro, true);
+  assert.equal(parseNascimentoImport('00/2021').erro, true);
 });
 
-test('ano solto de quatro dígitos é tratado como safra', () => {
+test('ano solto de quatro dígitos não é mais aceito (safra removida)', () => {
   const r = parseNascimentoImport('2023');
-  assert.equal(r.estimada, true);
-  assert.equal(r.data.getFullYear(), 2023);
-  assert.equal(r.data.getMonth(), 9);
+  assert.equal(r.estimada, false);
+  assert.equal(r.erro, true);
+  assert.equal(r.data, null);
 });
 
-test('número inteiro na faixa de anos é safra, não serial do Excel', () => {
+test('número inteiro na faixa de anos plausíveis vira erro, não é lido como serial do Excel', () => {
   const r = parseNascimentoImport(2023);
-  assert.equal(r.estimada, true);
-  assert.equal(r.data.getFullYear(), 2023);
+  assert.equal(r.erro, true);
+  assert.equal(r.data, null);
 });
 
 test('número fora da faixa de anos continua sendo serial do Excel', () => {
@@ -116,17 +124,20 @@ test('data impossível vira erro', () => {
   assert.equal(r.erro, true);
 });
 
-test('safra fora da faixa plausível vira erro', () => {
-  assert.equal(parseNascimentoImport('safra 1200').erro, true);
-  assert.equal(parseNascimentoImport('3050').erro, true);
+test('"safra 2023" e variações não são mais aceitas', () => {
+  for (const entrada of ['safra 2023', 'Safra 2023', 'safra 23', 'safra 2023/2024']) {
+    const r = parseNascimentoImport(entrada);
+    assert.equal(r.erro, true, entrada);
+    assert.equal(r.data, null, entrada);
+  }
 });
 
 // ─── Casos que a revisão adversarial pegou ────────────────────────────────────
 
-test('mês em ISO não é confundido com safra', () => {
+test('mês em ISO (2023-03) continua sem dia suficiente para virar data', () => {
   const r = parseNascimentoImport('2023-03');
-  assert.equal(r.estimada, false, 'não pode virar safra');
-  assert.equal(r.erro, true, 'sem dia, não dá para gravar como data');
+  assert.equal(r.estimada, false);
+  assert.equal(r.erro, true, 'ordem ISO sem dia não bate com o padrão de mês/ano (que é mês primeiro)');
 });
 
 test('texto que o JS consegue parsear não vira data exata por acidente', () => {
@@ -137,15 +148,7 @@ test('texto que o JS consegue parsear não vira data exata por acidente', () => 
   }
 });
 
-test('safra de dois dígitos é sempre deste século', () => {
-  assert.equal(parseNascimentoImport('safra 24').data.getFullYear(), 2024);
-});
-
-test('safra futura vira erro em vez de entrar em silêncio', () => {
-  // "safra 87" seria 2087: erro de digitação, não dado. Se entrasse, a idade de
-  // uma data futura é nula e o animal ficaria sem categoria, sem aviso nenhum.
-  assert.equal(parseNascimentoImport('safra 87').erro, true);
-  const anoQueVem = new Date().getFullYear() + 1;
-  assert.equal(parseNascimentoImport(`safra ${anoQueVem}`).erro, false, 'o ano que vem ainda vale');
-  assert.equal(parseNascimentoImport(`safra ${anoQueVem + 1}`).erro, true, 'depois disso, não');
+test('ano fora da faixa plausível vira erro (e não é lido como safra nem serial)', () => {
+  assert.equal(parseNascimentoImport('1200').erro, true);
+  assert.equal(parseNascimentoImport('3050').erro, true);
 });

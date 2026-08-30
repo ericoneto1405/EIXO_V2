@@ -1701,7 +1701,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         {visibleColumns.has('idade') && (
                                         <td
                                             className="border-r border-[var(--eixo-border)] px-4 py-3"
-                                            title={animal.dataNascimentoEstimada ? 'Idade estimada pela safra informada na importação' : undefined}
+                                            title={animal.dataNascimentoEstimada ? 'Idade estimada — nascimento informado sem o dia exato' : undefined}
                                         >
                                             {animal.dataNascimentoEstimada ? '~' : ''}{calculateAge(animal.dataNascimento)}
                                         </td>

@@ -136,7 +136,7 @@ const normalizeAnimal = (animal: any): HerdAnimal => {
         registrationNumber: animal.registrationNumber || null,
         registrationType: animal.registrationType || null,
         registrationCategory: animal.registrationCategory || null,
-        // true = a data veio de safra na importação; a tela mostra "~" na idade.
+        // true = a data veio sem o dia exato (só mês/ano) na importação; a tela mostra "~" na idade.
         dataNascimentoEstimada: Boolean(animal.dataNascimentoEstimada),
         categoria: animal.categoria || null,
         // true = o servidor deduziu por sexo + idade; o produtor não escolheu.

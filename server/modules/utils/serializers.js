@@ -21,7 +21,7 @@ export function serializeAnimal(animal) {
         /** o que está realmente gravado, para o formulário de edição. */
         categoriaDefinida: animal.categoria ?? null,
         dataNascimento: animal.dataNascimento ? animal.dataNascimento.toISOString() : null,
-        /** true = a data veio de safra informada na importação, não de nascimento anotado. */
+        /** true = a data veio sem o dia exato (só mês/ano) na importação, não de nascimento anotado. */
         dataNascimentoEstimada: animal.dataNascimentoEstimada ?? false,
         ultimoPeso: animal.pesagens?.[0]?.peso ?? animal.pesoAtual ?? null,
         gmd: animal.gmd ?? null,

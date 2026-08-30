@@ -818,7 +818,7 @@ app.patch('/animals/:id', requireAuth, requireModule('Editar Animais'), async (r
         if (dataNascimento !== undefined) {
             const novaData = dataNascimento ? new Date(dataNascimento) : null;
             updateData.dataNascimento = novaData;
-            // A flag de safra só cai quando a data MUDA de verdade. O modal manda
+            // A flag de data estimada só cai quando a data MUDA de verdade. O modal manda
             // o campo em todo salvamento, mesmo sem edição — zerar aqui de forma
             // incondicional apagaria o "~" da idade estimada de um animal cuja
             // data continua sendo o chute do 1º de outubro. Flag que mente é

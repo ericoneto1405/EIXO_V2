@@ -241,7 +241,7 @@ const TEMPLATE_COLUMNS = [
   { key: 'identificacao',      label: 'Identificação',           tier: 'required',     type: 'text',   example: 'EXEMPLO-1',                  description: 'Brinco, tatuagem ou número que identifica o animal de forma única.' },
   { key: 'sexo',               label: 'Sexo (MACHO ou FÊMEA)',   tier: 'required',     type: 'list',   options: ['MACHO', 'FEMEA'],            example: 'MACHO',                      description: 'MACHO ou FEMEA.' },
   // --- Idade e peso ---
-  { key: 'data_nascimento',    label: 'Nascimento ou safra',     tier: 'recommended',  type: 'text',   example: 'safra 2023',                 description: 'Aceita a data exata (15/03/2021) ou só a safra ("safra 2023"). Safra entra como estimativa e o EIXO mostra a idade como aproximada — melhor que inventar uma data.' },
+  { key: 'data_nascimento',    label: 'Nascimento',              tier: 'recommended',  type: 'text',   example: '15/03/2021',                 description: 'Data exata (15/03/2021) ou, se não souber o dia, só mês/ano (03/2021) — o EIXO assume o dia 15 e mostra a idade como aproximada.' },
   { key: 'ultimo_peso_kg',     label: 'Último Peso (kg)',        tier: 'recommended',  type: 'number', example: '520',                        description: 'Peso registrado mais recente, em kg.' },
   { key: 'data_pesagem',       label: 'Data da Pesagem',         tier: 'recommended',  type: 'date',   example: '01/06/2026',                 description: 'Data da pesagem informada acima (DD/MM/AAAA).' },
   // --- Rebanho ---
@@ -528,7 +528,7 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
           dados.getCell(`${colChar}${row}`).numFmt = '0.##';
         }
       }
-      // Nascimento aceita "safra 2023" além de data, então precisa ser TEXTO.
+      // Nascimento aceita mês/ano além da data completa, então precisa ser TEXTO.
       // Sem isso o Excel reinterpreta pelo locale da máquina: em en-US "3/5/2021"
       // chega renderizado como m/d/yyyy e vira 3 de maio em vez de 5 de março —
       // dois meses de erro silencioso na idade, que realimenta a categoria.
@@ -989,15 +989,15 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
     const sexo = normalizeSexoImport(row.sexo);
     const racaResolvida = resolveImportRaca(row, contexto.racaPadrao);
 
-    // Nascimento aceita data exata OU safra ("safra 2023"), porque é assim que
-    // o pecuarista de corte conta a idade do lote.
+    // Nascimento aceita data exata ou só mês/ano (dia 15 assumido), porque nem
+    // todo produtor sabe o dia exato do nascimento.
     const nascimento = parseNascimentoImport(row.data_nascimento);
     const dataNascimento = nascimento.data;
     const previsaoParto = parseImportDate(row.previsao_parto);
     const pesagem = parsePesagemImport(row.data_pesagem);
     const dataPesagem = pesagem.data;
     const pesoAtual = parseNumber(row.ultimo_peso_kg);
-    if (nascimento.erro) rowReasons.push('Nascimento inválido — use a data (15/03/2021) ou a safra ("safra 2023")');
+    if (nascimento.erro) rowReasons.push('Nascimento inválido — use a data completa (15/03/2021) ou pelo menos mês/ano (03/2021)');
     if (pesagem.erro) rowReasons.push('Data da pesagem inválida');
     if (pesagem.diaEstimado) rowAvisos.push('Dia da pesagem não informado — considerando o dia 15 do mês.');
     if (row.ultimo_peso_kg && (!pesoAtual || pesoAtual <= 0)) rowReasons.push('Último peso deve ser maior que zero');
@@ -1063,8 +1063,8 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
         tipoCadastro: 'MESTICO', // refinado depois pela tela de animal
         sexo,
         dataNascimento,
-        // Safra entra como estimativa assumida, para a tela mostrar "~3 anos
-        // (estimado)" em vez de fingir que existe uma data anotada.
+        // Mês/ano entra como estimativa assumida (dia 15), para a tela mostrar
+        // "~3 anos (estimado)" em vez de fingir que existe uma data anotada.
         dataNascimentoEstimada: nascimento.estimada,
         pesoAtual,
         statusReprodutivo: statusNormalizado,
@@ -1389,8 +1389,8 @@ app.post('/herd/import/erros-xlsx', requireAuth, async (req, res) => {
         cell.alignment = { vertical: 'middle' };
         if (col.type === 'date') cell.numFmt = 'dd/mm/yyyy';
         if (col.type === 'number') cell.numFmt = '0.##';
-        // Mesma razão do template: nascimento aceita "safra 2023" e precisa ser
-        // texto, senão o Excel reinterpreta a data pelo locale da máquina.
+        // Mesma razão do template: nascimento aceita mês/ano e precisa ser texto,
+        // senão o Excel reinterpreta a data pelo locale da máquina.
         if (col.key === 'data_nascimento') cell.numFmt = '@';
       });
       const motivoCell = ws.getCell(rowNum, totalCols + 1);

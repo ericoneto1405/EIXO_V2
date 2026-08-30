@@ -60,6 +60,7 @@ const MOTIVO_PARA_COLUNA: { padrao: RegExp; key: string }[] = [
     { padrao: /data da pesagem/i, key: 'data_pesagem' },
     { padrao: /peso/i, key: 'ultimo_peso_kg' },
     { padrao: /previs[ãa]o de parto/i, key: 'previsao_parto' },
+    { padrao: /status reprodutivo/i, key: 'status_reprodutivo' },
     { padrao: /pasto de destino/i, key: 'pasto_destino' },
     { padrao: /lote de destino/i, key: 'lote_destino' },
 ];
@@ -185,10 +186,19 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
         onChange(proximas);
     };
 
-    const renderCelula = (linha: PreviewLinha, indice: number, coluna: PreviewColuna) => {
+    // Numa linha com erro, só a célula apontada como culpada fica editável — as
+    // demais já estão corretas e travar evita edição por engano. Se o motivo não
+    // bateu com nenhuma coluna conhecida (`problemas` vazio), não trava nada: é
+    // melhor deixar a linha toda editável do que prender o cliente sem solução.
+    const renderCelula = (
+        linha: PreviewLinha,
+        indice: number,
+        coluna: PreviewColuna,
+        travada: boolean,
+    ) => {
         const valor = linha.dados[coluna.key];
         const comum = {
-            disabled,
+            disabled: disabled || travada,
             className: CLASSE_CELULA,
         };
 
@@ -364,7 +374,12 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                                                 }`}
                                             >
                                                 <div className="min-w-[9rem]">
-                                                    {renderCelula(linha, indice, coluna)}
+                                                    {renderCelula(
+                                                        linha,
+                                                        indice,
+                                                        coluna,
+                                                        status === 'erro' && problemas.size > 0 && !problemas.has(coluna.key),
+                                                    )}
                                                 </div>
                                             </td>
                                         ))}
