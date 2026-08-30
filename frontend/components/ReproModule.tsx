@@ -912,7 +912,7 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                         {desmamaForm.createCalf && (
                             <div className="grid gap-3 sm:grid-cols-3">
                                 <div>
-                                    <label className={labelClass}>Brinco do bezerro</label>
+                                    <label className={labelClass}>Identificação do bezerro</label>
                                     <input
                                         type="text"
                                         value={desmamaForm.calfBrinco}

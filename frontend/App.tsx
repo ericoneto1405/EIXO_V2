@@ -581,16 +581,6 @@ const AppContent: React.FC = () => {
             });
             const payload = await response.json().catch(() => null);
 
-            if (response.status === 423) {
-                const target = deleteFarmTarget;
-                setDeleteFarmTarget(null);
-                setDeletePassword('');
-                setSelectedFarmId(target.id);
-                setSupportDraft(`Solicito uma análise para exclusão da fazenda "${target.name}" (ID: ${target.id}).`);
-                setIsSupportOpen(true);
-                return;
-            }
-
             if (!response.ok) {
                 setDeleteError(payload?.message || 'Não foi possível excluir a fazenda.');
                 return;

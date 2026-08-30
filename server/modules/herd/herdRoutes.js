@@ -1421,7 +1421,7 @@ const REGISTRATION_ENTITIES = [
 ];
 
 const PO_TEMPLATE_COLUMNS = [
-  { key: 'identificacao', label: 'Identificação / Brinco', required: true, type: 'text', description: 'Identificação usada no manejo da fazenda.' },
+  { key: 'identificacao', label: 'Identificação', required: true, type: 'text', description: 'Identificação usada no manejo da fazenda.' },
   { key: 'nome', label: 'Nome do animal', required: true, type: 'text', description: 'Nome oficial ou nome usado na fazenda.' },
   { key: 'raca', label: 'Raça', required: true, type: 'text', description: 'Raça do animal.' },
   { key: 'sexo', label: 'Sexo', required: true, type: 'list', options: ['MACHO', 'FEMEA'], description: 'MACHO ou FEMEA.' },
@@ -1649,7 +1649,7 @@ app.post('/po/herd/import/upload', requireAuth, uploadHerdImportFile, async (req
       const registrationNumberReferenceKey = normalizeHeader(registrationKey);
       const registrationReferenceKey = `${normalizeHeader(registrationEntity)}|${registrationNumberReferenceKey}`;
       const reasons = [];
-      if (!brinco) reasons.push('Identificação / Brinco é obrigatório');
+      if (!brinco) reasons.push('Identificação é obrigatória');
       if (!nome) reasons.push('Nome do animal é obrigatório');
       if (!raca) reasons.push('Raça é obrigatória');
       if (!sexo) reasons.push('Sexo é obrigatório e deve ser MACHO ou FEMEA');

@@ -14,6 +14,49 @@ import { REPRO_WINDOW_DAYS } from '../config/env.js';
 import { calculateActivePaddockArea, hasActivePaddock, hasDuplicatePaddockNames } from './farmRules.js';
 const prisma = new PrismaClient();
 
+// Tudo que indica uso real da fazenda (não configuração). Se qualquer um desses
+// tiver registro, a fazenda tem histórico e nunca pode ser excluída — nem pelo
+// dono, nem por um admin. O histórico fica guardado permanentemente (também
+// serve de base para cobrança futura do cliente).
+const FARM_HISTORY_MODELS = [
+    'animal',
+    'acasalamentoSession',
+    'breedingSeason',
+    'criaMortality',
+    'embryoBatch',
+    'embryoTransfer',
+    'embryoPairSequence',
+    'externalOperation',
+    'feedlotContract',
+    'fieldOccurrence',
+    'financialPayable',
+    'financialReceivable',
+    'financialTransaction',
+    'financialResultEntry',
+    'geneticsAnalysisRun',
+    'herdEvent',
+    'herdImportPending',
+    'nutritionAssignment',
+    'nutritionCostEntry',
+    'nutritionExecution',
+    'nutritionFabrication',
+    'nutritionPreparedFeed',
+    'nutritionTroughReading',
+    'paddockMove',
+    'pharmacyBatch',
+    'pharmacyMovement',
+    'poAnimal',
+    'poLot',
+    'poWeighing',
+    'reproEvent',
+    'sanitaryRecord',
+    'selectionDecision',
+    'semenBatch',
+    'weighingSession',
+    'reproCheckupRecord',
+    'reproCheckupSession',
+];
+
 const findFarmByCoordinates = async ({ req, lat, lng, excludeFarmId = null }) => {
     if (lat === null || lng === null) {
         return null;
@@ -408,37 +451,12 @@ app.delete('/farms/:id', requireNonFieldWorker, async (req, res) => {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
 
-        const [
-            animalCount,
-            payableCount,
-            receivableCount,
-            transactionCount,
-            herdEventCount,
-            sanitaryCount,
-            reproCount,
-            weighingCount,
-        ] = await Promise.all([
-            prisma.animal.count({ where: { farmId: farm.id } }),
-            prisma.financialPayable.count({ where: { farmId: farm.id } }),
-            prisma.financialReceivable.count({ where: { farmId: farm.id } }),
-            prisma.financialTransaction.count({ where: { farmId: farm.id } }),
-            prisma.herdEvent.count({ where: { farmId: farm.id } }),
-            prisma.sanitaryRecord.count({ where: { farmId: farm.id } }),
-            prisma.reproEvent.count({ where: { farmId: farm.id } }),
-            prisma.weighingSession.count({ where: { farmId: farm.id } }),
-        ]);
-        const hasData = [
-            animalCount,
-            payableCount,
-            receivableCount,
-            transactionCount,
-            herdEventCount,
-            sanitaryCount,
-            reproCount,
-            weighingCount,
-        ].some((count) => count > 0);
+        const historyCounts = await Promise.all(
+            FARM_HISTORY_MODELS.map((model) => prisma[model].count({ where: { farmId: farm.id } })),
+        );
+        const hasHistory = historyCounts.some((count) => count > 0);
 
-        if (hasData) {
+        if (hasHistory) {
             await recordActivityLog(prisma, req, {
                 statusCode: 423,
                 requestMeta: {
@@ -449,7 +467,7 @@ app.delete('/farms/:id', requireNonFieldWorker, async (req, res) => {
                 },
             });
             return res.status(423).json({
-                message: 'A exclusão direta de fazendas está temporariamente desativada por segurança.',
+                message: 'Esta fazenda tem histórico registrado (animais, financeiro, sanidade, reprodução ou outro módulo) e não pode ser excluída. O histórico é mantido permanentemente pelo sistema.',
             });
         }
 

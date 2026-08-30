@@ -1378,13 +1378,13 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                                 if (event.key !== 'Enter') return;
                                                 event.preventDefault();
                                                 if (!resolveManualAnimal()) {
-                                                    setFormMsg({ text: 'Animal não encontrado. Confira o brinco/registro.', type: 'error' });
+                                                    setFormMsg({ text: 'Animal não encontrado. Confira a identificação/registro.', type: 'error' });
                                                     setPendingReplace(null);
                                                     return;
                                                 }
                                                 weightInputRef.current?.focus();
                                             }}
-                                            placeholder="Brinco, ID ou registro"
+                                            placeholder="Identificação, ID ou registro"
                                             className="w-full rounded-[14px] border-2 border-[#d7cab3] bg-[#fffaf1] px-4 py-4 text-2xl font-black uppercase text-[#2f3a2d] outline-none focus:border-[#9d7d4d]"
                                         />
                                         <datalist id="weighing-animal-options">
@@ -1397,7 +1397,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                             ))}
                                         </datalist>
                                         <p className="mt-1 text-xs font-semibold text-[#d7cab3]">
-                                            Digite exatamente o brinco, ID ou registro do animal.
+                                            Digite exatamente a identificação, ID ou registro do animal.
                                         </p>
                                     </div>
                                     <div>
