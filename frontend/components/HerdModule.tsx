@@ -4,7 +4,6 @@ import LotDetailModal from './LotDetailModal';
 import LotePurchaseModal from './LotePurchaseModal';
 import WeighingsTab from './WeighingsTab';
 import HerdSettingsTab from './HerdSettingsTab';
-import OnboardingSpotlight from './OnboardingSpotlight';
 import ImportHerdModal from './ImportHerdModal';
 import {
     AnimalStatusFilter,
@@ -1611,15 +1610,16 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             ) : sortedAnimals.length === 0 ? (
                                 <tr>
                                     <td colSpan={12} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
-                                        <OnboardingSpotlight
-                                            step={3}
-                                            totalSteps={3}
-                                            title="Adicione os animais do seu rebanho"
-                                            description="Importe uma planilha ou cadastre manualmente para começar a acompanhar seu rebanho."
-                                            actionLabel="Adicionar animal"
-                                            onAction={openAnimalForm}
-                                            iconPath="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                                        />
+                                        <div className="flex flex-col items-center gap-3 py-4">
+                                            <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum animal cadastrado ainda. Importe uma planilha ou cadastre manualmente.</p>
+                                            <button
+                                                type="button"
+                                                onClick={openAnimalForm}
+                                                className="rounded-xl border-2 border-[#5a8c00] bg-[#B6E23A] px-3.5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130]"
+                                            >
+                                                Adicionar animal
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ) : (

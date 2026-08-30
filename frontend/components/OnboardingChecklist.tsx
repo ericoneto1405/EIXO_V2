@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { buildApiUrl } from '../api';
 import type { Farm } from '../types';
 
@@ -18,6 +18,8 @@ interface StepState {
     animals: boolean;
     weighings: boolean;
 }
+
+const STEP_KEYS: (keyof StepState)[] = ['farm', 'paddocks', 'animals', 'weighings'];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -69,6 +71,8 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
     const [visible, setVisible] = useState(true);
     const [allDone, setAllDone] = useState(false);
     const [refreshKey, setRefreshKey] = useState(0);
+    const [justCompleted, setJustCompleted] = useState<Set<keyof StepState>>(new Set());
+    const prevStepsRef = useRef<StepState | null>(null);
 
     useEffect(() => {
         const refreshProgress = () => setRefreshKey((current) => current + 1);
@@ -107,6 +111,23 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
             }
 
             const next = { farm: farmDone, paddocks: paddocksDone, animals: animalsDone, weighings: weighingsDone };
+            const prev = prevStepsRef.current;
+            if (prev) {
+                const newlyDone = STEP_KEYS.filter((key) => !prev[key] && next[key]);
+                if (newlyDone.length > 0) {
+                    setJustCompleted((current) => new Set([...current, ...newlyDone]));
+                    newlyDone.forEach((key) => {
+                        setTimeout(() => {
+                            setJustCompleted((current) => {
+                                const copy = new Set(current);
+                                copy.delete(key);
+                                return copy;
+                            });
+                        }, 1200);
+                    });
+                }
+            }
+            prevStepsRef.current = next;
             setSteps(next);
             setLoading(false);
 
@@ -132,7 +153,6 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
     };
 
     const completedCount = Object.values(steps).filter(Boolean).length;
-    const progressPct = Math.round((completedCount / 4) * 100);
 
     const nextAction = !steps.farm
         ? { label: 'Cadastrar fazenda', onClick: () => onNavigate('Fazendas') }
@@ -187,11 +207,34 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
             </div>
 
             {/* Barra de progresso */}
-            <div className="h-1 bg-[var(--eixo-surface-soft)]">
-                <div
-                    className="h-1 rounded-full bg-[var(--eixo-green)] transition-all duration-700"
-                    style={{ width: `${progressPct}%` }}
-                />
+            <div className="grid grid-cols-4 gap-1.5 border-b border-[var(--eixo-border)] px-5 py-3">
+                {STEP_KEYS.map((key, index) => {
+                    const done = steps[key];
+                    const isCurrent = !done && STEP_KEYS.slice(0, index).every((k) => steps[k]);
+                    const glow = justCompleted.has(key);
+                    return (
+                        <div key={key} className="flex flex-col items-center gap-1">
+                            <span
+                                className={`text-[10px] font-bold ${
+                                    done || isCurrent ? 'text-[var(--eixo-green-dark)]' : 'text-[var(--eixo-text-soft)]'
+                                }`}
+                            >
+                                {index + 1}
+                            </span>
+                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--eixo-surface-soft)]">
+                                <div
+                                    className={`h-full rounded-full transition-all duration-500 ease-out ${
+                                        done
+                                            ? `w-full bg-[var(--eixo-green)] ${glow ? 'shadow-[0_0_8px_rgba(182,226,58,0.7)]' : ''}`
+                                            : isCurrent
+                                                ? 'w-full animate-pulse bg-[var(--eixo-green)] opacity-40'
+                                                : 'w-0'
+                                    }`}
+                                />
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
             {/* Passos */}
