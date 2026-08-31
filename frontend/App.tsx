@@ -103,7 +103,7 @@ const MODULE_CATEGORIES = [
     },
     {
         title: 'Operação',
-        modules: ['Operações', 'Configurações', 'Registro de Atividades', 'Ver Atividades de Todos'],
+        modules: ['Operações', 'Configurações', 'Registro de Atividades', 'Ver Atividades de Todos', 'Confinamento e Contratos'],
     },
 ];
 
@@ -241,6 +241,19 @@ const UPGRADE_CONTENT: Record<string, {
             'Evite vender no escuro ou perder histórico de negociação.',
         ],
         previewItems: ['Pipeline de negociações e compradores', 'Margem por lote e cenário de venda', 'Histórico comercial consolidado'],
+        icon: <UpgradeChartIcon />,
+    },
+    'Confinamento e Contratos': {
+        accessLabels: ['Confinamento e Contratos'],
+        requiredPlan: 'PLUS',
+        moduleName: 'Confinamento e Contratos',
+        tagline: 'Centralize a gestão de confinamento e contratos no EIXO Performance',
+        benefits: [
+            'Acompanhe a operação de confinamento com mais organização.',
+            'Mantenha contratos e rotinas comerciais reunidos no mesmo módulo.',
+            'Tenha uma base clara para evoluir decisões e controles da operação.',
+        ],
+        previewItems: ['Lotes de confinamento', 'Contratos comerciais', 'Rotinas da operação'],
         icon: <UpgradeChartIcon />,
     },
 };
