@@ -201,6 +201,21 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
         setStatus('saving');
         setErrorMessage('');
         try {
+            // A prévia preserva a célula vazia quando a linha usa o destino
+            // padrão. Ao confirmar, deixa os destinos explícitos em cada linha
+            // para que eles não dependam apenas dos campos separados do modal.
+            const defaultPaddockName = paddocks.find((paddock) => paddock.id === paddockId)?.name || '';
+            const defaultLotName = lots.find((lot) => lot.id === lotId)?.name || '';
+            const linhasParaConfirmar = previewLinhas.map((linha) => {
+                const dados = { ...linha.dados };
+                if (!String(dados.pasto_destino || '').trim() && defaultPaddockName) {
+                    dados.pasto_destino = defaultPaddockName;
+                }
+                if (!String(dados.lote_destino || '').trim() && defaultLotName) {
+                    dados.lote_destino = defaultLotName;
+                }
+                return { line: linha.line, dados };
+            });
             const res = await fetch(buildApiUrl('/herd/import/confirmar'), {
                 method: 'POST',
                 credentials: 'include',
@@ -210,7 +225,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                     paddockId: paddockId || undefined,
                     lotId: lotId || undefined,
                     racaPadrao: racaPadrao || undefined,
-                    linhas: previewLinhas.map((linha) => ({ line: linha.line, dados: linha.dados })),
+                    linhas: linhasParaConfirmar,
                 }),
             });
             const data = await res.json().catch(() => ({}));
