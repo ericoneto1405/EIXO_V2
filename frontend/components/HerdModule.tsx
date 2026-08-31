@@ -43,6 +43,14 @@ const HERD_TABLE_COLUMN_KEYS = HERD_TABLE_COLUMNS.map((c) => c.key);
 
 type TabKey = 'overview' | 'animals' | 'pastures' | 'lots' | 'weighings' | 'settings';
 type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'sem_categoria' | 'gmd_baixo' | 'desmame' | 'aguardando_id';
+const HEALTH_QUICK_FILTER_LABELS: Record<Exclude<HealthQuickFilter, 'none'>, string> = {
+    desmame: 'Prontos para desmame',
+    aguardando_id: 'Desmamados aguardando identificação',
+    sem_pasto: 'Animais sem pasto',
+    pesagem_atrasada: 'Pesagem acima de 30 dias',
+    sem_categoria: 'Categoria não confirmada',
+    gmd_baixo: 'GMD abaixo da meta',
+};
 type AnimalHeaderFilterKey = 'identificacao' | 'registro' | 'raca' | 'sexo' | 'pasto' | 'lote' | 'categoria' | 'peso' | 'nutricao' | null;
 type TransferFarmOption = {
     id: string;
@@ -815,6 +823,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         return { withoutPaddock, withoutWeighing, staleWeighing, withoutCategory, belowTargetGmd, readyForWeaning, weanedAwaitingId };
     }, [animals]);
 
+    const activeQuickFilterLabel = healthQuickFilter === 'none'
+        ? null
+        : HEALTH_QUICK_FILTER_LABELS[healthQuickFilter];
+
     const clearAllFilters = () => {
         setSearchTerm('');
         setLotFilter('');
@@ -835,6 +847,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const applyHealthQuickFilter = (quickFilter: HealthQuickFilter) => {
         clearAllFilters();
         setHealthQuickFilter(quickFilter);
+    };
+
+    const openAnimalsWithQuickFilter = (quickFilter: Exclude<HealthQuickFilter, 'none'>) => {
+        applyHealthQuickFilter(quickFilter);
+        setActiveTab('animals');
     };
 
     const sortedAnimals = useMemo(() => {
@@ -1921,6 +1938,83 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
             </div>
 
+            <section aria-labelledby="herd-attention-title">
+                <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <h3 id="herd-attention-title" className="text-base font-bold text-[var(--eixo-text)]">Atenção ao rebanho</h3>
+                        <p className="text-sm text-[var(--eixo-text-muted)]">Clique em um cartão para abrir somente os animais que precisam de ação.</p>
+                    </div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <button
+                        type="button"
+                        onClick={() => openAnimalsWithQuickFilter('desmame')}
+                        aria-label={`${healthOverview.readyForWeaning} animais prontos para desmame. Ver animais.`}
+                        className="group rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--eixo-surface-soft)] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-green)]"
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Prontos para desmame</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#3a5c10]">{healthOverview.readyForWeaning}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">7 meses ou peso mínimo</p>
+                        <span className="mt-3 inline-flex text-xs font-semibold text-[#527a13] transition-transform group-hover:translate-x-0.5">Ver animais →</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => openAnimalsWithQuickFilter('aguardando_id')}
+                        aria-label={`${healthOverview.weanedAwaitingId} animais desmamados aguardando identificação. Ver animais.`}
+                        className="group rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--eixo-surface-soft)] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-green)]"
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Desmamados aguardando ID</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#3a5c10]">{healthOverview.weanedAwaitingId}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Identificação provisória mantida</p>
+                        <span className="mt-3 inline-flex text-xs font-semibold text-[#527a13] transition-transform group-hover:translate-x-0.5">Ver animais →</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => openAnimalsWithQuickFilter('sem_pasto')}
+                        aria-label={`${healthOverview.withoutPaddock} animais sem pasto. Ver animais.`}
+                        className="group rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--eixo-surface-soft)] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-green)]"
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Sem pasto</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#8c2020]">{healthOverview.withoutPaddock}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Animais sem alocação</p>
+                        <span className="mt-3 inline-flex text-xs font-semibold text-[#8c2020] transition-transform group-hover:translate-x-0.5">Ver animais →</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => openAnimalsWithQuickFilter('pesagem_atrasada')}
+                        aria-label={`${healthOverview.staleWeighing} animais com pesagem acima de 30 dias. Ver animais.`}
+                        className="group rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--eixo-surface-soft)] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-green)]"
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Pesagem acima de 30 dias</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#9a7a19]">{healthOverview.staleWeighing}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Priorizar atualização</p>
+                        <span className="mt-3 inline-flex text-xs font-semibold text-[#8d6f16] transition-transform group-hover:translate-x-0.5">Ver animais →</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => openAnimalsWithQuickFilter('sem_categoria')}
+                        aria-label={`${healthOverview.withoutCategory} animais com categoria não confirmada. Ver animais.`}
+                        className="group rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--eixo-surface-soft)] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-green)]"
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Categoria não confirmada</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#7a5e2b]">{healthOverview.withoutCategory}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Deduzida pela idade — confirme se quiser fixar</p>
+                        <span className="mt-3 inline-flex text-xs font-semibold text-[#7a5e2b] transition-transform group-hover:translate-x-0.5">Ver animais →</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => openAnimalsWithQuickFilter('gmd_baixo')}
+                        aria-label={`${healthOverview.belowTargetGmd} animais com GMD abaixo da meta. Ver animais.`}
+                        className="group rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--eixo-surface-soft)] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-green)]"
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">GMD abaixo da meta</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#8c2020]">{healthOverview.belowTargetGmd}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Verificar manejo e nutrição</p>
+                        <span className="mt-3 inline-flex text-xs font-semibold text-[#8c2020] transition-transform group-hover:translate-x-0.5">Ver animais →</span>
+                    </button>
+                </div>
+            </section>
+
             {(overviewStats.porCategoria.length > 0 || overviewStats.porRaca.length > 0) && (
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
@@ -2218,90 +2312,43 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             </div>
 
             {activeTab === 'animals' && (
-                <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-                    <button
-                        type="button"
-                        onClick={() => applyHealthQuickFilter('desmame')}
-                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
-                            healthQuickFilter === 'desmame'
-                                ? 'border-[#b8d86d] bg-[#f0f9d4]'
-                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
-                        }`}
-                    >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Prontos para desmame</p>
-                        <p className="mt-1 text-2xl font-extrabold text-[#3a5c10]">{healthOverview.readyForWeaning}</p>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">7 meses ou peso mínimo</p>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => applyHealthQuickFilter('aguardando_id')}
-                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
-                            healthQuickFilter === 'aguardando_id'
-                                ? 'border-[#b8d86d] bg-[#f0f9d4]'
-                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
-                        }`}
-                    >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Desmamados aguardando ID</p>
-                        <p className="mt-1 text-2xl font-extrabold text-[#3a5c10]">{healthOverview.weanedAwaitingId}</p>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Identificação provisória mantida</p>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => applyHealthQuickFilter('sem_pasto')}
-                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
-                            healthQuickFilter === 'sem_pasto'
-                                ? 'border-[#e5b9b0] bg-[#fff2ef]'
-                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
-                        }`}
-                    >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Sem pasto</p>
-                        <p className="mt-1 text-2xl font-extrabold text-[#8c2020]">{healthOverview.withoutPaddock}</p>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Ver animais sem alocação</p>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => applyHealthQuickFilter('pesagem_atrasada')}
-                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
-                            healthQuickFilter === 'pesagem_atrasada'
-                                ? 'border-[#ecd59b] bg-[#fff9e8]'
-                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
-                        }`}
-                    >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Pesagem &gt; 30 dias</p>
-                        <p className="mt-1 text-2xl font-extrabold text-[#9a7a19]">{healthOverview.staleWeighing}</p>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Priorizar atualização</p>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => applyHealthQuickFilter('sem_categoria')}
-                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
-                            healthQuickFilter === 'sem_categoria'
-                                ? 'border-[#d8c39c] bg-[#f9f2e5]'
-                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
-                        }`}
-                    >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Categoria não confirmada</p>
-                        <p className="mt-1 text-2xl font-extrabold text-[#7a5e2b]">{healthOverview.withoutCategory}</p>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Deduzida pela idade — confirme se quiser fixar</p>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => applyHealthQuickFilter('gmd_baixo')}
-                        className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
-                            healthQuickFilter === 'gmd_baixo'
-                                ? 'border-[#f0c4b8] bg-[#fff2ef]'
-                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface-soft)]'
-                        }`}
-                    >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">GMD abaixo da meta</p>
-                        <p className="mt-1 text-2xl font-extrabold text-[#8c2020]">{healthOverview.belowTargetGmd}</p>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Verificar manejo/nutrição</p>
-                    </button>
-                </div>
-            )}
-
-            {activeTab === 'animals' && (
                 <div className="mb-6 space-y-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
+                    {activeQuickFilterLabel && (
+                        <div role="status" className="flex flex-col gap-3 rounded-xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-graphite)]">Filtro ativo</p>
+                                <p className="mt-0.5 text-sm font-semibold text-[var(--eixo-text)]">{activeQuickFilterLabel} · {sortedAnimals.length} {sortedAnimals.length === 1 ? 'animal' : 'animais'}</p>
+                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">Abra um animal da lista para concluir a pendência.</p>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {healthQuickFilter === 'pesagem_atrasada' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab('weighings')}
+                                        className="rounded-lg border border-[var(--eixo-green)] bg-[var(--eixo-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-green-dark)] transition-colors hover:bg-[var(--eixo-green)]/10"
+                                    >
+                                        Registrar pesagens
+                                    </button>
+                                )}
+                                {healthQuickFilter === 'sem_pasto' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab('pastures')}
+                                        className="rounded-lg border border-[var(--eixo-green)] bg-[var(--eixo-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-green-dark)] transition-colors hover:bg-[var(--eixo-green)]/10"
+                                    >
+                                        Ver pastos
+                                    </button>
+                                )}
+                                <button
+                                    type="button"
+                                    onClick={clearAllFilters}
+                                    className="text-xs font-semibold text-[var(--eixo-graphite)] underline underline-offset-2 hover:text-[var(--eixo-text)]"
+                                >
+                                    Limpar filtro
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     <div className="relative">
                         <svg
                             className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--eixo-text-muted)]"
@@ -2347,7 +2394,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             onClick={clearAllFilters}
                             className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
                         >
-                            Limpar filtros
+                            Limpar todos os filtros
                         </button>
                         <button
                             type="button"
