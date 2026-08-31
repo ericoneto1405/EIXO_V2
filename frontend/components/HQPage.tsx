@@ -44,7 +44,17 @@ interface HQSuporteItem {
     totalMessages: number;
     humanRequested: boolean;
     assumedByAdmin: boolean;
+    needsReview: boolean;
+    fallbackReason: string | null;
 }
+
+const FALLBACK_REASON_LABELS: Record<string, string> = {
+    low_confidence: 'IA sem certeza',
+    ai_error: 'Erro técnico na IA',
+    ai_unavailable: 'IA indisponível',
+};
+
+type SupportFilter = 'todas' | 'revisao' | 'revisadas';
 
 interface HQSuporteMessage {
     id: string;
@@ -101,6 +111,7 @@ const HQPage: React.FC = () => {
     const [supportAssumed, setSupportAssumed] = React.useState(false);
     const [supportReply, setSupportReply] = React.useState('');
     const [supportActionLoading, setSupportActionLoading] = React.useState(false);
+    const [supportFilter, setSupportFilter] = React.useState<SupportFilter>('todas');
     const [cadastro, setCadastro] = React.useState<HQCadastroItem[]>([]);
     const [search, setSearch] = React.useState('');
     const [loadingByTab, setLoadingByTab] = React.useState<Record<TabKey, boolean>>({
@@ -378,6 +389,14 @@ const HQPage: React.FC = () => {
         </div>
     );
 
+    const filteredSuporte = React.useMemo(() => {
+        if (supportFilter === 'revisao') return suporte.filter((item) => item.needsReview);
+        if (supportFilter === 'revisadas') return suporte.filter((item) => item.fallbackReason && !item.needsReview);
+        return suporte;
+    }, [suporte, supportFilter]);
+
+    const selectedSupportItem = suporte.find((item) => item.conversationId === selectedConversationId) || null;
+
     const renderSuporte = () => {
         if (!suporte.length) {
             return (
@@ -387,7 +406,30 @@ const HQPage: React.FC = () => {
             );
         }
 
+        const filterButtons: Array<{ key: SupportFilter; label: string }> = [
+            { key: 'todas', label: 'Todas' },
+            { key: 'revisao', label: `Precisa de revisão (${suporte.filter((item) => item.needsReview).length})` },
+            { key: 'revisadas', label: 'Já revisadas' },
+        ];
+
         return (
+            <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+                {filterButtons.map((filter) => (
+                    <button
+                        key={filter.key}
+                        type="button"
+                        onClick={() => setSupportFilter(filter.key)}
+                        className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                            supportFilter === filter.key
+                                ? 'bg-[#2F2F2F] text-white'
+                                : 'border border-[#D7D7D7] bg-white text-[#5E5E5E] hover:bg-[#f2f2f2]'
+                        }`}
+                    >
+                        {filter.label}
+                    </button>
+                ))}
+            </div>
             <div className="grid gap-4 lg:grid-cols-[420px_1fr]">
                 <div className="overflow-x-auto rounded-2xl border border-[#D7D7D7] bg-white">
                     <table className="min-w-full text-sm text-[#2F2F2F]">
@@ -399,7 +441,14 @@ const HQPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {suporte.map((item) => (
+                            {!filteredSuporte.length && (
+                                <tr>
+                                    <td colSpan={3} className="px-4 py-6 text-center text-sm text-[#5E5E5E]">
+                                        Nenhuma conversa nesse filtro.
+                                    </td>
+                                </tr>
+                            )}
+                            {filteredSuporte.map((item) => (
                                 <tr
                                     key={item.conversationId}
                                     className={`cursor-pointer border-t border-[#ECECEC] ${item.humanRequested ? 'bg-[#fff5dc]' : selectedConversationId === item.conversationId ? 'bg-[#f5f8ef]' : ''}`}
@@ -416,6 +465,11 @@ const HQPage: React.FC = () => {
                                         )}
                                         {item.assumedByAdmin && (
                                             <span className="mt-1 inline-flex rounded-full bg-[#dff0b8] px-2 py-0.5 text-[10px] font-bold uppercase text-[#355000]">Em atendimento</span>
+                                        )}
+                                        {item.needsReview && (
+                                            <span className="mt-1 inline-flex rounded-full bg-[#f7b2a3] px-2 py-0.5 text-[10px] font-bold uppercase text-[#6b1f10]">
+                                                {FALLBACK_REASON_LABELS[item.fallbackReason || ''] || 'Precisa de revisão'}
+                                            </span>
                                         )}
                                     </td>
                                     <td className="px-4 py-3">{getSuporteContent(item)}</td>
@@ -489,6 +543,37 @@ const HQPage: React.FC = () => {
                                             Liberar para IA
                                         </button>
                                     )}
+                                    {selectedSupportItem?.needsReview && (
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                setSupportActionLoading(true);
+                                                try {
+                                                    const response = await fetch(buildApiUrl(`/api/hq/suporte/${selectedConversationId}/review`), {
+                                                        method: 'POST',
+                                                        credentials: 'include',
+                                                    });
+                                                    const payload = await response.json().catch(() => ({}));
+                                                    if (!response.ok) throw new Error(payload?.message || 'Erro ao marcar como revisada.');
+                                                    await Promise.all([
+                                                        loadSupportConversation(selectedConversationId as string),
+                                                        loadTab('suporte', true),
+                                                    ]);
+                                                } catch (error) {
+                                                    setErrorByTab((current) => ({
+                                                        ...current,
+                                                        suporte: error instanceof Error ? error.message : 'Erro ao marcar como revisada.',
+                                                    }));
+                                                } finally {
+                                                    setSupportActionLoading(false);
+                                                }
+                                            }}
+                                            disabled={supportActionLoading}
+                                            className="rounded-xl border border-[#D7D7D7] bg-white px-3 py-1.5 text-xs font-bold text-[#2F2F2F] hover:bg-[#f2f2f2] disabled:opacity-60"
+                                        >
+                                            Marcar como revisado
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -548,6 +633,7 @@ const HQPage: React.FC = () => {
                         </div>
                     )}
                 </div>
+            </div>
             </div>
         );
     };

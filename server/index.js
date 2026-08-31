@@ -15,7 +15,6 @@ import { runMarketCapture } from './market/services/marketCaptureService.js';
 import { publishNormalizedPrice, rejectNormalizedPrice } from './market/services/marketPublishService.js';
 import { resolveMarketTrends } from './market/services/marketTrendService.js';
 import { startMarketCron } from './market/jobs/marketCron.js';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import twilio from 'twilio';
 import { Resend } from 'resend';
 // ─── Módulos Extraídos (Fase 3) ────────────────────────────────────────────────
