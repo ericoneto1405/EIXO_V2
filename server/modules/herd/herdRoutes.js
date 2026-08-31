@@ -551,6 +551,7 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
 
     const buffer = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     const filename = `[EIXO] ${farmName} - Cadastro de Rebanho.xlsx`;
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
     return res.send(Buffer.from(buffer));
@@ -1583,6 +1584,7 @@ app.get('/po/herd/import/template', requireAuth, async (req, res) => {
 
     const buffer = await workbook.xlsx.writeBuffer();
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     const filename = `[EIXO] ${farm.name} - Cadastro de Rebanho.xlsx`;
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
     return res.send(Buffer.from(buffer));

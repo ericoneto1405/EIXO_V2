@@ -1278,7 +1278,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         if (!farmId) throw new Error('Selecione uma fazenda para baixar a planilha modelo.');
         const templatePath = isPoMode ? '/po/herd/import/template' : '/herd/import/template';
         const url = buildApiUrl(`${templatePath}?farmId=${encodeURIComponent(farmId)}`);
-        const res = await fetch(url, { credentials: 'include' });
+        const res = await fetch(url, { credentials: 'include', cache: 'no-store' });
         if (!res.ok) throw new Error('Erro ao baixar planilha modelo');
         const blob = await res.blob();
         const link = document.createElement('a');
