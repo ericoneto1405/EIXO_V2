@@ -2,7 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { requireAuth, requireSuperAdmin } from '../middlewares/requireAuth.js';
 import { PLAN_ENTITLEMENTS, PLAN_MODULES } from '../utils/saasContext.js';
 import { FIELD_WORKER_ROLE, FIELD_ADMIN_ROLE } from '../config/env.js';
-import { createSupportLog, getSupportConversationState, SUPPORT_ENTITY, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE, SUPPORT_ACTION_ADMIN, SUPPORT_ACTION_REQUEST } from '../chat/chatService.js';
+import { createSupportLog, getSupportConversationState, SUPPORT_ENTITY, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE, SUPPORT_ACTION_ADMIN, SUPPORT_ACTION_REQUEST, SUPPORT_ACTION_REVIEWED } from '../chat/chatService.js';
 import { logActivity } from '../utils/activityLog.js';
 const prisma = new PrismaClient();
 
@@ -302,7 +302,7 @@ export function registerHQRoutes(app) {
             const logs = await prisma.activityLog.findMany({
                 where: {
                     entity: SUPPORT_ENTITY,
-                    action: { in: ['chat_message_user', 'chat_message_ai', 'chat_message_admin', SUPPORT_ACTION_REQUEST, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE] },
+                    action: { in: ['chat_message_user', 'chat_message_ai', 'chat_message_admin', SUPPORT_ACTION_REQUEST, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE, SUPPORT_ACTION_REVIEWED] },
                 },
                 orderBy: { createdAt: 'desc' },
                 take: 500,
@@ -323,6 +323,9 @@ export function registerHQRoutes(app) {
                         humanRequested: false,
                         assumedByAdmin: false,
                         latestControl: null,
+                        fallbackReason: null,
+                        fallbackAt: null,
+                        reviewedAt: null,
                     });
                 }
                 const row = grouped.get(key);
@@ -339,17 +342,31 @@ export function registerHQRoutes(app) {
                 if (!row.latestControl && [SUPPORT_ACTION_REQUEST, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE].includes(log.action)) {
                     row.latestControl = log.action;
                 }
+                if (!row.fallbackAt && log.action === 'chat_message_ai' && log.requestMeta && typeof log.requestMeta === 'object' && log.requestMeta.fallbackReason) {
+                    row.fallbackReason = log.requestMeta.fallbackReason;
+                    row.fallbackAt = log.createdAt;
+                }
+                if (!row.reviewedAt && log.action === SUPPORT_ACTION_REVIEWED) {
+                    row.reviewedAt = log.createdAt;
+                }
             }
 
             const conversations = Array.from(grouped.values())
-                .map((item) => ({
-                    ...item,
-                    humanRequested: item.latestControl === SUPPORT_ACTION_REQUEST,
-                    assumedByAdmin: item.latestControl === SUPPORT_ACTION_ASSUME,
-                    latestControl: undefined,
-                }))
+                .map((item) => {
+                    const needsReview = Boolean(item.fallbackAt)
+                        && (!item.reviewedAt || new Date(item.reviewedAt).getTime() < new Date(item.fallbackAt).getTime());
+                    return {
+                        ...item,
+                        humanRequested: item.latestControl === SUPPORT_ACTION_REQUEST,
+                        assumedByAdmin: item.latestControl === SUPPORT_ACTION_ASSUME,
+                        needsReview,
+                        latestControl: undefined,
+                        fallbackAt: undefined,
+                    };
+                })
                 .sort((a, b) => {
                     if (a.humanRequested !== b.humanRequested) return a.humanRequested ? -1 : 1;
+                    if (a.needsReview !== b.needsReview) return a.needsReview ? -1 : 1;
                     return new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime();
                 });
 
@@ -489,6 +506,26 @@ export function registerHQRoutes(app) {
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Erro ao responder conversa.' });
+        }
+    });
+
+    app.post('/api/hq/suporte/:conversationId/review', requireAuth, requireSuperAdmin, async (req, res) => {
+        const { conversationId } = req.params;
+        try {
+            const reviewedSaved = await createSupportLog(req, {
+                conversationId,
+                action: SUPPORT_ACTION_REVIEWED,
+                message: 'Conversa marcada como revisada.',
+                requestMeta: {
+                    adminUserId: req.user.id,
+                    adminName: req.user.name || null,
+                },
+            });
+            if (!reviewedSaved) throw new Error('Não foi possível marcar como revisada.');
+            return res.json({ ok: true });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao marcar conversa como revisada.' });
         }
     });
 

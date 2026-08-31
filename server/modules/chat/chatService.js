@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { PrismaClient } from '@prisma/client';
 import {
     APP_BASE_URL,
@@ -100,16 +100,17 @@ Resposta, se a conversa anterior pediu para mostrar o caminho: "Claro. Clique em
 4. Depois, cadastre os pastos da fazenda.
 
 **Como importar animais por planilha?**
-1. Acesse [Manejo do Rebanho](eixo:view:Rebanho%20Comercial) e vá para a aba [Animais](eixo:view:Rebanho%20Comercial?tab=animals).
-2. Clique em "Importar planilha".
-3. Revise o mapeamento das colunas.
-4. Confirme a importação.
+1. Acesse [Manejo do Rebanho](eixo:view:Rebanho%20Comercial), aba [Animais](eixo:view:Rebanho%20Comercial?tab=animals), e clique em "Importar planilha".
+2. Clique em "Baixar modelo" para pegar a planilha em branco e preencha com os dados do rebanho.
+3. Clique em "Enviar planilha preenchida" e selecione o arquivo preenchido.
+4. Revise a prévia: linhas com erro ficam marcadas e você corrige direto na tabela.
+5. Clique em "Importar" para confirmar.
 
 **Como registrar pesagem?**
-1. Em [Manejo do Rebanho](eixo:view:Rebanho%20Comercial), vá para a aba [Animais](eixo:view:Rebanho%20Comercial?tab=animals) e localize o animal.
-2. Clique no botão de ações (⋮).
-3. Abra a aba "Pesagens".
-4. Registre data e peso.
+1. Acesse [Manejo do Rebanho](eixo:view:Rebanho%20Comercial), aba [Pesagens](eixo:view:Rebanho%20Comercial?tab=weighings).
+2. Clique em "Nova sessão de pesagem".
+3. No painel de curral, lance o ID do animal e o peso em kg.
+4. Também dá pra importar pesagens em lote por planilha, no mesmo lugar.
 
 **Como lançar despesa?**
 1. Acesse [Financeiro](eixo:view:Financeiro) > "Lançamentos".
@@ -124,11 +125,8 @@ Resposta, se a conversa anterior pediu para mostrar o caminho: "Claro. Clique em
 - Se o usuário relatar erro técnico, peça print/etapas e oriente acionar o suporte humano.
 - Foque sempre em ajudar a concluir a tarefa dentro do sistema EIXO.`;
 
-const genAI = GOOGLE_API_KEY ? new GoogleGenerativeAI(GOOGLE_API_KEY) : null;
-const model = genAI ? genAI.getGenerativeModel({
-    model: 'gemini-2.5-flash',
-    systemInstruction: EIXO_SUPORTE_SYSTEM_PROMPT,
-}) : null;
+const SUPPORT_MODEL_NAME = 'gemini-2.5-flash';
+const genAI = GOOGLE_API_KEY ? new GoogleGenAI({ apiKey: GOOGLE_API_KEY }) : null;
 
 export const SUPPORT_ENTITY = 'SupportChat';
 const SUPPORT_ACTION_USER = 'chat_message_user';
@@ -137,6 +135,7 @@ export const SUPPORT_ACTION_ADMIN = 'chat_message_admin';
 export const SUPPORT_ACTION_ASSUME = 'chat_assumed';
 export const SUPPORT_ACTION_RELEASE = 'chat_released';
 export const SUPPORT_ACTION_REQUEST = 'chat_human_requested';
+export const SUPPORT_ACTION_REVIEWED = 'chat_marked_reviewed';
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
 const SUPPORT_ALERT_COOLDOWN_MS = Number(process.env.SUPPORT_ALERT_COOLDOWN_MS) || 15 * 60 * 1000;
@@ -207,7 +206,7 @@ const SUPPORT_INTERNAL_LINKS = [
     { label: 'Lotes', href: 'eixo:view:Rebanho%20Comercial?tab=lots' },
     { label: 'Criar lote', href: 'eixo:view:Rebanho%20Comercial?tab=lots' },
     { label: 'Pesagens', href: 'eixo:view:Rebanho%20Comercial?tab=weighings' },
-    { label: 'Registrar pesagem', href: 'eixo:view:Rebanho%20Comercial?tab=animals' },
+    { label: 'Registrar pesagem', href: 'eixo:view:Rebanho%20Comercial?tab=weighings' },
     { label: 'Visão geral do rebanho', href: 'eixo:view:Rebanho%20Comercial?tab=overview' },
     { label: 'Cadastrar fazenda', href: 'eixo:view:Fazendas' },
     { label: 'Cadastrar pasto', href: 'eixo:view:Fazendas' },
@@ -525,7 +524,7 @@ export function registerChatRoutes(app) {
             requestMeta: { role: 'user', farmId: normalizedFarmId, currentPath: normalizedCurrentPath },
         });
 
-        if (!model) {
+        if (!genAI) {
             const fallbackText = 'Suporte automático indisponível no momento. Nosso time foi avisado e responderá por aqui.';
             await createSupportLog(req, {
                 conversationId: conversationKey,
@@ -559,13 +558,16 @@ export function registerChatRoutes(app) {
                 farmId: normalizedFarmId,
                 currentPath: normalizedCurrentPath,
             });
-            const chat = model.startChat({
+            const chat = genAI.chats.create({
+                model: SUPPORT_MODEL_NAME,
                 history: history || [],
+                config: { systemInstruction: EIXO_SUPORTE_SYSTEM_PROMPT },
             });
 
-            const result = await chat.sendMessage(`${supportContext}\n\nMensagem do cliente:\n${message}`);
-            const response = await result.response;
-            const text = response.text();
+            const response = await chat.sendMessage({
+                message: `${supportContext}\n\nMensagem do cliente:\n${message}`,
+            });
+            const text = response.text;
             if (shouldTriggerSupportNoAnswerFallback(text)) {
                 const fallbackText = 'Não consegui responder essa dúvida com segurança agora. Nosso time foi avisado e continuará seu atendimento por aqui.';
                 await createSupportLog(req, {
