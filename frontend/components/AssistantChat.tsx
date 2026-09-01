@@ -87,7 +87,11 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
         const stored = window.localStorage.getItem(storageKey);
         if (stored) {
             setConversationId(stored);
+            return;
         }
+        const created = crypto.randomUUID();
+        setConversationId(created);
+        window.localStorage.setItem(storageKey, created);
     }, [farmId, initialDraft]);
 
     const loadRecentConversations = async () => {
