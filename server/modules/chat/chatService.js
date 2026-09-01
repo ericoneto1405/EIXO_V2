@@ -3,7 +3,12 @@ import { GoogleGenAI } from '@google/genai';
 import { PrismaClient } from '@prisma/client';
 import {
     APP_BASE_URL,
+    SUPPORT_AI_PROVIDER,
+    GROQ_API_KEY,
     GOOGLE_API_KEY,
+    GOOGLE_CLOUD_PROJECT,
+    GOOGLE_CLOUD_LOCATION,
+    SUPPORT_MODEL_NAME,
     CHAT_RATE_WINDOW_MS,
     CHAT_RATE_MAX_PER_USER,
     CHAT_BURST_WINDOW_MS,
@@ -15,8 +20,19 @@ import { normalizeUserModules, getDerivedAccessType } from '../utils/saasContext
 import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
 const prisma = new PrismaClient();
 
-if (!GOOGLE_API_KEY) {
+const SUPPORT_AI_PROVIDERS = new Set(['groq', 'gemini', 'vertex']);
+const isGroqProvider = SUPPORT_AI_PROVIDER === 'groq';
+const isGeminiProvider = SUPPORT_AI_PROVIDER === 'gemini';
+const isVertexProvider = SUPPORT_AI_PROVIDER === 'vertex';
+
+if (!SUPPORT_AI_PROVIDERS.has(SUPPORT_AI_PROVIDER)) {
+    console.warn(`SUPPORT_AI_PROVIDER inválido: ${SUPPORT_AI_PROVIDER}. O suporte automático ficará indisponível.`);
+} else if (isGroqProvider && !GROQ_API_KEY) {
+    console.warn('GROQ_API_KEY is not set. Groq API will not be available.');
+} else if (isGeminiProvider && !GOOGLE_API_KEY) {
     console.warn('GOOGLE_API_KEY is not set. Gemini API will not be available.');
+} else if (isVertexProvider && !GOOGLE_CLOUD_PROJECT) {
+    console.warn('GOOGLE_CLOUD_PROJECT is not set. Vertex AI will not be available.');
 }
 const EIXO_SUPORTE_SYSTEM_PROMPT = `Você é o Eixo Suporte, assistente virtual do sistema EIXO (pecuária de corte).
 
@@ -125,8 +141,65 @@ Resposta, se a conversa anterior pediu para mostrar o caminho: "Claro. Clique em
 - Se o usuário relatar erro técnico, peça print/etapas e oriente acionar o suporte humano.
 - Foque sempre em ajudar a concluir a tarefa dentro do sistema EIXO.`;
 
-const SUPPORT_MODEL_NAME = 'gemini-2.5-flash';
-const genAI = GOOGLE_API_KEY ? new GoogleGenAI({ apiKey: GOOGLE_API_KEY }) : null;
+const genAI = isVertexProvider
+    ? (GOOGLE_CLOUD_PROJECT
+        ? new GoogleGenAI({
+            vertexai: true,
+            project: GOOGLE_CLOUD_PROJECT,
+            location: GOOGLE_CLOUD_LOCATION,
+        })
+        : null)
+    : (isGeminiProvider && GOOGLE_API_KEY ? new GoogleGenAI({ apiKey: GOOGLE_API_KEY }) : null);
+
+const isSupportAiAvailable = isGroqProvider
+    ? Boolean(GROQ_API_KEY)
+    : Boolean(genAI);
+
+const toGroqHistory = (history) => (Array.isArray(history) ? history : [])
+    .slice(-6)
+    .map((item) => {
+        const role = item?.role === 'model' ? 'assistant' : item?.role === 'user' ? 'user' : null;
+        const text = Array.isArray(item?.parts)
+            ? item.parts.map((part) => typeof part?.text === 'string' ? part.text : '').join('\n').trim()
+            : '';
+        return role && text ? { role, content: text.slice(0, 600) } : null;
+    })
+    .filter(Boolean);
+
+const generateGroqSupportAnswer = async ({ history, supportContext, message }) => {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+            Authorization: `Bearer ${GROQ_API_KEY}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: SUPPORT_MODEL_NAME,
+            messages: [
+                { role: 'system', content: EIXO_SUPORTE_SYSTEM_PROMPT },
+                { role: 'system', content: supportContext },
+                ...toGroqHistory(history),
+                { role: 'user', content: `Mensagem do cliente:\n${String(message).slice(0, 2000)}` },
+            ],
+            temperature: 0.2,
+            max_completion_tokens: 500,
+        }),
+        signal: AbortSignal.timeout(20_000),
+    });
+
+    if (!response.ok) {
+        throw new Error(`Groq API retornou HTTP ${response.status}.`);
+    }
+
+    const payload = await response.json();
+    const text = typeof payload?.choices?.[0]?.message?.content === 'string'
+        ? payload.choices[0].message.content.trim()
+        : '';
+    if (!text) {
+        throw new Error('Groq API retornou uma resposta vazia.');
+    }
+    return text;
+};
 
 export const SUPPORT_ENTITY = 'SupportChat';
 const SUPPORT_ACTION_USER = 'chat_message_user';
@@ -524,7 +597,7 @@ export function registerChatRoutes(app) {
             requestMeta: { role: 'user', farmId: normalizedFarmId, currentPath: normalizedCurrentPath },
         });
 
-        if (!genAI) {
+        if (!isSupportAiAvailable) {
             const fallbackText = 'Suporte automático indisponível no momento. Nosso time foi avisado e responderá por aqui.';
             await createSupportLog(req, {
                 conversationId: conversationKey,
@@ -558,16 +631,15 @@ export function registerChatRoutes(app) {
                 farmId: normalizedFarmId,
                 currentPath: normalizedCurrentPath,
             });
-            const chat = genAI.chats.create({
-                model: SUPPORT_MODEL_NAME,
-                history: history || [],
-                config: { systemInstruction: EIXO_SUPORTE_SYSTEM_PROMPT },
-            });
-
-            const response = await chat.sendMessage({
-                message: `${supportContext}\n\nMensagem do cliente:\n${message}`,
-            });
-            const text = response.text;
+            const text = isGroqProvider
+                ? await generateGroqSupportAnswer({ history, supportContext, message })
+                : (await genAI.chats.create({
+                    model: SUPPORT_MODEL_NAME,
+                    history: history || [],
+                    config: { systemInstruction: EIXO_SUPORTE_SYSTEM_PROMPT },
+                }).sendMessage({
+                    message: `${supportContext}\n\nMensagem do cliente:\n${message}`,
+                })).text;
             if (shouldTriggerSupportNoAnswerFallback(text)) {
                 const fallbackText = 'Não consegui responder essa dúvida com segurança agora. Nosso time foi avisado e continuará seu atendimento por aqui.';
                 await createSupportLog(req, {
@@ -594,7 +666,7 @@ export function registerChatRoutes(app) {
 
             return res.json({ response: text, conversationId: conversationKey, assumedByAdmin: false });
         } catch (error) {
-            console.error('Erro ao comunicar com a API do Gemini:', error);
+            console.error(`Erro ao comunicar com a IA do Suporte (${SUPPORT_AI_PROVIDER}):`, error);
             const fallbackText = 'Suporte automático indisponível no momento. Nosso time foi avisado e responderá por aqui.';
             await createSupportLog(req, {
                 conversationId: conversationKey,
