@@ -56,9 +56,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
     const [isLoading, setIsLoading] = useState(false);
     const [conversationId, setConversationId] = useState('');
     const [recentConversations, setRecentConversations] = useState<RecentConversation[]>([]);
-    const [humanStatus, setHumanStatus] = useState<'none' | 'requested' | 'assumed'>('none');
-    const [isRequestingHuman, setIsRequestingHuman] = useState(false);
-    const [humanRequestError, setHumanRequestError] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
@@ -75,8 +72,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
         const created = crypto.randomUUID();
         setConversationId(created);
         setMessages([]);
-        setHumanStatus('none');
-        setHumanRequestError(null);
         setInputMessage(initialDraft);
         window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, created);
     }, [initialDraft, farmId]);
@@ -121,7 +116,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
             const data = await response.json().catch(() => ({}));
             if (!response.ok) return;
             const fetched = Array.isArray(data?.messages) ? data.messages : [];
-            setHumanStatus(data?.assumedByAdmin ? 'assumed' : data?.humanRequested ? 'requested' : 'none');
             setMessages(
                 fetched.map((msg: any) => ({
                     id: msg.id,
@@ -203,8 +197,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
         const created = crypto.randomUUID();
         setConversationId(created);
         setMessages([]);
-        setHumanStatus('none');
-        setHumanRequestError(null);
         window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, created);
         setRecentConversations((prev) => {
             const next = [
@@ -218,38 +210,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
             ];
             return next.slice(0, 3);
         });
-    };
-
-    const requestHumanSupport = async () => {
-        if (isRequestingHuman || humanStatus !== 'none') return;
-        const activeConversationId = conversationId || crypto.randomUUID();
-        if (!conversationId) {
-            setConversationId(activeConversationId);
-            window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, activeConversationId);
-        }
-        setIsRequestingHuman(true);
-        setHumanRequestError(null);
-        try {
-            const response = await fetch(buildApiUrl('/api/chat/request-human'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    conversationId: activeConversationId,
-                    farmId,
-                    currentPath: window.location.pathname,
-                }),
-            });
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(data?.message || 'Erro ao solicitar especialista.');
-            setHumanStatus(data?.assumedByAdmin ? 'assumed' : 'requested');
-            await loadConversationMessages(activeConversationId);
-            await loadRecentConversations();
-        } catch (error) {
-            setHumanRequestError(error instanceof Error ? error.message : 'Erro ao solicitar especialista.');
-        } finally {
-            setIsRequestingHuman(false);
-        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -486,21 +446,6 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
 
             {/* Input */}
             <div className="border-t border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3">
-                <button
-                    type="button"
-                    onClick={() => void requestHumanSupport()}
-                    disabled={isRequestingHuman || humanStatus !== 'none'}
-                    className="mb-2 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-2 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#dceeb1] disabled:cursor-default disabled:opacity-70"
-                >
-                    {isRequestingHuman
-                        ? 'Enviando solicitação...'
-                        : humanStatus === 'assumed'
-                            ? 'Atendimento assumido pela equipe EIXO'
-                            : humanStatus === 'requested'
-                                ? 'Aguardando especialista'
-                                : 'Falar com especialista'}
-                </button>
-                {humanRequestError && <p className="mb-2 text-center text-xs text-[var(--eixo-danger)]">{humanRequestError}</p>}
                 <button
                     type="button"
                     onClick={handleCreateNewConversation}
