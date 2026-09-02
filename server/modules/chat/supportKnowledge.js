@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-02.1';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-02.2';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-02';
 
 export const SUPPORT_TONE_RULES = [
@@ -47,12 +47,14 @@ const SUPPORT_TOPIC_DEFINITIONS = [
     {
         id: 'animais-cadastro',
         title: 'Cadastrar e consultar animais',
-        keywords: ['animal', 'animais', 'brinco', 'cadastro animal', 'rebanho'],
+        keywords: ['animal', 'animais', 'brinco', 'cadastro animal', 'rebanho', 'categoria', 'categoria automática', 'categoria não identificada'],
         href: 'eixo:view:Rebanho%20Comercial?tab=animals',
         guidance: [
             'Acesse Manejo do Rebanho e abra a aba Animais.',
             'Use Adicionar animal para um cadastro individual.',
             'Localize o animal na lista para consultar ou completar seus dados.',
+            'Nos cartões de atenção, categoria sugerida automaticamente foi calculada pelos dados do animal; categoria não identificada indica que faltam dados para o cálculo.',
+            'Para confirmar ou informar a categoria, abra o animal, selecione a categoria, salve e registre a justificativa da alteração.',
         ],
     },
     {
