@@ -4,7 +4,7 @@ import { logActivity, recordActivityLog } from '../utils/activityLog.js';
 import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
 import { serializeFinancialTransaction } from '../utils/serializers.js';
 import { parseNumber } from '../utils/formatters.js';
-import { requireAuth, requireBillingAccess } from '../middlewares/requireAuth.js';
+import { requireAuth, requireBillingAccess, requireEntitlement } from '../middlewares/requireAuth.js';
 import {
     ensureFinancialSettings,
     summarizeCashFlow,
@@ -459,7 +459,7 @@ export function registerFinancialRoutes(app) {
         }
     });
 
-    app.get('/financial/reports/cash-flow', requireAuth, requireBillingAccess, async (req, res) => {
+    app.get('/financial/reports/cash-flow', requireAuth, requireBillingAccess, requireEntitlement('EIXO_GESTAO', 'EIXO_DECISAO'), async (req, res) => {
         try {
             const farms = await resolveReportFarms(req);
             if (!farms) return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -482,7 +482,7 @@ export function registerFinancialRoutes(app) {
         }
     });
 
-    app.get('/financial/reports/income-statement', requireAuth, requireBillingAccess, async (req, res) => {
+    app.get('/financial/reports/income-statement', requireAuth, requireBillingAccess, requireEntitlement('EIXO_GESTAO', 'EIXO_DECISAO'), async (req, res) => {
         try {
             const farms = await resolveReportFarms(req);
             if (!farms) return res.status(404).json({ message: 'Fazenda não encontrada.' });
@@ -511,7 +511,7 @@ export function registerFinancialRoutes(app) {
         }
     });
 
-    app.get('/financial/reports/analytics', requireAuth, requireBillingAccess, async (req, res) => {
+    app.get('/financial/reports/analytics', requireAuth, requireBillingAccess, requireEntitlement('EIXO_GESTAO', 'EIXO_DECISAO'), async (req, res) => {
         try {
             const dimension = String(req.query.dimension || 'FARM').toUpperCase();
             if (!['FARM', 'LOT', 'PADDOCK', 'PRODUCTION_PHASE'].includes(dimension)) {
@@ -631,7 +631,7 @@ export function registerFinancialRoutes(app) {
         }
     });
 
-    app.get('/financial/reports/data-quality', requireAuth, requireBillingAccess, async (req, res) => {
+    app.get('/financial/reports/data-quality', requireAuth, requireBillingAccess, requireEntitlement('EIXO_GESTAO', 'EIXO_DECISAO'), async (req, res) => {
         try {
             const farms = await resolveReportFarms(req);
             if (!farms) return res.status(404).json({ message: 'Fazenda não encontrada.' });
