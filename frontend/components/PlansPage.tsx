@@ -27,21 +27,21 @@ const PLANS: Plan[] = [
         code: 'GRATIS',
         name: 'EIXO Essencial',
         price: 'R$0,00/mês',
-        priceNote: '',
-        description: 'O plano gratuito mais completo do mercado, para quem entendeu que planilhas e cadernos já não dão conta de gerir sua fazenda.',
+        priceNote: 'Para sempre, com o rebanho inteiro',
+        description: 'Traga o rebanho todo, sem limite de animais. O plano gratuito mais completo do mercado, para quem entendeu que planilhas e cadernos já não dão conta de gerir sua fazenda.',
         cta: 'Comece agora!',
         ctaVariant: 'outline',
         features: [
             { text: 'Animais ilimitados', included: true },
             { text: '1 fazenda', included: true },
             { text: 'Até 3 usuários', included: true },
-            { text: 'Manejo do Rebanho (básico)', included: true },
+            { text: 'Manejo do Rebanho completo', included: true },
             { text: 'Estrutura da Fazenda', included: true },
-            { text: 'Financeiro completo', included: true },
-            { text: 'Dashboard (Visão Geral)', included: true },
-            { text: 'Nutrição avançada', included: false },
+            { text: 'Importação da sua planilha atual', included: true },
+            { text: 'Pesagem no curral pelo celular, sem internet', included: true },
+            { text: 'Financeiro: entradas, saídas e saldo', included: true },
+            { text: 'Custo por arroba e margem', included: false },
             { text: 'Exportação de dados (Excel/CSV)', included: false },
-            { text: 'Múltiplas fazendas', included: false },
         ],
     },
     {
@@ -49,19 +49,19 @@ const PLANS: Plan[] = [
         code: 'EIXO_GESTAO',
         name: 'EIXO Gestão',
         badge: 'Mais popular',
-        price: 'Em breve',
-        priceNote: '',
-        description: 'Inclui Dashboard completo, Nutrição avançada e exportação de dados.',
-        cta: 'Quero saber mais',
+        price: 'R$97/mês',
+        priceNote: 'R$79/mês no plano anual',
+        description: 'Saiba quanto custa a arroba que você produz e se está ganhando ou perdendo contra o preço do dia.',
+        cta: 'Quero assinar',
         ctaVariant: 'primary',
         features: [
-            { text: 'Animais ilimitados', included: true },
+            { text: 'Tudo do EIXO Essencial', included: true },
+            { text: 'Custo por arroba e por cabeça', included: true },
+            { text: 'Margem contra o preço da @ do dia', included: true },
+            { text: 'DRE e fluxo de caixa', included: true },
             { text: 'Até 3 fazendas', included: true },
             { text: 'Até 5 usuários', included: true },
-            { text: 'Tudo do EIXO Essencial', included: true },
-            { text: 'Dashboard (Visão Geral)', included: true },
             { text: 'Nutrição avançada', included: true },
-            { text: 'Pesagens avançadas', included: true },
             { text: 'Exportação de dados (Excel/CSV)', included: true },
             { text: 'Eixo Acasalamento', included: false },
             { text: 'Confinamento e rastreabilidade', included: false },
@@ -71,21 +71,20 @@ const PLANS: Plan[] = [
         id: 'decisao',
         code: 'EIXO_DECISAO',
         name: 'EIXO Performance',
-        price: 'Em breve',
-        priceNote: '',
-        description: 'Operação profissional, P.O. e exportação sem limites.',
-        cta: 'Quero saber mais',
+        price: 'R$247/mês',
+        priceNote: 'R$197/mês no plano anual',
+        description: 'Genética, confinamento e balança eletrônica no mesmo lugar que o resto da fazenda.',
+        cta: 'Falar com a gente',
         ctaVariant: 'dark',
         features: [
-            { text: 'Animais ilimitados', included: true },
+            { text: 'Tudo do EIXO Gestão', included: true },
             { text: 'Fazendas ilimitadas', included: true },
             { text: 'Usuários ilimitados', included: true },
-            { text: 'Tudo do EIXO Gestão', included: true },
             { text: 'Eixo Acasalamento', included: true },
             { text: 'Confinamento e contratos', included: true },
             { text: 'Rastreabilidade completa', included: true },
             { text: 'Integração com balanças eletrônicas', included: true },
-            { text: 'Relatório de erros auditável', included: true },
+            { text: 'Suporte prioritário', included: true },
         ],
     },
 ];
@@ -274,9 +273,7 @@ const PlansPage: React.FC<PlansPageProps> = ({
                                     {plan.name}
                                 </p>
                                 <div className="mt-2 flex items-baseline gap-1">
-                                    <span className={`font-brand text-3xl font-extrabold ${
-                                        plan.price === 'Em breve' ? 'text-[var(--eixo-text-muted)] text-xl' : 'text-[var(--eixo-text)]'
-                                    }`}>
+                                    <span className="font-brand text-3xl font-extrabold text-[var(--eixo-text)]">
                                         {plan.price}
                                     </span>
                                 </div>
@@ -323,10 +320,10 @@ const PlansPage: React.FC<PlansPageProps> = ({
 
                 {/* Nota de preços + Early Access */}
                 <p className="mt-8 text-center text-sm text-[#a8a29e]">
-                    Os primeiros 100 produtores que cadastrarem agora ganham <span className="font-semibold text-[var(--eixo-text)]">EIXO Base Vitalício</span> + prioridade no suporte.
+                    As 50 primeiras fazendas assinam o EIXO Gestão por <span className="font-semibold text-[var(--eixo-text)]">R$59/mês, travado por 12 meses</span>.
                 </p>
                 <p className="mt-1 text-center text-xs text-[#a8a29e]">
-                    Preços dos planos pagos em breve. Dúvidas? <a href="mailto:contato@eixo.ag" className="text-[var(--eixo-green)] hover:underline">contato@eixo.ag</a>
+                    Acima de 3.000 cabeças, fale com a gente para um orçamento. Dúvidas? <a href="mailto:contato@eixo.ag" className="text-[var(--eixo-green)] hover:underline">contato@eixo.ag</a>
                 </p>
             </div>
         </div>
