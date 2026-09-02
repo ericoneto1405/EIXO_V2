@@ -4,6 +4,7 @@ import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/fa
 import { parseDateValue, normalizePregnant } from '../utils/formatters.js';
 import { serializeCheckupSession, serializeCheckupRecord } from '../utils/serializers.js';
 import { logActivity } from '../utils/activityLog.js';
+import { requireAuth, requireModule } from '../middlewares/requireAuth.js';
 
 const prisma = new PrismaClient();
 
@@ -23,7 +24,7 @@ function stableExternalReference(registry, name) {
 
 // ─── Reprodução: avaliações (toque) por sessão + KPIs de decisão ─────────────
 export function registerReproRoutes(app) {
-    app.get('/repro/embryo-transfers', async (req, res) => {
+    app.get('/repro/embryo-transfers', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId, herdType = 'COMMERCIAL', status = 'PENDING' } = req.query || {};
         if (!farmId || !['COMMERCIAL', 'PO'].includes(String(herdType))) {
             return res.status(400).json({ message: 'Informe fazenda e tipo de rebanho válidos.' });
@@ -43,7 +44,7 @@ export function registerReproRoutes(app) {
         }
     });
 
-    app.post('/repro/embryo-transfers', async (req, res) => {
+    app.post('/repro/embryo-transfers', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId, herdType = 'COMMERCIAL', embryoBatchId, recipientId, transferredAt, date, notes } = req.body || {};
         const normalizedHerdType = String(herdType).toUpperCase();
         const transferDate = parseDateValue(transferredAt || date);
@@ -129,7 +130,7 @@ export function registerReproRoutes(app) {
     });
 
     // Criar sessão de avaliação com as fichas das vacas avaliadas
-    app.post('/repro/checkups', async (req, res) => {
+    app.post('/repro/checkups', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId, occurredAt, responsibleName, seasonId, notes, records } = req.body || {};
 
         if (!farmId || !occurredAt) {
@@ -257,7 +258,7 @@ export function registerReproRoutes(app) {
     });
 
     // Listar sessões da fazenda (filtros opcionais: estação e período)
-    app.get('/repro/checkups', async (req, res) => {
+    app.get('/repro/checkups', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId, seasonId, from, to } = req.query || {};
         if (!farmId) {
             return res.status(400).json({ message: 'Informe a fazenda.' });
@@ -294,7 +295,7 @@ export function registerReproRoutes(app) {
     });
 
     // Detalhar uma sessão com as fichas
-    app.get('/repro/checkups/:id', async (req, res) => {
+    app.get('/repro/checkups/:id', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { id } = req.params;
         try {
             const session = await prisma.reproCheckupSession.findFirst({
@@ -312,7 +313,7 @@ export function registerReproRoutes(app) {
     });
 
     // Apagar uma sessão (fichas somem junto por cascade)
-    app.delete('/repro/checkups/:id', async (req, res) => {
+    app.delete('/repro/checkups/:id', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { id } = req.params;
         try {
             const session = await prisma.reproCheckupSession.findFirst({
@@ -330,7 +331,7 @@ export function registerReproRoutes(app) {
     });
 
     // Editar uma sessão: refaz as fichas e recalcula o status no Rebanho
-    app.put('/repro/checkups/:id', async (req, res) => {
+    app.put('/repro/checkups/:id', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { id } = req.params;
         const { occurredAt, responsibleName, seasonId, notes, records } = req.body || {};
 
@@ -444,7 +445,7 @@ export function registerReproRoutes(app) {
     });
 
     // KPIs de decisão do rebanho (opcionalmente por estação)
-    app.get('/repro/kpis', async (req, res) => {
+    app.get('/repro/kpis', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId, seasonId } = req.query || {};
         if (!farmId) {
             return res.status(400).json({ message: 'Informe a fazenda.' });
@@ -546,7 +547,7 @@ export function registerReproRoutes(app) {
     });
 
     // Farol: classifica cada fêmea avaliada em verde / amarelo / vermelho
-    app.get('/repro/farol', async (req, res) => {
+    app.get('/repro/farol', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId, seasonId } = req.query || {};
         if (!farmId) {
             return res.status(400).json({ message: 'Informe a fazenda.' });
@@ -633,7 +634,7 @@ export function registerReproRoutes(app) {
     });
 
     // Registrar parto (grava como ReproEvent PARTO e atualiza a vaca no Rebanho)
-    app.post('/repro/partos', async (req, res) => {
+    app.post('/repro/partos', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId, animalId, date, calfSex, notes } = req.body || {};
         if (!farmId || !animalId || !date) {
             return res.status(400).json({ message: 'Informe fazenda, vaca e data do parto.' });
@@ -696,7 +697,7 @@ export function registerReproRoutes(app) {
     });
 
     // Listar partos da fazenda
-    app.get('/repro/partos', async (req, res) => {
+    app.get('/repro/partos', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId } = req.query || {};
         if (!farmId) {
             return res.status(400).json({ message: 'Informe a fazenda.' });
@@ -721,7 +722,7 @@ export function registerReproRoutes(app) {
     });
 
     // Apagar um parto (não reverte o status já gravado na vaca)
-    app.delete('/repro/partos/:id', async (req, res) => {
+    app.delete('/repro/partos/:id', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { id } = req.params;
         try {
             const event = await prisma.reproEvent.findFirst({
@@ -760,7 +761,7 @@ export function registerReproRoutes(app) {
     });
 
     // Registrar desmama (ReproEvent DESMAME, com peso à desmama opcional)
-    app.post('/repro/desmamas', async (req, res) => {
+    app.post('/repro/desmamas', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId, animalId, date, weightKg, notes } = req.body || {};
         if (!farmId || !animalId || !date) {
             return res.status(400).json({ message: 'Informe fazenda, vaca e data da desmama.' });
@@ -818,7 +819,7 @@ export function registerReproRoutes(app) {
     });
 
     // Listar desmamas da fazenda
-    app.get('/repro/desmamas', async (req, res) => {
+    app.get('/repro/desmamas', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId } = req.query || {};
         if (!farmId) {
             return res.status(400).json({ message: 'Informe a fazenda.' });
@@ -843,7 +844,7 @@ export function registerReproRoutes(app) {
     });
 
     // Apagar uma desmama
-    app.delete('/repro/desmamas/:id', async (req, res) => {
+    app.delete('/repro/desmamas/:id', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { id } = req.params;
         try {
             const event = await prisma.reproEvent.findFirst({
