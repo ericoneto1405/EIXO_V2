@@ -40,8 +40,9 @@ interface FinanceModuleProps {
     onboardingAction?: { action: 'SAIDA' | 'ENTRADA' | 'RESULTADO'; nonce: number } | null;
 }
 
-// Financeiro completo liberado para todos os planos
-const LOCKED_TABS_FREE: FinanceTab[] = [];
+// Anotar é de graça, entender custa: o plano gratuito lança, concilia e vê o
+// saldo; DRE, fluxo, analytics e qualidade do dado são do EIXO Gestão em diante.
+const LOCKED_TABS_FREE: FinanceTab[] = ['dre', 'fluxo', 'analytics', 'quality'];
 
 // ── Componente principal ──────────────────────────────────────────────────────
 

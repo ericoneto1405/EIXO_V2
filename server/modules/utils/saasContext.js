@@ -20,7 +20,7 @@ export const PLAN_ENTITLEMENTS = {
 };
 export const PLAN_MODULES = {
     GRATIS: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'],
-    EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades'],
+    EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Gestão Comercial'],
     EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics', 'Gestão Comercial', 'Confinamento e Contratos'],
 };
 
@@ -200,9 +200,11 @@ export const buildAllowedModulesFromPlan = (modules, entitlements, roles = [], a
     }
     if (codes.has('EIXO_GESTAO') || codes.has('EIXO_DECISAO')) {
         nextModules.add('Registro de Atividades');
+        // Vender boi é o básico de qualquer fazenda: compra e venda desceu
+        // do Performance para o Gestão em 02/09/2026.
+        nextModules.add('Gestão Comercial');
     }
     if (codes.has('EIXO_DECISAO')) {
-        nextModules.add('Gestão Comercial');
         nextModules.add('Confinamento e Contratos');
     }
 
