@@ -42,13 +42,14 @@ const HERD_TABLE_COLUMNS: { key: string; label: string }[] = [
 const HERD_TABLE_COLUMN_KEYS = HERD_TABLE_COLUMNS.map((c) => c.key);
 
 type TabKey = 'overview' | 'animals' | 'pastures' | 'lots' | 'weighings' | 'settings';
-type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'sem_categoria' | 'gmd_baixo' | 'desmame' | 'aguardando_id';
+type HealthQuickFilter = 'none' | 'sem_pasto' | 'pesagem_atrasada' | 'categoria_automatica' | 'sem_categoria' | 'gmd_baixo' | 'desmame' | 'aguardando_id';
 const HEALTH_QUICK_FILTER_LABELS: Record<Exclude<HealthQuickFilter, 'none'>, string> = {
     desmame: 'Prontos para desmame',
     aguardando_id: 'Desmamados aguardando identificação',
     sem_pasto: 'Animais sem pasto',
     pesagem_atrasada: 'Pesagem acima de 30 dias',
-    sem_categoria: 'Categoria não confirmada',
+    categoria_automatica: 'Categoria sugerida automaticamente',
+    sem_categoria: 'Categoria não identificada',
     gmd_baixo: 'GMD abaixo da meta',
 };
 type AnimalHeaderFilterKey = 'identificacao' | 'registro' | 'raca' | 'sexo' | 'pasto' | 'lote' | 'categoria' | 'peso' | 'nutricao' | null;
@@ -654,9 +655,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             const lastWeighingAgeDays = animal.dataUltimaPesagem
                 ? Math.floor((Date.now() - new Date(animal.dataUltimaPesagem).getTime()) / 86400000)
                 : null;
-            // Olha o que está GRAVADO, não o deduzido: a pendência é o produtor
-            // confirmar a categoria, e a dedução preencheria o card com tudo verde.
-            const hasCategory = Boolean(String(animal.categoriaDefinida || '').trim());
+            const hasResolvedCategory = Boolean(String(animal.categoria || '').trim());
+            const hasAutomaticCategory = Boolean(animal.categoriaAutomatica);
             const hasPaddock = Boolean(animal.currentPaddockId || animal.currentPaddockName);
             const currentGmd = typeof animal.gmd30 === 'number'
                 ? animal.gmd30
@@ -670,7 +670,10 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             if (healthQuickFilter === 'pesagem_atrasada') {
                 if (lastWeighingAgeDays === null || lastWeighingAgeDays <= 30) return false;
             }
-            if (healthQuickFilter === 'sem_categoria' && hasCategory) {
+            if (healthQuickFilter === 'categoria_automatica' && !hasAutomaticCategory) {
+                return false;
+            }
+            if (healthQuickFilter === 'sem_categoria' && hasResolvedCategory) {
                 return false;
             }
             if (healthQuickFilter === 'gmd_baixo') {
@@ -786,6 +789,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const healthOverview = useMemo(() => {
         let withoutPaddock = 0;
         let withoutWeighing = 0;
+        let automaticCategory = 0;
         let withoutCategory = 0;
         let staleWeighing = 0;
         let belowTargetGmd = 0;
@@ -796,10 +800,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             const hasPaddock = Boolean(animal.currentPaddockId || animal.currentPaddockName);
             if (!hasPaddock) withoutPaddock++;
 
-            // Olha o que está GRAVADO, não o deduzido: a pendência é o produtor
-            // confirmar a categoria, e a dedução preencheria o card com tudo verde.
-            const hasCategory = Boolean(String(animal.categoriaDefinida || '').trim());
-            if (!hasCategory) withoutCategory++;
+            const hasResolvedCategory = Boolean(String(animal.categoria || '').trim());
+            if (animal.categoriaAutomatica) automaticCategory++;
+            if (!hasResolvedCategory) withoutCategory++;
 
             if (animal.dataUltimaPesagem) {
                 const days = Math.floor((Date.now() - new Date(animal.dataUltimaPesagem).getTime()) / 86400000);
@@ -820,7 +823,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             if (animal.desmamadoEm && animal.identificacaoProvisoria) weanedAwaitingId++;
         }
 
-        return { withoutPaddock, withoutWeighing, staleWeighing, withoutCategory, belowTargetGmd, readyForWeaning, weanedAwaitingId };
+        return { withoutPaddock, withoutWeighing, staleWeighing, automaticCategory, withoutCategory, belowTargetGmd, readyForWeaning, weanedAwaitingId };
     }, [animals]);
 
     const activeQuickFilterLabel = healthQuickFilter === 'none'
@@ -1992,14 +1995,25 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     </button>
                     <button
                         type="button"
-                        onClick={() => openAnimalsWithQuickFilter('sem_categoria')}
-                        aria-label={`${healthOverview.withoutCategory} animais com categoria não confirmada. Ver animais.`}
+                        onClick={() => openAnimalsWithQuickFilter('categoria_automatica')}
+                        aria-label={`${healthOverview.automaticCategory} animais com categoria sugerida automaticamente. Ver animais.`}
                         className="group rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--eixo-surface-soft)] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-green)]"
                     >
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Categoria não confirmada</p>
-                        <p className="mt-1 text-2xl font-extrabold text-[#7a5e2b]">{healthOverview.withoutCategory}</p>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Deduzida pela idade — confirme se quiser fixar</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Categoria sugerida automaticamente</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#7a5e2b]">{healthOverview.automaticCategory}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Calculada pelos dados do animal</p>
                         <span className="mt-3 inline-flex text-xs font-semibold text-[#7a5e2b] transition-transform group-hover:translate-x-0.5">Ver animais →</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => openAnimalsWithQuickFilter('sem_categoria')}
+                        aria-label={`${healthOverview.withoutCategory} animais com categoria não identificada. Ver animais.`}
+                        className="group rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-left transition-all duration-200 hover:-translate-y-0.5 hover:bg-[var(--eixo-surface-soft)] hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-green)]"
+                    >
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-text-muted)]">Categoria não identificada</p>
+                        <p className="mt-1 text-2xl font-extrabold text-[#8c2020]">{healthOverview.withoutCategory}</p>
+                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Dados insuficientes para calcular</p>
+                        <span className="mt-3 inline-flex text-xs font-semibold text-[#8c2020] transition-transform group-hover:translate-x-0.5">Ver animais →</span>
                     </button>
                     <button
                         type="button"
@@ -2318,7 +2332,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             <div>
                                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-graphite)]">Filtro ativo</p>
                                 <p className="mt-0.5 text-sm font-semibold text-[var(--eixo-text)]">{activeQuickFilterLabel} · {sortedAnimals.length} {sortedAnimals.length === 1 ? 'animal' : 'animais'}</p>
-                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">Abra um animal da lista para concluir a pendência.</p>
+                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">
+                                    {healthQuickFilter === 'categoria_automatica'
+                                        ? 'Revise a sugestão, selecione a categoria e salve para confirmá-la.'
+                                        : healthQuickFilter === 'sem_categoria'
+                                            ? 'Informe os dados necessários ou selecione a categoria e salve o animal.'
+                                            : 'Abra um animal da lista para concluir a pendência.'}
+                                </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2">
                                 {healthQuickFilter === 'pesagem_atrasada' && (
