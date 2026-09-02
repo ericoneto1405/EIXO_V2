@@ -629,12 +629,17 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                         </div>
                                     </div>
 
+                                    <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">
+                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--eixo-green)] text-[10px] text-[#1a1a1a]">1</span>
+                                        Etapa 1 de 2 · Confirmar quem é você
+                                    </div>
+
                                     <form onSubmit={handleSubmit} className="space-y-4">
                                         {/* ── Documento ── */}
                                         <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
                                             <p className="mb-1 text-sm font-semibold text-[var(--eixo-text)]">Identificação</p>
                                             <p className="mb-3 text-xs text-[var(--eixo-text-muted)]">
-                                                Usamos seu CNPJ ou CPF para confirmar que você é um produtor real.
+                                                Usamos seu CNPJ ou CPF só pra confirmar que você é um produtor de verdade — não pedimos cartão nem pagamento aqui.
                                             </p>
 
                                             {/* Seletor CNPJ / CPF */}
@@ -840,6 +845,10 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                         )}
 
                                         {/* ── Dados pessoais ── */}
+                                        <div className="mb-1 mt-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">
+                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--eixo-green)] text-[10px] text-[#1a1a1a]">2</span>
+                                            Etapa 2 de 2 · Seus dados de acesso
+                                        </div>
                                         <div>
                                             <label htmlFor="register-name" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
                                                 Nome completo

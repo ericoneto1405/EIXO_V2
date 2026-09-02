@@ -49,6 +49,14 @@ const FAQS = [
     a: 'Não. No EIXO Essencial, os animais são ilimitados. O plano inclui 1 fazenda e até 3 usuários.',
   },
   {
+    q: 'Funciona sem internet no curral?',
+    a: 'Para a pesagem, sim. O EIXO Campo, o aplicativo usado no curral, salva as pesagens no próprio celular quando não há sinal e envia sozinho assim que a internet volta — você acompanha o status de cada uma (enviado ou pendente) e pode tocar em "Sincronizar agora" quando quiser. As demais telas do sistema precisam de conexão.',
+  },
+  {
+    q: 'Como levo os dados do meu caderno ou da minha planilha para o EIXO?',
+    a: 'Você baixa a planilha modelo, preenche com os animais da sua fazenda e importa. Antes de salvar, o sistema mostra uma prévia para você conferir e corrigir o que estiver errado. Não precisa cadastrar animal por animal.',
+  },
+  {
     q: 'Meus dados ficam seguros?',
     a: 'Seus dados ficam armazenados em servidores seguros, em conformidade com a LGPD. Você tem acesso completo ao histórico a qualquer momento.',
   },
