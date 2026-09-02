@@ -143,9 +143,6 @@ const Farms: React.FC<FarmsProps> = ({
             <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
-                            Estrutura da Fazenda
-                        </div>
                         <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">
                             {activeTab === 'pharmacy' ? 'Farmácia' : activeTab === 'map' ? 'Mapa da Fazenda' : 'Fazendas e Pastos'}
                         </h1>
