@@ -41,7 +41,7 @@ const PLANS: Plan[] = [
             { text: 'Pesagem no curral pelo celular, sem internet', included: true },
             { text: 'Financeiro: entradas, saídas e saldo', included: true },
             { text: 'DRE e fluxo de caixa', included: false },
-            { text: 'Nutrição avançada', included: false },
+            { text: 'Exportação de dados (Excel/CSV)', included: false },
         ],
     },
     {
@@ -57,9 +57,10 @@ const PLANS: Plan[] = [
         features: [
             { text: 'Tudo do EIXO Essencial', included: true },
             { text: 'DRE e fluxo de caixa', included: true },
+            { text: 'Reprodução: estação de monta e prenhez', included: true },
             { text: 'Compra e venda de animais', included: true },
+            { text: 'Exportação de dados (Excel/CSV)', included: true },
             { text: 'Nutrição avançada', included: true },
-            { text: 'Registro de atividades', included: true },
             { text: 'Até 3 fazendas', included: true },
             { text: 'Até 5 usuários', included: true },
             { text: 'Eixo Acasalamento', included: false },
@@ -80,7 +81,6 @@ const PLANS: Plan[] = [
             { text: 'Fazendas ilimitadas', included: true },
             { text: 'Usuários ilimitados', included: true },
             { text: 'Eixo Acasalamento', included: true },
-            { text: 'Reprodução e genética', included: true },
             { text: 'Confinamento e contratos', included: true },
             { text: 'Suporte prioritário', included: true },
         ],

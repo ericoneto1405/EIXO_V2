@@ -193,8 +193,8 @@ const UPGRADE_CONTENT: Record<string, {
         icon: <UpgradeNutritionIcon />,
     },
     'Reprodução': {
-        accessLabels: ['Eixo Genetics'],
-        requiredPlan: 'PLUS',
+        accessLabels: ['Reprodução'],
+        requiredPlan: 'PRO',
         moduleName: 'Reprodução',
         tagline: 'Acompanhe a reprodução com mais controle e menos papel solto',
         benefits: [
