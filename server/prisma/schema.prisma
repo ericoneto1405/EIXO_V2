@@ -1351,6 +1351,9 @@ model ActivityLog {
   @@index([organizationId, createdAt])
   @@index([userId, createdAt])
   @@index([farmId, createdAt])
+  @@index([entity, entityId, createdAt])
+  @@index([entity, action, createdAt])
+  @@index([userId, entity, createdAt])
 }
 
 model UserFarmAccess {
