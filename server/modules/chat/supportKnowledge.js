@@ -170,6 +170,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Um cadeado indica que o módulo não está liberado pelo plano ou pelas permissões do usuário.',
             'Confira as opções em Ver planos ou peça ao responsável da organização para revisar o acesso.',
             'Nunca informe preço ou condição comercial que não esteja na tela oficial.',
+            'A assinatura dos planos pagos ainda não está aberta: quem já é cliente pode registrar interesse pelo botão Solicitar upgrade na página de planos.',
+            'Não prometa recurso que ainda não existe no sistema, mesmo que o usuário pergunte por ele.',
         ],
     },
     {
