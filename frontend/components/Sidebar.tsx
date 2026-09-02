@@ -389,7 +389,7 @@ const navSections: NavSection[] = [
             { label: 'Sanidade', icon: <SanidadeIcon />, value: 'Sanidade', status: 'coming_soon' },
             { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição', allowedLabels: ['Nutrição'], requiredPlanBadge: 'PRO' },
             { label: 'Eixo Acasalamento', icon: <HerdGeneticIcon />, value: 'Eixo Acasalamento', path: '/genetics/acasalamento', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
-            { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Reprodução', path: '/genetics/reproducao', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
+            { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Reprodução', path: '/genetics/reproducao', allowedLabels: ['Reprodução'], requiredPlanBadge: 'PRO' },
             { label: 'Confinamento e Contratos', icon: <OperationsIcon />, value: 'Confinamento e Contratos', allowedLabels: ['Confinamento e Contratos'], requiredPlanBadge: 'PLUS' },
         ],
     },

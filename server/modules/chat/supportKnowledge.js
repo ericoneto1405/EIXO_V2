@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-02.2';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-02.6';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-02';
 
 export const SUPPORT_TONE_RULES = [
@@ -14,11 +14,11 @@ export const SUPPORT_TONE_RULES = [
 export const SUPPORT_MODULE_CATALOG = [
     { name: 'Estrutura da Fazenda', href: 'eixo:view:Fazendas', entitlementCodes: ['CORE'], benefit: 'organiza fazendas, pastos e base operacional.', salesTrigger: 'cadastro de fazenda, pasto, mapa ou estrutura.' },
     { name: 'Manejo do Rebanho', href: 'eixo:view:Rebanho%20Comercial', entitlementCodes: ['CORE'], benefit: 'centraliza animais, lotes, importação, pesagens e eventos.', salesTrigger: 'controle de animais, planilhas, peso, compra, venda ou lotes.' },
-    { name: 'Financeiro', href: 'eixo:view:Financeiro', entitlementCodes: ['CORE', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'liga lançamentos, despesas, receitas e visão econômica da fazenda.', salesTrigger: 'despesas, receitas, lucro, fluxo de caixa, compra ou venda.' },
+    { name: 'Financeiro', href: 'eixo:view:Financeiro', entitlementCodes: ['CORE', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'liga lançamentos, despesas e receitas; DRE, fluxo de caixa, analytics e qualidade do dado exigem EIXO Gestão em diante.', salesTrigger: 'despesas, receitas, lucro, fluxo de caixa, compra ou venda.' },
     { name: 'Nutrição', href: 'eixo:view:Nutri%C3%A7%C3%A3o', entitlementCodes: ['NUTRITION', 'EIXO_NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'controla dieta, consumo, custo por lote e ingredientes em risco.', salesTrigger: 'cocho, dieta, trato, consumo, suplemento, ração ou custo alimentar.' },
-    { name: 'Reprodução', href: '/genetics/reproducao', entitlementCodes: ['GENETICS', 'PO', 'EIXO_DECISAO'], benefit: 'organiza coberturas, diagnósticos, partos e indicadores reprodutivos.', salesTrigger: 'prenhez, parto, matriz, cobertura, IATF ou estação de monta.' },
+    { name: 'Reprodução', href: '/genetics/reproducao', entitlementCodes: ['GENETICS', 'PO', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'organiza coberturas, diagnósticos, partos e indicadores reprodutivos.', salesTrigger: 'prenhez, parto, matriz, cobertura, IATF ou estação de monta.' },
     { name: 'EIXO Acasalamento', href: '/genetics/acasalamento', entitlementCodes: ['GENETICS', 'EIXO_DECISAO'], benefit: 'apoia decisões de acasalamento com histórico e objetivo produtivo.', salesTrigger: 'acasalamento, touro, sêmen, botijão, matriz ou genética.' },
-    { name: 'Gestão Comercial', href: 'eixo:view:Gest%C3%A3o%20Comercial', entitlementCodes: ['EIXO_DECISAO'], benefit: 'apoia negociação, mercado, oportunidades e decisão de venda.', salesTrigger: 'venda, mercado, comprador, negociação, arroba ou margem.' },
+    { name: 'Gestão Comercial', href: 'eixo:view:Gest%C3%A3o%20Comercial', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'apoia negociação, mercado, oportunidades e decisão de venda.', salesTrigger: 'venda, mercado, comprador, negociação, arroba ou margem.' },
     { name: 'Botijão de Sêmen', href: 'eixo:view:Estoque%20e%20Equipamentos', entitlementCodes: ['CORE', 'GENETICS', 'EIXO_DECISAO'], benefit: 'organiza o estoque de sêmen usado no EIXO Acasalamento.', salesTrigger: 'sêmen, botijão, doses, estoque de touro ou acasalamento.' },
 ];
 
@@ -170,6 +170,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Um cadeado indica que o módulo não está liberado pelo plano ou pelas permissões do usuário.',
             'Confira as opções em Ver planos ou peça ao responsável da organização para revisar o acesso.',
             'Nunca informe preço ou condição comercial que não esteja na tela oficial.',
+            'A assinatura dos planos pagos ainda não está aberta: quem já é cliente pode registrar interesse pelo botão Solicitar upgrade na página de planos.',
+            'Não prometa recurso que ainda não existe no sistema, mesmo que o usuário pergunte por ele.',
         ],
     },
     {

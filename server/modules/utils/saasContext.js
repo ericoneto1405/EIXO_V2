@@ -5,7 +5,7 @@ const prisma = new PrismaClient();
 
 export const SUPER_ADMIN_ALL_MODULES = [
     'Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda',
-    'Rebanho Comercial', 'Eixo Genetics', 'Gestão Comercial',
+    'Rebanho Comercial', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial',
     'Confinamento e Contratos',
     'Fornecedores', 'Remédios', 'Rações', 'Suplementos',
     'Nutrição', 'Financeiro',
@@ -20,8 +20,8 @@ export const PLAN_ENTITLEMENTS = {
 };
 export const PLAN_MODULES = {
     GRATIS: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'],
-    EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades'],
-    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics', 'Gestão Comercial', 'Confinamento e Contratos'],
+    EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Gestão Comercial', 'Reprodução'],
+    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Confinamento e Contratos'],
 };
 
 export const PLAN_LIMITS = {
@@ -195,14 +195,23 @@ export const buildAllowedModulesFromPlan = (modules, entitlements, roles = [], a
         nextModules.add('Nutrição');
     }
     if (codes.has('GENETICS') || codes.has('PO') || codes.has('EIXO_GENETICS') || codes.has('EIXO_DECISAO')) {
+        // 'Eixo Genetics' é o Acasalamento (seleção genética), que fica no
+        // Performance. A Reprodução tem rótulo próprio desde 02/09/2026 para
+        // poder descer de plano sem levar o Acasalamento junto.
         nextModules.add('Eixo Genetics');
+        nextModules.add('Reprodução');
         nextModules.add('Plantel P.O.');
     }
     if (codes.has('EIXO_GESTAO') || codes.has('EIXO_DECISAO')) {
         nextModules.add('Registro de Atividades');
+        // Fazenda de cria vive de reprodução: estação de monta e prenhez
+        // desceram do Performance para o Gestão em 02/09/2026.
+        nextModules.add('Reprodução');
+        // Vender boi é o básico de qualquer fazenda: compra e venda desceu
+        // do Performance para o Gestão em 02/09/2026.
+        nextModules.add('Gestão Comercial');
     }
     if (codes.has('EIXO_DECISAO')) {
-        nextModules.add('Gestão Comercial');
         nextModules.add('Confinamento e Contratos');
     }
 
