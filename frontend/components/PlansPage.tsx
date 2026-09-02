@@ -40,7 +40,7 @@ const PLANS: Plan[] = [
             { text: 'Importação da sua planilha atual', included: true },
             { text: 'Pesagem no curral pelo celular, sem internet', included: true },
             { text: 'Financeiro: entradas, saídas e saldo', included: true },
-            { text: 'Custo por arroba e margem', included: false },
+            { text: 'DRE e fluxo de caixa', included: false },
             { text: 'Exportação de dados (Excel/CSV)', included: false },
         ],
     },
@@ -51,14 +51,14 @@ const PLANS: Plan[] = [
         badge: 'Mais popular',
         price: 'R$97/mês',
         priceNote: 'R$79/mês no plano anual',
-        description: 'Saiba quanto custa a arroba que você produz e se está ganhando ou perdendo contra o preço do dia.',
-        cta: 'Quero assinar',
+        description: 'O financeiro completo da fazenda, com reprodução e comercial no mesmo lugar.',
+        cta: 'Solicitar upgrade',
         ctaVariant: 'primary',
         features: [
             { text: 'Tudo do EIXO Essencial', included: true },
-            { text: 'Custo por arroba e por cabeça', included: true },
-            { text: 'Margem contra o preço da @ do dia', included: true },
             { text: 'DRE e fluxo de caixa', included: true },
+            { text: 'Reprodução: estação de monta e prenhez', included: true },
+            { text: 'Compra e venda de animais', included: true },
             { text: 'Até 3 fazendas', included: true },
             { text: 'Até 5 usuários', included: true },
             { text: 'Nutrição avançada', included: true },
@@ -73,8 +73,8 @@ const PLANS: Plan[] = [
         name: 'EIXO Performance',
         price: 'R$247/mês',
         priceNote: 'R$197/mês no plano anual',
-        description: 'Genética, confinamento e balança eletrônica no mesmo lugar que o resto da fazenda.',
-        cta: 'Falar com a gente',
+        description: 'Genética e confinamento para quem opera em escala, sem limite de fazendas.',
+        cta: 'Solicitar upgrade',
         ctaVariant: 'dark',
         features: [
             { text: 'Tudo do EIXO Gestão', included: true },
@@ -82,8 +82,6 @@ const PLANS: Plan[] = [
             { text: 'Usuários ilimitados', included: true },
             { text: 'Eixo Acasalamento', included: true },
             { text: 'Confinamento e contratos', included: true },
-            { text: 'Rastreabilidade completa', included: true },
-            { text: 'Integração com balanças eletrônicas', included: true },
             { text: 'Suporte prioritário', included: true },
         ],
     },
@@ -143,10 +141,6 @@ const PlansPage: React.FC<PlansPageProps> = ({
             window.location.href = '/?register=1';
             return;
         }
-        if (!isAuthenticated) {
-            window.open(`mailto:contato@eixo.ag?subject=${encodeURIComponent(`Interesse no ${plan.name}`)}`, '_blank');
-            return;
-        }
         if (!canRequestUpgrade || !currentPlanCode || PLAN_ORDER[plan.code] <= PLAN_ORDER[currentPlanCode]) {
             return;
         }
@@ -165,8 +159,7 @@ const PlansPage: React.FC<PlansPageProps> = ({
             if (!response.ok) {
                 throw new Error(payload?.message || 'Não foi possível registrar seu interesse.');
             }
-            setInterestMessage(`Interesse no ${plan.name} registrado. Abrindo o contato comercial...`);
-            window.location.href = `mailto:contato@eixo.ag?subject=${encodeURIComponent(`Upgrade para ${plan.name}`)}`;
+            setInterestMessage(`Interesse no ${plan.name} registrado. Entramos em contato com você.`);
         } catch (error) {
             setInterestError(error instanceof Error ? error.message : 'Não foi possível registrar seu interesse.');
         } finally {
@@ -281,7 +274,10 @@ const PlansPage: React.FC<PlansPageProps> = ({
                                 <p className="mt-3 text-sm text-[var(--eixo-text-muted)]">{plan.description}</p>
                             </div>
 
-                            {/* CTA */}
+                            {/* CTA — só aparece quando leva a algum lugar de verdade.
+                                Visitante só tem caminho no plano grátis; a assinatura
+                                dos pagos ainda não está aberta. */}
+                            {(plan.id === 'gratis' || isAuthenticated) ? (
                             <button
                                 type="button"
                                 onClick={() => handleCta(plan)}
@@ -298,6 +294,11 @@ const PlansPage: React.FC<PlansPageProps> = ({
                             >
                                 {ctaState.label}
                             </button>
+                            ) : (
+                                <p className="mb-6 w-full rounded-xl border border-dashed border-[var(--eixo-border)] py-2.5 text-center text-sm text-[var(--eixo-text-muted)]">
+                                    Assinatura ainda não aberta
+                                </p>
+                            )}
 
                             {/* Divider */}
                             <div className="mb-4 border-t border-[var(--eixo-border)]" />
@@ -318,13 +319,6 @@ const PlansPage: React.FC<PlansPageProps> = ({
                     })}
                 </div>
 
-                {/* Nota de preços + Early Access */}
-                <p className="mt-8 text-center text-sm text-[#a8a29e]">
-                    As 50 primeiras fazendas assinam o EIXO Gestão por <span className="font-semibold text-[var(--eixo-text)]">R$59/mês, travado por 12 meses</span>.
-                </p>
-                <p className="mt-1 text-center text-xs text-[#a8a29e]">
-                    Acima de 3.000 cabeças, fale com a gente para um orçamento. Dúvidas? <a href="mailto:contato@eixo.ag" className="text-[var(--eixo-green)] hover:underline">contato@eixo.ag</a>
-                </p>
             </div>
         </div>
     );
