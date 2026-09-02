@@ -54,18 +54,27 @@ export const CHAT_RATE_MAX_PER_USER = Number(process.env.CHAT_RATE_MAX_PER_USER)
 export const CHAT_BURST_WINDOW_MS = Number(process.env.CHAT_BURST_WINDOW_MS) || 10 * 1000;
 export const CHAT_BURST_MAX_PER_USER = Number(process.env.CHAT_BURST_MAX_PER_USER) || 8;
 export const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:5173';
+export const APP_RELEASE_SHA = String(process.env.APP_RELEASE_SHA || 'local').trim();
 export const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'noreply@eixo.ag';
 export const RESEND_API_KEY = process.env.RESEND_API_KEY;
 export const TWILIO_ACCOUNT_SID = process.env.TWILIO_ACCOUNT_SID;
 export const TWILIO_AUTH_TOKEN = process.env.TWILIO_AUTH_TOKEN;
 export const TWILIO_VERIFY_SID = process.env.TWILIO_VERIFY_SID;
 export const SUPPORT_AI_PROVIDER = String(process.env.SUPPORT_AI_PROVIDER || 'groq').trim().toLowerCase();
+export const SUPPORT_AI_FALLBACK_PROVIDER = String(process.env.SUPPORT_AI_FALLBACK_PROVIDER || 'gemini').trim().toLowerCase();
 export const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 export const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 export const GOOGLE_CLOUD_PROJECT = process.env.GOOGLE_CLOUD_PROJECT || '';
 export const GOOGLE_CLOUD_LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'global';
 export const SUPPORT_MODEL_NAME = process.env.SUPPORT_MODEL_NAME
     || (SUPPORT_AI_PROVIDER === 'groq' ? 'openai/gpt-oss-20b' : 'gemini-2.5-flash');
+export const SUPPORT_ALERT_COOLDOWN_MS = Number(process.env.SUPPORT_ALERT_COOLDOWN_MS) || 15 * 60 * 1000;
+export const SUPPORT_TELEGRAM_INCLUDE_MESSAGE = process.env.SUPPORT_TELEGRAM_INCLUDE_MESSAGE === 'true';
+export const SUPPORT_ROLLOUT_MODE = String(process.env.SUPPORT_ROLLOUT_MODE || (IS_PROD ? 'shadow' : 'full')).trim().toLowerCase();
+export const SUPPORT_PILOT_ORGANIZATION_IDS = String(process.env.SUPPORT_PILOT_ORGANIZATION_IDS || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
 
 // ─── Constantes de Rate Limiting ────────────────────────────────────────────────
 export const LOGIN_WINDOW_MS = 15 * 60 * 1000;
@@ -107,6 +116,12 @@ if (IS_PROD) {
     }
     if (!process.env.CORS_ORIGIN || CORS_ORIGIN.includes('localhost') || CORS_ORIGIN.includes('127.0.0.1')) {
         productionConfigErrors.push('CORS_ORIGIN deve apontar para as origens reais do frontend em produção.');
+    }
+    if (!['shadow', 'pilot', 'full'].includes(SUPPORT_ROLLOUT_MODE)) {
+        productionConfigErrors.push('SUPPORT_ROLLOUT_MODE deve ser shadow, pilot ou full.');
+    }
+    if (SUPPORT_ROLLOUT_MODE === 'pilot' && !SUPPORT_PILOT_ORGANIZATION_IDS.length) {
+        productionConfigErrors.push('SUPPORT_PILOT_ORGANIZATION_IDS deve informar ao menos uma organização no modo pilot.');
     }
     if (productionConfigErrors.length) {
         for (const errorMessage of productionConfigErrors) {

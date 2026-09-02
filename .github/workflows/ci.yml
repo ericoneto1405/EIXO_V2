@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: 20
@@ -19,6 +21,12 @@ jobs:
         run: npm ci
       - name: Generate Prisma Client
         run: npm run generate
+      - name: Testes do backend
+        run: npm test --workspace server
+      - name: Validar conhecimento do EIXO Suporte
+        run: npm run support:validate --workspace server
+        env:
+          SUPPORT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
       - name: TypeScript check (frontend)
         run: npx tsc -p frontend/tsconfig.json --noEmit
       - name: Build frontend

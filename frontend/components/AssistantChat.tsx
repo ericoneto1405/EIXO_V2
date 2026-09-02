@@ -33,7 +33,7 @@ const SUGESTOES = [
     'Como acompanhar o financeiro da minha fazenda?',
 ];
 
-const MAX_CHARS = 150;
+const MAX_CHARS = 1000;
 
 const formatConversationDate = (value: string) => {
     const parsed = new Date(value);
@@ -56,8 +56,19 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
     const [isLoading, setIsLoading] = useState(false);
     const [conversationId, setConversationId] = useState('');
     const [recentConversations, setRecentConversations] = useState<RecentConversation[]>([]);
+    const [humanStatus, setHumanStatus] = useState<'none' | 'requested' | 'assumed'>('none');
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const [feedbackByMessage, setFeedbackByMessage] = useState<Record<string, 'resolved' | 'unresolved'>>({});
+    const [satisfactionByMessage, setSatisfactionByMessage] = useState<Record<string, number>>({});
+    const [feedbackLoading, setFeedbackLoading] = useState<string | null>(null);
+    const [satisfactionLoading, setSatisfactionLoading] = useState<string | null>(null);
+    const [ratingPromptMessageId, setRatingPromptMessageId] = useState<string | null>(null);
+    const [unresolvedReasonMessageId, setUnresolvedReasonMessageId] = useState<string | null>(null);
+    const [unresolvedReason, setUnresolvedReason] = useState('');
+    const [feedbackPrompt, setFeedbackPrompt] = useState<string | null>(null);
+    const [humanRequestLoading, setHumanRequestLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLInputElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -72,6 +83,13 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
         const created = crypto.randomUUID();
         setConversationId(created);
         setMessages([]);
+        setHumanStatus('none');
+        setFeedbackByMessage({});
+        setSatisfactionByMessage({});
+        setRatingPromptMessageId(null);
+        setUnresolvedReasonMessageId(null);
+        setUnresolvedReason('');
+        setFeedbackPrompt(null);
         setInputMessage(initialDraft);
         window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, created);
     }, [initialDraft, farmId]);
@@ -102,8 +120,9 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
             const data = await response.json().catch(() => ({}));
             const fetched = Array.isArray(data?.conversations) ? data.conversations : [];
             setRecentConversations(fetched);
+            setLoadError(null);
         } catch {
-            // silencioso
+            setLoadError('Não foi possível carregar as conversas recentes.');
         }
     };
 
@@ -114,8 +133,30 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                 credentials: 'include',
             });
             const data = await response.json().catch(() => ({}));
-            if (!response.ok) return;
+            if (response.status === 404) return;
+            if (!response.ok) throw new Error(data?.message || 'Erro ao carregar conversa.');
             const fetched = Array.isArray(data?.messages) ? data.messages : [];
+            const fetchedFeedback = data?.feedbackByMessage && typeof data.feedbackByMessage === 'object'
+                ? data.feedbackByMessage
+                : {};
+            const fetchedSatisfaction = data?.satisfactionByMessage && typeof data.satisfactionByMessage === 'object'
+                ? data.satisfactionByMessage
+                : {};
+            const latestAiMessage = [...fetched]
+                .reverse()
+                .find((msg: any) => msg?.source === 'ai' && msg?.id);
+            setHumanStatus(data?.assumedByAdmin ? 'assumed' : data?.humanRequested ? 'requested' : 'none');
+            setFeedbackByMessage(fetchedFeedback);
+            setSatisfactionByMessage(fetchedSatisfaction);
+            setRatingPromptMessageId(
+                latestAiMessage?.id
+                && fetchedFeedback[latestAiMessage.id]
+                && !fetchedSatisfaction[latestAiMessage.id]
+                    ? latestAiMessage.id
+                    : null,
+            );
+            setUnresolvedReasonMessageId(null);
+            setUnresolvedReason('');
             setMessages(
                 fetched.map((msg: any) => ({
                     id: msg.id,
@@ -124,8 +165,9 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                     source: msg.source || (msg.role === 'user' ? 'user' : 'ai'),
                 })),
             );
-        } catch {
-            // silencioso
+            setLoadError(null);
+        } catch (error) {
+            setLoadError(error instanceof Error ? error.message : 'Não foi possível carregar a conversa.');
         }
     };
 
@@ -137,10 +179,12 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
         if (!conversationId) return;
         void loadConversationMessages(conversationId);
         const interval = window.setInterval(() => {
-            void loadConversationMessages(conversationId);
-        }, 4000);
+            if (document.visibilityState === 'visible') {
+                void loadConversationMessages(conversationId);
+            }
+        }, humanStatus === 'requested' || humanStatus === 'assumed' ? 5000 : 15000);
         return () => window.clearInterval(interval);
-    }, [conversationId]);
+    }, [conversationId, humanStatus]);
 
     const sendMessage = async (text?: string) => {
         const msgText = (text ?? inputMessage).trim();
@@ -153,18 +197,12 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
         setIsLoading(true);
 
         try {
-            const history = messages.map(msg => ({
-                role: msg.role,
-                parts: [{ text: msg.text }],
-            }));
-
             const response = await fetch(buildApiUrl('/api/chat/send-message'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({
                     message: msgText,
-                    history,
                     conversationId,
                     farmId,
                     currentPath: window.location.pathname,
@@ -181,12 +219,17 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                 setConversationId(data.conversationId);
                 window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, data.conversationId);
             }
+            setHumanStatus(data?.assumedByAdmin ? 'assumed' : data?.humanRequested ? 'requested' : 'none');
+            setLoadError(null);
+            setFeedbackPrompt(null);
             await loadConversationMessages(data?.conversationId || conversationId);
             await loadRecentConversations();
         } catch (error: any) {
+            const message = error instanceof Error ? error.message : 'Não foi possível processar sua pergunta.';
+            setLoadError(message);
             setMessages(prev => [...prev, {
                 role: 'model',
-                text: 'Desculpe, não consegui processar sua pergunta agora. Tente novamente em instantes.',
+                text: 'Desculpe, não consegui processar sua pergunta agora. Confira sua conexão e tente novamente.',
             }]);
         } finally {
             setIsLoading(false);
@@ -197,6 +240,14 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
         const created = crypto.randomUUID();
         setConversationId(created);
         setMessages([]);
+        setHumanStatus('none');
+        setLoadError(null);
+        setFeedbackByMessage({});
+        setSatisfactionByMessage({});
+        setRatingPromptMessageId(null);
+        setUnresolvedReasonMessageId(null);
+        setUnresolvedReason('');
+        setFeedbackPrompt(null);
         window.localStorage.setItem(`eixo_support_conversation_${farmId || 'global'}`, created);
         setRecentConversations((prev) => {
             const next = [
@@ -212,12 +263,100 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
         });
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             void sendMessage();
         }
     };
+
+    const sendFeedback = async (messageId: string, resolved: boolean, reason = '') => {
+        if (!messageId || feedbackLoading) return;
+        setFeedbackLoading(messageId);
+        try {
+            const response = await fetch(buildApiUrl('/api/chat/feedback'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ conversationId, messageId, resolved, reason: reason.trim() }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data?.message || 'Erro ao registrar avaliação.');
+            setFeedbackByMessage((previous) => ({
+                ...previous,
+                [messageId]: resolved ? 'resolved' : 'unresolved',
+            }));
+            setHumanStatus(data?.humanRequested ? 'requested' : humanStatus);
+            setFeedbackPrompt(
+                resolved
+                    ? 'Que bom! Fico feliz em ter ajudado.'
+                    : data?.humanRequested
+                        ? 'Entendi. A Equipe EIXO continuará o atendimento por aqui.'
+                        : data?.message || 'Conte o que aconteceu ou em qual etapa você parou. Vou tentar de outro jeito.',
+            );
+            setRatingPromptMessageId(messageId);
+            setUnresolvedReasonMessageId(null);
+            setUnresolvedReason('');
+            if (!resolved && !data?.humanRequested) inputRef.current?.focus();
+        } catch (error) {
+            setLoadError(error instanceof Error ? error.message : 'Não foi possível registrar sua avaliação.');
+        } finally {
+            setFeedbackLoading(null);
+        }
+    };
+
+    const sendSatisfaction = async (messageId: string, rating: number) => {
+        if (!messageId || satisfactionLoading) return;
+        setSatisfactionLoading(messageId);
+        try {
+            const response = await fetch(buildApiUrl('/api/chat/satisfaction'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ conversationId, messageId, rating }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data?.message || 'Erro ao registrar satisfação.');
+            setSatisfactionByMessage((previous) => ({ ...previous, [messageId]: Number(data.rating) }));
+            setRatingPromptMessageId(null);
+            setFeedbackPrompt('Obrigado pela avaliação. Ela ajuda a melhorar o EIXO Suporte.');
+        } catch (error) {
+            setLoadError(error instanceof Error ? error.message : 'Não foi possível registrar sua satisfação.');
+        } finally {
+            setSatisfactionLoading(null);
+        }
+    };
+
+    const requestHumanSupport = async () => {
+        if (!conversationId || humanRequestLoading || humanStatus !== 'none') return;
+        setHumanRequestLoading(true);
+        try {
+            const response = await fetch(buildApiUrl('/api/chat/request-human'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                    conversationId,
+                    farmId,
+                    currentPath: window.location.pathname,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(data?.message || 'Erro ao solicitar atendimento da Equipe EIXO.');
+            setHumanStatus(data?.assumedByAdmin ? 'assumed' : 'requested');
+            setLoadError(null);
+            await loadConversationMessages(data?.conversationId || conversationId);
+            await loadRecentConversations();
+        } catch (error) {
+            setLoadError(error instanceof Error ? error.message : 'Não foi possível chamar a Equipe EIXO.');
+        } finally {
+            setHumanRequestLoading(false);
+        }
+    };
+
+    const lastAiMessageId = [...messages]
+        .reverse()
+        .find((message) => message.role === 'model' && message.source === 'ai' && message.id)?.id;
 
     const handleInternalLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, href: string) => {
         if (!href.startsWith('eixo:view:')) return;
@@ -398,9 +537,26 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                     </div>
                 )}
 
+                {loadError && (
+                    <div role="alert" className="rounded-xl border border-[var(--eixo-danger)] bg-red-50 px-3 py-2 text-xs text-[var(--eixo-danger)]">
+                        <p>{loadError}</p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setLoadError(null);
+                                void loadRecentConversations();
+                                if (conversationId) void loadConversationMessages(conversationId);
+                            }}
+                            className="mt-2 rounded-lg border border-current px-2.5 py-1 font-semibold"
+                        >
+                            Tentar novamente
+                        </button>
+                    </div>
+                )}
+
                 {/* Mensagens */}
                 {messages.map((msg, index) => (
-                    <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div key={msg.id || index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                         {msg.role === 'model' && (
                             <div className="mr-2 mt-1 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-[var(--eixo-text)]">
                                 <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -414,15 +570,104 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                                 ? 'bg-[var(--eixo-text)] text-white rounded-br-sm'
                                 : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] rounded-bl-sm'
                         }`}>
-                            {msg.source === 'specialist' && (
-                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--eixo-success)]">Equipe EIXO</p>
+                            {(msg.source === 'specialist' || msg.source === 'ai') && (
+                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--eixo-success)]">
+                                    {msg.source === 'specialist' ? 'Equipe EIXO' : 'Eixo Suporte automático'}
+                                </p>
                             )}
                             <div className="space-y-1">
                                 {renderText(msg.text)}
                             </div>
+                            {msg.id && msg.id === lastAiMessageId && !feedbackByMessage[msg.id] && humanStatus === 'none' && (
+                                <div className="mt-3 border-t border-[var(--eixo-border)] pt-2">
+                                    <p className="mb-1.5 text-[11px] font-medium text-[var(--eixo-text-muted)]">Isso resolveu sua dúvida?</p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => void sendFeedback(msg.id as string, true)}
+                                            disabled={feedbackLoading === msg.id}
+                                            className="rounded-lg border border-[var(--eixo-border)] bg-white px-2.5 py-1 text-[11px] font-semibold hover:bg-[var(--eixo-green-soft)] disabled:opacity-50"
+                                        >
+                                            Sim, resolveu
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setUnresolvedReasonMessageId(msg.id as string);
+                                                setUnresolvedReason('');
+                                            }}
+                                            disabled={feedbackLoading === msg.id}
+                                            className="rounded-lg border border-[var(--eixo-border)] bg-white px-2.5 py-1 text-[11px] font-semibold hover:bg-[var(--eixo-surface)] disabled:opacity-50"
+                                        >
+                                            Ainda não
+                                        </button>
+                                    </div>
+                                    {unresolvedReasonMessageId === msg.id && (
+                                        <div className="mt-2 space-y-2">
+                                            <label className="block text-[11px] text-[var(--eixo-text-muted)]" htmlFor={`support-reason-${msg.id}`}>
+                                                Em qual etapa você parou?
+                                            </label>
+                                            <textarea
+                                                id={`support-reason-${msg.id}`}
+                                                value={unresolvedReason}
+                                                onChange={(event) => setUnresolvedReason(event.target.value.slice(0, 300))}
+                                                maxLength={300}
+                                                rows={2}
+                                                placeholder="Descreva o motivo em uma frase curta."
+                                                className="w-full resize-none rounded-lg border border-[var(--eixo-border)] bg-white px-2.5 py-2 text-xs text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-success)]"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => void sendFeedback(msg.id as string, false, unresolvedReason)}
+                                                disabled={feedbackLoading === msg.id || unresolvedReason.trim().length < 3}
+                                                className="rounded-lg bg-[var(--eixo-text)] px-2.5 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
+                                            >
+                                                Enviar motivo
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {msg.id
+                                && msg.id === lastAiMessageId
+                                && feedbackByMessage[msg.id]
+                                && !satisfactionByMessage[msg.id]
+                                && ratingPromptMessageId === msg.id && (
+                                <div className="mt-3 border-t border-[var(--eixo-border)] pt-2">
+                                    <p className="mb-1.5 text-[11px] font-medium text-[var(--eixo-text-muted)]">Como você avalia este atendimento?</p>
+                                    <div className="flex gap-1">
+                                        {[1, 2, 3, 4, 5].map((rating) => (
+                                            <button
+                                                key={rating}
+                                                type="button"
+                                                onClick={() => void sendSatisfaction(msg.id as string, rating)}
+                                                disabled={satisfactionLoading === msg.id}
+                                                aria-label={`${rating} de 5`}
+                                                className="h-7 w-7 rounded-lg border border-[var(--eixo-border)] bg-white text-xs font-bold hover:bg-[var(--eixo-green-soft)] disabled:opacity-50"
+                                            >
+                                                {rating}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ))}
+
+                {feedbackPrompt && (
+                    <p role="status" className="rounded-xl bg-[var(--eixo-green-soft)] px-3 py-2 text-xs text-[var(--eixo-text)]">
+                        {feedbackPrompt}
+                    </p>
+                )}
+
+                {humanStatus !== 'none' && (
+                    <p role="status" className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs text-[var(--eixo-text)]">
+                        {humanStatus === 'assumed'
+                            ? 'A Equipe EIXO está acompanhando esta conversa.'
+                            : 'A conversa foi encaminhada para a Equipe EIXO.'}
+                    </p>
+                )}
 
                 {/* Indicador de digitando */}
                 {isLoading && (
@@ -453,17 +698,17 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                 >
                     Iniciar nova conversa
                 </button>
-                <div className={`flex items-center gap-2 rounded-2xl border bg-[var(--eixo-surface-soft)] px-3 py-2 transition-colors ${inputMessage.length >= MAX_CHARS ? 'border-[#c0644a]' : 'border-[var(--eixo-border)]'}`}>
-                    <input
+                <div className={`flex items-end gap-2 rounded-2xl border bg-[var(--eixo-surface-soft)] px-3 py-2 transition-colors ${inputMessage.length >= MAX_CHARS ? 'border-[#c0644a]' : 'border-[var(--eixo-border)]'}`}>
+                    <textarea
                         ref={inputRef}
-                        type="text"
                         value={inputMessage}
                         onChange={(e) => setInputMessage(e.target.value.slice(0, MAX_CHARS))}
                         onKeyDown={handleKeyDown}
                         placeholder={conversationId ? 'Digite sua dúvida...' : 'Escolha um histórico ou inicie nova conversa'}
                         disabled={isLoading || !conversationId}
                         maxLength={MAX_CHARS}
-                        className="flex-1 bg-transparent text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:outline-none disabled:opacity-50"
+                        rows={2}
+                        className="max-h-28 min-h-10 flex-1 resize-none bg-transparent text-sm text-[var(--eixo-text)] placeholder-[var(--eixo-text-soft)] focus:outline-none disabled:opacity-50"
                     />
                     <button
                         type="button"
@@ -475,8 +720,19 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                         <SendIcon />
                     </button>
                 </div>
+                <p className="mt-1 text-right text-[10px] text-[var(--eixo-text-soft)]">{inputMessage.length}/{MAX_CHARS}</p>
+                {humanStatus === 'none' && (
+                    <button
+                        type="button"
+                        onClick={() => void requestHumanSupport()}
+                        disabled={humanRequestLoading || !conversationId}
+                        className="mt-1 w-full text-center text-[11px] font-semibold text-[var(--eixo-text-muted)] underline underline-offset-2 hover:text-[var(--eixo-text)] disabled:opacity-50"
+                    >
+                        {humanRequestLoading ? 'Chamando a Equipe EIXO...' : 'Preciso falar com a Equipe EIXO'}
+                    </button>
+                )}
                 <p className="mt-2 text-center text-[10px] text-[var(--eixo-text-soft)]">
-                    Eixo Suporte responde dúvidas sobre o uso do sistema.
+                    Eixo Suporte responde com base na versão atual do sistema.
                 </p>
             </div>
         </div>

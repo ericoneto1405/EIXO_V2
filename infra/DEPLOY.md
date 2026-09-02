@@ -34,6 +34,7 @@ Autorizações técnicas solicitadas pelo sistema operacional ou pela ferramenta
 - Trabalhar em uma branch separada.
 - Revisar o diff e confirmar o escopo.
 - Validar o TypeScript e o build.
+- Executar os testes do backend e validar o conhecimento do EIXO Suporte.
 - Abrir um pull request para `main`.
 - Mesclar somente com o CI aprovado.
 
@@ -44,14 +45,15 @@ Os secrets `VPS_HOST`, `VPS_USER` e `VPS_SSH_KEY` devem estar configurados no Gi
 1. Instala as dependências com `npm ci`.
 2. Gera o Prisma Client.
 3. Valida o TypeScript e constrói o frontend.
-4. Conecta na VPS por SSH.
-5. Atualiza `/var/www/eixo` para a versão da `main`.
-6. Preserva e recarrega `server/.env.production`.
-7. Cria um backup do banco.
-8. Aplica as migrações pendentes do Prisma.
-9. Constrói o frontend na VPS.
-10. Reinicia `eixo-server` pelo PM2.
-11. Confirma a saúde da API e a disponibilidade do site.
+4. Executa os testes do backend e valida links, tópicos e atualização do EIXO Suporte.
+5. Conecta na VPS por SSH.
+6. Atualiza `/var/www/eixo` para a versão da `main`.
+7. Preserva e recarrega `server/.env.production`.
+8. Cria um backup do banco.
+9. Aplica as migrações pendentes do Prisma.
+10. Constrói o frontend na VPS.
+11. Reinicia `eixo-server` pelo PM2.
+12. Confirma a saúde da API, a versão ativa do EIXO Suporte e a disponibilidade do site.
 
 Se a validação, o backup, a migração, o build ou um health check falhar, o workflow termina com erro.
 
@@ -84,6 +86,16 @@ A preparação inicial do servidor, PostgreSQL, Nginx, SSL e PM2 está documenta
 O arquivo `server/.env.production` existe somente na VPS e não deve ser versionado. Antes de qualquer deploy, ele precisa conter as credenciais e configurações reais de produção.
 
 O CI continua usando Node.js 20 até a migração coordenada do projeto e da VPS para Node.js 24.
+
+## Implantação gradual do EIXO Suporte
+
+Configure `SUPPORT_ROLLOUT_MODE` no `server/.env.production`:
+
+- `shadow`: gera a resposta candidata apenas para revisão no HQ e encaminha o cliente para a Equipe EIXO;
+- `pilot`: mostra a nova resposta somente às organizações listadas em `SUPPORT_PILOT_ORGANIZATION_IDS`;
+- `full`: libera o novo autoatendimento para todos.
+
+Use IDs de organização separados por vírgula no piloto. Avance de `shadow` para `pilot` e depois para `full` somente quando segurança, precisão, links e satisfação estiverem dentro das metas do plano.
 
 ## Backup
 
