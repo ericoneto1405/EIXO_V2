@@ -1,0 +1,43 @@
+#!/bin/sh
+# Roda as mesmas checagens do CI antes do push sair da maquina.
+# Para pular de proposito: git push --no-verify
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+ZERO=0000000000000000000000000000000000000000
+BASE=""
+HOJE=$(date +%Y-%m-%d)
+
+# git entrega no stdin: <ref local> <sha local> <ref remoto> <sha remoto>
+while read -r _lref lsha _rref rsha; do
+    [ "$lsha" = "$ZERO" ] && continue
+    if [ "$rsha" != "$ZERO" ] && git cat-file -e "$rsha" 2>/dev/null; then
+        BASE="$rsha"
+    fi
+done
+
+echo "→ Conhecimento do EIXO Suporte..."
+if ! SUPPORT_BASE_SHA="$BASE" npm run support:validate --workspace server; then
+    echo ""
+    echo "✗ Push cancelado. Mexeu em tela sensivel sem revisar o conhecimento do suporte."
+    echo "  Edite server/modules/chat/supportKnowledge.js (linhas 3 e 4):"
+    echo "    SUPPORT_KNOWLEDGE_REVISION   = '$HOJE.1'   (se ja tem .1 hoje, use .2, .3...)"
+    echo "    SUPPORT_KNOWLEDGE_UPDATED_AT = '$HOJE'"
+    exit 1
+fi
+
+echo "→ TypeScript do frontend..."
+if ! npx tsc -p frontend/tsconfig.json --noEmit; then
+    echo ""
+    echo "✗ Push cancelado. O TypeScript acima quebra o build no CI."
+    exit 1
+fi
+
+echo "→ Testes do backend..."
+if ! npm test --workspace server; then
+    echo ""
+    echo "✗ Push cancelado: teste do backend falhando."
+    exit 1
+fi
+
+echo "✓ Passou nas mesmas checagens do CI. Subindo..."
