@@ -274,8 +274,8 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             </div>
 
             <h1 className="font-brand text-balance text-3xl font-semibold tracking-[0.01em] leading-[1.12] text-[var(--eixo-text)] sm:text-4xl lg:text-6xl">
-              Gestão pecuária no eixo.<br />
-              <span className="text-[#7aad1a]">Decisão na mão.</span>
+              Sua fazenda organizada,<br />
+              <span className="text-[#7aad1a]">sem precisar entender de tecnologia.</span>
             </h1>
 
             <p className="mt-6 max-w-2xl font-sans text-lg font-normal leading-relaxed text-[var(--eixo-text-muted)] lg:text-xl">
