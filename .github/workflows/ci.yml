@@ -1,8 +1,8 @@
 name: ci
 
+# Roda so em pull request. Push na main e checado pelo job "CI - Build & Validate"
+# dentro do deploy.yml, que faz exatamente os mesmos passos.
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
 
