@@ -8,6 +8,7 @@ export const otpVerifyAttempts = new Map();
 export const chatRateAttempts = new Map();
 export const chatBurstAttempts = new Map();
 export const forgotPasswordAttempts = new Map();
+export const cnpjLookupAttempts = new Map();
 
 // ─── Funções Genéricas de Rate Limiting ────────────────────────────────────────
 

@@ -10,6 +10,7 @@ import {
     OTP_SEND_WINDOW_MS, OTP_SEND_MAX_PER_IP, OTP_SEND_MAX_PER_PHONE,
     OTP_VERIFY_WINDOW_MS, OTP_VERIFY_MAX_PER_IP, OTP_VERIFY_MAX_PER_PHONE,
     FORGOT_PASSWORD_WINDOW_MS, FORGOT_PASSWORD_MAX_ATTEMPTS,
+    CNPJ_LOOKUP_WINDOW_MS, CNPJ_LOOKUP_MAX_PER_IP,
     APP_BASE_URL, RESEND_FROM_EMAIL, TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_VERIFY_SID,
     PASSWORD_POLICY_MESSAGE, AVATAR_UPLOAD_ROOT,
     APP_ACTIVATION_CODE_TTL_MS, APP_ACTIVATION_CODE_ALPHABET, PHONE_VERIFY_TTL_MS,
@@ -23,7 +24,7 @@ import {
 } from '../utils/saasContext.js';
 import { logActivity } from '../utils/activityLog.js';
 import {
-    otpSendAttempts, otpVerifyAttempts, forgotPasswordAttempts,
+    otpSendAttempts, otpVerifyAttempts, forgotPasswordAttempts, cnpjLookupAttempts,
     isWindowRateLimited, registerWindowAttempt, clearWindowAttempt, getWindowRetryAfterSeconds,
     isAnyLoginRateLimited, registerFailedLogin, clearLoginAttempts,
     registerFailedLogins, clearLoginRateLimits,
@@ -235,10 +236,17 @@ app.post('/auth/register/check-email', async (req, res) => {
 
 // ─── Consulta pública de CNPJ (Receita Federal) ──────────────────────────────
 app.get('/public/cnpj/:cnpj', async (req, res) => {
+    const ipKey = `ip:${req.ip || 'unknown'}`;
+    if (isWindowRateLimited(cnpjLookupAttempts, ipKey, CNPJ_LOOKUP_MAX_PER_IP, CNPJ_LOOKUP_WINDOW_MS)) {
+        const retryAfter = getWindowRetryAfterSeconds(cnpjLookupAttempts, ipKey, CNPJ_LOOKUP_WINDOW_MS);
+        res.set('Retry-After', String(retryAfter));
+        return res.status(429).json({ message: 'Muitas consultas de CNPJ. Tente novamente em instantes.' });
+    }
     const cnpj = req.params.cnpj.replace(/\D/g, '');
     if (cnpj.length !== 14) {
         return res.status(400).json({ message: 'CNPJ deve ter 14 dígitos.' });
     }
+    registerWindowAttempt(cnpjLookupAttempts, ipKey, CNPJ_LOOKUP_WINDOW_MS);
     try {
         const data = await fetchCnpjData(cnpj);
         return res.json(data);
