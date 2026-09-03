@@ -122,11 +122,12 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
   const btnSecondary = `inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)] ${focusRing}`;
   const headerSecondaryButton = `inline-flex h-10 items-center justify-center rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]/70 px-4 text-sm font-semibold text-[var(--eixo-text)] shadow-sm transition-colors hover:bg-[var(--eixo-surface)] ${focusRing}`;
   const headerPrimaryButton = `inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.76)] bg-[rgba(182,226,58,0.82)] px-5 text-sm font-bold text-[#1a1a1a] shadow-[0_10px_22px_rgba(121,160,24,0.18),inset_0_1px_0_rgba(255,255,255,0.58)] transition-all duration-200 hover:bg-[rgba(182,226,58,0.92)] hover:shadow-[0_12px_28px_rgba(121,160,24,0.24),inset_0_1px_0_rgba(255,255,255,0.66)] ${focusRing}`;
-  const navItems: Array<{ label: string; id: NavSectionId; action: () => void }> = [
-    { label: 'EIXO Essencial', id: 'gratis', action: () => scrollTo('gratis') },
+  const navItems: Array<{ label: string; id: string; action: () => void }> = [
+    { label: 'O que você ganha', id: 'gratis', action: () => scrollTo('gratis') },
     { label: 'Antes e Depois', id: 'antes-depois', action: () => scrollTo('antes-depois') },
     { label: 'Como funciona', id: 'como', action: () => scrollTo('como') },
     { label: 'Dúvidas', id: 'faq', action: () => scrollTo('faq') },
+    { label: 'Ver Planos', id: 'planos', action: () => { window.location.href = '/planos'; } },
   ];
 
   return (
@@ -135,10 +136,10 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
       {/* ── Nav ── */}
       <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${isScrolled ? 'border-b border-[var(--eixo-border)] bg-[var(--eixo-bg)]/95 shadow-sm backdrop-blur' : 'bg-[var(--eixo-bg)]'}`}>
         <div className="mx-auto flex h-[75px] max-w-7xl items-center justify-between px-4 lg:px-8">
-          <div className="inline-flex flex-col items-center leading-none">
+          <div className="inline-flex shrink-0 flex-col items-center leading-none">
             <img src="/logo_eixo_official.svg" alt="EIXO" className="h-[2.53575rem] w-auto" />
             <div className="mt-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] whitespace-nowrap text-[var(--eixo-text)]/75">
-              Tecnologia para Gestão Pecuária
+              Gestão para Pecuária de Corte
             </div>
           </div>
           <nav
@@ -170,13 +171,6 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             >
               {menuOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
             </button>
-            <button
-              type="button"
-              onClick={() => { window.location.href = '/planos'; }}
-              className={`hidden h-10 items-center rounded-xl border border-white/62 bg-white/46 px-4 text-sm font-semibold text-[var(--eixo-text)] shadow-[0_9px_20px_rgba(47,47,47,0.10),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-xl transition-all duration-200 hover:border-white/86 hover:bg-white/62 lg:inline-flex ${focusRing}`}
-            >
-              Ver Planos
-            </button>
             <button type="button" onClick={onEnter} className={`${headerSecondaryButton} hidden md:inline-flex`}>
               Entrar
             </button>
@@ -195,7 +189,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
               }}
               className={`w-full py-3 text-left text-base font-brand font-semibold text-[var(--eixo-text)] ${focusRing}`}
             >
-              EIXO Essencial
+              O que você ganha
             </button>
             <button
               type="button"

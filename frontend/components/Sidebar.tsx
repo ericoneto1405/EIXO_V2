@@ -660,7 +660,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                             <div className="flex min-h-[108px] w-[88%] flex-col items-center justify-center">
                                 <img src="/logo_eixo_official.svg" alt="EIXO" className="h-auto w-full max-w-[236px]" />
                                 <p className="mt-2 w-full max-w-[236px] text-center text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--eixo-border-strong)]">
-                                    Gestão Pecuária de Corte
+                                    Gestão para Pecuária de Corte
                                 </p>
                             </div>
                         )}

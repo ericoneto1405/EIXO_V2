@@ -71,7 +71,7 @@ const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess }) => {
                     <div className="mb-10">
                         <img src="/logo_eixo_official.svg" alt="EIXO" className="h-10 w-auto" />
                         <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--eixo-text)]/72">
-                            Plataforma de Gestão Pecuária
+                            Gestão para Pecuária de Corte
                         </div>
                     </div>
 

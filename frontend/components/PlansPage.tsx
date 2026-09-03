@@ -202,7 +202,7 @@ const PlansPage: React.FC<PlansPageProps> = ({
                     <div className="inline-flex flex-col items-center leading-none">
                         <img src="/logo_eixo_official.svg" alt="EIXO" className="h-7" />
                         <span className="mt-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] whitespace-nowrap text-[var(--eixo-text)]/75">
-                            Tecnologia para Gestão Pecuária
+                            Gestão para Pecuária de Corte
                         </span>
                     </div>
                     <div className="w-[92px]" aria-hidden="true" />

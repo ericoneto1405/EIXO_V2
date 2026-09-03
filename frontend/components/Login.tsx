@@ -56,7 +56,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                     <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-6 pt-4 sm:pb-10 sm:pt-8 lg:px-8">
                         <div className="mb-4 sm:mb-10">
                             <img src="/logo_eixo_official.svg" alt="EIXO" className="h-10 w-auto" />
-                            <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--eixo-text)]/72">Plataforma de Gestão Pecuária</div>
+                            <div className="text-[11px] uppercase tracking-[0.18em] text-[var(--eixo-text)]/72">Gestão para Pecuária de Corte</div>
                         </div>
 
                         <div className="flex flex-1 items-center justify-center">
