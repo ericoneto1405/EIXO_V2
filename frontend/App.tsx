@@ -1047,6 +1047,26 @@ const AppContent: React.FC = () => {
                 );
             }
 
+            // Reprodução tem rota própria (fora do switch(activeView) abaixo), então
+            // a trava de plano precisa ser checada aqui também — senão quem digita a
+            // URL direto no plano grátis entra na tela e ela quebra (API barra por trás).
+            if (location.pathname.startsWith('/genetics/reproducao')) {
+                const reproducaoUpgrade = getUpgradeModuleForView('Reprodução');
+                if (reproducaoUpgrade) {
+                    return (
+                        <UpgradeScreen
+                            moduleName={reproducaoUpgrade.moduleName}
+                            icon={reproducaoUpgrade.icon}
+                            tagline={reproducaoUpgrade.tagline}
+                            benefits={reproducaoUpgrade.benefits}
+                            requiredPlan={reproducaoUpgrade.requiredPlan}
+                            previewItems={reproducaoUpgrade.previewItems}
+                            onUpgrade={() => setUpgradeModal(reproducaoUpgrade.moduleName)}
+                        />
+                    );
+                }
+            }
+
             const withFarmGuard = (content: React.ReactNode) =>
                 hasSelectedFarm ? content : (
                     <FarmRequiredPanel title="Selecione uma fazenda para continuar" />

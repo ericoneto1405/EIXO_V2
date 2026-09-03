@@ -10,6 +10,7 @@ import {
     listWeighingSessions,
     updateWeighing,
 } from '../adapters/herdApi';
+import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import type {
     HerdAnimal,
     HerdLot,
@@ -36,6 +37,16 @@ interface PendingReplaceData {
     lotName: string | null;
     date: string;
     weightKg: number;
+}
+
+interface OfflinePesagem {
+    animalId: string;
+    animalLabel: string;
+    lotName: string | null;
+    herdType: HerdType;
+    date: string;
+    weightKg: number;
+    weighingSessionId: string | null;
 }
 
 interface WeighingsTabProps {
@@ -241,6 +252,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
     const [pendingReplace, setPendingReplace] = useState<PendingReplaceData | null>(null);
     const [activeSessionMode, setActiveSessionMode] = useState<SessionMode>('INDIVIDUAL');
     const [manualSessionWeighings, setManualSessionWeighings] = useState<ManualSessionWeighing[]>([]);
+    const offlinePesagens = useOfflineQueue<OfflinePesagem>('eixo:pesagens:offline:', farmId);
     const [groupAnimalsCount, setGroupAnimalsCount] = useState('');
     const [groupTotalWeight, setGroupTotalWeight] = useState('');
     const [groupSelectedAnimalIds, setGroupSelectedAnimalIds] = useState<string[]>([]);
@@ -658,6 +670,38 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
             window.dispatchEvent(new Event('eixo:herd-onboarding-progress-changed'));
             window.setTimeout(() => animalCodeInputRef.current?.focus(), 0);
         } catch (err: any) {
+            const isNetworkFailure = err instanceof TypeError
+                || (typeof navigator !== 'undefined' && navigator.onLine === false);
+
+            if (isNetworkFailure && !forceReplace) {
+                offlinePesagens.enqueue({
+                    animalId: animal.id,
+                    animalLabel: animal.identificacao || animal.brinco || animal.nome || animal.id,
+                    lotName,
+                    herdType,
+                    date: formDate,
+                    weightKg: pesoNum,
+                    weighingSessionId: activeSession ? activeSession.id : null,
+                });
+                setPendingReplace(null);
+                setManualSessionWeighings((current) => [
+                    {
+                        animalId: animal.id,
+                        animalLabel: animal.identificacao || animal.brinco || animal.nome || animal.id,
+                        lotName,
+                        date: formDate,
+                        weightKg: pesoNum,
+                        savedAt: new Date().toISOString(),
+                    },
+                    ...current,
+                ]);
+                setFormMsg({ text: 'Sem internet agora — pesagem salva no celular. Sincroniza quando o sinal voltar.', type: 'success' });
+                setFormWeight('');
+                setFormAnimalCode('');
+                window.setTimeout(() => animalCodeInputRef.current?.focus(), 0);
+                return;
+            }
+
             const message = err?.message ?? 'Erro ao salvar.';
             if (message.includes('Já existe pesagem cadastrada nesta data.')) {
                 setPendingReplace({
@@ -674,6 +718,26 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
             }
         } finally {
             setFormSaving(false);
+        }
+    };
+
+    const syncOfflinePesagens = async () => {
+        setFormMsg(null);
+        const result = await offlinePesagens.sync(async (item) => {
+            await createWeighing(item.animalId, item.herdType, {
+                data: item.date,
+                peso: item.weightKg,
+                ...(item.weighingSessionId ? { weighingSessionId: item.weighingSessionId } : {}),
+            });
+        });
+        if (result.sent > 0) {
+            load();
+            loadSessions();
+        }
+        if (result.pending > 0) {
+            setFormMsg({ text: `${result.sent} pesagem(ns) sincronizada(s). ${result.pending} ainda sem internet.`, type: 'error' });
+        } else if (result.sent > 0) {
+            setFormMsg({ text: `${result.sent} pesagem(ns) sincronizada(s) com sucesso!`, type: 'success' });
         }
     };
 
@@ -1481,6 +1545,20 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                             placeholder="Buscar animal"
                                             className="w-40 rounded-lg border border-[#d7cab3] bg-[#fffaf1] px-2 py-1 text-xs text-[#2f3a2d] outline-none focus:border-[#9d7d4d]"
                                         />
+                                    </div>
+                                )}
+                                {offlinePesagens.pendingCount > 0 && (
+                                    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-xs text-[#6d6558]">
+                                        <span>
+                                            {offlinePesagens.pendingCount} pesagem(ns) salva(s) no celular, aguardando internet.
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => { void syncOfflinePesagens(); }}
+                                            className="rounded-lg bg-[#9d7d4d] px-2.5 py-1 font-semibold text-white hover:bg-[#8f7144]"
+                                        >
+                                            Sincronizar agora
+                                        </button>
                                     </div>
                                 )}
                                 {formMsg && (
