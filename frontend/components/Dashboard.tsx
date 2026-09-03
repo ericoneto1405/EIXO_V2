@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import WeatherCard from './WeatherCard';
-import CattleNewsCard from './CattleNewsCard';
 import { buildApiUrl } from '../api';
 import { getReproKpis, getReproFarol, ReproKpis, ReproFarol } from '../adapters/reproApi';
 
@@ -77,98 +76,16 @@ interface KpiData {
     areaTotalHa: number | null;
 }
 
-type ReplacementRatioStatus = 'FAVORAVEL' | 'EQUILIBRADA' | 'PRESSIONADA' | 'SEM_DADOS';
-type FatCattleSignalStatus = 'BOM' | 'NEUTRO' | 'RUIM' | 'SEM_DADOS';
-
-interface MarketSignal {
-    status: FatCattleSignalStatus | ReplacementRatioStatus;
-    signal: string;
-    label: string;
-    text: string;
-}
-
-interface ReplacementMarketSnapshot {
-    fatCattlePricePerArroba: number | null;
-    finishedAnimalWeightArrobas: number | null;
-    finishedAnimalGrossValue: number | null;
-    replacementAnimalType: 'BEZERRO_DESMAMA' | 'BEZERRO_12M' | 'GARROTE' | 'BOI_MAGRO' | 'NOVILHA' | null;
-    replacementAnimalTypeLabel: string | null;
-    replacementAnimalPrice: number | null;
-    replacementAnimalWeightArrobas: number | null;
-    replacementCostInFatArrobas: number | null;
-    replacementAnimalsPerFinishedAnimal: number | null;
-    replacementArrobaPrice: number | null;
-    replacementPremiumPercent: number | null;
-    replacementPremiumInFatArrobas: number | null;
-    replacementRatio?: number | null;
-    status: ReplacementRatioStatus;
-    statusLabel: string;
-    interpretation: string;
-    region: string | null;
-    state: string | null;
-    sourceName: string | null;
-    sourceBase?: string | null;
-    referenceDate: string | null;
-    fatCattleTrendPercent?: number | null;
-    replacementAnimalTrendPercent?: number | null;
-    replacementCostTrendArrobas?: number | null;
-    fatCattleSignal?: MarketSignal | null;
-    replacementSignal?: MarketSignal | null;
-    aiInsight?: {
-        summary: string;
-        detail: string;
-        attentionPoints: string[];
-        tone: 'OPORTUNIDADE' | 'NEUTRO' | 'CAUTELA' | 'SEM_DADOS';
-        generatedBy: 'RULES_FALLBACK' | 'AI';
-    } | null;
-}
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const fmt = (n: number, decimals = 1) =>
     n.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-
-const fmtMoney = (n: number) =>
-    n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const formatMarketReferenceDate = (value: string | null | undefined) => {
-    if (!value) return null;
-    const raw = String(value).trim();
-    if (!raw) return null;
-    const datePart = raw.includes('T') ? raw.split('T')[0] : raw;
-    const parts = datePart.split('-');
-    if (parts.length !== 3) return null;
-    const [year, month, day] = parts;
-    if (!year || !month || !day) return null;
-    if (year.length !== 4 || month.length !== 2 || day.length !== 2) return null;
-    return `${day}/${month}/${year}`;
-};
 
 // Classifica taxa de ocupação
 const getOccupationStatus = (taxa: number) => {
     if (taxa < 0.8) return { label: 'Leve', color: 'text-[var(--eixo-info)]', bg: 'bg-[rgba(63,111,143,0.10)]' };
     if (taxa <= 1.5) return { label: 'Adequada', color: 'text-[var(--eixo-success)]', bg: 'bg-[var(--eixo-green-soft)]' };
     return { label: 'Sobrecarregado', color: 'text-[var(--eixo-danger)]', bg: 'bg-[rgba(184,66,50,0.08)]' };
-};
-
-const getSignalUi = (status?: string | null) => {
-    if (status === 'FAVORAVEL' || status === 'BOM') {
-        return { cls: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' };
-    }
-    if (status === 'EQUILIBRADA' || status === 'NEUTRO') {
-        return { cls: 'bg-[rgba(213,150,0,0.10)] text-[#8a6000]' };
-    }
-    if (status === 'PRESSIONADA' || status === 'RUIM') {
-        return { cls: 'bg-[rgba(184,66,50,0.10)] text-[var(--eixo-danger)]' };
-    }
-    return { cls: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' };
-};
-
-const trendLabel = (value: number | null | undefined, suffix = '%') => {
-    if (value === null || value === undefined) return 'sem histórico';
-    if (value > 0) return `↑ ${fmt(Math.abs(value), 1)}${suffix} na semana`;
-    if (value < 0) return `↓ ${fmt(Math.abs(value), 1)}${suffix} na semana`;
-    return `→ ${fmt(0, 1)}${suffix} na semana`;
 };
 
 // ─── KPI Card ─────────────────────────────────────────────────────────────────
@@ -204,7 +121,6 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
         totalAnimais: 0, nascimentosMes: 0, categorias: [], taxaOcupacao: null,
         gmdMedio: null, entradas: null, saidas: null, saldoMes: null, animaisSemPesagem: 0, areaTotalHa: null,
     });
-    const [marketReplacement, setMarketReplacement] = useState<ReplacementMarketSnapshot | null>(null);
     const [reproKpis, setReproKpis] = useState<ReproKpis | null>(null);
     const [reproFarol, setReproFarol] = useState<ReproFarol | null>(null);
     const [loading, setLoading] = useState(false);
@@ -238,7 +154,6 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
 
                 if (!active) return;
                 const payload = overviewData?.kpis || {};
-                const marketPayload = overviewData?.marketReplacement || null;
                 setKpis({
                     totalAnimais: Number(payload.totalAnimais || 0),
                     nascimentosMes: Number(payload.nascimentosMes || 0),
@@ -251,7 +166,6 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                     animaisSemPesagem: Number(payload.animaisSemPesagem || 0),
                     areaTotalHa: payload.areaTotalHa ?? null,
                 });
-                setMarketReplacement(marketPayload);
 
                 // Camada de decisão: reprodução (só por fazenda selecionada)
                 if (scope === 'farm' && farmId) {
@@ -288,33 +202,6 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
 
     const occupationStatus = kpis.taxaOcupacao !== null ? getOccupationStatus(kpis.taxaOcupacao) : null;
     const mesLabel = new Date().toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-    const marketSnapshot = marketReplacement;
-    const replacementSignalLabel = marketSnapshot?.replacementSignal?.status === 'EQUILIBRADA'
-        ? 'Ágio alto na reposição'
-        : (marketSnapshot?.replacementSignal?.label || 'Sem dados de reposição');
-    const replacementSignalText = marketSnapshot?.replacementSignal?.status === 'EQUILIBRADA'
-        ? 'O bezerro está 31,5% acima da arroba do boi gordo. Só fecha com GMD e custo controlados.'
-        : (marketSnapshot?.replacementSignal?.text || 'Ainda não há dados suficientes para analisar a compra da reposição.');
-    const replacementSignalPill = marketSnapshot?.replacementSignal?.status === 'EQUILIBRADA'
-        ? 'Cautela forte'
-        : (marketSnapshot?.replacementSignal?.signal || 'Sem dados');
-    const fatSignalText = marketSnapshot?.fatCattleSignal?.status === 'NEUTRO'
-        ? 'Sem histórico e custo da fazenda, o sistema ainda não crava se a venda está boa.'
-        : (marketSnapshot?.fatCattleSignal?.text || 'Ainda não há dados suficientes para avaliar o sinal do boi gordo.');
-    const marketHasData = Boolean(
-        marketSnapshot
-        && marketSnapshot.replacementSignal?.status !== 'SEM_DADOS'
-        && marketSnapshot.fatCattlePricePerArroba !== null
-        && marketSnapshot.replacementAnimalPrice !== null
-        && marketSnapshot.replacementAnimalWeightArrobas !== null
-        && marketSnapshot.replacementCostInFatArrobas !== null
-        && marketSnapshot.replacementAnimalsPerFinishedAnimal !== null
-        && marketSnapshot.replacementArrobaPrice !== null
-        && marketSnapshot.replacementPremiumPercent !== null,
-    );
-    const compactInsight = marketHasData
-        ? `Bezerro custa ${fmt(marketSnapshot!.replacementCostInFatArrobas as number, 1)} @ de boi gordo e tem ágio de ${fmt(marketSnapshot!.replacementPremiumPercent as number, 1)}%. Só faz sentido com recria eficiente.`
-        : (marketSnapshot?.aiInsight?.detail || '');
 
     return (
         <div className="space-y-6">
@@ -527,108 +414,10 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                 );
             })()}
 
-            {/* Clima + Notícias */}
-            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
-                <div className="mb-4 flex items-center justify-between gap-3">
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Mercado e Reposição</p>
-                        <p className="mt-1 text-sm text-[var(--eixo-text-soft)]">
-                            {(marketSnapshot?.region || marketSnapshot?.state || 'Região não configurada')}
-                            {marketSnapshot?.sourceName ? ` • ${marketSnapshot.sourceName}` : ''}
-                            {formatMarketReferenceDate(marketSnapshot?.referenceDate) ? ` • Referência: ${formatMarketReferenceDate(marketSnapshot?.referenceDate)}` : ''}
-                        </p>
-                    </div>
-                </div>
+            {/* Clima */}
 
-                {!marketHasData ? (
-                    <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
-                        <p className="text-sm font-semibold text-[var(--eixo-text)]">Ainda não há dados suficientes para analisar mercado e reposição.</p>
-                        <p className="mt-2 text-xs text-[var(--eixo-text-soft)]">A cotação regional ainda não está disponível.</p>
-                    </div>
-                ) : (
-                    <>
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Sinal do boi gordo</p>
-                                <div className="mt-1 flex items-center gap-2">
-                                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${getSignalUi(marketSnapshot?.fatCattleSignal?.status).cls}`}>
-                                        {marketSnapshot?.fatCattleSignal?.signal || 'Sem dados'}
-                                    </span>
-                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{marketSnapshot?.fatCattleSignal?.label || 'Sem dados da arroba'}</p>
-                                </div>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{fatSignalText}</p>
-                            </div>
-                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Sinal da reposição</p>
-                                <div className="mt-1 flex items-center gap-2">
-                                    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${getSignalUi(marketSnapshot?.replacementSignal?.status).cls}`}>
-                                        {replacementSignalPill}
-                                    </span>
-                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{replacementSignalLabel}</p>
-                                </div>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{replacementSignalText}</p>
-                            </div>
-                        </div>
-
-                        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4">
-                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Boi gordo</p>
-                                <p className="mt-1 text-lg font-extrabold text-[var(--eixo-text)]">{fmtMoney(marketSnapshot!.fatCattlePricePerArroba as number)}/@</p>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{fmt(marketSnapshot!.finishedAnimalWeightArrobas as number, 0)} @ de referência</p>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{trendLabel(marketSnapshot?.fatCattleTrendPercent ?? null, '%')}</p>
-                            </div>
-                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">{marketSnapshot?.replacementAnimalTypeLabel || 'Reposição'}</p>
-                                <p className="mt-1 text-lg font-extrabold text-[var(--eixo-text)]">{fmtMoney(marketSnapshot!.replacementAnimalPrice as number)}/cab</p>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{fmt(marketSnapshot!.replacementAnimalWeightArrobas as number, 0)} @ estimadas</p>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{trendLabel(marketSnapshot?.replacementAnimalTrendPercent ?? null, '%')}</p>
-                            </div>
-                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Custo da reposição</p>
-                                <p className="mt-1 text-lg font-extrabold text-[var(--eixo-text)]">{fmt(marketSnapshot!.replacementCostInFatArrobas as number, 1)} @</p>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">por bezerro</p>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">{trendLabel(marketSnapshot?.replacementCostTrendArrobas ?? null, ' @')}</p>
-                            </div>
-                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Poder de compra</p>
-                                <p className="mt-1 text-lg font-extrabold text-[var(--eixo-text)]">{fmt(marketSnapshot!.replacementAnimalsPerFinishedAnimal as number, 2)}</p>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">bezerros por boi</p>
-                            </div>
-                        </div>
-
-                        {marketSnapshot?.aiInsight && (
-                            <div className="mt-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Leitura EIXO</p>
-                                <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">{compactInsight}</p>
-                            </div>
-                        )}
-                        <details className="mt-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-                            <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Detalhes</summary>
-                            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-                                <div>
-                                    <p className="text-xs text-[var(--eixo-text-muted)]">Arroba do bezerro</p>
-                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{fmtMoney(marketSnapshot!.replacementArrobaPrice as number)}/@</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-[var(--eixo-text-muted)]">Ágio da reposição</p>
-                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{fmt(marketSnapshot!.replacementPremiumPercent as number, 1)}%</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-[var(--eixo-text-muted)]">Ágio em arrobas</p>
-                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">{marketSnapshot?.replacementPremiumInFatArrobas === null ? '—' : `${fmt(marketSnapshot!.replacementPremiumInFatArrobas as number, 1)} @`}</p>
-                                </div>
-                            </div>
-                        </details>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">
-                            Referência: {formatMarketReferenceDate(marketSnapshot?.referenceDate) || 'Data não informada'} · Fonte: {marketSnapshot?.sourceName || 'EIXO Mercado'}
-                        </p>
-                    </>
-                )}
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-1">
                 <WeatherCard city={farmCity ?? null} lat={farmLat} lng={farmLng} onNavigateToFarms={onNavigateToFarms} />
-                <CattleNewsCard />
             </div>
         </div>
     );

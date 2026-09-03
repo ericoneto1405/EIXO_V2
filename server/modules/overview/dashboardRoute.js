@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
-import { buildEmptyMarketReplacementSnapshot, buildMarketReplacementSnapshot, resolveFarmMarketRegion } from '../market/marketHelpers.js';
 import { resolverCategoria } from '../herd/animalCategories.js';
 const prisma = new PrismaClient();
 
@@ -28,21 +27,6 @@ export function registerOverviewRoutes(app) {
 
             const farmIds = farms.map((farm) => farm.id);
             const selectedFarm = scope === 'farm' ? farms[0] : null;
-            let marketReplacement = buildEmptyMarketReplacementSnapshot();
-            try {
-                marketReplacement = await buildMarketReplacementSnapshot({ scope, farm: selectedFarm });
-            } catch (marketError) {
-                const fallbackRegionContext = scope === 'farm' ? resolveFarmMarketRegion(selectedFarm) : null;
-                console.error('[overview/dashboard] marketReplacement failed', {
-                    scope,
-                    farmId: farmId || null,
-                    error: marketError?.message || 'unknown_error',
-                });
-                marketReplacement = buildEmptyMarketReplacementSnapshot({
-                    region: fallbackRegionContext?.region || null,
-                    state: fallbackRegionContext?.state || null,
-                });
-            }
             if (!farmIds.length) {
                 return res.json({
                     kpis: {
@@ -57,7 +41,6 @@ export function registerOverviewRoutes(app) {
                         animaisSemPesagem: 0,
                         areaTotalHa: null,
                     },
-                    marketReplacement,
                 });
             }
 
@@ -163,7 +146,6 @@ export function registerOverviewRoutes(app) {
                     animaisSemPesagem,
                     areaTotalHa,
                 },
-                marketReplacement,
             });
         } catch (error) {
             console.error(error);

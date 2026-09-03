@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-03.1';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-03.2';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-03';
 
 export const SUPPORT_TONE_RULES = [

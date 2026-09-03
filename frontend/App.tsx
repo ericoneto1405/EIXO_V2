@@ -663,7 +663,7 @@ const AppContent: React.FC = () => {
 
     React.useEffect(() => {
         const parentView = SUB_VIEW_PARENT[activeView] ?? activeView;
-        const canAccessInternal = (parentView === 'EIXO HQ' || parentView === 'EIXO Mercado') && isSuperAdmin;
+        const canAccessInternal = parentView === 'EIXO HQ' && isSuperAdmin;
         if (
             isAuthenticated &&
             currentAllowedModules.length &&
@@ -1194,7 +1194,6 @@ const AppContent: React.FC = () => {
                 return <Settings />;
             case 'EIXO HQ':
                 return <HQPage />;
-            case 'EIXO Mercado':
             case 'Gestão Comercial':
                 return <CommercialManagement />;
             case 'Visão Geral':
@@ -1255,7 +1254,7 @@ const AppContent: React.FC = () => {
                                         ? 'h-full overflow-x-hidden overflow-y-auto px-4 py-4 lg:px-6 lg:py-6'
                                         : 'h-full overflow-x-hidden overflow-y-auto p-4 lg:p-6'
                             }>
-                                {hasNoFarms && activeView !== 'Fazendas' && activeView !== 'EIXO HQ' && activeView !== 'EIXO Mercado' ? <FirstFarmOnboarding /> : (
+                                {hasNoFarms && activeView !== 'Fazendas' && activeView !== 'EIXO HQ' ? <FirstFarmOnboarding /> : (
                                     <>
                                         {currentUser && (
                                             <>
@@ -1301,14 +1300,6 @@ const AppContent: React.FC = () => {
                         title="EIXO HQ — Painel do Fundador"
                     >
                         HQ
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveView('EIXO Mercado')}
-                        className="rounded-xl bg-[#2F2F2F] px-3 py-2 text-xs font-bold text-[#B6E23A] shadow-lg hover:bg-[#1a1a1a]"
-                        title="EIXO Mercado — Backoffice interno"
-                    >
-                        Mercado
                     </button>
                 </div>
             )}

@@ -12,11 +12,7 @@
     "test": "node --test",
     "support:validate": "node scripts/validate-support-knowledge.mjs",
     "support:verify-release": "node scripts/verify-support-release.mjs",
-    "seed": "node prisma/seed.js",
-    "seed:market": "node scripts/seed-market-prices.mjs",
-    "market:mock-national": "node market/jobs/runMarketCaptureJob.js mock-national",
-    "market:noticias-agricolas": "node market/jobs/runMarketCaptureJob.js noticias-agricolas",
-    "market:publish-pending": "node market/jobs/publishPendingNormalized.js"
+    "seed": "node prisma/seed.js"
   },
   "dependencies": {
     "@google/genai": "^2.19.0",

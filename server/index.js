@@ -11,14 +11,9 @@ import dotenv from 'dotenv';
 import { registerNutritionModuleRoutes } from './nutritionModule.js';
 import { registerAcasalamentoRoutes } from './acasalamentoModule.js';
 import { upsertSystemAccountCategories } from './accountCategoryDefaults.js';
-import { runMarketCapture } from './market/services/marketCaptureService.js';
-import { publishNormalizedPrice, rejectNormalizedPrice } from './market/services/marketPublishService.js';
-import { resolveMarketTrends } from './market/services/marketTrendService.js';
-import { startMarketCron } from './market/jobs/marketCron.js';
 import twilio from 'twilio';
 import { Resend } from 'resend';
 // ─── Módulos Extraídos (Fase 3) ────────────────────────────────────────────────
-import { registerMarketRoutes } from './modules/market/marketRoutes.js';
 import { registerChatRoutes, createSupportLog, getSupportConversationState, SUPPORT_ENTITY, SUPPORT_ACTION_ASSUME, SUPPORT_ACTION_RELEASE } from './modules/chat/chatService.js';
 import { registerHQRoutes } from './modules/hq/hqRoutes.js';
 import { registerFieldRoutes } from './modules/field/fieldRoutes.js';
