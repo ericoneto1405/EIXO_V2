@@ -258,7 +258,6 @@ registerHerdRoutes(app);
 registerReproRoutes(app);
 registerPharmacyRoutes(app);
 
-registerMarketRoutes(app);
 registerChatRoutes(app);
 registerHQRoutes(app);
 registerFieldRoutes(app);
@@ -275,9 +274,7 @@ const startServer = (port) => {
         activePort = port;
         console.log(`Eixo API rodando em http://localhost:${port}`);
         try {
-            startMarketCron();
         } catch (cronError) {
-            console.warn('[market-cron] Falha ao iniciar agendamento:', cronError?.message || cronError);
         }
     });
 

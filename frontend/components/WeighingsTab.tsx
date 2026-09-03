@@ -252,7 +252,21 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
     const [pendingReplace, setPendingReplace] = useState<PendingReplaceData | null>(null);
     const [activeSessionMode, setActiveSessionMode] = useState<SessionMode>('INDIVIDUAL');
     const [manualSessionWeighings, setManualSessionWeighings] = useState<ManualSessionWeighing[]>([]);
-    const offlinePesagens = useOfflineQueue<OfflinePesagem>('eixo:pesagens:offline:', farmId);
+    const sendOfflinePesagem = async (item: OfflinePesagem) => {
+        await createWeighing(item.animalId, item.herdType, {
+            data: item.date,
+            peso: item.weightKg,
+            ...(item.weighingSessionId ? { weighingSessionId: item.weighingSessionId } : {}),
+        });
+    };
+    const offlinePesagens = useOfflineQueue<OfflinePesagem>('eixo:pesagens:offline:', farmId, {
+        autoSync: sendOfflinePesagem,
+        onSynced: (result) => {
+            load();
+            loadSessions();
+            setFormMsg({ text: `${result.sent} pesagem(ns) sincronizada(s) com sucesso!`, type: 'success' });
+        },
+    });
     const [groupAnimalsCount, setGroupAnimalsCount] = useState('');
     const [groupTotalWeight, setGroupTotalWeight] = useState('');
     const [groupSelectedAnimalIds, setGroupSelectedAnimalIds] = useState<string[]>([]);
@@ -723,21 +737,9 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
 
     const syncOfflinePesagens = async () => {
         setFormMsg(null);
-        const result = await offlinePesagens.sync(async (item) => {
-            await createWeighing(item.animalId, item.herdType, {
-                data: item.date,
-                peso: item.weightKg,
-                ...(item.weighingSessionId ? { weighingSessionId: item.weighingSessionId } : {}),
-            });
-        });
-        if (result.sent > 0) {
-            load();
-            loadSessions();
-        }
+        const result = await offlinePesagens.sync(sendOfflinePesagem);
         if (result.pending > 0) {
             setFormMsg({ text: `${result.sent} pesagem(ns) sincronizada(s). ${result.pending} ainda sem internet.`, type: 'error' });
-        } else if (result.sent > 0) {
-            setFormMsg({ text: `${result.sent} pesagem(ns) sincronizada(s) com sucesso!`, type: 'success' });
         }
     };
 

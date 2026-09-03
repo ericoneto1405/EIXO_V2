@@ -18,7 +18,32 @@ import {
     updateWeighing,
 } from '../adapters/herdApi';
 import { getCurrentNutrition } from '../adapters/nutritionApi';
+import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import { buildApiUrl } from '../api';
+
+interface OfflineHerdEvent {
+    animalId: string;
+    herdType: HerdType;
+    type: string;
+    date: string;
+    peso?: number;
+    valor?: number;
+    origem?: string;
+    destino?: string;
+    observacoes?: string;
+    purchasePurpose?: 'PRODUCTION' | 'BREEDING';
+}
+
+interface OfflineSanitaryRecord {
+    animalId: string;
+    herdType: HerdType;
+    tipo: string;
+    produto: string;
+    date: string;
+    dose?: string;
+    proximaAplicacao?: string;
+    observacoes?: string;
+}
 
 interface AnimalDetailModalProps {
     animal: (Animal | HerdAnimal) | null;
@@ -88,6 +113,27 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
 }) => {
     const resolvedMode: HerdType = mode ?? herdType ?? 'COMMERCIAL';
     const animalBasePath = resolvedMode === 'PO' ? '/po/animals' : '/animals';
+    const farmIdForOffline = (animal as any)?.farmId ?? null;
+    const sendOfflineEvent = async (item: OfflineHerdEvent) => {
+        await createHerdEvent(item.animalId, item.herdType, item);
+    };
+    const sendOfflineSanitary = async (item: OfflineSanitaryRecord) => {
+        await createSanitaryRecord(item.animalId, item.herdType, item);
+    };
+    const offlineEvents = useOfflineQueue<OfflineHerdEvent>('eixo:herd-events:offline:', farmIdForOffline, {
+        autoSync: sendOfflineEvent,
+        onSynced: (result) => {
+            void loadHerdEvents();
+            setEventsOfflineNotice(`${result.sent} evento(s) sincronizado(s) com sucesso!`);
+        },
+    });
+    const offlineSanitary = useOfflineQueue<OfflineSanitaryRecord>('eixo:sanitary:offline:', farmIdForOffline, {
+        autoSync: sendOfflineSanitary,
+        onSynced: (result) => {
+            void loadSanitaryRecords();
+            setSanitaryOfflineNotice(`${result.sent} registro(s) sincronizado(s) com sucesso!`);
+        },
+    });
     const [activeTab, setActiveTab] = useState<ModalTab>('weighing');
 
     // Pesagens
@@ -126,6 +172,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const [herdEvents, setHerdEvents] = useState<HerdEvent[]>([]);
     const [isLoadingEvents, setIsLoadingEvents] = useState(false);
     const [eventsError, setEventsError] = useState<string | null>(null);
+    const [eventsOfflineNotice, setEventsOfflineNotice] = useState<string | null>(null);
     const [eventType, setEventType] = useState<string>('COMPRA');
     const [eventDate, setEventDate] = useState(new Date().toISOString().slice(0, 10));
     const [eventPeso, setEventPeso] = useState('');
@@ -140,6 +187,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const [sanitaryRecords, setSanitaryRecords] = useState<SanitaryRecord[]>([]);
     const [isLoadingSanitary, setIsLoadingSanitary] = useState(false);
     const [sanitaryError, setSanitaryError] = useState<string | null>(null);
+    const [sanitaryOfflineNotice, setSanitaryOfflineNotice] = useState<string | null>(null);
     const [sanitaryTipo, setSanitaryTipo] = useState<string>('VACINA');
     const [sanitaryProduto, setSanitaryProduto] = useState('');
     const [sanitaryDate, setSanitaryDate] = useState(new Date().toISOString().slice(0, 10));
@@ -444,17 +492,21 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         if (!eventDate) { setEventsError('Informe a data do evento.'); return; }
         setIsSavingEvent(true);
         setEventsError(null);
+        setEventsOfflineNotice(null);
+        const eventPayload: OfflineHerdEvent = {
+            animalId,
+            herdType: resolvedMode,
+            type: eventType,
+            date: eventDate,
+            peso: eventPeso ? Number(eventPeso) : undefined,
+            valor: eventValor ? Number(eventValor) : undefined,
+            origem: eventOrigem || undefined,
+            destino: eventDestino || undefined,
+            observacoes: eventObs || undefined,
+            purchasePurpose: eventType === 'COMPRA' ? eventPurchasePurpose : undefined,
+        };
         try {
-            await createHerdEvent(animalId, resolvedMode, {
-                type: eventType,
-                date: eventDate,
-                peso: eventPeso ? Number(eventPeso) : undefined,
-                valor: eventValor ? Number(eventValor) : undefined,
-                origem: eventOrigem || undefined,
-                destino: eventDestino || undefined,
-                observacoes: eventObs || undefined,
-                purchasePurpose: eventType === 'COMPRA' ? eventPurchasePurpose : undefined,
-            });
+            await createHerdEvent(animalId, resolvedMode, eventPayload);
             setEventPeso('');
             setEventValor('');
             setEventOrigem('');
@@ -462,9 +514,29 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             setEventObs('');
             await loadHerdEvents();
         } catch (error: any) {
-            setEventsError(error?.message || 'Não foi possível salvar o evento.');
+            const isNetworkFailure = error instanceof TypeError
+                || (typeof navigator !== 'undefined' && navigator.onLine === false);
+            if (isNetworkFailure) {
+                offlineEvents.enqueue(eventPayload);
+                setEventPeso('');
+                setEventValor('');
+                setEventOrigem('');
+                setEventDestino('');
+                setEventObs('');
+                setEventsOfflineNotice('Sem internet agora — evento salvo no celular. Sincroniza quando o sinal voltar.');
+            } else {
+                setEventsError(error?.message || 'Não foi possível salvar o evento.');
+            }
         } finally {
             setIsSavingEvent(false);
+        }
+    };
+
+    const syncOfflineEvents = async () => {
+        setEventsError(null);
+        const result = await offlineEvents.sync(sendOfflineEvent);
+        if (result.pending > 0) {
+            setEventsError(`${result.sent} evento(s) sincronizado(s). ${result.pending} ainda sem internet.`);
         }
     };
 
@@ -490,9 +562,37 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             setSanitaryObs('');
             await loadSanitaryRecords();
         } catch (error: any) {
-            setSanitaryError(error?.message || 'Não foi possível salvar o registro.');
+            const isNetworkFailure = error instanceof TypeError
+                || (typeof navigator !== 'undefined' && navigator.onLine === false);
+            if (isNetworkFailure) {
+                offlineSanitary.enqueue({
+                    animalId,
+                    herdType: resolvedMode,
+                    tipo: sanitaryTipo,
+                    produto: sanitaryProduto,
+                    date: sanitaryDate,
+                    dose: sanitaryDose || undefined,
+                    proximaAplicacao: sanitaryProxima || undefined,
+                    observacoes: sanitaryObs || undefined,
+                });
+                setSanitaryProduto('');
+                setSanitaryDose('');
+                setSanitaryProxima('');
+                setSanitaryObs('');
+                setSanitaryOfflineNotice('Sem internet agora — registro salvo no celular. Sincroniza quando o sinal voltar.');
+            } else {
+                setSanitaryError(error?.message || 'Não foi possível salvar o registro.');
+            }
         } finally {
             setIsSavingSanitary(false);
+        }
+    };
+
+    const syncOfflineSanitary = async () => {
+        setSanitaryError(null);
+        const result = await offlineSanitary.sync(sendOfflineSanitary);
+        if (result.pending > 0) {
+            setSanitaryError(`${result.sent} registro(s) sincronizado(s). ${result.pending} ainda sem internet.`);
         }
     };
 
@@ -1046,6 +1146,15 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingEvent ? 'Salvando...' : 'Registrar evento'}
                                         </button>
                                     </form>
+                                    {offlineEvents.pendingCount > 0 && (
+                                        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs text-[var(--eixo-text-muted)]">
+                                            <span>{offlineEvents.pendingCount} evento(s) salvo(s) no celular, aguardando internet.</span>
+                                            <button type="button" onClick={() => { void syncOfflineEvents(); }} className="rounded-lg bg-[var(--eixo-green)] px-2.5 py-1 font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]">
+                                                Sincronizar agora
+                                            </button>
+                                        </div>
+                                    )}
+                                    {eventsOfflineNotice && <p className="mb-4 text-sm text-[var(--eixo-success)]">{eventsOfflineNotice}</p>}
                                     {eventsError && <p className="mb-4 text-sm text-[var(--eixo-danger)]">{eventsError}</p>}
                                     {isLoadingEvents ? (
                                         <p className="text-sm text-[var(--eixo-text-muted)]">Carregando eventos...</p>
@@ -1109,6 +1218,15 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingSanitary ? 'Salvando...' : 'Registrar'}
                                         </button>
                                     </form>
+                                    {offlineSanitary.pendingCount > 0 && (
+                                        <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs text-[var(--eixo-text-muted)]">
+                                            <span>{offlineSanitary.pendingCount} registro(s) salvo(s) no celular, aguardando internet.</span>
+                                            <button type="button" onClick={() => { void syncOfflineSanitary(); }} className="rounded-lg bg-[var(--eixo-green)] px-2.5 py-1 font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]">
+                                                Sincronizar agora
+                                            </button>
+                                        </div>
+                                    )}
+                                    {sanitaryOfflineNotice && <p className="mb-4 text-sm text-[var(--eixo-success)]">{sanitaryOfflineNotice}</p>}
                                     {sanitaryError && <p className="mb-4 text-sm text-[var(--eixo-danger)]">{sanitaryError}</p>}
                                     {isLoadingSanitary ? (
                                         <p className="text-sm text-[var(--eixo-text-muted)]">Carregando registros...</p>

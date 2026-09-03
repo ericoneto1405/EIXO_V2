@@ -39,7 +39,6 @@ const GeneticsReproducao = React.lazy(() => import('./components/ReproModule'));
 const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'));
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
 const HQPage = React.lazy(() => import('./components/HQPage'));
-const MarketAdmin = React.lazy(() => import('./components/MarketAdmin'));
 const CommercialManagement = React.lazy(() => import('./components/CommercialManagement'));
 
 const WEB_DEVICE_KEY_STORAGE = 'eixo:web:device-key';
@@ -1196,7 +1195,6 @@ const AppContent: React.FC = () => {
             case 'EIXO HQ':
                 return <HQPage />;
             case 'EIXO Mercado':
-                return isSuperAdmin ? <MarketAdmin /> : <Navigate to="/" replace />;
             case 'Gestão Comercial':
                 return <CommercialManagement />;
             case 'Visão Geral':
