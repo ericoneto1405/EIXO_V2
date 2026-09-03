@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-03.5';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-03.6';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-03';
 
 export const SUPPORT_TONE_RULES = [
@@ -18,7 +18,7 @@ export const SUPPORT_MODULE_CATALOG = [
     { name: 'Nutrição', href: 'eixo:view:Nutri%C3%A7%C3%A3o', entitlementCodes: ['NUTRITION', 'EIXO_NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'controla dieta, consumo, custo por lote e ingredientes em risco.', salesTrigger: 'cocho, dieta, trato, consumo, suplemento, ração ou custo alimentar.' },
     { name: 'Reprodução', href: '/genetics/reproducao', entitlementCodes: ['GENETICS', 'PO', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'organiza coberturas, diagnósticos, partos e indicadores reprodutivos.', salesTrigger: 'prenhez, parto, matriz, cobertura, IATF ou estação de monta.' },
     { name: 'EIXO Acasalamento', href: '/genetics/acasalamento', entitlementCodes: ['GENETICS', 'EIXO_DECISAO'], benefit: 'apoia decisões de acasalamento com histórico e objetivo produtivo.', salesTrigger: 'acasalamento, touro, sêmen, botijão, matriz ou genética.' },
-    { name: 'Gestão Comercial', href: 'eixo:view:Gest%C3%A3o%20Comercial', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'apoia negociação, mercado, oportunidades e decisão de venda.', salesTrigger: 'venda, mercado, comprador, negociação, arroba ou margem.' },
+    { name: 'Gestão Comercial', href: 'eixo:view:Gest%C3%A3o%20Comercial', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'CRM da fazenda: clientes, pipeline de negociação por etapas, contrato e lembretes de aniversário/recompra.', salesTrigger: 'venda, cliente, comprador, negociação, pipeline, contrato ou aniversário de cliente.' },
     { name: 'Botijão de Sêmen', href: 'eixo:view:Estoque%20e%20Equipamentos', entitlementCodes: ['CORE', 'GENETICS', 'EIXO_DECISAO'], benefit: 'organiza o estoque de sêmen usado no EIXO Acasalamento.', salesTrigger: 'sêmen, botijão, doses, estoque de touro ou acasalamento.' },
 ];
 
@@ -157,8 +157,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['gestão comercial', 'negociação', 'comprador', 'mercado', 'arroba', 'venda'],
         href: 'eixo:view:Gest%C3%A3o%20Comercial',
         guidance: [
-            'Acesse Gestão Comercial para acompanhar mercado, oportunidades e decisões de venda.',
-            'A disponibilidade depende do plano e das permissões do usuário.',
+            'Cadastre clientes (frigorífico, pecuarista ou leilão/corretor) e acompanhe o pipeline de negociação por etapas, da prospecção ao fechamento.',
+            'Negociação fechada (Ganho) permite gerar contrato com comissão. A aba Alertas avisa aniversário de cliente e quem não compra há 90+ dias.',
         ],
     },
     {

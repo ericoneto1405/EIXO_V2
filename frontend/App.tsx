@@ -1195,7 +1195,7 @@ const AppContent: React.FC = () => {
             case 'EIXO HQ':
                 return <HQPage />;
             case 'Gestão Comercial':
-                return <CommercialManagement />;
+                return <CommercialManagement farmId={selectedFarmId} farmName={selectedFarm?.name} />;
             case 'Visão Geral':
             default:
                 return <Dashboard

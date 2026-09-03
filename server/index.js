@@ -28,6 +28,7 @@ import { registerPORoutes } from "./modules/po/poRoutes.js";
 import { registerHerdRoutes } from "./modules/herd/herdRoutes.js";
 import { registerReproRoutes } from "./modules/repro/reproRoutes.js";
 import { registerPharmacyRoutes } from "./modules/pharmacy/pharmacyRoutes.js";
+import { registerCommercialRoutes } from "./modules/commercial/commercialRoutes.js";
 
 // ─── Módulos Extraídos (Fase 1) ────────────────────────────────────────────────
 import {
@@ -252,6 +253,7 @@ registerPORoutes(app);
 registerHerdRoutes(app);
 registerReproRoutes(app);
 registerPharmacyRoutes(app);
+registerCommercialRoutes(app);
 
 registerChatRoutes(app);
 registerHQRoutes(app);

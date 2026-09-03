@@ -34,6 +34,10 @@ model User {
   activityLogs                   ActivityLog[]
   appActivationCodes             AppActivationCode[]
   appDevices                     AppDevice[]
+  commercialClients               CommercialClient[]             @relation("CommercialClientCreatedBy")
+  commercialDeals                 CommercialDeal[]                @relation("CommercialDealCreatedBy")
+  commercialContracts              CommercialContract[]           @relation("CommercialContractCreatedBy")
+  commercialReminders              CommercialReminder[]           @relation("CommercialReminderCreatedBy")
   externalOperations             ExternalOperation[]            @relation("ExternalOperationCreatedBy")
   externalOperationLedgerEntries ExternalOperationLedgerEntry[] @relation("ExternalOperationLedgerCreatedBy")
   externalOperationSettlements   ExternalOperationSettlement[]  @relation("ExternalOperationSettlementCreatedBy")
@@ -225,6 +229,10 @@ model Farm {
   embryoBatches           EmbryoBatch[]
   embryoTransfers         EmbryoTransfer[]
   embryoPairSequences     EmbryoPairSequence[]
+  commercialClients       CommercialClient[]
+  commercialDeals         CommercialDeal[]
+  commercialContracts     CommercialContract[]
+  commercialReminders     CommercialReminder[]
   externalOperations      ExternalOperation[]
   organization            Organization?            @relation(fields: [organizationId], references: [id])
   user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -2060,6 +2068,96 @@ model ExternalOperationSettlement {
   @@index([operationId, type])
 }
 
+model CommercialClient {
+  id          String                 @id
+  farmId      String
+  createdById String
+  name        String
+  type        CommercialClientType
+  document    String?
+  phone       String?
+  email       String?
+  city        String?
+  state       String?
+  birthDate   DateTime?
+  notes       String?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  farm        Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  createdBy   User                   @relation("CommercialClientCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  deals       CommercialDeal[]
+  reminders   CommercialReminder[]
+
+  @@index([farmId])
+  @@index([farmId, type])
+}
+
+model CommercialDeal {
+  id                String              @id
+  farmId            String
+  clientId          String
+  createdById       String
+  title             String
+  stage             CommercialDealStage @default(PROSPECCAO)
+  lotLabel          String?
+  quantityAnimals   Int?
+  estimatedValue    Float?
+  closedValue       Float?
+  expectedCloseDate DateTime?
+  closedAt          DateTime?
+  lostReason        String?
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  farm              Farm                @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  client            CommercialClient    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy         User                @relation("CommercialDealCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  contract          CommercialContract?
+
+  @@index([farmId, stage])
+  @@index([clientId])
+}
+
+model CommercialContract {
+  id               String         @id
+  dealId           String         @unique
+  farmId           String
+  createdById      String
+  commissionPct    Float?
+  commissionAmount Float?
+  paymentTerms     String?
+  fileName         String?
+  storagePath      String?
+  signedAt         DateTime?
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  deal             CommercialDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  farm             Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  createdBy        User           @relation("CommercialContractCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([farmId])
+}
+
+model CommercialReminder {
+  id          String                 @id
+  farmId      String
+  clientId    String
+  createdById String
+  type        CommercialReminderType
+  dueDate     DateTime
+  message     String?
+  doneAt      DateTime?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  farm        Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  client      CommercialClient       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdBy   User                   @relation("CommercialReminderCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([farmId, dueDate])
+  @@index([clientId])
+}
+
 model FeedlotContract {
   id                 String                         @id
   farmId             String
@@ -2413,6 +2511,27 @@ enum ExternalOperationDocumentType {
   GTA
   NF
   OTHER
+}
+
+enum CommercialClientType {
+  FRIGORIFICO
+  PECUARISTA
+  LEILAO_CORRETOR
+}
+
+enum CommercialDealStage {
+  PROSPECCAO
+  CONTATO
+  NEGOCIANDO
+  PROPOSTA
+  GANHO
+  PERDIDO
+}
+
+enum CommercialReminderType {
+  BIRTHDAY
+  INACTIVITY
+  CUSTOM
 }
 
 enum ExternalOperationNature {
