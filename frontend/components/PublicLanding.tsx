@@ -138,7 +138,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         <div className="mx-auto flex h-[75px] max-w-7xl items-center justify-between px-4 lg:px-8">
           <div className="inline-flex shrink-0 flex-col items-center leading-none">
             <img src="/logo_eixo_official.svg" alt="EIXO" className="h-[2.53575rem] w-auto" />
-            <div className="mt-[4px] text-[10px] font-semibold uppercase tracking-[0.18em] whitespace-nowrap text-[var(--eixo-text)]/75">
+            <div className="mt-[4px] text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-[var(--eixo-text)]/75">
               Gestão para Pecuária de Corte
             </div>
           </div>
