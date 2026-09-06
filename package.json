@@ -31,8 +31,12 @@
     "resend": "^6.12.2"
   },
   "overrides": {
+    "browserslist": "4.28.8",
     "undici": "~7.29.0",
     "body-parser": "~1.20.6",
-    "brace-expansion": "~1.1.18"
+    "brace-expansion": "~1.1.18",
+    "deepmerge-ts": "8.0.2",
+    "qs": "6.16.0",
+    "uuid": "11.1.1"
   }
 }
