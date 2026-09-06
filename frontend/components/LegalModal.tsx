@@ -30,15 +30,15 @@ Coletados automaticamente: IP, tipo de dispositivo, páginas acessadas e cookies
 
 COMO USAMOS SEUS DADOS
 — Criar e gerenciar sua conta (execução de contrato)
-— Processar pagamentos via Asaas (execução de contrato)
+— Processar pagamentos (execução de contrato)
 — Melhorar a plataforma (legítimo interesse)
 — Enviar comunicações de marketing apenas com seu consentimento
 
 COM QUEM COMPARTILHAMOS
-Seus dados não são vendidos. Podemos compartilhá-los com: Asaas (pagamentos), provedores de nuvem (hospedagem) e autoridades quando exigido por lei.
+Seus dados não são vendidos. Podemos compartilhá-los com: provedores de nuvem (hospedagem) e autoridades quando exigido por lei.
 
 SEUS DIREITOS
-Você pode acessar, corrigir ou excluir seus dados a qualquer momento. Para exercer seus direitos, envie e-mail para privacidade@eixo.app. Responderemos em até 15 dias úteis.
+Você pode acessar, corrigir ou excluir seus dados a qualquer momento. Para exercer seus direitos, envie e-mail para XXXX. Responderemos em até 15 dias úteis.
 
 SEGURANÇA
 Utilizamos criptografia, controle de acesso e monitoramento contínuo para proteger seus dados.`,

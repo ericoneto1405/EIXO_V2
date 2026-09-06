@@ -1,5 +1,7 @@
 import React from 'react';
 import { ArrowRight, CheckCircle2, ChevronDown, TrendingDown, TrendingUp, Lightbulb, Menu, X } from 'lucide-react';
+import CookieConsent from './CookieConsent';
+import LegalModal, { type LegalDoc } from './LegalModal';
 
 interface PublicLandingProps {
   onEnter: () => void;
@@ -50,7 +52,7 @@ const FAQS = [
   },
   {
     q: 'Funciona sem internet no curral?',
-    a: 'Para a pesagem, sim. O EIXO Campo, o aplicativo usado no curral, salva as pesagens no próprio celular quando não há sinal e envia sozinho assim que a internet volta — você acompanha o status de cada uma (enviado ou pendente) e pode tocar em "Sincronizar agora" quando quiser. As demais telas do sistema precisam de conexão.',
+    a: 'Sim, no EIXO Performance. O App EIXO Campo salva as pesagens no próprio celular quando não há sinal e envia sozinho assim que a internet volta — você acompanha o status de cada uma (enviado ou pendente) e pode tocar em "Sincronizar agora" quando quiser. As demais telas do sistema precisam de conexão.',
   },
   {
     q: 'Como levo os dados do meu caderno ou da minha planilha para o EIXO?',
@@ -79,6 +81,8 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [showMobileCta, setShowMobileCta] = React.useState(false);
   const [activeNav, setActiveNav] = React.useState<NavSectionId | null>(null);
+  const [cookieBannerVisible, setCookieBannerVisible] = React.useState(false);
+  const [openLegalModal, setOpenLegalModal] = React.useState<LegalDoc | null>(null);
   const heroCtaRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -634,20 +638,23 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-sm text-[var(--eixo-text-muted)] md:flex-row lg:px-8">
           <p>© 2026 EIXO · Plataforma de gestão pecuária</p>
           <div className="flex items-center gap-6">
-            <a href="#" className="transition-colors hover:text-[var(--eixo-text)]">Termos</a>
-            <a href="#" className="transition-colors hover:text-[var(--eixo-text)]">Privacidade</a>
+            <button type="button" onClick={() => setOpenLegalModal('terms')} className="transition-colors hover:text-[var(--eixo-text)]">Termos</button>
+            <button type="button" onClick={() => setOpenLegalModal('privacy')} className="transition-colors hover:text-[var(--eixo-text)]">Privacidade</button>
             <a href="#" className="transition-colors hover:text-[var(--eixo-text)]">Contato</a>
           </div>
         </div>
       </footer>
 
       {/* CTA fixo mobile */}
-      {showMobileCta && <div className="fixed bottom-4 left-4 right-4 z-40 sm:hidden">
+      {showMobileCta && <div className={`fixed left-4 right-4 z-40 sm:hidden ${cookieBannerVisible ? 'bottom-40' : 'bottom-4'}`}>
         <button type="button" onClick={onRegister} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--eixo-green)] px-5 py-4 font-bold text-[#1a1a1a] shadow-lg hover:bg-[var(--eixo-green-dark)]">
           Criar minha conta grátis
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>}
+
+      <CookieConsent onVisibilityChange={setCookieBannerVisible} />
+      {openLegalModal && <LegalModal doc={openLegalModal} onClose={() => setOpenLegalModal(null)} />}
     </div>
   );
 };
