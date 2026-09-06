@@ -46,6 +46,10 @@ export const getPlanLimits = (planCode) => {
     };
 };
 
+export const canAccessEixoCampo = (saasContext) => (
+    getPlanLimits(saasContext?.planCode).code === 'EIXO_DECISAO'
+);
+
 const PLAN_ORDER = {
     GRATIS: 0,
     EIXO_GESTAO: 1,

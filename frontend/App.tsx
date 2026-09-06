@@ -310,6 +310,7 @@ const AppContent: React.FC = () => {
         || (currentUser?.entitlements?.includes('EIXO_DECISAO')
             ? 'EIXO_DECISAO'
             : isFreePlan ? 'GRATIS' : 'EIXO_GESTAO');
+    const hasEixoCampoAccess = currentPlanCode === 'EIXO_DECISAO';
     // Módulos exclusivos de planos pagos — bloqueados mesmo que estejam no banco do usuário
     const PAID_ONLY_MODULES: string[] = [];
     const currentAllowedModules = React.useMemo(() => {
@@ -490,12 +491,12 @@ const AppContent: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 8h4M9 17h6M11 20h2" />
                     </svg>
                 </div>
-                <h1 className="mt-6 text-2xl font-bold text-[var(--eixo-text)]">Acesso exclusivo do App do Manejo</h1>
+                <h1 className="mt-6 text-2xl font-bold text-[var(--eixo-text)]">Acesso exclusivo do App EIXO Campo</h1>
                 <p className="mt-3 text-sm leading-6 text-[var(--eixo-text-muted)]">
                     Este usuário foi criado para operação de campo e não possui acesso ao sistema desktop.
                 </p>
                 <div className="mt-6 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-4 text-sm text-[var(--eixo-text-muted)]">
-                    Use este acesso apenas no App do Manejo, no celular do colaborador vinculado.
+                    Use este acesso apenas no App EIXO Campo, no celular do colaborador vinculado.
                 </div>
                 <button
                     type="button"
@@ -1134,15 +1135,9 @@ const AppContent: React.FC = () => {
                         farms={farms}
                         canManageUsers={canManageUsers}
                         currentUserId={currentUser?.id || null}
-                        isFreePlan={isFreePlan}
+                        hasEixoCampoAccess={hasEixoCampoAccess}
                         moduleCategories={registerModuleCategories}
-                        onOpenUserRegister={() => {
-                            if (isFreePlan) {
-                                setUpgradeModal('Múltiplos usuários');
-                                return;
-                            }
-                            setIsRegisterModalOpen(true);
-                        }}
+                        onOpenUserRegister={() => setIsRegisterModalOpen(true)}
                         refreshKey={usersRefreshKey}
                     />
                 );
@@ -1233,13 +1228,7 @@ const AppContent: React.FC = () => {
                             farmCity={selectedFarm?.city ?? null}
                             farmLat={selectedFarm?.lat ?? null}
                             farmLng={selectedFarm?.lng ?? null}
-                            onOpenUserRegister={() => {
-                                if (isFreePlan) {
-                                    setUpgradeModal('Múltiplos usuários');
-                                    return;
-                                }
-                                setIsRegisterModalOpen(true);
-                            }}
+                            onOpenUserRegister={() => setIsRegisterModalOpen(true)}
                             onOpenProfile={() => setIsProfileModalOpen(true)}
                         />
                         <AlertsBar

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canUpgradePlan, getPlanLimits, normalizePlanCode } from './saasContext.js';
+import { canAccessEixoCampo, canUpgradePlan, getPlanLimits, normalizePlanCode } from './saasContext.js';
 
 test('normaliza os nomes equivalentes do plano gratuito', () => {
     assert.equal(normalizePlanCode('gratis'), 'GRATIS');
@@ -30,6 +30,12 @@ test('mantém o plano Performance sem limite de fazendas e usuários', () => {
         users: null,
         label: 'plano EIXO Performance',
     });
+});
+
+test('libera o App EIXO Campo somente no plano Performance', () => {
+    assert.equal(canAccessEixoCampo({ planCode: 'GRATIS' }), false);
+    assert.equal(canAccessEixoCampo({ planCode: 'EIXO_GESTAO' }), false);
+    assert.equal(canAccessEixoCampo({ planCode: 'EIXO_DECISAO' }), true);
 });
 
 test('trata plano ausente ou desconhecido como gratuito', () => {

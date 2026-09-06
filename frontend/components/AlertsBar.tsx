@@ -76,7 +76,7 @@ const normalizeShortAlertText = (alert: Alert) => {
 
 const normalizeAlertMeta = (alert: Alert): OperationalAlert => {
     const severity: AlertSeverity = alert.type === 'critical' ? 'high' : alert.type === 'warning' ? 'medium' : 'info';
-    const sourceLabel = alert.source === 'APP_MANEJO' ? 'App do Manejo' : alert.source === 'FINANCEIRO' ? 'Financeiro' : 'Sistema';
+    const sourceLabel = alert.source === 'APP_MANEJO' ? 'App EIXO Campo' : alert.source === 'FINANCEIRO' ? 'Financeiro' : 'Sistema';
     const chipLabel = normalizeShortAlertText(alert);
     const baseDescription = cleanTrailingPeriod(alert.message);
 

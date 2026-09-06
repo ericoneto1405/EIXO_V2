@@ -12,6 +12,7 @@ import {
     ensureSaasContextForUser, ensureFieldWorkerFarmAccess,
     normalizeUserModules as normalizeUserModulesFn,
     getPlanLimits,
+    canAccessEixoCampo,
 } from '../utils/saasContext.js';
 import {
     generateActivationCode, hashActivationCode, normalizeActivationCode,
@@ -42,6 +43,35 @@ function normalizeUserModulesLocal(modules, roles, accessType) {
 }
 
 export function registerUserRoutes(app) {
+const getOrganizationUserLimit = async (organizationId) => {
+    const activeSubscription = await prisma.billingSubscription.findFirst({
+        where: {
+            organizationId,
+            status: 'ACTIVE',
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { planCode: true },
+    });
+    const planLimits = getPlanLimits(activeSubscription?.planCode);
+    if (planLimits.users === null) {
+        return { limitReached: false, planLimits };
+    }
+    const memberCount = await prisma.organizationMembership.count({
+        where: { organizationId },
+    });
+    return { limitReached: memberCount >= planLimits.users, planLimits };
+};
+
+const respondUserLimitReached = (res, planLimits) => res.status(403).json({
+    code: 'user_limit_reached',
+    message: `O ${planLimits.label} permite até ${planLimits.users} usuários. Faça upgrade para adicionar mais.`,
+});
+
+const respondEixoCampoPlanRequired = (res) => res.status(403).json({
+    code: 'eixo_campo_plan_required',
+    message: 'O App EIXO Campo está disponível somente no plano EIXO Performance.',
+});
+
 app.get('/users', requireAuth, async (req, res) => {
     try {
         if (!canManageOrganizationUsers(req)) {
@@ -150,6 +180,10 @@ app.post('/users', requireAuth, async (req, res) => {
         const organizationId = req.saas?.organizationId || null;
         if (!organizationId) {
             return res.status(400).json({ message: 'Organização ativa não encontrada.' });
+        }
+
+        if (isFieldAccess && !canAccessEixoCampo(req.saas)) {
+            return respondEixoCampoPlanRequired(res);
         }
 
         if (isFieldAccess) {
@@ -310,7 +344,7 @@ app.patch('/users/:id', requireAuth, async (req, res) => {
         }
 
         if (targetUser.accessType === 'APP_MANEJO') {
-            return res.status(400).json({ message: 'Esse acesso deve ser editado no painel do App do Manejo.' });
+            return res.status(400).json({ message: 'Esse acesso deve ser editado no painel do App EIXO Campo.' });
         }
 
         if (normalizedDefaultFarmId) {
@@ -588,6 +622,9 @@ app.post('/users/:id/app-code', requireAuth, async (req, res) => {
         if (!canManageOrganizationUsers(req)) {
             return res.status(403).json({ message: 'Apenas administradores podem gerar codigo.' });
         }
+        if (!canAccessEixoCampo(req.saas)) {
+            return respondEixoCampoPlanRequired(res);
+        }
 
         const targetUser = await prisma.user.findFirst({
             where: {
@@ -607,7 +644,7 @@ app.post('/users/:id/app-code', requireAuth, async (req, res) => {
             return res.status(404).json({ message: 'Usuario nao encontrado.' });
         }
         if (targetUser.accessType !== 'APP_MANEJO') {
-            return res.status(400).json({ message: 'Esse usuario nao usa App do Manejo.' });
+            return res.status(400).json({ message: 'Esse usuario nao usa o App EIXO Campo.' });
         }
         if (!targetUser.fieldProfile) {
             return res.status(400).json({ message: 'Defina o perfil de campo antes de gerar o codigo.' });
@@ -761,6 +798,11 @@ app.post('/invitations', requireAuth, async (req, res) => {
             return res.status(409).json({ message: 'Este e-mail já é membro da organização.' });
         }
 
+        const { limitReached, planLimits } = await getOrganizationUserLimit(orgId);
+        if (limitReached) {
+            return respondUserLimitReached(res, planLimits);
+        }
+
         // Cancelar convites pendentes para o mesmo e-mail
         await prisma.invitation.updateMany({
             where: { organizationId: orgId, email: normalizedEmail, acceptedAt: null },
@@ -840,6 +882,23 @@ app.post('/invitations/accept', async (req, res) => {
 
         // Usuário já existe — só vincular à organização
         const existingUser = await prisma.user.findUnique({ where: { email: invitation.email } });
+        const existingMembership = existingUser
+            ? await prisma.organizationMembership.findUnique({
+                where: {
+                    organizationId_userId: {
+                        organizationId: invitation.organizationId,
+                        userId: existingUser.id,
+                    },
+                },
+            })
+            : null;
+        if (!existingMembership) {
+            const { limitReached, planLimits } = await getOrganizationUserLimit(invitation.organizationId);
+            if (limitReached) {
+                return respondUserLimitReached(res, planLimits);
+            }
+        }
+
         if (existingUser) {
             await prisma.$transaction([
                 prisma.organizationMembership.upsert({
@@ -938,13 +997,16 @@ app.post('/app/activate', async (req, res) => {
 
         const targetUser = activationCode.user;
         if (!targetUser || targetUser.accessType === 'WEB' || !targetUser.fieldProfile) {
-            return res.status(400).json({ message: 'Usuario sem acesso valido ao App do Manejo.' });
+            return res.status(400).json({ message: 'Usuario sem acesso valido ao App EIXO Campo.' });
         }
         if (targetUser.appActivationStatus === 'BLOQUEADO') {
             return res.status(403).json({ message: 'Acesso bloqueado. Procure a fazenda.' });
         }
 
         const saasContext = await ensureSaasContextForUser(targetUser.id);
+        if (!canAccessEixoCampo(saasContext)) {
+            return respondEixoCampoPlanRequired(res);
+        }
         const accessContext = await ensureFieldWorkerFarmAccess(targetUser, saasContext);
 
         const activeDevice = await prisma.appDevice.findFirst({
@@ -1026,8 +1088,11 @@ app.post('/app/activate', async (req, res) => {
 
 app.get('/app/me', requireAuth, async (req, res) => {
     try {
+        if (!canAccessEixoCampo(req.saas)) {
+            return respondEixoCampoPlanRequired(res);
+        }
         if (req.access?.appContext?.mode !== 'field') {
-            return res.status(403).json({ message: 'Esse acesso nao pertence ao App do Manejo.' });
+            return res.status(403).json({ message: 'Esse acesso nao pertence ao App EIXO Campo.' });
         }
         const payload = await buildAppAuthPayload(req.user.id, { device: req.appDevice || null });
         return res.json(payload);

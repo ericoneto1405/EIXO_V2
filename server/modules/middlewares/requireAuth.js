@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { UUID_REGEX, allowXUserId } from '../config/constants.js';
 import { extractSessionTokenFromRequest, hashSessionToken, getSessionFromRequest } from './session.js';
-import { ensureSaasContextForUser, ensureFieldWorkerFarmAccess, isSaasContextError, BILLING_BLOCKED_STATES, buildAllowedModulesFromPlan } from '../utils/saasContext.js';
+import { ensureSaasContextForUser, ensureFieldWorkerFarmAccess, isSaasContextError, BILLING_BLOCKED_STATES, buildAllowedModulesFromPlan, canAccessEixoCampo } from '../utils/saasContext.js';
 
 const prisma = new PrismaClient();
 
@@ -86,6 +86,16 @@ export const requireAuth = async (req, res, next) => {
             req.user = session.user;
             req.session = session;
             req.saas = await ensureSaasContextForUser(session.user.id);
+            if (session.deviceId && !canAccessEixoCampo(req.saas)) {
+                await prisma.session.updateMany({
+                    where: { id: session.id, revokedAt: null },
+                    data: { revokedAt: new Date() },
+                });
+                return res.status(403).json({
+                    code: 'eixo_campo_plan_required',
+                    message: 'O App EIXO Campo está disponível somente no plano EIXO Performance.',
+                });
+            }
             req.access = await ensureFieldWorkerFarmAccess(session.user, req.saas);
             return next();
         }

@@ -22,7 +22,7 @@ interface TeamPermissionsProps {
     farms: Farm[];
     canManageUsers: boolean;
     currentUserId?: string | null;
-    isFreePlan: boolean;
+    hasEixoCampoAccess: boolean;
     moduleCategories: {
         title: string;
         modules: string[];
@@ -136,7 +136,7 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                     <div>
                         <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
-                            App do Manejo
+                            App EIXO Campo
                         </div>
                         <h3 className="font-brand text-xl font-extrabold text-[var(--eixo-text)]">Novo colaborador de campo</h3>
                     </div>
@@ -353,7 +353,7 @@ const EditFieldCollaboratorModal: React.FC<EditFieldCollaboratorModalProps> = ({
                     <div>
                         <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                             <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
-                            App do Manejo
+                            App EIXO Campo
                         </div>
                         <h3 className="font-brand text-xl font-extrabold text-[var(--eixo-text)]">Editar colaborador</h3>
                     </div>
@@ -700,7 +700,7 @@ const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({ payload, onCl
                 <div className="border-b border-[var(--eixo-border)] px-6 py-5">
                     <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                         <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
-                        App do Manejo
+                        App EIXO Campo
                     </div>
                     <h3 className="font-brand text-xl font-extrabold text-[var(--eixo-text)]">Código de ativação</h3>
                     <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Copie agora. Esse código não será exibido novamente.</p>
@@ -733,7 +733,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
     farms,
     canManageUsers,
     currentUserId,
-    isFreePlan,
+    hasEixoCampoAccess,
     moduleCategories,
     onOpenUserRegister,
     refreshKey = 0,
@@ -985,7 +985,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                             </div>
                             <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Usuários e Permissões</h1>
                             <p className="mt-1 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
-                                Separe o acesso do sistema web do acesso operacional no App do Manejo.
+                                Separe o acesso do sistema web do acesso operacional no App EIXO Campo.
                             </p>
                         </div>
                     </div>
@@ -1003,7 +1003,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                     <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
                         <div className="flex items-center gap-2">
                             <SmartphoneIcon />
-                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#a8a29e]">App do Manejo</p>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#a8a29e]">App EIXO Campo</p>
                         </div>
                         <p className="mt-2 text-3xl font-extrabold text-[var(--eixo-text)]">{fieldUsers.length}</p>
                         <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Acessos operacionais por código no celular.</p>
@@ -1177,11 +1177,11 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                         <div>
                             <div className="flex items-center gap-2">
                                 <SmartphoneIcon />
-                                <p className="text-sm font-semibold text-[var(--eixo-text)]">App do Manejo</p>
+                                <p className="text-sm font-semibold text-[var(--eixo-text)]">App EIXO Campo</p>
                             </div>
                             <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Colaboradores entram só com código e ficam presos a um aparelho por vez.</p>
                         </div>
-                        {!isFreePlan && canManageUsers && (
+                        {hasEixoCampoAccess && canManageUsers && (
                             <button
                                 type="button"
                                 onClick={() => {
@@ -1196,12 +1196,12 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                         )}
                     </div>
 
-                    {isFreePlan ? (
+                    {!hasEixoCampoAccess ? (
                         <div className="px-6 py-10">
                             <div className="rounded-2xl border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-5 py-5">
-                                <p className="text-sm font-semibold text-[var(--eixo-text)]">App do Manejo disponível apenas nos planos pagos</p>
+                                <p className="text-sm font-semibold text-[var(--eixo-text)]">App EIXO Campo disponível apenas no EIXO Performance</p>
                                 <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
-                                    Faça upgrade para cadastrar vaqueiros e admins de campo, gerar códigos de ativação e controlar o aparelho vinculado.
+                                    Faça upgrade para o EIXO Performance para cadastrar vaqueiros e admins de campo, gerar códigos de ativação e controlar o aparelho vinculado.
                                 </p>
                             </div>
                         </div>
@@ -1294,7 +1294,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                         </div>
                     )}
 
-                    {fieldActionError && !isFreePlan && (
+                    {fieldActionError && hasEixoCampoAccess && (
                         <div className="border-t border-[var(--eixo-border)] px-6 py-4 text-sm text-[var(--eixo-danger)]">
                             {fieldActionError}
                         </div>
