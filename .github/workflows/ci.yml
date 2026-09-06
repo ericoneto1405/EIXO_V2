@@ -19,6 +19,8 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
+      - name: Audit dependencies
+        run: npm audit --audit-level=moderate
       - name: Generate Prisma Client
         run: npm run generate
       - name: Testes do backend

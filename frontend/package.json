@@ -24,7 +24,7 @@
     "react-fast-marquee": "^1.6.5",
     "react-is": "^19.2.0",
     "react-leaflet": "^5.0.0",
-    "react-router-dom": "^6.30.6",
+    "react-router-dom": "7.18.3",
     "recharts": "^3.4.1",
     "xlsx": "file:../vendor/xlsx-0.20.3.tgz"
   },
