@@ -57,10 +57,10 @@ const MODULE_INFO: Record<string, ModuleInfo> = {
         cta: 'Conhecer EIXO Performance',
     },
     'Gestão Comercial': {
-        plan: 'PLUS',
-        title: 'Disponível no EIXO Performance',
-        description: 'Este módulo faz parte dos recursos avançados para análise e decisão.',
-        cta: 'Conhecer EIXO Performance',
+        plan: 'PRO',
+        title: 'Disponível no EIXO Gestão',
+        description: 'É o CRM da fazenda: organiza negociações, compradores e histórico de vendas num só lugar.',
+        cta: 'Conhecer EIXO Gestão',
     },
 };
 
@@ -396,7 +396,7 @@ const navSections: NavSection[] = [
     {
         sectionLabel: 'Gestão',
         items: [
-            { label: 'Gestão Comercial', icon: <ChartIcon />, value: 'Gestão Comercial', allowedLabels: ['Gestão Comercial'], requiredPlanBadge: 'PLUS' },
+            { label: 'Gestão Comercial', icon: <ChartIcon />, value: 'Gestão Comercial', allowedLabels: ['Gestão Comercial'], requiredPlanBadge: 'PRO' },
             { label: 'Registro de Atividades', icon: <ReportIcon />, value: 'Registro de Atividades', allowedLabels: ['Registro de Atividades'], requiredPlanBadge: 'PRO' },
             { label: 'Ocorrências do EIXO Campo', icon: <ReportIcon />, value: 'Ocorrências do EIXO Campo', allowedLabels: ['Operações'] },
             { label: 'Botijão de Sêmen', icon: <SuppliersIcon />, value: 'Estoque e Equipamentos' },

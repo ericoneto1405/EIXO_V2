@@ -231,9 +231,9 @@ const UPGRADE_CONTENT: Record<string, {
         icon: <UpgradeReportIcon />,
     },
     'Gestão Comercial': {
-        requiredPlan: 'PLUS',
+        requiredPlan: 'PRO',
         moduleName: 'Gestão Comercial',
-        tagline: 'Transforme negociação em decisão com margem, histórico e timing',
+        tagline: 'O CRM da fazenda: organize negociações, compradores e histórico de vendas',
         benefits: [
             'Acompanhe oportunidades, preços e decisões de venda em contexto.',
             'Conecte comercial com estoque, operação e estratégia da fazenda.',

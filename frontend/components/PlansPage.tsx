@@ -59,6 +59,7 @@ const PLANS: Plan[] = [
             { text: 'DRE e fluxo de caixa', included: true },
             { text: 'Reprodução: estação de monta e prenhez', included: true },
             { text: 'Compra e venda de animais', included: true },
+            { text: 'Gestão Comercial: CRM de clientes e negociações', included: true },
             { text: 'Exportação de dados (Excel/CSV)', included: true },
             { text: 'Nutrição avançada', included: true },
             { text: 'Até 3 fazendas', included: true },
@@ -245,7 +246,7 @@ const PlansPage: React.FC<PlansPageProps> = ({
                         return (
                             <div
                                 key={plan.id}
-                                className={`relative flex flex-col rounded-2xl border bg-[var(--eixo-surface)] p-6 ${
+                                className={`relative flex flex-col rounded-2xl border bg-[var(--eixo-surface)] p-6 transition-all duration-150 ease-in-out hover:-translate-y-1 hover:border-[var(--eixo-green)] hover:shadow-xl hover:shadow-[var(--eixo-green)]/15 ${
                                     isCurrentPlan || plan.id === 'gestao'
                                         ? 'border-[var(--eixo-green)] shadow-lg shadow-[var(--eixo-green)]/10'
                                         : 'border-[var(--eixo-border)]'
