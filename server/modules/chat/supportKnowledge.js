@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-06.3';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-06';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-07.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-07';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -95,9 +95,10 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['financeiro', 'despesa', 'receita', 'lançamento', 'conta pagar', 'conta receber'],
         href: 'eixo:view:Financeiro',
         guidance: [
-            'Acesse Financeiro e abra Lançamentos.',
-            'Use Novo lançamento, informe entrada ou saída, categoria, valor e data.',
-            'Caixa mostra pagamentos e recebimentos; resultado mostra competência e desempenho.',
+            'Acesse Financeiro e abra Contas a Pagar (despesas) ou Contas a Receber (receitas).',
+            'Use Nova conta, informe categoria, valor, data e vencimento.',
+            'Cada aba já mostra o histórico completo: o que está pago/recebido e o que ainda está em aberto.',
+            'Venda ou compra de animal não se lança aqui: é feita em Manejo do Rebanho, que já atualiza o rebanho e cria o lançamento junto.',
         ],
     },
     {
