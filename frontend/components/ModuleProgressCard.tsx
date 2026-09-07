@@ -316,7 +316,11 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
                     </p>
                     {activeView === 'Financeiro' && (
                         <button type="button" onClick={handleFinanceAction} className="mt-3 rounded-xl border-2 border-[#5a8c00] bg-[#B6E23A] px-3.5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130]">
-                            {nextFinanceStep === 'Conferir o resultado do mês' ? 'Ver resultado do mês' : 'Registrar lançamento'}
+                            {nextFinanceStep === 'Conferir o resultado do mês'
+                                ? 'Ver resultado do mês'
+                                : nextFinanceStep === 'Registrar uma despesa'
+                                    ? 'Registrar despesa'
+                                    : 'Registrar receita'}
                         </button>
                     )}
                 </div>

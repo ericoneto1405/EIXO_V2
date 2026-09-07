@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { FinancialTransaction } from '../../adapters/financialApi';
-import { CalendarCheckIcon, CheckIcon, ClockIcon, LockIcon, WalletIcon, formatCurrency, formatDate, getCatLabel, isVencida, statusBadge } from '../financeUtils';
+import { CalendarCheckIcon, CheckIcon, ClockIcon, LockIcon, MESES, WalletIcon, formatCurrency, formatDate, getCatLabel, isVencida, statusBadge } from '../financeUtils';
 import KpiCard from '../KpiCard';
 
 type ContaFilter = 'todos' | 'pendente' | 'vencido' | 'pago';
@@ -9,6 +9,7 @@ interface ContasTabProps {
     tipo: 'pagar' | 'receber';
     pendingAll: FinancialTransaction[];
     pendingLoading: boolean;
+    anos: number[];
     onMarkPaid: (id: string) => Promise<void>;
     onEdit: (t: FinancialTransaction) => void;
     onDelete: (t: FinancialTransaction) => void;
@@ -35,7 +36,7 @@ const applyFilter = (list: FinancialTransaction[], filter: ContaFilter) => {
     return list;
 };
 
-const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading, onMarkPaid, onEdit, onDelete }) => {
+const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading, anos, onMarkPaid, onEdit, onDelete }) => {
     const [filter, setFilter] = useState<ContaFilter>('todos');
     const [markingPaid, setMarkingPaid] = useState<string | null>(null);
 
@@ -44,9 +45,25 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
         [pendingAll, tipo],
     );
 
-    // Totais consideram só o que está em aberto — o que já foi pago/recebido
-    // não entra na conta de "quanto falta".
-    const abertas = useMemo(() => lista.filter(t => t.status !== 'PAGO'), [lista]);
+    // Filtro de período: 0 = "todos" pros dois seletores. Usa o vencimento
+    // como referência (é a data que importa pra contas a pagar/receber) e cai
+    // pra data de competência quando não tem vencimento cadastrado.
+    const [filtroMes, setFiltroMes] = useState(0);
+    const [filtroAno, setFiltroAno] = useState(0);
+
+    const noPeriodo = useMemo(() => {
+        if (!filtroMes && !filtroAno) return lista;
+        return lista.filter(t => {
+            const ref = t.vencimento || t.data;
+            if (!ref) return false;
+            const d = new Date(ref);
+            if (filtroAno && d.getFullYear() !== filtroAno) return false;
+            if (filtroMes && d.getMonth() + 1 !== filtroMes) return false;
+            return true;
+        });
+    }, [lista, filtroMes, filtroAno]);
+
+    const abertasNoPeriodo = useMemo(() => noPeriodo.filter(t => t.status !== 'PAGO'), [noPeriodo]);
 
     const handleMarkPaid = async (id: string) => {
         setMarkingPaid(id);
@@ -57,11 +74,12 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
         }
     };
 
-    const filtrada = applyFilter(lista, filter);
-    const totalPendente = abertas.reduce((s, t) => s + t.valor, 0);
-    const totalVencido = abertas.filter(isVencida).reduce((s, t) => s + t.valor, 0);
-    const totalAVencer = abertas.filter(t => !isVencida(t)).reduce((s, t) => s + t.valor, 0);
-    const totalPago = lista.filter(t => t.status === 'PAGO').reduce((s, t) => s + t.valor, 0);
+    const filtrada = applyFilter(noPeriodo, filter);
+    // Os cards seguem o período escolhido: mudam junto com o filtro de mês/ano.
+    const totalPendente = abertasNoPeriodo.reduce((s, t) => s + t.valor, 0);
+    const totalVencido = abertasNoPeriodo.filter(isVencida).reduce((s, t) => s + t.valor, 0);
+    const totalAVencer = abertasNoPeriodo.filter(t => !isVencida(t)).reduce((s, t) => s + t.valor, 0);
+    const totalPago = noPeriodo.filter(t => t.status === 'PAGO').reduce((s, t) => s + t.valor, 0);
     const corTotal = tipo === 'pagar' ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-success)]';
 
     return (
@@ -82,17 +100,37 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
                 </KpiCard>
             </div>
 
+            {/* Período */}
+            <div className="flex flex-wrap items-center gap-2">
+                <select value={filtroMes} onChange={e => setFiltroMes(Number(e.target.value))}
+                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
+                    <option value={0}>Todos os meses</option>
+                    {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+                </select>
+                <select value={filtroAno} onChange={e => setFiltroAno(Number(e.target.value))}
+                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
+                    <option value={0}>Todos os anos</option>
+                    {anos.map(a => <option key={a} value={a}>{a}</option>)}
+                </select>
+                {(filtroMes !== 0 || filtroAno !== 0) && (
+                    <button type="button" onClick={() => { setFiltroMes(0); setFiltroAno(0); }}
+                        className="text-xs font-semibold text-[var(--eixo-text-muted)] underline hover:text-[var(--eixo-text)]">
+                        Limpar período
+                    </button>
+                )}
+            </div>
+
             {/* Filtros */}
             <div className="flex flex-wrap gap-2">
-                <FilterPill active={filter === 'todos'} onClick={() => setFilter('todos')}>Todos ({lista.length})</FilterPill>
+                <FilterPill active={filter === 'todos'} onClick={() => setFilter('todos')}>Todos ({noPeriodo.length})</FilterPill>
                 <FilterPill active={filter === 'pendente'} onClick={() => setFilter('pendente')}>
-                    A vencer ({abertas.filter(t => !isVencida(t)).length})
+                    A vencer ({abertasNoPeriodo.filter(t => !isVencida(t)).length})
                 </FilterPill>
                 <FilterPill active={filter === 'vencido'} onClick={() => setFilter('vencido')}>
-                    Vencidos ({abertas.filter(isVencida).length})
+                    Vencidos ({abertasNoPeriodo.filter(isVencida).length})
                 </FilterPill>
                 <FilterPill active={filter === 'pago'} onClick={() => setFilter('pago')}>
-                    {tipo === 'pagar' ? 'Pagos' : 'Recebidos'} ({lista.filter(t => t.status === 'PAGO').length})
+                    {tipo === 'pagar' ? 'Pagos' : 'Recebidos'} ({noPeriodo.filter(t => t.status === 'PAGO').length})
                 </FilterPill>
             </div>
 

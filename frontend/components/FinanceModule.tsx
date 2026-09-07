@@ -380,12 +380,12 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
 
             {/* ── Aba: Contas a Pagar ───────────────────────────────────────────── */}
             {activeTab === 'contas_pagar' && (
-                <ContasTab tipo="pagar" pendingAll={pendingAll} pendingLoading={pendingLoading} onMarkPaid={handleMarkPaid} onEdit={openEditModal} onDelete={(t) => { setDeleteError(null); setDeleteConfirmId(t.id); }} />
+                <ContasTab tipo="pagar" pendingAll={pendingAll} pendingLoading={pendingLoading} anos={anos} onMarkPaid={handleMarkPaid} onEdit={openEditModal} onDelete={(t) => { setDeleteError(null); setDeleteConfirmId(t.id); }} />
             )}
 
             {/* ── Aba: Contas a Receber ─────────────────────────────────────────── */}
             {activeTab === 'contas_receber' && (
-                <ContasTab tipo="receber" pendingAll={pendingAll} pendingLoading={pendingLoading} onMarkPaid={handleMarkPaid} onEdit={openEditModal} onDelete={(t) => { setDeleteError(null); setDeleteConfirmId(t.id); }} />
+                <ContasTab tipo="receber" pendingAll={pendingAll} pendingLoading={pendingLoading} anos={anos} onMarkPaid={handleMarkPaid} onEdit={openEditModal} onDelete={(t) => { setDeleteError(null); setDeleteConfirmId(t.id); }} />
             )}
 
             {/* ── Aba: Fluxo de Caixa ──────────────────────────────────────────── */}
