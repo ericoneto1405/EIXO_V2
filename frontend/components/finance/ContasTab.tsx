@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { FinancialTransaction } from '../../adapters/financialApi';
-import { CalendarCheckIcon, CheckIcon, ClockIcon, LockIcon, MESES, WalletIcon, formatCurrency, formatDate, getCatLabel, isVencida, statusBadge } from '../financeUtils';
+import { CalendarCheckIcon, CheckIcon, ClockIcon, LockIcon, WalletIcon, formatCurrency, formatDate, getCatLabel, isVencida, statusBadge } from '../financeUtils';
 import KpiCard from '../KpiCard';
 
 type ContaFilter = 'todos' | 'pendente' | 'vencido' | 'pago';
@@ -9,7 +9,6 @@ interface ContasTabProps {
     tipo: 'pagar' | 'receber';
     pendingAll: FinancialTransaction[];
     pendingLoading: boolean;
-    anos: number[];
     onMarkPaid: (id: string) => Promise<void>;
     onEdit: (t: FinancialTransaction) => void;
     onDelete: (t: FinancialTransaction) => void;
@@ -36,7 +35,7 @@ const applyFilter = (list: FinancialTransaction[], filter: ContaFilter) => {
     return list;
 };
 
-const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading, anos, onMarkPaid, onEdit, onDelete }) => {
+const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading, onMarkPaid, onEdit, onDelete }) => {
     const [filter, setFilter] = useState<ContaFilter>('todos');
     const [markingPaid, setMarkingPaid] = useState<string | null>(null);
 
@@ -45,23 +44,27 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
         [pendingAll, tipo],
     );
 
-    // Filtro de período: 0 = "todos" pros dois seletores. Usa o vencimento
-    // como referência (é a data que importa pra contas a pagar/receber) e cai
-    // pra data de competência quando não tem vencimento cadastrado.
-    const [filtroMes, setFiltroMes] = useState(0);
-    const [filtroAno, setFiltroAno] = useState(0);
+    // Filtro de período por Date Picker (De/Até). Usa o vencimento como
+    // referência (é a data que importa pra contas a pagar/receber) e cai pra
+    // data de competência quando não tem vencimento cadastrado.
+    const [filtroDe, setFiltroDe] = useState('');
+    const [filtroAte, setFiltroAte] = useState('');
 
     const noPeriodo = useMemo(() => {
-        if (!filtroMes && !filtroAno) return lista;
+        if (!filtroDe && !filtroAte) return lista;
         return lista.filter(t => {
             const ref = t.vencimento || t.data;
             if (!ref) return false;
             const d = new Date(ref);
-            if (filtroAno && d.getFullYear() !== filtroAno) return false;
-            if (filtroMes && d.getMonth() + 1 !== filtroMes) return false;
+            if (filtroDe && d < new Date(filtroDe)) return false;
+            if (filtroAte) {
+                const ateFimDoDia = new Date(filtroAte);
+                ateFimDoDia.setHours(23, 59, 59, 999);
+                if (d > ateFimDoDia) return false;
+            }
             return true;
         });
-    }, [lista, filtroMes, filtroAno]);
+    }, [lista, filtroDe, filtroAte]);
 
     const abertasNoPeriodo = useMemo(() => noPeriodo.filter(t => t.status !== 'PAGO'), [noPeriodo]);
 
@@ -102,18 +105,18 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
 
             {/* Período */}
             <div className="flex flex-wrap items-center gap-2">
-                <select value={filtroMes} onChange={e => setFiltroMes(Number(e.target.value))}
-                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
-                    <option value={0}>Todos os meses</option>
-                    {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
-                </select>
-                <select value={filtroAno} onChange={e => setFiltroAno(Number(e.target.value))}
-                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
-                    <option value={0}>Todos os anos</option>
-                    {anos.map(a => <option key={a} value={a}>{a}</option>)}
-                </select>
-                {(filtroMes !== 0 || filtroAno !== 0) && (
-                    <button type="button" onClick={() => { setFiltroMes(0); setFiltroAno(0); }}
+                <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--eixo-text-muted)]">
+                    De
+                    <input type="date" value={filtroDe} onChange={e => setFiltroDe(e.target.value)}
+                        className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" />
+                </label>
+                <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--eixo-text-muted)]">
+                    Até
+                    <input type="date" value={filtroAte} onChange={e => setFiltroAte(e.target.value)}
+                        className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" />
+                </label>
+                {(filtroDe !== '' || filtroAte !== '') && (
+                    <button type="button" onClick={() => { setFiltroDe(''); setFiltroAte(''); }}
                         className="text-xs font-semibold text-[var(--eixo-text-muted)] underline hover:text-[var(--eixo-text)]">
                         Limpar período
                     </button>
