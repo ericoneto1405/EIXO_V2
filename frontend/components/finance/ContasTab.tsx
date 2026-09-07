@@ -1,14 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { FinancialTransaction } from '../../adapters/financialApi';
-import { CheckIcon, formatCurrency, formatDate, getCatLabel, isVencida, statusBadge } from '../financeUtils';
+import { CalendarCheckIcon, CheckIcon, ClockIcon, LockIcon, WalletIcon, formatCurrency, formatDate, getCatLabel, isVencida, statusBadge } from '../financeUtils';
+import KpiCard from '../KpiCard';
 
-type ContaFilter = 'todos' | 'pendente' | 'vencido';
+type ContaFilter = 'todos' | 'pendente' | 'vencido' | 'pago';
 
 interface ContasTabProps {
     tipo: 'pagar' | 'receber';
     pendingAll: FinancialTransaction[];
     pendingLoading: boolean;
     onMarkPaid: (id: string) => Promise<void>;
+    onEdit: (t: FinancialTransaction) => void;
+    onDelete: (t: FinancialTransaction) => void;
 }
 
 const FilterPill: React.FC<{
@@ -27,18 +30,23 @@ const FilterPill: React.FC<{
 
 const applyFilter = (list: FinancialTransaction[], filter: ContaFilter) => {
     if (filter === 'vencido') return list.filter(isVencida);
-    if (filter === 'pendente') return list.filter(t => !isVencida(t));
+    if (filter === 'pendente') return list.filter(t => t.status !== 'PAGO' && !isVencida(t));
+    if (filter === 'pago') return list.filter(t => t.status === 'PAGO');
     return list;
 };
 
-const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading, onMarkPaid }) => {
+const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading, onMarkPaid, onEdit, onDelete }) => {
     const [filter, setFilter] = useState<ContaFilter>('todos');
     const [markingPaid, setMarkingPaid] = useState<string | null>(null);
 
     const lista = useMemo(
-        () => pendingAll.filter(t => t.type === (tipo === 'pagar' ? 'SAIDA' : 'ENTRADA') && t.status !== 'PAGO'),
+        () => pendingAll.filter(t => t.type === (tipo === 'pagar' ? 'SAIDA' : 'ENTRADA')),
         [pendingAll, tipo],
     );
+
+    // Totais consideram só o que está em aberto — o que já foi pago/recebido
+    // não entra na conta de "quanto falta".
+    const abertas = useMemo(() => lista.filter(t => t.status !== 'PAGO'), [lista]);
 
     const handleMarkPaid = async (id: string) => {
         setMarkingPaid(id);
@@ -50,39 +58,41 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
     };
 
     const filtrada = applyFilter(lista, filter);
-    const totalPendente = lista.reduce((s, t) => s + t.valor, 0);
-    const totalVencido = lista.filter(isVencida).reduce((s, t) => s + t.valor, 0);
-    const totalAVencer = lista.filter(t => !isVencida(t)).reduce((s, t) => s + t.valor, 0);
+    const totalPendente = abertas.reduce((s, t) => s + t.valor, 0);
+    const totalVencido = abertas.filter(isVencida).reduce((s, t) => s + t.valor, 0);
+    const totalAVencer = abertas.filter(t => !isVencida(t)).reduce((s, t) => s + t.valor, 0);
+    const totalPago = lista.filter(t => t.status === 'PAGO').reduce((s, t) => s + t.valor, 0);
     const corTotal = tipo === 'pagar' ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-success)]';
 
     return (
         <>
             {/* Cards de resumo */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">
-                        Total {tipo === 'pagar' ? 'a pagar' : 'a receber'}
-                    </p>
-                    <p className={`mt-2 font-brand text-2xl font-extrabold ${corTotal}`}>{formatCurrency(totalPendente)}</p>
-                </div>
-                <div className="rounded-2xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-danger)]">Vencidos</p>
-                    <p className="mt-2 font-brand text-2xl font-extrabold text-[var(--eixo-danger)]">{formatCurrency(totalVencido)}</p>
-                </div>
-                <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] p-5">
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite)]">A vencer</p>
-                    <p className="mt-2 font-brand text-2xl font-extrabold text-[var(--eixo-graphite)]">{formatCurrency(totalAVencer)}</p>
-                </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <KpiCard title={`Total ${tipo === 'pagar' ? 'a pagar' : 'a receber'}`} icon={<WalletIcon />}>
+                    <p className={`font-brand text-2xl font-extrabold ${corTotal}`}>{formatCurrency(totalPendente)}</p>
+                </KpiCard>
+                <KpiCard title="Vencidos" icon={<ClockIcon />} tone="danger">
+                    <p className="font-brand text-2xl font-extrabold text-[var(--eixo-danger)]">{formatCurrency(totalVencido)}</p>
+                </KpiCard>
+                <KpiCard title="A vencer" icon={<CalendarCheckIcon />} tone="success">
+                    <p className="font-brand text-2xl font-extrabold text-[var(--eixo-graphite)]">{formatCurrency(totalAVencer)}</p>
+                </KpiCard>
+                <KpiCard title={tipo === 'pagar' ? 'Total pago' : 'Total recebido'} icon={<CheckIcon />}>
+                    <p className="font-brand text-2xl font-extrabold text-[var(--eixo-text)]">{formatCurrency(totalPago)}</p>
+                </KpiCard>
             </div>
 
             {/* Filtros */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
                 <FilterPill active={filter === 'todos'} onClick={() => setFilter('todos')}>Todos ({lista.length})</FilterPill>
                 <FilterPill active={filter === 'pendente'} onClick={() => setFilter('pendente')}>
-                    A vencer ({lista.filter(t => !isVencida(t)).length})
+                    A vencer ({abertas.filter(t => !isVencida(t)).length})
                 </FilterPill>
                 <FilterPill active={filter === 'vencido'} onClick={() => setFilter('vencido')}>
-                    Vencidos ({lista.filter(isVencida).length})
+                    Vencidos ({abertas.filter(isVencida).length})
+                </FilterPill>
+                <FilterPill active={filter === 'pago'} onClick={() => setFilter('pago')}>
+                    {tipo === 'pagar' ? 'Pagos' : 'Recebidos'} ({lista.filter(t => t.status === 'PAGO').length})
                 </FilterPill>
             </div>
 
@@ -139,15 +149,39 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
-                                                    <button
-                                                        type="button"
-                                                        disabled={markingPaid === t.id}
-                                                        onClick={() => handleMarkPaid(t.id)}
-                                                        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--eixo-border-strong)] bg-[var(--eixo-green-soft)] px-3 py-1 text-xs font-semibold text-[var(--eixo-success)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50"
-                                                    >
-                                                        <CheckIcon className="w-3.5 h-3.5" />
-                                                        {markingPaid === t.id ? '...' : 'Pago'}
-                                                    </button>
+                                                    {(t.herdEventId || t.sanitaryRecordId) ? (
+                                                        <span className="inline-flex items-center gap-1 text-xs text-[var(--eixo-text-muted)]"><LockIcon /> auto</span>
+                                                    ) : (
+                                                        <div className="inline-flex flex-wrap items-center justify-center gap-1.5">
+                                                            {t.status !== 'PAGO' && (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={markingPaid === t.id}
+                                                                    onClick={() => handleMarkPaid(t.id)}
+                                                                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--eixo-border-strong)] bg-[var(--eixo-green-soft)] px-3 py-1 text-xs font-semibold text-[var(--eixo-success)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50"
+                                                                >
+                                                                    <CheckIcon className="w-3.5 h-3.5" />
+                                                                    {markingPaid === t.id ? '...' : 'Pago'}
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => onEdit(t)}
+                                                                title="Editar lançamento"
+                                                                aria-label="Editar lançamento"
+                                                                className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-2 py-1 text-xs font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--eixo-green)]"
+                                                            >
+                                                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828A2 2 0 0110 16.414H8v-2a2 2 0 01.586-1.414z" /></svg>
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => onDelete(t)}
+                                                                className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)]"
+                                                            >
+                                                                Cancelar
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </td>
                                             </tr>
                                         );

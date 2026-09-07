@@ -22,6 +22,63 @@ export const CheckIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h
     </svg>
 );
 
+export const ArrowUpCircleIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 16V8m0 0-3.5 3.5M12 8l3.5 3.5" />
+    </svg>
+);
+
+export const ArrowDownCircleIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 8v8m0 0-3.5-3.5M12 16l3.5-3.5" />
+    </svg>
+);
+
+export const ScaleIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M12 3v18M5 7h14M5 7l-2.5 6a2.5 2.5 0 005 0L5 7Zm14 0l-2.5 6a2.5 2.5 0 005 0L19 7Z" />
+    </svg>
+);
+
+export const CowIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M4 4h3l2 4h6l2-4h3M7 8l-1 8h12l-1-8M9 16v2M15 16v2" />
+    </svg>
+);
+
+export const PillIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <rect x="4" y="9" width="16" height="6" rx="3" strokeWidth={1.8} />
+        <path strokeLinecap="round" strokeWidth={1.8} d="M12 9v6" />
+    </svg>
+);
+
+export const ClockIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" strokeWidth={1.8} />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 7v5l3.5 2" />
+    </svg>
+);
+
+export const CalendarCheckIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <rect x="4" y="5" width="16" height="15" rx="2" strokeWidth={1.8} />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4 9h16M8 3v3m8-3v3M9.5 14l1.8 1.8L15 12" />
+    </svg>
+);
+
+export const WalletIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+            d="M4 7a2 2 0 012-2h11a2 2 0 012 2v10a2 2 0 01-2 2H6a2 2 0 01-2-2V7Z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12h3M4 9h16" />
+    </svg>
+);
+
 // ── Utilitários ───────────────────────────────────────────────────────────────
 
 export const formatCurrency = (value: number) =>
@@ -58,6 +115,16 @@ export const CATTLE_SALE_CATEGORY_NAMES = new Set([
     'venda de animais para descarte',
 ]);
 
+export const CATTLE_PURCHASE_CATEGORY_NAMES = new Set([
+    'compra de animais',
+    'compra de animais para producao',
+    'compra de bezerros',
+    'compra de garrotes',
+    'compra de novilhas',
+    'compra de matrizes',
+    'compra de reprodutores',
+]);
+
 export const FEED_AND_MED_CATEGORY_NAMES = new Set([
     'racao / concentrado',
     'sal mineral',
@@ -73,10 +140,9 @@ export const FINANCIAL_PROGRESS_EVENT = 'eixo:financial-transactions-changed';
 
 // ── Tipos de aba ──────────────────────────────────────────────────────────────
 
-export type FinanceTab = 'lancamentos' | 'visao_geral' | 'contas_pagar' | 'contas_receber' | 'fluxo' | 'dre' | 'analytics' | 'quality' | 'plano_contas';
+export type FinanceTab = 'visao_geral' | 'contas_pagar' | 'contas_receber' | 'fluxo' | 'dre' | 'analytics' | 'quality' | 'plano_contas';
 
 export const TAB_LABELS: Record<FinanceTab, string> = {
-    lancamentos: 'Lançamentos',
     visao_geral: 'Visão Geral',
     contas_pagar: 'Contas a Pagar',
     contas_receber: 'Contas a Receber',

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import WeatherCard from './WeatherCard';
+import KpiCard from './KpiCard';
 import { buildApiUrl } from '../api';
 import { getReproKpis, getReproFarol, ReproKpis, ReproFarol } from '../adapters/reproApi';
 
@@ -87,32 +88,6 @@ const getOccupationStatus = (taxa: number) => {
     if (taxa <= 1.5) return { label: 'Adequada', color: 'text-[var(--eixo-success)]', bg: 'bg-[var(--eixo-green-soft)]' };
     return { label: 'Sobrecarregado', color: 'text-[var(--eixo-danger)]', bg: 'bg-[rgba(184,66,50,0.08)]' };
 };
-
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
-
-interface KpiCardProps {
-    title: string;
-    icon: React.ReactNode;
-    loading?: boolean;
-    children: React.ReactNode;
-}
-
-const KpiCard: React.FC<KpiCardProps> = ({ title, icon, loading, children }) => (
-    <div className="flex min-h-[120px] flex-col rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
-        <div className="flex items-center gap-2 mb-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--eixo-green-soft)] text-[var(--eixo-green)]">
-                {icon}
-            </div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">{title}</p>
-        </div>
-        {loading ? (
-            <div className="space-y-2">
-                <div className="h-7 w-20 animate-pulse rounded-lg bg-[var(--eixo-surface-soft)]" />
-                <div className="h-3 w-32 animate-pulse rounded-lg bg-[var(--eixo-surface-soft)]" />
-            </div>
-        ) : children}
-    </div>
-);
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 

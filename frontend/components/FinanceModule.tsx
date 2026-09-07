@@ -20,14 +20,16 @@ import {
     FINANCIAL_PROGRESS_EVENT,
     FinanceTab,
     TAB_LABELS,
-    groupByGroup,
+    CATTLE_SALE_CATEGORY_NAMES,
+    CATTLE_PURCHASE_CATEGORY_NAMES,
+    normalizeSearchText,
 } from './financeUtils';
 import PlanoContasTab from './finance/PlanoContasTab';
 import DreTab from './finance/DreTab';
 import FluxoTab from './finance/FluxoTab';
 import ContasTab from './finance/ContasTab';
 import VisaoGeralTab from './finance/VisaoGeralTab';
-import LancamentosTab from './finance/LancamentosTab';
+import CategoryPicker from './finance/CategoryPicker';
 import AnalyticsTab from './finance/AnalyticsTab';
 import DataQualityTab from './finance/DataQualityTab';
 import { useToasts, ToastHost } from './finance/useToasts';
@@ -52,7 +54,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     const { toasts, notify, dismiss } = useToasts();
 
     // ── Estado geral ──
-    const [activeTab, setActiveTab] = useState<FinanceTab>('lancamentos');
+    const [activeTab, setActiveTab] = useState<FinanceTab>('visao_geral');
 
     // ── Lançamentos (mensal) ──
     const [selectedMes, setSelectedMes] = useState(hoje.getMonth() + 1);
@@ -70,6 +72,9 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     // ── Categorias ──
     const [categories, setCategories] = useState<AccountCategory[]>([]);
     const [catLoading, setCatLoading] = useState(true);
+    // Sinal pra abrir "Nova categoria" no Plano de Contas quando não existe
+    // nenhuma categoria ativa pro tipo escolhido no Novo Lançamento.
+    const [planoContasCreateSignal, setPlanoContasCreateSignal] = useState<{ type: TransactionType; nonce: number } | null>(null);
 
     // ── Modal novo lançamento ──
     const [modalOpen, setModalOpen] = useState(false);
@@ -119,11 +124,13 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         } finally { setIsLoading(false); }
     }, [farmId, selectedMes, selectedAno]);
 
+    // Contas a Pagar/Receber mostram o histórico completo (pago e pendente),
+    // não só o que está em aberto — por isso busca tudo, sem filtro de status.
     const loadPending = useCallback(async () => {
         if (!farmId) { setPendingAll([]); setPendingLoading(false); return; }
         setPendingLoading(true);
         try {
-            const data = await listTransactions(farmId, undefined, undefined, { status: 'PENDENTE' });
+            const data = await listTransactions(farmId);
             setPendingAll(data);
         } catch { /* silencioso */ }
         finally { setPendingLoading(false); }
@@ -147,15 +154,29 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
 
     // ── Categorias filtradas por tipo ──────────────────────────────────────────
 
+    // Compra/venda de animal precisa passar pelo Manejo do Rebanho (é lá que o
+    // animal entra ou sai do rebanho) — por isso essas categorias não aparecem
+    // pra escolha manual aqui, evitando lançar sem atualizar o rebanho.
     const filteredCategories = useMemo(
-        () => categories.filter(c => c.type === formType && c.isActive && c.isConfigured && !c.deprecatedAt),
+        () => categories.filter(c => {
+            const normalizedName = normalizeSearchText(c.name);
+            return c.type === formType
+                && c.isActive
+                && c.isConfigured
+                && !c.deprecatedAt
+                && !CATTLE_SALE_CATEGORY_NAMES.has(normalizedName)
+                && !CATTLE_PURCHASE_CATEGORY_NAMES.has(normalizedName);
+        }),
         [categories, formType],
     );
 
     useEffect(() => {
+        // Não mexe na categoria enquanto está editando um lançamento existente —
+        // senão troca a categoria certa pela primeira da lista sem avisar.
+        if (editingTransaction) return;
         const first = filteredCategories[0];
         setFormCategoryId(first?.id ?? '');
-    }, [filteredCategories]);
+    }, [filteredCategories, editingTransaction]);
 
     // ── Handlers: lançamentos ─────────────────────────────────────────────────
 
@@ -192,7 +213,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
             setActiveTab('dre');
             return;
         }
-        setActiveTab('lancamentos');
+        setActiveTab(onboardingAction.action === 'SAIDA' ? 'contas_pagar' : 'contas_receber');
         resetForm();
         setFormType(onboardingAction.action);
         setModalOpen(true);
@@ -299,16 +320,6 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                         </div>
                         <h2 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Financeiro</h2>
                     </div>
-                    {activeTab === 'lancamentos' && (
-                        <button
-                            type="button"
-                            onClick={() => { resetForm(); setModalOpen(true); }}
-                            className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-brand font-bold text-[#1a1a1a] shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
-                        >
-                            <PlusIcon className="h-[18px] w-[18px]" />
-                            <span className="ml-2">Novo lançamento</span>
-                        </button>
-                    )}
                     {(activeTab === 'contas_pagar' || activeTab === 'contas_receber') && (
                         <button
                             type="button"
@@ -353,23 +364,6 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                 })}
             </div>
 
-            {/* ── Aba: Lançamentos ──────────────────────────────────────────────── */}
-            {activeTab === 'lancamentos' && (
-                <LancamentosTab
-                    transactions={transactions}
-                    isLoading={isLoading}
-                    loadError={loadError}
-                    selectedMes={selectedMes}
-                    setSelectedMes={setSelectedMes}
-                    selectedAno={selectedAno}
-                    setSelectedAno={setSelectedAno}
-                    anos={anos}
-                    onNew={() => { resetForm(); setModalOpen(true); }}
-                    onEdit={openEditModal}
-                    onDelete={(t) => { setDeleteError(null); setDeleteConfirmId(t.id); }}
-                />
-            )}
-
             {/* ── Aba: Visão Geral ─────────────────────────────────────────────── */}
             {activeTab === 'visao_geral' && (
                 <VisaoGeralTab
@@ -386,12 +380,12 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
 
             {/* ── Aba: Contas a Pagar ───────────────────────────────────────────── */}
             {activeTab === 'contas_pagar' && (
-                <ContasTab tipo="pagar" pendingAll={pendingAll} pendingLoading={pendingLoading} onMarkPaid={handleMarkPaid} />
+                <ContasTab tipo="pagar" pendingAll={pendingAll} pendingLoading={pendingLoading} onMarkPaid={handleMarkPaid} onEdit={openEditModal} onDelete={(t) => { setDeleteError(null); setDeleteConfirmId(t.id); }} />
             )}
 
             {/* ── Aba: Contas a Receber ─────────────────────────────────────────── */}
             {activeTab === 'contas_receber' && (
-                <ContasTab tipo="receber" pendingAll={pendingAll} pendingLoading={pendingLoading} onMarkPaid={handleMarkPaid} />
+                <ContasTab tipo="receber" pendingAll={pendingAll} pendingLoading={pendingLoading} onMarkPaid={handleMarkPaid} onEdit={openEditModal} onDelete={(t) => { setDeleteError(null); setDeleteConfirmId(t.id); }} />
             )}
 
             {/* ── Aba: Fluxo de Caixa ──────────────────────────────────────────── */}
@@ -427,6 +421,7 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                     inputCls={inputCls}
                     labelCls={labelCls}
                     notify={notify}
+                    openCreateSignal={planoContasCreateSignal}
                 />
             )}
 
@@ -458,18 +453,36 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             {/* Categoria */}
                             <div>
                                 <label className={labelCls}>Categoria</label>
+                                {formType === 'ENTRADA' && (
+                                    <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Vendeu um animal? Registre a venda em Manejo do Rebanho — o lançamento financeiro é feito automaticamente.</p>
+                                )}
+                                {formType === 'SAIDA' && (
+                                    <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Comprou um animal? Registre a compra em Manejo do Rebanho — o lançamento financeiro é feito automaticamente.</p>
+                                )}
                                 {catLoading ? (
                                     <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Carregando...</p>
                                 ) : filteredCategories.length === 0 ? (
-                                    <p className="mt-1 text-sm text-[var(--eixo-danger)]">Nenhuma categoria ativa. Crie no Plano de Contas.</p>
+                                    <div className="mt-1 rounded-xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] p-3">
+                                        <p className="text-sm text-[var(--eixo-danger)]">Nenhuma categoria ativa para {formType === 'ENTRADA' ? 'Entrada' : 'Saída'}.</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setModalOpen(false);
+                                                setActiveTab('plano_contas');
+                                                setPlanoContasCreateSignal({ type: formType, nonce: Date.now() });
+                                            }}
+                                            className="mt-2 rounded-lg bg-[var(--eixo-green)] px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:opacity-90"
+                                        >
+                                            Criar categoria agora
+                                        </button>
+                                    </div>
                                 ) : (
-                                    <select value={formCategoryId} onChange={e => setFormCategoryId(e.target.value)} className={inputCls}>
-                                        {Array.from(groupByGroup(filteredCategories).entries()).map(([grp, cats]) => (
-                                            <optgroup key={grp} label={grp}>
-                                                {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </optgroup>
-                                        ))}
-                                    </select>
+                                    <CategoryPicker
+                                        categories={filteredCategories}
+                                        value={formCategoryId}
+                                        onChange={setFormCategoryId}
+                                        inputCls={inputCls}
+                                    />
                                 )}
                             </div>
                             {/* Valor */}

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     AccountCategory,
     AccountCategoryType,
@@ -18,6 +18,9 @@ interface PlanoContasTabProps {
     inputCls: string;
     labelCls: string;
     notify: (message: string, type?: 'success' | 'error') => void;
+    // Sinal vindo de fora (ex: modal de Novo Lançamento) pra já abrir o
+    // formulário de nova categoria direto no tipo certo (Entrada/Saída).
+    openCreateSignal?: { type: AccountCategoryType; nonce: number } | null;
 }
 
 const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
@@ -28,6 +31,7 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
     inputCls,
     labelCls,
     notify,
+    openCreateSignal,
 }) => {
     // ── Nova categoria ──
     const [pcModalOpen, setPcModalOpen] = useState(false);
@@ -106,6 +110,12 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
         setPcFormGroup(useNewGroup ? '__new__' : '');
         setPcModalOpen(true);
     };
+
+    useEffect(() => {
+        if (!openCreateSignal) return;
+        openCategoryModal(openCreateSignal.type);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [openCreateSignal?.nonce]);
 
     const startEditCat = (cat: AccountCategory) => {
         setEditingCatId(cat.id); setEditingCatName(cat.name); setEditingCatGroup(cat.group);

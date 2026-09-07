@@ -1,6 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { upsertSystemAccountCategories } from '../accountCategoryDefaults.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+dotenv.config({ path: path.join(__dirname, '..', '.env.local'), override: true });
 
 const prisma = new PrismaClient();
 
@@ -10,6 +17,7 @@ const DEFAULT_MODULES = [
     'Rebanho Comercial',
     'Plantel P.O.',
     'Rebanho Genética',
+    'Financeiro',
     'Fornecedores',
     'Remédios',
     'Rações',
