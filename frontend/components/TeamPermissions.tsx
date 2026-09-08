@@ -18,7 +18,8 @@ import type {
     WebUserUpdatePayload,
 } from '../types';
 
-interface TeamPermissionsProps {
+export interface TeamPermissionsProps {
+    mode?: 'web' | 'field';
     farms: Farm[];
     canManageUsers: boolean;
     currentUserId?: string | null;
@@ -737,6 +738,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
     moduleCategories,
     onOpenUserRegister,
     refreshKey = 0,
+    mode = 'web',
 }) => {
     const [users, setUsers] = React.useState<ManagedUser[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
@@ -981,17 +983,18 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                         <div>
                             <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
                                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
-                                Estrutura da Fazenda
+                                {mode === 'field' ? 'APP EIXO CAMPO' : 'Estrutura da Fazenda'}
                             </div>
-                            <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Usuários e Permissões</h1>
+                            <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">{mode === 'field' ? 'Colaboradores e aparelhos' : 'Usuários e Permissões'}</h1>
                             <p className="mt-1 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
-                                Separe o acesso do sistema web do acesso operacional no App EIXO Campo.
+                                {mode === 'field' ? 'Gerencie colaboradores, códigos de ativação e aparelhos do aplicativo.' : 'Gerencie os usuários e as permissões de acesso ao sistema web.'}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className={`grid gap-4 ${mode === 'field' ? 'md:grid-cols-2' : ''}`}>
+                    {mode === 'web' && (
                     <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
                         <div className="flex items-center gap-2">
                             <DesktopIcon />
@@ -1000,6 +1003,8 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                         <p className="mt-2 text-3xl font-extrabold text-[var(--eixo-text)]">{webUsers.length}</p>
                         <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Acessos com e-mail, senha e módulos do sistema.</p>
                     </div>
+                    )}
+                    {mode === 'field' && (<>
                     <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
                         <div className="flex items-center gap-2">
                             <SmartphoneIcon />
@@ -1015,9 +1020,10 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                         </p>
                         <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Um aparelho por colaborador de campo.</p>
                     </div>
+                    </>)}
                 </div>
 
-                {canManageUsers && (
+                {mode === 'web' && canManageUsers && (
                     <div className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
                         <div className="mb-4">
                             <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
@@ -1069,6 +1075,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                     </div>
                 )}
 
+                {mode === 'web' && (
                 <div className="overflow-hidden rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                     <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-6 py-4">
                         <div>
@@ -1172,6 +1179,8 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                     )}
                 </div>
 
+                )}
+                {mode === 'field' && (
                 <div className="overflow-hidden rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
                     <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-6 py-4">
                         <div>
@@ -1207,6 +1216,8 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                         </div>
                     ) : isLoading ? (
                         <div className="px-6 py-10 text-sm text-[var(--eixo-text-muted)]">Carregando colaboradores...</div>
+                    ) : error ? (
+                        <div role="alert" className="px-6 py-10 text-sm text-[var(--eixo-danger)]">{error}</div>
                     ) : fieldUsers.length === 0 ? (
                         <div className="px-6 py-10 text-sm text-[var(--eixo-text-muted)]">Nenhum colaborador de campo cadastrado.</div>
                     ) : (
@@ -1300,6 +1311,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                         </div>
                     )}
                 </div>
+                )}
             </div>
 
             <FieldCollaboratorModal

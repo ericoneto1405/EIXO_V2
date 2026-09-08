@@ -6,7 +6,7 @@ import { buildApiUrl } from './api';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import Operations from './components/Operations';
-import FieldOccurrences from './components/FieldOccurrences';
+import AppEixoCampo from './components/AppEixoCampo';
 import ConfinementContracts from './components/ConfinementContracts';
 import Settings from './components/Settings';
 import Header from './components/Header';
@@ -649,12 +649,14 @@ const AppContent: React.FC = () => {
 
     React.useEffect(() => {
         const parentView = SUB_VIEW_PARENT[activeView] ?? activeView;
+        const canAccessCampo = activeView === 'APP EIXO CAMPO' && ['Fazendas', 'Operações'].some((module) => currentAllowedModules.includes(module));
         const canAccessInternal = parentView === 'EIXO HQ' && isSuperAdmin;
         if (
             isAuthenticated &&
             currentAllowedModules.length &&
             !currentAllowedModules.includes(parentView) &&
-            !canAccessInternal
+            !canAccessInternal &&
+            !canAccessCampo
         ) {
             const fallbackView = currentAllowedModules[0] || 'Fazendas';
             setActiveView(fallbackView);
@@ -1168,8 +1170,22 @@ const AppContent: React.FC = () => {
                 return <FinanceModule farmId={selectedFarmId} farmName={selectedFarm?.name} isFreePlan={isFreePlan} onboardingAction={financeOnboardingAction} onUpgradeRequest={() => setUpgradeModal('Financeiro completo')} />;
             case 'Registro de Atividades':
                 return <ActivityModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
+            case 'APP EIXO CAMPO':
             case 'Ocorrências do EIXO Campo':
-                return <FieldOccurrences farmId={selectedFarmId} />;
+                return <AppEixoCampo
+                    key={activeView}
+                    farmId={selectedFarmId}
+                    initialOccurrences={activeView === 'Ocorrências do EIXO Campo'}
+                    canViewCollaborators={currentAllowedModules.includes('Fazendas')}
+                    canViewOccurrences={currentAllowedModules.includes('Operações')}
+                    farms={farms}
+                    canManageUsers={canManageUsers}
+                    currentUserId={currentUser?.id || null}
+                    hasEixoCampoAccess={hasEixoCampoAccess}
+                    moduleCategories={registerModuleCategories}
+                    onOpenUserRegister={() => setIsRegisterModalOpen(true)}
+                    refreshKey={usersRefreshKey}
+                />;
             case 'Operações':
                 return <Operations />;
             case 'Confinamento e Contratos':
