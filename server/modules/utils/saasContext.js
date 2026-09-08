@@ -6,7 +6,8 @@ const prisma = new PrismaClient();
 export const SUPER_ADMIN_ALL_MODULES = [
     'Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda',
     'Rebanho Comercial', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial',
-    'Confinamento e Contratos',
+    'Confinamento e Contratos', 'Plantel P.O.', 'Estoque e Equipamentos',
+    'Editar Animais', 'Ver Atividades de Todos', 'Ocorrências do EIXO Campo',
     'Fornecedores', 'Remédios', 'Rações', 'Suplementos',
     'Nutrição', 'Financeiro',
     'Operações', 'Configurações', 'Registro de Atividades',
@@ -46,7 +47,8 @@ export const getPlanLimits = (planCode) => {
     };
 };
 
-export const canAccessEixoCampo = (saasContext) => (
+export const canAccessEixoCampo = (saasContext, roles = []) => (
+    roles.includes('SUPER_ADMIN') ||
     getPlanLimits(saasContext?.planCode).code === 'EIXO_DECISAO'
 );
 
@@ -186,43 +188,32 @@ export const normalizeUserModules = (modules, roles = [], accessType = 'WEB') =>
     return normalizedModules;
 };
 
-export const buildAllowedModulesFromPlan = (modules, entitlements, roles = [], accessType = 'WEB') => {
+// O plano limita a organização; permissões limitam cada pessoa dentro dela.
+export const buildAllowedModulesFromPlan = (modules, entitlements, roles = [], accessType = 'WEB', saasContext = {}) => {
     const normalizedModules = normalizeUserModules(modules, roles, accessType);
-    if (accessType === 'APP_MANEJO') {
-        return normalizedModules;
-    }
+    if (roles.includes('SUPER_ADMIN')) return SUPER_ADMIN_ALL_MODULES;
+    // Preserva o contrato do aplicativo de campo, validado por canAccessEixoCampo.
+    if (accessType === 'APP_MANEJO') return normalizedModules;
 
-    const codes = new Set((entitlements || []).map((code) => String(code || '').trim().toUpperCase()));
-    const nextModules = new Set(normalizedModules.length ? normalizedModules : PLAN_MODULES.GRATIS);
-
-    if (codes.has('NUTRITION') || codes.has('EIXO_NUTRITION') || codes.has('EIXO_GESTAO') || codes.has('EIXO_DECISAO')) {
-        nextModules.add('Nutrição');
-    }
-    if (codes.has('GENETICS') || codes.has('PO') || codes.has('EIXO_GENETICS') || codes.has('EIXO_DECISAO')) {
-        // 'Eixo Genetics' é o Acasalamento (seleção genética), que fica no
-        // Performance. A Reprodução tem rótulo próprio desde 02/09/2026 para
-        // poder descer de plano sem levar o Acasalamento junto.
-        nextModules.add('Eixo Genetics');
-        nextModules.add('Reprodução');
-        nextModules.add('Plantel P.O.');
-    }
-    if (codes.has('EIXO_GESTAO') || codes.has('EIXO_DECISAO')) {
-        nextModules.add('Registro de Atividades');
-        // Fazenda de cria vive de reprodução: estação de monta e prenhez
-        // desceram do Performance para o Gestão em 02/09/2026.
-        nextModules.add('Reprodução');
-        // Vender boi é o básico de qualquer fazenda: compra e venda desceu
-        // do Performance para o Gestão em 02/09/2026.
-        nextModules.add('Gestão Comercial');
-    }
-    if (codes.has('EIXO_DECISAO')) {
-        nextModules.add('Confinamento e Contratos');
-    }
-
-    return Array.from(nextModules);
+    const planCode = getPlanLimits(saasContext.planCode).code;
+    const planModules = new Set(PLAN_MODULES[planCode]);
+    if (planCode === 'EIXO_DECISAO') planModules.add('Plantel P.O.');
+    const paidModules = new Set([
+        ...PLAN_MODULES.EIXO_DECISAO.filter((module) => !PLAN_MODULES.GRATIS.includes(module)),
+        'Plantel P.O.', 'Ver Atividades de Todos',
+    ]);
+    if (planCode !== 'GRATIS') planModules.add('Ver Atividades de Todos');
+    const aliases = { 'Rebanho Genética': 'Eixo Genetics', 'DRE': 'Financeiro', 'Fluxo de Caixa': 'Financeiro', 'Contas a Pagar': 'Financeiro', 'Contas a Receber': 'Financeiro' };
+    const requested = normalizedModules.map((module) => aliases[module] || module);
+    if (saasContext.membershipRole === 'OWNER') requested.push(...planModules);
+    return [...new Set(requested)].filter((module) =>
+        (!paidModules.has(module) || planModules.has(module))
+        && !(saasContext.membershipRole === 'MEMBER' && module === 'Financeiro')
+    );
 };
 
 export const canManageOrganizationUsers = (req) => {
+    if (req.user?.roles?.includes('SUPER_ADMIN')) return true;
     const membershipRole = String(req.saas?.membershipRole || '').trim().toUpperCase();
     return ORGANIZATION_ADMIN_ROLES.has(membershipRole);
 };
@@ -242,6 +233,7 @@ export const canSeeAllActivityLogs = (req) => {
         req.saas?.entitlements,
         req.user?.roles,
         req.user?.accessType,
+        req.saas,
     );
     return allowedModules.includes('Ver Atividades de Todos');
 };
@@ -492,6 +484,6 @@ export const serializeAuthUserWithContext = async (userId, options) => {
     const accessContext = await ensureFieldWorkerFarmAccess(user, saasContext);
     return serializeAuthUser(user, saasContext, {
         ...accessContext,
-        allowedModules: buildAllowedModulesFromPlan(user.modules, saasContext?.entitlements || [], user.roles, user.accessType),
+        allowedModules: buildAllowedModulesFromPlan(user.modules, saasContext?.entitlements || [], user.roles, user.accessType, saasContext),
     });
 };

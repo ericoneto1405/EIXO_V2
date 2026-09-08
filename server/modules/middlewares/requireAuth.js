@@ -1,13 +1,14 @@
 import { PrismaClient } from '@prisma/client';
 import { UUID_REGEX, allowXUserId } from '../config/constants.js';
 import { extractSessionTokenFromRequest, hashSessionToken, getSessionFromRequest } from './session.js';
-import { ensureSaasContextForUser, ensureFieldWorkerFarmAccess, isSaasContextError, BILLING_BLOCKED_STATES, buildAllowedModulesFromPlan, canAccessEixoCampo } from '../utils/saasContext.js';
+import { ensureSaasContextForUser, ensureFieldWorkerFarmAccess, isSaasContextError, BILLING_BLOCKED_STATES, PLAN_ENTITLEMENTS, getPlanLimits, buildAllowedModulesFromPlan, canAccessEixoCampo } from '../utils/saasContext.js';
 
 const prisma = new PrismaClient();
 
 export const isFieldWorkerRequest = (req) => req.access?.appContext?.mode === 'field';
 
 export const requireBillingAccess = (req, res, next) => {
+    if (req.user?.roles?.includes('SUPER_ADMIN')) return next();
     if (isFieldWorkerRequest(req)) {
         return res.status(403).json({ message: 'Financeiro não está disponível para operação de campo.' });
     }
@@ -29,9 +30,7 @@ export const requireNonFieldWorker = (req, res, next) => {
     return next();
 };
 
-// Trava por módulo liberado à PESSOA (checkbox em Equipe > Permissões), não
-// pelo plano da conta — requireEntitlement já cobre o plano. SUPER_ADMIN
-// sempre passa.
+// Cruza o plano da organização com as permissões da pessoa.
 export const requireModule = (moduleName) => (req, res, next) => {
     if (req.user?.roles?.includes('SUPER_ADMIN')) {
         return next();
@@ -41,6 +40,7 @@ export const requireModule = (moduleName) => (req, res, next) => {
         req.saas?.entitlements,
         req.user?.roles,
         req.user?.accessType,
+        req.saas,
     );
     if (!allowedModules.includes(moduleName)) {
         return res.status(403).json({ message: `Módulo "${moduleName}" não liberado para este usuário.` });
@@ -49,14 +49,17 @@ export const requireModule = (moduleName) => (req, res, next) => {
 };
 
 export const requireEntitlement = (...codes) => async (req, res, next) => {
+    if (req.user?.roles?.includes('SUPER_ADMIN')) return next();
     const orgId = req.saas?.organizationId || null;
     if (!orgId) return res.status(403).json({ message: 'Organização não encontrada.' });
-    const entitlements = req.saas?.entitlements || [];
+    const entitlements = PLAN_ENTITLEMENTS[getPlanLimits(req.saas?.planCode).code];
     const hasEntitlement = codes.some((code) => entitlements.includes(code));
     if (hasEntitlement) return next();
-    const count = await prisma.organizationProductEntitlement.count({
-        where: { organizationId: orgId, status: 'ACTIVE', product: { code: { in: codes } } },
-    });
+    const planProducts = new Set(Object.values(PLAN_ENTITLEMENTS).flat());
+    const extraCodes = codes.filter((code) => !planProducts.has(code));
+    const count = extraCodes.length ? await prisma.organizationProductEntitlement.count({
+        where: { organizationId: orgId, status: 'ACTIVE', product: { code: { in: extraCodes } } },
+    }) : 0;
     if (count > 0) return next();
     return res.status(403).json({
         code: 'entitlement_required',
@@ -86,7 +89,7 @@ export const requireAuth = async (req, res, next) => {
             req.user = session.user;
             req.session = session;
             req.saas = await ensureSaasContextForUser(session.user.id);
-            if (session.deviceId && !canAccessEixoCampo(req.saas)) {
+            if (session.deviceId && !canAccessEixoCampo(req.saas, session.user.roles)) {
                 await prisma.session.updateMany({
                     where: { id: session.id, revokedAt: null },
                     data: { revokedAt: new Date() },

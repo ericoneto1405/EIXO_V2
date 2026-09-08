@@ -86,7 +86,7 @@ interface User {
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Plantel P.O.', 'Estoque e Equipamentos'],
     },
     {
         title: 'Cadastros',
@@ -300,28 +300,19 @@ const AppContent: React.FC = () => {
     const [paddocksRefreshNonce, setPaddocksRefreshNonce] = useState(0);
     const isSuperAdmin = React.useMemo(() => currentUser?.roles?.includes('SUPER_ADMIN') ?? false, [currentUser]);
     const canManageUsers = React.useMemo(() => {
+        if (currentUser?.roles?.includes('SUPER_ADMIN')) return true;
         const normalizedRoles = (currentUser?.roles || []).map((role) => String(role || '').trim().toLowerCase());
         const membershipRole = String(currentUser?.membershipRole || '').trim().toUpperCase();
         return normalizedRoles.includes('admin') || ['OWNER', 'ADMIN'].includes(membershipRole);
     }, [currentUser]);
-    const PAID_ENTITLEMENTS = ['GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'];
-    const isFreePlan = !(currentUser?.entitlements?.some(e => PAID_ENTITLEMENTS.includes(e)));
-    const currentPlanCode: 'GRATIS' | 'EIXO_GESTAO' | 'EIXO_DECISAO' = currentUser?.planCode
-        || (currentUser?.entitlements?.includes('EIXO_DECISAO')
-            ? 'EIXO_DECISAO'
-            : isFreePlan ? 'GRATIS' : 'EIXO_GESTAO');
-    const hasEixoCampoAccess = currentPlanCode === 'EIXO_DECISAO';
-    // Módulos exclusivos de planos pagos — bloqueados mesmo que estejam no banco do usuário
-    const PAID_ONLY_MODULES: string[] = [];
+    const currentPlanCode = currentUser?.planCode || 'GRATIS';
+    const isFreePlan = !isSuperAdmin && currentPlanCode === 'GRATIS';
+    const hasEixoCampoAccess = isSuperAdmin || currentPlanCode === 'EIXO_DECISAO';
     const currentAllowedModules = React.useMemo(() => {
-        const hasNutritionEntitlement = (currentUser?.entitlements || []).some((code) =>
-            ['NUTRITION', 'EIXO_NUTRITION'].includes(code),
-        );
-        const sourceModules = currentUser?.allowedModules?.length
-            ? currentUser.allowedModules
-            : currentUser?.modules || [];
+        if (isSuperAdmin) return ALL_MODULES;
+        const sourceModules = currentUser?.allowedModules ?? [];
         if (!sourceModules.length) {
-            return ['Fazendas'];
+            return [];
         }
         const LEGACY_MODULE_MAP: Record<string, string> = {
             'Mapa da Fazenda': 'Fazendas',
@@ -337,17 +328,11 @@ const AppContent: React.FC = () => {
             sourceModules
                 .map((module) => LEGACY_MODULE_MAP[module] ?? module)
                 .filter((module) => ALL_MODULES.includes(module))
-                // Bloqueia módulos pagos para usuários do plano grátis
-                .filter((module) => isFreePlan ? !PAID_ONLY_MODULES.includes(module) : true)
                 // Operador (MEMBER) não acessa Financeiro
                 .filter((module) => membershipRole === 'MEMBER' ? module !== 'Financeiro' : true)
         ));
-        const withNutrition = hasNutritionEntitlement && !filtered.includes('Nutrição')
-            ? [...filtered, 'Nutrição']
-            : filtered;
-        const fallbackModules = ['Fazendas'];
-        return withNutrition.length ? withNutrition : fallbackModules;
-    }, [currentUser, isFreePlan]);
+        return filtered;
+    }, [currentUser, isSuperAdmin]);
     const registerModuleCategories = React.useMemo(
         () =>
             MODULE_CATEGORIES.map((category) => ({
@@ -1016,6 +1001,36 @@ const AppContent: React.FC = () => {
         // The selectedFarm state can be passed down to children components to filter data
         console.log(`Rendering view "${activeView}" for farm: "${selectedFarm?.name ?? 'Nenhuma'}"`);
 
+        const isAcasalamentoView = location.pathname.startsWith('/genetics/acasalamento')
+            || (!isGeneticsRoute && ['Eixo Genetics', 'Eixo Acasalamento'].includes(activeView));
+        const hasRequiredPlan = isSuperAdmin || currentPlanCode === 'EIXO_DECISAO';
+        if (isAcasalamentoView && (!hasRequiredPlan || !currentAllowedModules.includes('Eixo Genetics'))) {
+            const canRequestPlanUpgrade = ['OWNER', 'ADMIN'].includes(currentUser?.membershipRole || '');
+            return (
+                <section className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 lg:p-8">
+                    <h1 className="font-brand text-2xl font-extrabold text-[var(--eixo-graphite)]">Eixo Acasalamento</h1>
+                    <p className="mt-3 text-sm text-[var(--eixo-text-muted)]" role="status">
+                        {hasRequiredPlan
+                            ? 'Você não tem permissão para acessar o Acasalamento. Solicite acesso ao responsável pela organização.'
+                            : 'O Acasalamento está disponível no EIXO Performance.'}
+                    </p>
+                    {!hasRequiredPlan && (canRequestPlanUpgrade ? (
+                        <button
+                            type="button"
+                            onClick={() => setUpgradeModal('Eixo Acasalamento')}
+                            className="mt-6 inline-flex items-center rounded-2xl bg-[var(--eixo-green)] px-5 py-3 text-sm font-semibold text-[#1a1a1a]"
+                        >
+                            Solicitar upgrade
+                        </button>
+                    ) : (
+                        <p className="mt-3 text-sm text-[var(--eixo-text-muted)]">
+                            Fale com o responsável pela organização sobre a mudança de plano.
+                        </p>
+                    ))}
+                </section>
+            );
+        }
+
         const upgradeModule = getUpgradeModuleForView(activeView);
         if (upgradeModule) {
             return (
@@ -1032,21 +1047,6 @@ const AppContent: React.FC = () => {
         }
 
         if (isGeneticsRoute) {
-            if (location.pathname.startsWith('/genetics/acasalamento') && isFreePlan) {
-                const acasalamentoUpgrade = UPGRADE_CONTENT['Eixo Acasalamento'];
-                return (
-                    <UpgradeScreen
-                        moduleName={acasalamentoUpgrade.moduleName}
-                        icon={acasalamentoUpgrade.icon}
-                        tagline={acasalamentoUpgrade.tagline}
-                        benefits={acasalamentoUpgrade.benefits}
-                        requiredPlan={acasalamentoUpgrade.requiredPlan}
-                        previewItems={acasalamentoUpgrade.previewItems}
-                        onUpgrade={() => setUpgradeModal(acasalamentoUpgrade.moduleName)}
-                    />
-                );
-            }
-
             // Reprodução tem rota própria (fora do switch(activeView) abaixo), então
             // a trava de plano precisa ser checada aqui também — senão quem digita a
             // URL direto no plano grátis entra na tela e ela quebra (API barra por trás).

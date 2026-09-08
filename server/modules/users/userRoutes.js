@@ -182,7 +182,7 @@ app.post('/users', requireAuth, async (req, res) => {
             return res.status(400).json({ message: 'Organização ativa não encontrada.' });
         }
 
-        if (isFieldAccess && !canAccessEixoCampo(req.saas)) {
+        if (isFieldAccess && !canAccessEixoCampo(req.saas, req.user?.roles)) {
             return respondEixoCampoPlanRequired(res);
         }
 
@@ -622,7 +622,7 @@ app.post('/users/:id/app-code', requireAuth, async (req, res) => {
         if (!canManageOrganizationUsers(req)) {
             return res.status(403).json({ message: 'Apenas administradores podem gerar codigo.' });
         }
-        if (!canAccessEixoCampo(req.saas)) {
+        if (!canAccessEixoCampo(req.saas, req.user?.roles)) {
             return respondEixoCampoPlanRequired(res);
         }
 
@@ -1004,7 +1004,7 @@ app.post('/app/activate', async (req, res) => {
         }
 
         const saasContext = await ensureSaasContextForUser(targetUser.id);
-        if (!canAccessEixoCampo(saasContext)) {
+        if (!canAccessEixoCampo(saasContext, targetUser.roles)) {
             return respondEixoCampoPlanRequired(res);
         }
         const accessContext = await ensureFieldWorkerFarmAccess(targetUser, saasContext);
@@ -1088,7 +1088,7 @@ app.post('/app/activate', async (req, res) => {
 
 app.get('/app/me', requireAuth, async (req, res) => {
     try {
-        if (!canAccessEixoCampo(req.saas)) {
+        if (!canAccessEixoCampo(req.saas, req.user?.roles)) {
             return respondEixoCampoPlanRequired(res);
         }
         if (req.access?.appContext?.mode !== 'field') {

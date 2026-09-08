@@ -432,12 +432,15 @@ app.use(
     requireBillingAccess,
 );
 
+app.use(['/seasons', '/repro-events', '/repro'], requireAuth, requireModule('Reprodução'));
+
 // Módulos exclusivos de planos pagos — bloqueados no backend por entitlement
 app.use(
     ['/genetics', '/po'],
     requireAuth,
     requireBillingAccess,
-    requireEntitlement('GENETICS', 'EIXO_DECISAO'),
+    requireEntitlement('EIXO_DECISAO'),
+    requireModule('Eixo Genetics'),
 );
 
 app.use(
@@ -445,6 +448,7 @@ app.use(
     requireAuth,
     requireBillingAccess,
     requireEntitlement('NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'),
+    requireModule('Nutrição'),
 );
 
 // Financeiro: liberado por plano (requireBillingAccess já roda em cada rota
@@ -673,7 +677,7 @@ app.post('/auth/login', async (req, res) => {
         return res.json({
             user: serializeAuthUser(user, saasContext, {
                 ...accessContext,
-                allowedModules: buildAllowedModulesFromPlan(user.modules, saasContext?.entitlements || [], user.roles, user.accessType),
+                allowedModules: buildAllowedModulesFromPlan(user.modules, saasContext?.entitlements || [], user.roles, user.accessType, saasContext),
             }),
         });
     } catch (error) {
