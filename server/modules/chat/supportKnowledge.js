@@ -177,10 +177,11 @@ const SUPPORT_TOPIC_DEFINITIONS = [
     },
     {
         id: 'eixo-campo',
-        title: 'EIXO Campo',
+        title: 'APP EIXO CAMPO',
         keywords: ['eixo campo', 'aplicativo', 'app', 'vaqueiro', 'curral', 'ativação', 'dispositivo', 'offline', 'sem internet', 'sincronizar'],
-        href: 'eixo:view:Operações',
+        href: 'eixo:view:APP%20EIXO%20CAMPO',
         guidance: [
+            'Acesse APP EIXO CAMPO, na seção Colaboradores e aparelhos, para gerenciar colaboradores, códigos de ativação e aparelhos vinculados.',
             'O acesso ao EIXO Campo depende do perfil, da fazenda autorizada e da ativação do dispositivo.',
             'Confirme com o administrador da organização se o usuário e a fazenda estão liberados.',
             'Pesagens podem ser salvas sem internet e ficam pendentes até a sincronização automática ou pelo botão Sincronizar agora.',
@@ -193,7 +194,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['ocorrência', 'ocorrências', 'campo', 'foto', 'água', 'morte'],
         href: 'eixo:view:Ocorr%C3%AAncias%20do%20EIXO%20Campo',
         guidance: [
-            'Acesse Ocorrências do EIXO Campo para acompanhar registros enviados pela equipe de campo.',
+            'Acesse APP EIXO CAMPO, na seção Ocorrências, para acompanhar registros enviados pela equipe de campo.',
             'Use a fazenda selecionada e os filtros de situação para localizar a ocorrência.',
         ],
     },
@@ -203,7 +204,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['usuário', 'usuários', 'permissão', 'permissões', 'equipe', 'convite', 'acesso'],
         href: 'eixo:view:Usu%C3%A1rios%20e%20Permiss%C3%B5es',
         guidance: [
-            'Acesse Usuários e Permissões para cadastrar a equipe e revisar seus acessos.',
+            'Acesse Usuários e Permissões para cadastrar usuários do sistema web e revisar seus acessos. Para colaboradores do aplicativo, acesse APP EIXO CAMPO.',
             'Somente um usuário autorizado pode alterar permissões da organização.',
         ],
     },
