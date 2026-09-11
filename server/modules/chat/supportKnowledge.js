@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-08.2';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-08';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-11.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-11';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -182,7 +182,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         href: 'eixo:view:APP%20EIXO%20CAMPO',
         guidance: [
             'Acesse APP EIXO CAMPO, na seção Colaboradores e aparelhos, para gerenciar colaboradores, códigos de ativação e aparelhos vinculados.',
-            'O acesso ao EIXO Campo depende do perfil, da fazenda autorizada e da ativação do dispositivo.',
+            'Todo o módulo APP EIXO CAMPO, incluindo ocorrências e fotos, é exclusivo do plano EIXO Performance. O acesso também depende do perfil, da fazenda autorizada e da ativação do dispositivo.',
             'Confirme com o administrador da organização se o usuário e a fazenda estão liberados.',
             'Pesagens podem ser salvas sem internet e ficam pendentes até a sincronização automática ou pelo botão Sincronizar agora.',
             'As demais telas do painel web precisam de conexão.',
@@ -195,7 +195,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         href: 'eixo:view:Ocorr%C3%AAncias%20do%20EIXO%20Campo',
         guidance: [
             'Acesse APP EIXO CAMPO, na seção Ocorrências, para acompanhar registros enviados pela equipe de campo.',
-            'Use a fazenda selecionada e os filtros de situação para localizar a ocorrência.',
+            'As ocorrências e suas fotos exigem o plano EIXO Performance. Use a fazenda selecionada e os filtros de situação para localizar a ocorrência.',
         ],
     },
     {

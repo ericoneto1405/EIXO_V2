@@ -8,6 +8,8 @@ import { logActivity } from '../utils/activityLog.js';
 import { serializeFieldOccurrence, serializeFieldOccurrenceAttachment, getDaysSince, buildFieldOccurrenceAlert } from '../utils/serializers.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import { requireAuth } from '../middlewares/requireAuth.js';
+import { canAccessEixoCampo } from '../utils/saasContext.js';
+import { requireEixoCampoPlan } from '../middlewares/requireEixoCampoPlan.js';
 const prisma = new PrismaClient();
 
 const sanitizeUploadFileName = (value) =>
@@ -56,7 +58,7 @@ export function registerFieldRoutes(app) {
             }
 
             const alerts = [];
-            const fieldAppAlertsEnabled = process.env.ENABLE_FIELD_APP_ALERTS === 'true';
+            const fieldAppAlertsEnabled = process.env.ENABLE_FIELD_APP_ALERTS === 'true' && canAccessEixoCampo(req.saas, req.user?.roles);
 
             if (fieldAppAlertsEnabled) {
                 const [paddocks, staleOccurrences, immediateOccurrences] = await Promise.all([
@@ -239,7 +241,7 @@ export function registerFieldRoutes(app) {
         }
     });
 
-    app.get('/field-occurrences', requireAuth, async (req, res) => {
+    app.get('/field-occurrences', requireAuth, requireEixoCampoPlan, async (req, res) => {
         const { farmId, limit = 50, offset = 0, type, status } = req.query;
         try {
             const where = {
@@ -279,7 +281,7 @@ export function registerFieldRoutes(app) {
         }
     });
 
-    app.post('/field-occurrences', requireAuth, async (req, res) => {
+    app.post('/field-occurrences', requireAuth, requireEixoCampoPlan, async (req, res) => {
         const {
             farmId,
             type,
@@ -420,7 +422,7 @@ export function registerFieldRoutes(app) {
         }
     });
 
-    app.post('/field-occurrences/:id/attachments', requireAuth, async (req, res) => {
+    app.post('/field-occurrences/:id/attachments', requireAuth, requireEixoCampoPlan, async (req, res) => {
         const { id } = req.params;
         const { fileName, mimeType, contentBase64 } = req.body || {};
         const normalizedMimeType = String(mimeType || '').trim().toLowerCase();
@@ -481,7 +483,7 @@ export function registerFieldRoutes(app) {
         }
     });
 
-    app.get('/field-occurrence-attachments/:attachmentId/file', requireAuth, async (req, res) => {
+    app.get('/field-occurrence-attachments/:attachmentId/file', requireAuth, requireEixoCampoPlan, async (req, res) => {
         const { attachmentId } = req.params;
         try {
             const attachment = await prisma.fieldOccurrenceAttachment.findFirst({

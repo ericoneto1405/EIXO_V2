@@ -19,7 +19,7 @@ import {
 import { isPasswordStrongEnough, validateCNPJ, validateCPF, fetchCnpjData } from '../utils/validators.js';
 import { sanitizeUser, escapeHtml, normalizeEmailForLogin, isEmailValid } from '../utils/formatters.js';
 import {
-    canManageOrganizationUsers, canUpgradePlan, normalizePlanCode,
+    canAccessEixoCampo, canManageOrganizationUsers, canUpgradePlan, normalizePlanCode,
     normalizeUserModules, isSaasContextError,
 } from '../utils/saasContext.js';
 import { logActivity } from '../utils/activityLog.js';
@@ -643,6 +643,14 @@ app.post('/auth/login', async (req, res) => {
 
         const saasContext = await ensureSaasContextForUser(user.id);
         const accessContext = await ensureFieldWorkerFarmAccess(user, saasContext);
+
+        const isFieldAccessUser = user.accessType === 'APP_MANEJO' || user.accessType === 'WEB_APP';
+        if (isFieldAccessUser && !canAccessEixoCampo(saasContext, user.roles)) {
+            return res.status(403).json({
+                code: 'eixo_campo_plan_required',
+                message: 'O App EIXO Campo está disponível somente no plano EIXO Performance.',
+            });
+        }
 
         clearLoginRateLimits(rateLimitKeys);
 

@@ -242,6 +242,14 @@ const UPGRADE_CONTENT: Record<string, {
         previewItems: ['Pipeline de negociações e compradores', 'Margem por lote e cenário de venda', 'Histórico comercial consolidado'],
         icon: <UpgradeChartIcon />,
     },
+    'APP EIXO CAMPO': {
+        requiredPlan: 'PLUS',
+        moduleName: 'APP EIXO CAMPO',
+        tagline: 'Gerencie a equipe e acompanhe o campo com o EIXO Performance',
+        benefits: ['Gerencie colaboradores e códigos de ativação.', 'Controle os aparelhos vinculados.', 'Acompanhe ocorrências e fotos enviadas pela equipe.'],
+        previewItems: ['Colaboradores e aparelhos', 'Códigos de ativação', 'Ocorrências de campo'],
+        icon: <UpgradeReportIcon />,
+    },
     'Confinamento e Contratos': {
         accessLabels: ['Confinamento e Contratos'],
         requiredPlan: 'PLUS',
@@ -355,8 +363,9 @@ const AppContent: React.FC = () => {
         if (!currentAllowedModules.includes('Gestão Comercial')) {
             labels.add('Gestão Comercial');
         }
+        if (!hasEixoCampoAccess) labels.add('APP EIXO CAMPO');
         return Array.from(labels);
-    }, [currentAllowedModules]);
+    }, [currentAllowedModules, hasEixoCampoAccess]);
     const [openFarmForm, setOpenFarmForm] = useState(false);
     const [upgradeModal, setUpgradeModal] = useState<string | null>(null); // nome do módulo bloqueado
     const [isSupportOpen, setIsSupportOpen] = useState(false);
@@ -815,6 +824,9 @@ const AppContent: React.FC = () => {
     }, [updateFarmFormQuery]);
 
     const getUpgradeModuleForView = React.useCallback((view: string) => {
+        if (view === 'APP EIXO CAMPO' || view === 'Ocorrências do EIXO Campo') {
+            return hasEixoCampoAccess ? null : UPGRADE_CONTENT['APP EIXO CAMPO'];
+        }
         const moduleConfig = UPGRADE_CONTENT[view];
         if (!moduleConfig) {
             return null;
@@ -824,7 +836,7 @@ const AppContent: React.FC = () => {
         }
         const isUnlocked = moduleConfig.accessLabels.some((label) => currentAllowedModules.includes(label));
         return isUnlocked ? null : moduleConfig;
-    }, [currentAllowedModules]);
+    }, [currentAllowedModules, hasEixoCampoAccess]);
 
     const handleHeaderAlertAction = React.useCallback((alert: Alert) => {
         if (alert.farmId) {
