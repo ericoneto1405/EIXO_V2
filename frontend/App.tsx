@@ -1,20 +1,9 @@
 import React, { Suspense, useState, useRef, useEffect } from 'react';
 import AssistantChat from './components/AssistantChat';
-import ActivityModule from './components/ActivityModule';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { buildApiUrl } from './api';
 import Sidebar from './components/Sidebar';
-import Dashboard from './components/Dashboard';
-import Operations from './components/Operations';
-import AppEixoCampo from './components/AppEixoCampo';
-import ConfinementContracts from './components/ConfinementContracts';
-import Settings from './components/Settings';
 import Header from './components/Header';
-import Farms from './components/Farms';
-import Suppliers from './components/Suppliers';
-import Feeds from './components/Feeds';
-import Supplements from './components/Supplements';
-import SemenTankModule from './components/SemenTankModule';
 import Login from './components/Login';
 import Register from './components/Register';
 import ForgotPassword from './components/ForgotPassword';
@@ -40,6 +29,17 @@ const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
 const HQPage = React.lazy(() => import('./components/HQPage'));
 const CommercialManagement = React.lazy(() => import('./components/CommercialManagement'));
+const Dashboard = React.lazy(() => import('./components/Dashboard'));
+const Operations = React.lazy(() => import('./components/Operations'));
+const AppEixoCampo = React.lazy(() => import('./components/AppEixoCampo'));
+const ConfinementContracts = React.lazy(() => import('./components/ConfinementContracts'));
+const Settings = React.lazy(() => import('./components/Settings'));
+const Farms = React.lazy(() => import('./components/Farms'));
+const Suppliers = React.lazy(() => import('./components/Suppliers'));
+const Feeds = React.lazy(() => import('./components/Feeds'));
+const Supplements = React.lazy(() => import('./components/Supplements'));
+const SemenTankModule = React.lazy(() => import('./components/SemenTankModule'));
+const ActivityModule = React.lazy(() => import('./components/ActivityModule'));
 
 const WEB_DEVICE_KEY_STORAGE = 'eixo:web:device-key';
 const getWebDeviceKey = () => {

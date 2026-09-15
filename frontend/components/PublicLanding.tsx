@@ -258,7 +258,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
             <source media="(max-width: 767px)" srcSet="/hero-curral-768.webp" type="image/webp" />
             <source srcSet="/hero-curral-1600.webp" type="image/webp" />
             <img
-              src="/homem de costas no curral.png"
+              src="/homem-de-costas-no-curral.webp"
               alt=""
               aria-hidden="true"
               fetchPriority="high"
@@ -343,7 +343,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
           <div
             className="absolute inset-0"
             style={{
-              backgroundImage: "linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url('/vista_aerea_fazenda_eixo.png')",
+              backgroundImage: "linear-gradient(rgba(255,255,255,0.82), rgba(255,255,255,0.82)), url('/vista_aerea_fazenda_eixo.webp')",
               backgroundPosition: 'center',
               backgroundSize: 'cover',
             }}
@@ -498,7 +498,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
           <div
             className="absolute inset-0 opacity-[0.12]"
             style={{
-              backgroundImage: "url('/vista_aerea_fazenda_eixo.png')",
+              backgroundImage: "url('/vista_aerea_fazenda_eixo.webp')",
               backgroundPosition: 'center',
               backgroundSize: 'cover',
             }}
