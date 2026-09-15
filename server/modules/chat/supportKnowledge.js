@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-15.3';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-15.5';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-15';
 
 export const SUPPORT_TONE_RULES = [
@@ -19,7 +19,7 @@ export const SUPPORT_MODULE_CATALOG = [
     { name: 'Reprodução', href: '/genetics/reproducao', entitlementCodes: ['GENETICS', 'PO', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'organiza coberturas, diagnósticos, partos e indicadores reprodutivos.', salesTrigger: 'prenhez, parto, matriz, cobertura, IATF ou estação de monta.' },
     { name: 'EIXO Acasalamento', href: '/genetics/acasalamento', entitlementCodes: ['GENETICS', 'EIXO_DECISAO'], benefit: 'apoia decisões de acasalamento com histórico e objetivo produtivo.', salesTrigger: 'acasalamento, touro, sêmen, botijão, matriz ou genética.' },
     { name: 'Gestão Comercial', href: 'eixo:view:Gest%C3%A3o%20Comercial', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'CRM da fazenda: clientes, pipeline de negociação por etapas, contrato e lembretes de aniversário/recompra.', salesTrigger: 'venda, cliente, comprador, negociação, pipeline, contrato ou aniversário de cliente.' },
-    { name: 'Botijão de Sêmen', href: 'eixo:view:Estoque%20e%20Equipamentos', entitlementCodes: ['CORE', 'GENETICS', 'EIXO_DECISAO'], benefit: 'organiza o estoque de sêmen usado no EIXO Acasalamento.', salesTrigger: 'sêmen, botijão, doses, estoque de touro ou acasalamento.' },
+    { name: 'Botijão de Sêmen', href: '/genetics/reproducao', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'organiza o estoque de sêmen usado no EIXO Acasalamento.', salesTrigger: 'sêmen, botijão, doses, estoque de touro ou acasalamento.' },
 ];
 
 const SUPPORT_TOPIC_DEFINITIONS = [
@@ -139,16 +139,16 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         href: '/genetics/acasalamento',
         guidance: [
             'Acesse EIXO Acasalamento para trabalhar objetivos produtivos e combinações entre matrizes e touros.',
-            'O estoque de sêmen usado no processo fica em Estoque e Equipamentos.',
+            'O estoque de sêmen usado no processo fica em Reprodução, na aba Botijão de Sêmen.',
         ],
     },
     {
         id: 'estoque-semen',
         title: 'Estoque de sêmen e equipamentos',
         keywords: ['estoque', 'sêmen', 'botijão', 'dose', 'equipamento'],
-        href: 'eixo:view:Estoque%20e%20Equipamentos',
+        href: '/genetics/reproducao',
         guidance: [
-            'Acesse Estoque e Equipamentos para consultar botijões e doses de sêmen.',
+            'Acesse Reprodução, aba Botijão de Sêmen, para consultar botijões e doses de sêmen.',
             'Esse estoque é usado pelo EIXO Acasalamento conforme o acesso do usuário.',
         ],
     },

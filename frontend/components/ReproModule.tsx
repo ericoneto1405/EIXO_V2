@@ -24,7 +24,9 @@ import {
 import { createBirthAnimal } from '../adapters/herdApi';
 import { BirthRegistrationPanel, EmbryoTransferPanel } from './ReproBirthAndTe';
 
-type TabKey = 'indicadores' | 'avaliacoes' | 'nova' | 'te' | 'partos' | 'desmama';
+const SemenTankModule = React.lazy(() => import('./SemenTankModule'));
+
+type TabKey = 'indicadores' | 'avaliacoes' | 'nova' | 'te' | 'botijao' | 'partos' | 'desmama';
 
 interface Season {
     id: string;
@@ -54,7 +56,7 @@ const formatDate = (value?: string | null) => {
     return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString('pt-BR');
 };
 
-const REPRO_TAB_KEYS: TabKey[] = ['indicadores', 'avaliacoes', 'nova', 'te', 'partos', 'desmama'];
+const REPRO_TAB_KEYS: TabKey[] = ['indicadores', 'avaliacoes', 'nova', 'te', 'botijao', 'partos', 'desmama'];
 
 const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
     const [searchParams] = useSearchParams();
@@ -413,6 +415,7 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
         { key: 'avaliacoes', label: 'Avaliações' },
         { key: 'nova', label: 'Nova avaliação' },
         { key: 'te', label: 'TE e Embriões' },
+        { key: 'botijao', label: 'Botijão de Sêmen' },
         { key: 'partos', label: 'Partos e nascimentos' },
         { key: 'desmama', label: 'Desmama' },
     ];
@@ -799,6 +802,12 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId }) => {
                             : `${editingId ? 'Salvar alterações' : 'Salvar avaliação'} (${markedCount} vaca(s))`}
                     </button>
                 </div>
+            )}
+
+            {activeTab === 'botijao' && farmId && (
+                <React.Suspense fallback={<div className={cardClass}>Carregando botijão...</div>}>
+                    <SemenTankModule farmId={farmId} />
+                </React.Suspense>
             )}
 
             {activeTab === 'te' && farmId && (

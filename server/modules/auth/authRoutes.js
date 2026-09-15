@@ -435,12 +435,18 @@ app.use(
 app.use(['/seasons', '/repro-events', '/repro'], requireAuth, requireModule('Reprodução'));
 
 // Módulos exclusivos de planos pagos — bloqueados no backend por entitlement
+// Botijão de sêmen fica dentro de Reprodução (plano Gestão em diante)
+const isSemenTankRoute = (req) => req.baseUrl === '/po' && req.path.startsWith('/semen');
+const unlessSemenTank = (middleware) => (req, res, next) => (isSemenTankRoute(req) ? next() : middleware(req, res, next));
+
+app.use('/po/semen', requireAuth, requireBillingAccess, requireModule('Reprodução'));
+
 app.use(
     ['/genetics', '/po'],
     requireAuth,
     requireBillingAccess,
-    requireEntitlement('EIXO_DECISAO'),
-    requireModule('Eixo Genetics'),
+    unlessSemenTank(requireEntitlement('EIXO_DECISAO')),
+    unlessSemenTank(requireModule('Eixo Genetics')),
 );
 
 app.use(
