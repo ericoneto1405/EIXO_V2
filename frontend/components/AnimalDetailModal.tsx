@@ -112,7 +112,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     onAnimalUpdated,
 }) => {
     const resolvedMode: HerdType = mode ?? herdType ?? 'COMMERCIAL';
-    const animalBasePath = resolvedMode === 'PO' ? '/po/animals' : '/animals';
+    const animalBasePath = '/animals';
     const farmIdForOffline = (animal as any)?.farmId ?? null;
     const sendOfflineEvent = async (item: OfflineHerdEvent) => {
         await createHerdEvent(item.animalId, item.herdType, item);
@@ -351,7 +351,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                 const payload = await getCurrentNutrition({
                     farmId,
                     animalId: resolvedMode === 'COMMERCIAL' ? animalId : undefined,
-                    poAnimalId: resolvedMode === 'PO' ? animalId : undefined,
+                    poAnimalId: undefined,
                 });
                 setNutritionPlanName(payload.plan?.nome || null);
                 setNutritionPlanMeta(payload.plan?.metaGmd ?? null);
@@ -606,7 +606,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         }
         // No Rebanho Comercial, editar um animal exige justificativa (fica no
         // histórico). No Plantel P.O. isso ainda não se aplica.
-        if (resolvedMode !== 'PO') {
+        {
             setJustificativaText('');
             setJustificativaError(null);
             setShowJustificativaModal(true);
@@ -683,7 +683,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             { label: 'Doadora', value: a.doadoraSnapshot || '—' },
             { label: 'Touro', value: a.touroSnapshot || 'Não informado' },
         ] : [];
-        if (resolvedMode !== 'PO') return [...baseItems, ...teItems];
+        return [...baseItems, ...teItems];
         return [
             { label: 'Nome', value: a.nome || '—' },
             { label: 'Registro', value: a.registro || '—' },

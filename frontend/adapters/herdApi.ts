@@ -1,15 +1,15 @@
 import { buildApiUrl } from '../api';
 import type { AnimalUI, LotUI, PaddockMove, WeighingSessionUI, WeighingUI } from '../types';
 
-export type HerdType = 'COMMERCIAL' | 'PO';
+export type HerdType = 'COMMERCIAL';
 
 export type HerdAnimal = AnimalUI;
 export type HerdLot = LotUI;
 export type HerdWeighing = WeighingUI;
 export type HerdWeighingSession = WeighingSessionUI;
 
-const getAnimalsBasePath = (herdType: HerdType) => (herdType === 'PO' ? '/po/animals' : '/animals');
-const getLotsBasePath = (herdType: HerdType) => (herdType === 'PO' ? '/po/lots' : '/lots');
+const getAnimalsBasePath = (herdType: HerdType) => ('/animals');
+const getLotsBasePath = (herdType: HerdType) => ('/lots');
 
 // ---- Tipos novos ----
 
@@ -330,22 +330,6 @@ export const updateResponsibleMother = async (
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data?.message || 'Erro ao trocar a matriz responsável.');
-    return normalizeAnimal(data.animal);
-};
-
-export const updatePoGenealogy = async (
-    animalId: string,
-    maeId: string | null,
-    paiId: string | null,
-): Promise<HerdAnimal> => {
-    const response = await fetch(buildApiUrl(`/po/animals/${animalId}/genealogia`), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ maeId, paiId }),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data?.message || 'Erro ao corrigir genealogia P.O.');
     return normalizeAnimal(data.animal);
 };
 

@@ -42,9 +42,7 @@ const getBullLabel = (batch: SemenBatchUI) => {
   if (batch.bullAnimal) {
     return batch.bullAnimal.registro || batch.bullAnimal.brinco || 'Touro do rebanho';
   }
-  if (batch.bullPoAnimal) {
-    return batch.bullPoAnimal.nome || batch.bullPoAnimal.registro || batch.bullPoAnimal.brinco || 'Touro P.O. legado';
-  }
+
   return batch.bullName || 'Touro externo';
 };
 
@@ -273,7 +271,7 @@ const SemenTankModule: React.FC<SemenTankModuleProps> = ({ farmId, farmName }) =
                 <tr key={batch.id} className="border-t border-[#eadfce]">
                   <td className="px-4 py-3">
                     <div className="font-bold">{getBullLabel(batch)}</div>
-                    <div className="text-xs text-[#6d6558]">{batch.bullRegistry || batch.bullAnimal?.registro || batch.bullPoAnimal?.registro || 'sem registro informado'}</div>
+                    <div className="text-xs text-[#6d6558]">{batch.bullRegistry || batch.bullAnimal?.registro || 'sem registro informado'}</div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-semibold">{batch.lote}</div>
@@ -284,7 +282,7 @@ const SemenTankModule: React.FC<SemenTankModuleProps> = ({ farmId, farmName }) =
                   </td>
                   <td className="px-4 py-3">
                     <span className="rounded-full bg-[#f1e7d8] px-2 py-1 text-xs font-bold text-[#74644e]">
-                      {batch.bullAnimalId || batch.bullAnimal ? 'Rebanho' : batch.bullPoAnimalId ? 'Legado P.O.' : 'Externo'}
+                      {batch.bullAnimalId || batch.bullAnimal ? 'Rebanho' : 'Externo'}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-[#6d6558]">{batch.localArmazenamento || '-'}</td>

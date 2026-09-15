@@ -1,3 +1,4 @@
+import { rejectLegacyPoReference } from '../animals/legacyPoGuard.js';
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
@@ -24,9 +25,10 @@ function stableExternalReference(registry, name) {
 
 // ─── Reprodução: avaliações (toque) por sessão + KPIs de decisão ─────────────
 export function registerReproRoutes(app) {
+app.use(['/animals', '/lots', '/farms', '/po', '/nutrition', '/repro'], rejectLegacyPoReference);
     app.get('/repro/embryo-transfers', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId, herdType = 'COMMERCIAL', status = 'PENDING' } = req.query || {};
-        if (!farmId || !['COMMERCIAL', 'PO'].includes(String(herdType))) {
+        if (!farmId || !['COMMERCIAL'].includes(String(herdType))) {
             return res.status(400).json({ message: 'Informe fazenda e tipo de rebanho válidos.' });
         }
         try {
@@ -48,7 +50,7 @@ export function registerReproRoutes(app) {
         const { farmId, herdType = 'COMMERCIAL', embryoBatchId, recipientId, transferredAt, date, notes } = req.body || {};
         const normalizedHerdType = String(herdType).toUpperCase();
         const transferDate = parseDateValue(transferredAt || date);
-        if (!farmId || !embryoBatchId || !recipientId || !transferDate || !['COMMERCIAL', 'PO'].includes(normalizedHerdType)) {
+        if (!farmId || !embryoBatchId || !recipientId || !transferDate || !['COMMERCIAL'].includes(normalizedHerdType)) {
             return res.status(400).json({ message: 'Informe fazenda, rebanho, lote, receptora e data válidos.' });
         }
         try {
@@ -57,38 +59,32 @@ export function registerReproRoutes(app) {
 
             const batch = await prisma.embryoBatch.findFirst({
                 where: { id: String(embryoBatchId), farmId: farm.id },
-                include: { donorAnimal: true, donorPoAnimal: true, sireAnimal: true, sirePoAnimal: true },
+                include: { donorAnimal: true,  sireAnimal: true,  },
             });
             if (!batch || batch.tecnica !== 'TE') return res.status(400).json({ message: 'Lote de embrião TE inválido.' });
             if (batch.quantidadeDisponivel < 1) return res.status(409).json({ message: 'O lote não possui embrião disponível.' });
-            if ((batch.donorAnimal && batch.donorAnimal.sexo !== 'FEMEA') || (batch.donorPoAnimal && batch.donorPoAnimal.sexo !== 'FEMEA')) {
+            if ((batch.donorAnimal && batch.donorAnimal.sexo !== 'FEMEA')) {
                 return res.status(400).json({ message: 'A doadora vinculada ao lote precisa ser fêmea.' });
             }
-            if ((batch.sireAnimal && batch.sireAnimal.sexo !== 'MACHO') || (batch.sirePoAnimal && batch.sirePoAnimal.sexo !== 'MACHO')) {
+            if ((batch.sireAnimal && batch.sireAnimal.sexo !== 'MACHO')) {
                 return res.status(400).json({ message: 'O touro vinculado ao lote precisa ser macho.' });
             }
 
-            const recipientModel = normalizedHerdType === 'PO' ? prisma.poAnimal : prisma.animal;
+            const recipientModel = prisma.animal;
             const recipient = await recipientModel.findFirst({ where: { id: String(recipientId), farmId: farm.id, sexo: 'FEMEA' } });
             const recipientSnapshot = animalSnapshot(recipient);
             if (!recipient || !recipientSnapshot) return res.status(400).json({ message: 'Receptora inválida para esta fazenda.' });
 
             const donorSnapshot = animalSnapshot(batch.donorAnimal)
-                || animalSnapshot(batch.donorPoAnimal)
                 || stableExternalReference(batch.donorRegistry, batch.donorName);
             if (!donorSnapshot) return res.status(400).json({ message: 'A doadora precisa de identificação ou registro estável.' });
             const donorKey = batch.donorAnimalId
                 ? `ANIMAL:${batch.donorAnimalId}`
-                : batch.donorPoAnimalId
-                    ? `PO:${batch.donorPoAnimalId}`
-                    : `EXTERNAL:${donorSnapshot.toUpperCase()}`;
+                : `EXTERNAL:${donorSnapshot.toUpperCase()}`;
             const sireSnapshot = animalSnapshot(batch.sireAnimal)
-                || animalSnapshot(batch.sirePoAnimal)
                 || stableExternalReference(batch.sireRegistry, batch.sireName);
 
-            const pendingRecipientWhere = normalizedHerdType === 'PO'
-                ? { recipientPoAnimalId: recipient.id }
-                : { recipientAnimalId: recipient.id };
+            const pendingRecipientWhere = { recipientAnimalId: recipient.id };
             const pending = await prisma.embryoTransfer.findFirst({
                 where: { farmId: farm.id, herdType: normalizedHerdType, status: 'PENDING', ...pendingRecipientWhere },
                 select: { id: true },
@@ -110,7 +106,7 @@ export function registerReproRoutes(app) {
                         herdType: normalizedHerdType,
                         embryoBatchId: batch.id,
                         recipientAnimalId: normalizedHerdType === 'COMMERCIAL' ? recipient.id : null,
-                        recipientPoAnimalId: normalizedHerdType === 'PO' ? recipient.id : null,
+                        
                         transferredAt: transferDate,
                         recipientSnapshot,
                         donorKey,

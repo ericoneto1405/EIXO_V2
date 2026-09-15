@@ -352,9 +352,9 @@ const serializeNutritionAssignment = (assignment) => ({
     farmId: assignment.farmId,
     planId: assignment.planId,
     lotId: assignment.lotId,
-    poLotId: assignment.poLotId,
+    
     animalId: assignment.animalId,
-    poAnimalId: assignment.poAnimalId,
+    
     unitId: assignment.unitId,
     startAt: toIso(assignment.startAt),
     endAt: toIso(assignment.endAt),
@@ -410,7 +410,7 @@ const serializeNutritionExecution = (execution) => ({
     id: execution.id,
     farmId: execution.farmId,
     lotId: execution.lotId,
-    poLotId: execution.poLotId,
+    
     unitId: execution.unitId,
     planId: execution.planId,
     preparedFeedId: execution.preparedFeedId,

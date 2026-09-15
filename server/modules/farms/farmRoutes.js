@@ -45,9 +45,6 @@ const FARM_HISTORY_MODELS = [
     'paddockMove',
     'pharmacyBatch',
     'pharmacyMovement',
-    'poAnimal',
-    'poLot',
-    'poWeighing',
     'reproEvent',
     'sanitaryRecord',
     'selectionDecision',
@@ -366,14 +363,13 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                 .filter((item) => item.id && item.active === false && existingPaddocks.find((current) => current.id === item.id)?.active !== false)
                 .map((item) => item.id);
             if (deactivatedIds.length) {
-                const [commercialCount, poCount] = await Promise.all([
+                const [commercialCount] = await Promise.all([
                     tx.animal.count({ where: { farmId: farm.id, currentPaddockId: { in: deactivatedIds } } }),
-                    tx.poAnimal.count({ where: { farmId: farm.id, currentPaddockId: { in: deactivatedIds } } }),
                 ]);
-                if (commercialCount + poCount > 0) {
-                    const error = new Error(`Mova os ${commercialCount + poCount} animais atuais antes de desativar o pasto.`);
+                if (commercialCount > 0) {
+                    const error = new Error(`Mova os ${commercialCount} animais atuais antes de desativar o pasto.`);
                     error.statusCode = 409;
-                    error.details = { commercialAnimals: commercialCount, poAnimals: poCount };
+                    error.details = { commercialAnimals: commercialCount, poAnimals: 0 };
                     throw error;
                 }
             }
@@ -526,14 +522,8 @@ app.get('/farms/:id/map-summary', async (req, res) => {
 
         const paddockIds = farm.paddocks.map((p) => p.id);
 
-        const [commercialGroups, poGroups] = await Promise.all([
+        const [commercialGroups] = await Promise.all([
             prisma.animal.groupBy({
-                by: ['currentPaddockId'],
-                where: { farmId: farm.id, currentPaddockId: { in: paddockIds } },
-                _count: { id: true },
-                _sum: { pesoAtual: true },
-            }),
-            prisma.poAnimal.groupBy({
                 by: ['currentPaddockId'],
                 where: { farmId: farm.id, currentPaddockId: { in: paddockIds } },
                 _count: { id: true },
@@ -542,14 +532,12 @@ app.get('/farms/:id/map-summary', async (req, res) => {
         ]);
 
         const commercialMap = new Map(commercialGroups.map((g) => [g.currentPaddockId, g]));
-        const poMap = new Map(poGroups.map((g) => [g.currentPaddockId, g]));
 
         const summary = farm.paddocks.map((paddock) => {
             const commercial = commercialMap.get(paddock.id);
-            const po = poMap.get(paddock.id);
             const animalCount = commercial?._count?.id ?? 0;
-            const poAnimalCount = po?._count?.id ?? 0;
-            const totalWeightKg = (commercial?._sum?.pesoAtual ?? 0) + (po?._sum?.pesoAtual ?? 0);
+            const poAnimalCount = 0;
+            const totalWeightKg = (commercial?._sum?.pesoAtual ?? 0);
             const areaHa = paddock.areaHa ?? 0;
             const uaTotal = totalWeightKg / 450;
             const lotacao = areaHa > 0 ? uaTotal / areaHa : null;
@@ -715,15 +703,14 @@ app.patch('/pastos/:id', requireNonFieldWorker, async (req, res) => {
             }
         }
         if (activeValue === false) {
-            const [activeCount, commercialCount, poCount] = await Promise.all([
+            const [activeCount, commercialCount] = await Promise.all([
                 prisma.paddock.count({ where: { farmId: paddock.farmId, active: true } }),
                 prisma.animal.count({ where: { farmId: paddock.farmId, currentPaddockId: paddock.id } }),
-                prisma.poAnimal.count({ where: { farmId: paddock.farmId, currentPaddockId: paddock.id } }),
             ]);
-            if (commercialCount + poCount > 0) {
+            if (commercialCount > 0) {
                 return res.status(409).json({
-                    message: `Mova os ${commercialCount + poCount} animais atuais antes de desativar o pasto.`,
-                    details: { commercialAnimals: commercialCount, poAnimals: poCount },
+                    message: `Mova os ${commercialCount} animais atuais antes de desativar o pasto.`,
+                    details: { commercialAnimals: commercialCount, poAnimals: 0 },
                 });
             }
             if (paddock.active && activeCount <= 1) {

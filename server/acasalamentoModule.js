@@ -2593,7 +2593,7 @@ const normalizeInventoryKey = (value) => normalizeRegistryPart(value) || normali
 const buildSemenInventory = async ({ prisma, farmId }) => {
     const batches = await prisma.semenBatch.findMany({
         where: { farmId, dosesDisponiveis: { gt: 0 } },
-        include: { bullAnimal: true, bullPoAnimal: true },
+        include: { bullAnimal: true },
         orderBy: { createdAt: 'desc' },
     });
     const byKey = new Map();
@@ -2603,8 +2603,6 @@ const buildSemenInventory = async ({ prisma, farmId }) => {
             normalizeInventoryKey(batch.bullName),
             normalizeInventoryKey(batch.bullAnimal?.registro),
             normalizeInventoryKey(batch.bullAnimal?.brinco),
-            normalizeInventoryKey(batch.bullPoAnimal?.registro),
-            normalizeInventoryKey(batch.bullPoAnimal?.nome),
         ].filter(Boolean);
         for (const key of keys) {
             const current = byKey.get(key) || {
@@ -2615,8 +2613,8 @@ const buildSemenInventory = async ({ prisma, farmId }) => {
             current.batches.push({
                 id: batch.id,
                 lote: batch.lote,
-                bullName: batch.bullName || batch.bullAnimal?.brinco || batch.bullPoAnimal?.nome || null,
-                bullRegistry: batch.bullRegistry || batch.bullAnimal?.registro || batch.bullPoAnimal?.registro || null,
+                bullName: batch.bullName || batch.bullAnimal?.brinco || null,
+                bullRegistry: batch.bullRegistry || batch.bullAnimal?.registro || null,
                 fornecedor: batch.fornecedor || null,
                 localArmazenamento: batch.localArmazenamento || null,
                 dosesDisponiveis: batch.dosesDisponiveis,

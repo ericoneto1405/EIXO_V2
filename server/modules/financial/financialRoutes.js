@@ -553,7 +553,7 @@ export function registerFinancialRoutes(app) {
                     let key = '';
                     let label = '';
                     if (dimension === 'LOT') {
-                        key = allocation.lotId || allocation.poLotId || '';
+                        key = allocation.lotId || '';
                         label = allocation.lotNameSnapshot || 'Lote não informado';
                     } else if (dimension === 'PADDOCK') {
                         key = allocation.paddockId || '';
@@ -569,14 +569,11 @@ export function registerFinancialRoutes(app) {
             }
             if (dimension === 'LOT') {
                 const commercialLotIds = [...new Set(entries.flatMap((entry) => entry.allocations.map((allocation) => allocation.lotId).filter(Boolean)))];
-                const poLotIds = [...new Set(entries.flatMap((entry) => entry.allocations.map((allocation) => allocation.poLotId).filter(Boolean)))];
-                const [commercialLots, poLots] = await Promise.all([
-                    prisma.lot.findMany({ where: { id: { in: commercialLotIds } }, include: { animals: { include: { pesagens: { orderBy: { data: 'asc' } } } } } }),
-                    prisma.poLot.findMany({ where: { id: { in: poLotIds } }, include: { animals: { include: { pesagens: { orderBy: { data: 'asc' } } } } } }),
-                ]);
+                const commercialLots = await 
+                    prisma.lot.findMany({ where: { id: { in: commercialLotIds } }, include: { animals: { include: { pesagens: { orderBy: { data: 'asc' } } } } } });
                 const acquisitionCostLots = new Set(entries
                     .filter((entry) => entry.sourceType === 'HERD_SALE_ACQUISITION')
-                    .flatMap((entry) => entry.allocations.map((allocation) => allocation.lotId || allocation.poLotId).filter(Boolean)));
+                    .flatMap((entry) => entry.allocations.map((allocation) => allocation.lotId).filter(Boolean)));
                 const enrichCostPerArroba = (row, animals) => {
                     const missing = [];
                     let gainKg = 0;
@@ -591,7 +588,6 @@ export function registerFinancialRoutes(app) {
                     row.costPerArrobaMissing = missing;
                 };
                 for (const lot of commercialLots) enrichCostPerArroba(groups.get(lot.id), lot.animals);
-                for (const lot of poLots) enrichCostPerArroba(groups.get(lot.id), lot.animals);
             }
             if (dimension === 'PADDOCK') {
                 const paddockIds = [...groups.keys()];
@@ -636,15 +632,11 @@ export function registerFinancialRoutes(app) {
             const farms = await resolveReportFarms(req);
             if (!farms) return res.status(404).json({ message: 'Fazenda não encontrada.' });
             const farmIds = farms.map((farm) => farm.id);
-            const [unconfiguredCategories, activeEntries, commercialLotsWithoutPhase, poLotsWithoutPhase, commercialAnimalsWithoutAcquisition, poAnimalsWithoutAcquisition, animals, weighingCounts] = await Promise.all([
+            const [unconfiguredCategories, activeEntries, commercialLotsWithoutPhase, commercialAnimalsWithoutAcquisition, animals, weighingCounts] = await Promise.all([
                 prisma.accountCategory.count({ where: { farmId: { in: farmIds }, isActive: true, isConfigured: false } }),
                 prisma.financialResultEntry.findMany({ where: { farmId: { in: farmIds }, status: 'ACTIVE', resultClass: 'PRODUCTION_COST' }, include: { allocations: true } }),
                 prisma.lot.count({ where: { farmId: { in: farmIds }, status: 'ATIVO', productionPhase: null } }),
-                prisma.poLot.count({ where: { farmId: { in: farmIds }, productionPhase: null } }),
                 prisma.animal.count({
-                    where: { farmId: { in: farmIds }, AND: [{ herdEvents: { some: { type: 'VENDA' } } }, { herdEvents: { none: { type: 'COMPRA', valor: { gt: 0 } } } }] },
-                }),
-                prisma.poAnimal.count({
                     where: { farmId: { in: farmIds }, AND: [{ herdEvents: { some: { type: 'VENDA' } } }, { herdEvents: { none: { type: 'COMPRA', valor: { gt: 0 } } } }] },
                 }),
                 prisma.animal.findMany({ where: { farmId: { in: farmIds } }, select: { id: true } }),
@@ -652,8 +644,8 @@ export function registerFinancialRoutes(app) {
             ]);
             const weighingCountByAnimal = new Map(weighingCounts.map((item) => [item.animalId, item._count._all]));
             const animalsWithoutSufficientWeighings = animals.filter((animal) => (weighingCountByAnimal.get(animal.id) || 0) < 2).length;
-            const lotsWithoutPhase = commercialLotsWithoutPhase + poLotsWithoutPhase;
-            const animalsWithoutAcquisition = commercialAnimalsWithoutAcquisition + poAnimalsWithoutAcquisition;
+            const lotsWithoutPhase = commercialLotsWithoutPhase;
+            const animalsWithoutAcquisition = commercialAnimalsWithoutAcquisition;
             const totalAmount = activeEntries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0);
             const allocatedAmount = activeEntries.reduce((sum, entry) => sum + entry.allocations.reduce((inner, allocation) => inner + Number(allocation.amount || 0), 0), 0);
             res.json({

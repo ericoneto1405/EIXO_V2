@@ -14,16 +14,6 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:border-[var(--eixo-green)] focus:outline-none';
 const labelClass = 'block text-xs font-medium text-[var(--eixo-text-muted)]';
 
-const HerdTypeSelector: React.FC<{ value: HerdType; onChange: (value: HerdType) => void }> = ({ value, onChange }) => (
-    <div className="grid grid-cols-2 gap-2">
-        {(['COMMERCIAL', 'PO'] as HerdType[]).map((option) => (
-            <button key={option} type="button" onClick={() => onChange(option)} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${value === option ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-text)]' : 'border-[var(--eixo-border)] text-[var(--eixo-text-muted)]'}`}>
-                {option === 'COMMERCIAL' ? 'Rebanho comercial' : 'Plantel P.O.'}
-            </button>
-        ))}
-    </div>
-);
-
 const isFemale = (animal: HerdAnimal) => ['FÊMEA', 'FEMEA'].includes(String(animal.sexo || '').toUpperCase());
 const isMale = (animal: HerdAnimal) => String(animal.sexo || '').toUpperCase() === 'MACHO';
 const animalLabel = (animal: HerdAnimal) => animal.identificacao || animal.brinco || animal.registro || animal.nome || 'Sem identificação';
@@ -78,7 +68,7 @@ export const BirthRegistrationPanel: React.FC<{ farmId: string; onRegistered?: (
             const result = await createBirthAnimal({
                 farmId,
                 maeId: origin === 'NATURAL' ? form.motherId : undefined,
-                paiId: herdType === 'PO' && origin === 'NATURAL' && form.fatherId ? form.fatherId : undefined,
+                paiId: undefined,
                 embryoTransferId: origin === 'TE' ? form.transferId : undefined,
                 origemNascimento: origin,
                 dataNascimento: form.date,
@@ -103,7 +93,7 @@ export const BirthRegistrationPanel: React.FC<{ farmId: string; onRegistered?: (
                 <h3 className="text-base font-bold text-[var(--eixo-text)]">Registrar parto e nascimento</h3>
                 <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">A matriz será atualizada e a cria entrará no rebanho na mesma operação.</p>
             </div>
-            <HerdTypeSelector value={herdType} onChange={setHerdType} />
+            
             <div className="grid grid-cols-2 gap-2">
                 {(['NATURAL', 'TE'] as const).map((value) => (
                     <button key={value} type="button" onClick={() => setOrigin(value)} className={`rounded-xl border px-3 py-2 text-sm font-semibold ${origin === value ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)]' : 'border-[var(--eixo-border)]'}`}>
@@ -120,13 +110,7 @@ export const BirthRegistrationPanel: React.FC<{ farmId: string; onRegistered?: (
                             {females.map((animal) => <option key={animal.id} value={animal.id}>{animalLabel(animal)}</option>)}
                         </select>
                     </div>
-                    {herdType === 'PO' && <div>
-                        <label className={labelClass}>Pai biológico (opcional)</label>
-                        <select value={form.fatherId} onChange={(e) => setForm((prev) => ({ ...prev, fatherId: e.target.value }))} className={inputClass}>
-                            <option value="">Não informado</option>
-                            {males.map((animal) => <option key={animal.id} value={animal.id}>{animalLabel(animal)}</option>)}
-                        </select>
-                    </div>}
+                    
                 </div>
             ) : (
                 <div>
@@ -207,7 +191,7 @@ export const EmbryoTransferPanel: React.FC<{ farmId: string }> = ({ farmId }) =>
         <div className="space-y-6">
             <form onSubmit={submit} className="space-y-4">
                 <div><h3 className="text-base font-bold text-[var(--eixo-text)]">Transferência de embrião</h3><p className="mt-1 text-xs text-[var(--eixo-text-muted)]">A baixa do estoque e o vínculo com a receptora são feitos juntos.</p></div>
-                <HerdTypeSelector value={herdType} onChange={setHerdType} />
+                
                 <div className="grid gap-3 sm:grid-cols-2">
                     <div><label className={labelClass}>Lote de embrião</label><select required value={form.embryoBatchId} onChange={(e) => setForm((prev) => ({ ...prev, embryoBatchId: e.target.value }))} className={inputClass}><option value="">Selecione</option>{batches.map((batch) => <option key={batch.id} value={batch.id}>{batch.lote} · {batch.quantidadeDisponivel} disponível(is)</option>)}</select></div>
                     <div><label className={labelClass}>Receptora</label><select required value={form.recipientId} onChange={(e) => setForm((prev) => ({ ...prev, recipientId: e.target.value }))} className={inputClass}><option value="">Selecione</option>{females.map((animal) => <option key={animal.id} value={animal.id}>{animalLabel(animal)}</option>)}</select></div>

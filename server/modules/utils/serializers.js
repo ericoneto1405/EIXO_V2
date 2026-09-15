@@ -141,64 +141,7 @@ export function serializeCheckupSession(session) {
     };
 }
 
-export function serializePoAnimal(animal) {
-    // Plantel P.O. NÃO deduz categoria: o model não guarda `funcaoReprodutiva`,
-    // então um touro de 8 anos sem categoria seria classificado como "Boi". Aqui
-    // a categoria é só o que o produtor gravou.
-    const categoriaResolvida = resolverCategoria(animal, { deduzir: false });
-    return {
-        id: animal.id,
-        farmId: animal.farmId,
-        brinco: animal.brinco,
-        nome: animal.nome,
-        raca: animal.raca,
-        sexo: animal.sexo,
-        dataNascimento: animal.dataNascimento ? animal.dataNascimento.toISOString() : null,
-        ultimoPeso: animal.pesagens?.[0]?.peso ?? animal.pesoAtual ?? null,
-        gmd: animal.gmd ?? null,
-        gmdLast: animal.gmd ?? null,
-        gmd30: animal.gmd30 ?? null,
-        lotId: animal.lotId || null,
-        currentPaddockId: animal.currentPaddockId,
-        currentPaddockName: animal.currentPaddock?.name || null,
-        nutritionPlan: animal.currentNutritionPlan || null,
-        registro: animal.registro,
-        registrationEntity: animal.registrationEntity || null,
-        registrationNumber: animal.registrationNumber || null,
-        registrationType: animal.registrationType || null,
-        registrationCategory: animal.registrationCategory || null,
-        categoria: categoriaResolvida.categoria,
-        categoriaAutomatica: categoriaResolvida.automatica,
-        categoriaDefinida: animal.categoria ?? null,
-        observacoes: animal.observacoes,
-        statusReprodutivo: animal.statusReprodutivo || null,
-        previsaoParto: animal.previsaoParto ? animal.previsaoParto.toISOString() : null,
-        emTransferenciaEmbriao: animal.emTransferenciaEmbriao ?? false,
-        marcadoDescarte: animal.marcadoDescarte ?? false,
-        motivoDescarte: animal.motivoDescarte || null,
-        maeId: animal.maeId || null,
-        maeNome: animal.maeNome || null,
-        paiId: animal.paiId || null,
-        paiNome: animal.paiNome || null,
-        matrizResponsavelId: animal.matrizResponsavelId || null,
-        identificacaoProvisoria: animal.identificacaoProvisoria ?? false,
-        identificacaoAnterior: animal.identificacaoAnterior || null,
-        identificacaoMatrizSnapshot: animal.identificacaoMatrizSnapshot || null,
-        sequenciaMatriz: animal.sequenciaMatriz ?? null,
-        tatuagemOrelhaEsquerda: animal.tatuagemOrelhaEsquerda || null,
-        origemNascimento: animal.origemNascimento || null,
-        identificacaoProvisoriaOriginal: animal.identificacaoProvisoriaOriginal || null,
-        receptoraGestacionalId: animal.receptoraGestacionalId || null,
-        receptoraGestacionalSnapshot: animal.receptoraGestacionalSnapshot || null,
-        doadoraSnapshot: animal.doadoraSnapshot || null,
-        touroSnapshot: animal.touroSnapshot || null,
-        embryoTransferId: animal.embryoTransferId || null,
-        desmamadoEm: animal.desmamadoEm ? animal.desmamadoEm.toISOString() : null,
-        pesoDesmamaKg: animal.pesoDesmamaKg ?? null,
-        createdAt: animal.createdAt.toISOString(),
-        updatedAt: animal.updatedAt.toISOString(),
-    };
-}
+
 
 export function serializePaddockMove(move) {
     return {
@@ -207,7 +150,7 @@ export function serializePaddockMove(move) {
         paddockId: move.paddockId,
         paddockName: move.paddock?.name || null,
         animalId: move.animalId || null,
-        poAnimalId: move.poAnimalId || null,
+        
         startAt: move.startAt.toISOString(),
         endAt: move.endAt ? move.endAt.toISOString() : null,
         notes: move.notes || null,
@@ -220,7 +163,7 @@ export function serializeSemenBatch(batch) {
         id: batch.id,
         farmId: batch.farmId,
         bullAnimalId: batch.bullAnimalId,
-        bullPoAnimalId: batch.bullPoAnimalId,
+        
         bullName: batch.bullName,
         bullRegistry: batch.bullRegistry,
         fornecedor: batch.fornecedor,
@@ -230,14 +173,7 @@ export function serializeSemenBatch(batch) {
         dosesDisponiveis: batch.dosesDisponiveis,
         localArmazenamento: batch.localArmazenamento,
         observacoes: batch.observacoes,
-        bullPoAnimal: batch.bullPoAnimal
-            ? {
-                  id: batch.bullPoAnimal.id,
-                  brinco: batch.bullPoAnimal.brinco,
-                  nome: batch.bullPoAnimal.nome,
-                  registro: batch.bullPoAnimal.registro,
-              }
-            : null,
+        
         bullAnimal: batch.bullAnimal
             ? {
                   id: batch.bullAnimal.id,
@@ -272,9 +208,9 @@ export function serializeNutritionAssignment(assignment) {
         farmId: assignment.farmId,
         planId: assignment.planId,
         lotId: assignment.lotId,
-        poLotId: assignment.poLotId,
+        
         animalId: assignment.animalId,
-        poAnimalId: assignment.poAnimalId,
+        
         startAt: assignment.startAt.toISOString(),
         endAt: assignment.endAt ? assignment.endAt.toISOString() : null,
         createdAt: assignment.createdAt.toISOString(),
@@ -287,11 +223,11 @@ export function serializeEmbryoBatch(batch) {
         id: batch.id,
         farmId: batch.farmId,
         donorAnimalId: batch.donorAnimalId,
-        donorPoAnimalId: batch.donorPoAnimalId,
+        
         donorName: batch.donorName,
         donorRegistry: batch.donorRegistry,
         sireAnimalId: batch.sireAnimalId,
-        sirePoAnimalId: batch.sirePoAnimalId,
+        
         sireName: batch.sireName,
         sireRegistry: batch.sireRegistry,
         tecnica: batch.tecnica,
@@ -302,14 +238,7 @@ export function serializeEmbryoBatch(batch) {
         quantidadeDisponivel: batch.quantidadeDisponivel,
         localArmazenamento: batch.localArmazenamento,
         observacoes: batch.observacoes,
-        donorPoAnimal: batch.donorPoAnimal
-            ? {
-                  id: batch.donorPoAnimal.id,
-                  brinco: batch.donorPoAnimal.brinco,
-                  nome: batch.donorPoAnimal.nome,
-                  registro: batch.donorPoAnimal.registro,
-              }
-            : null,
+        
         donorAnimal: batch.donorAnimal
             ? {
                   id: batch.donorAnimal.id,
@@ -318,14 +247,7 @@ export function serializeEmbryoBatch(batch) {
                   tipoCadastro: batch.donorAnimal.tipoCadastro,
               }
             : null,
-        sirePoAnimal: batch.sirePoAnimal
-            ? {
-                  id: batch.sirePoAnimal.id,
-                  brinco: batch.sirePoAnimal.brinco,
-                  nome: batch.sirePoAnimal.nome,
-                  registro: batch.sirePoAnimal.registro,
-              }
-            : null,
+        
         sireAnimal: batch.sireAnimal
             ? {
                   id: batch.sireAnimal.id,
@@ -430,7 +352,7 @@ export function serializeHerdEvent(event) {
         id: event.id,
         farmId: event.farmId,
         animalId: event.animalId || null,
-        poAnimalId: event.poAnimalId || null,
+        
         type: event.type,
         date: event.date.toISOString(),
         peso: event.peso ?? null,
@@ -448,7 +370,7 @@ export function serializeSanitaryRecord(record) {
         id: record.id,
         farmId: record.farmId,
         animalId: record.animalId || null,
-        poAnimalId: record.poAnimalId || null,
+        
         tipo: record.tipo,
         produto: record.produto,
         date: record.date.toISOString(),

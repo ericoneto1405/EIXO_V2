@@ -78,7 +78,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
     const [catalogos, setCatalogos] = useState<PreviewCatalogos | null>(null);
 
     // O Plantel P.O. ainda não tem as rotas de prévia — segue no envio direto.
-    const temPrevia = herdType !== 'PO';
+    const temPrevia = true;
     const contagem = useMemo(() => contarLinhas(previewLinhas), [previewLinhas]);
 
     if (!open) return null;
@@ -161,7 +161,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
 
             // Rebanho comercial: só CONFERE. Nada é gravado até o produtor
             // olhar a prévia e confirmar. O Plantel P.O. segue no fluxo antigo.
-            const uploadPath = temPrevia ? '/herd/import/validar' : '/po/herd/import/upload';
+            const uploadPath = '/herd/import/validar';
             const res = await fetch(buildApiUrl(uploadPath), {
                 method: 'POST',
                 credentials: 'include',
@@ -178,7 +178,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 setStatus('error');
                 return;
             }
-            if (temPrevia) {
+            {
                 const validacao = data as ValidacaoResposta;
                 setPreviewLinhas(validacao.linhas || []);
                 setCatalogos(validacao.catalogos || null);
@@ -270,7 +270,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
         setIsDownloadingErrors(true);
         setDownloadMessage('');
         try {
-            const errorsPath = herdType === 'PO' ? '/po/herd/import/erros-xlsx' : '/herd/import/erros-xlsx';
+            const errorsPath = '/herd/import/erros-xlsx';
             const res = await fetch(buildApiUrl(errorsPath), {
                 method: 'POST',
                 credentials: 'include',
@@ -477,10 +477,10 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             </svg>
                         </div>
                         <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">
-                            {temPrevia ? 'Conferindo a planilha…' : 'Processando planilha…'}
+                            {'Conferindo a planilha…'}
                         </p>
                         <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">{fileName}</p>
-                        {temPrevia && (
+                        {(
                             <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Nenhum animal é criado nesta etapa.</p>
                         )}
                     </div>

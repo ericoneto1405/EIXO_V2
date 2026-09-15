@@ -19,7 +19,6 @@ import {
     listEmbryoTransfers,
     listLots,
     registerCalfWeaning,
-    updatePoGenealogy,
     updateResponsibleMother,
 } from '../adapters/herdApi';
 import { getMyHerdColumns, updateMyHerdColumns } from '../adapters/usersApi';
@@ -396,7 +395,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     });
     const [paddocks, setPaddocks] = useState<Paddock[]>([]);
     const [farmBreeds, setFarmBreeds] = useState<string[]>([]);
-    const isPoMode = resolvedMode === 'PO';
+    
     const advancedFiltersStorageKey = useMemo(
         () => `eixo:herd:advanced-filters:${farmId || 'no-farm'}:${resolvedMode}`,
         [farmId, resolvedMode],
@@ -501,7 +500,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setLoadError(null);
         try {
             const [animalsResult, lotsResult] = await Promise.all([
-                listAnimals(farmId, resolvedMode, resolvedMode === 'PO' ? 'TODOS' : animalStatusFilter),
+                listAnimals(farmId, resolvedMode, animalStatusFilter),
                 listLots(farmId, resolvedMode),
             ]);
             setAnimals(animalsResult);
@@ -1042,10 +1041,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             );
             return;
         }
-        if (isPoMode && (!animalForm.nome.trim() || !animalForm.paddockId)) {
-            setAnimalFormError('No Plantel P.O., informe o nome e o pasto do animal.');
-            return;
-        }
+        
 
         const parsedPeso = animalForm.ultimoPeso ? Number(animalForm.ultimoPeso) : null;
         if (animalForm.ultimoPeso && (!parsedPeso || parsedPeso <= 0)) {
@@ -1121,7 +1117,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkLoading(true);
         setBulkError(null);
         try {
-            const endpoint = isPoMode ? '/po/animals/bulk-delete' : '/animals/bulk-delete';
+            const endpoint = '/animals/bulk-delete';
             const res = await fetch(buildApiUrl(endpoint), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1144,7 +1140,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkLoading(true);
         setBulkError(null);
         try {
-            const endpoint = isPoMode ? '/po/animals/bulk-move-lot' : '/animals/bulk-move-lot';
+            const endpoint = '/animals/bulk-move-lot';
             const res = await fetch(buildApiUrl(endpoint), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1169,7 +1165,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkLoading(true);
         setBulkError(null);
         try {
-            const endpoint = isPoMode ? '/po/animals/bulk-move-pasto' : '/animals/bulk-move-pasto';
+            const endpoint = '/animals/bulk-move-pasto';
             const res = await fetch(buildApiUrl(endpoint), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1233,7 +1229,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkLoading(true);
         setBulkError(null);
         try {
-            const endpoint = isPoMode ? '/po/animals/bulk-transfer-farm' : '/animals/bulk-transfer-farm';
+            const endpoint = '/animals/bulk-transfer-farm';
             const res = await fetch(buildApiUrl(endpoint), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1296,7 +1292,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
     const handleDownloadImportTemplate = async () => {
         if (!farmId) throw new Error('Selecione uma fazenda para baixar a planilha modelo.');
-        const templatePath = isPoMode ? '/po/herd/import/template' : '/herd/import/template';
+        const templatePath = '/herd/import/template';
         const url = buildApiUrl(`${templatePath}?farmId=${encodeURIComponent(farmId)}`);
         const res = await fetch(url, { credentials: 'include', cache: 'no-store' });
         if (!res.ok) throw new Error('Erro ao baixar planilha modelo');
@@ -1685,7 +1681,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                                     {animal.identificacaoProvisoriaOriginal || animal.identificacao} = {formatTeReference(animal.doadoraSnapshot, 'DO')}{animal.touroSnapshot ? ` × ${animal.touroSnapshot}` : ''}
                                                 </div>
                                             )}
-                                            {(animal.identificacaoProvisoria || isPoMode || animal.origemNascimento === 'TE') && (
+                                            {(animal.identificacaoProvisoria || animal.origemNascimento === 'TE') && (
                                                 <button
                                                     type="button"
                                                     onClick={(event) => {
@@ -2386,7 +2382,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] py-2 pl-9 pr-3 text-sm text-[var(--eixo-text)] placeholder:text-[var(--eixo-text-soft)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10"
                         />
                     </div>
-                    {resolvedMode !== 'PO' && (
+                    {(
                         <div className="flex gap-1.5 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-1 w-fit">
                             {([
                                 { key: 'VIVO', label: 'Rebanho ativo' },
@@ -3203,7 +3199,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     nome: nascimentoForm.nome || undefined,
                                     maeId: nascimentoForm.maeId,
                                     maeNome: nascimentoForm.maeNome || undefined,
-                                    paiId: isPoMode ? nascimentoForm.paiId || undefined : undefined,
+                                    paiId: undefined,
                                     origemNascimento: birthOrigin,
                                     embryoTransferId: birthOrigin === 'TE' ? selectedEmbryoTransferId : undefined,
                                 }, resolvedMode);
@@ -3268,27 +3264,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 {embryoTransfers.length === 0 && <p className="mt-1 text-xs text-[#8c2020]">Nenhuma transferência TE pendente neste rebanho.</p>}
                             </div>}
 
-                            {isPoMode && birthOrigin === 'NATURAL' && (
-                                <div>
-                                    <label className="block text-sm font-semibold text-[#2F2F2F]">Pai biológico (opcional)</label>
-                                    <input
-                                        type="text"
-                                        value={nascimentoForm.paiNome}
-                                        list="pai-suggestions"
-                                        onChange={(e) => {
-                                            const val = e.target.value;
-                                            const found = animals.find(a => (a.brinco === val || a.registro === val || a.nome === val) && String(a.sexo).toUpperCase() === 'MACHO');
-                                            setNascimentoForm(prev => ({ ...prev, paiNome: val, paiId: found?.id || '' }));
-                                        }}
-                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm focus:border-[#B6E23A] focus:outline-none"
-                                    />
-                                    <datalist id="pai-suggestions">
-                                        {animals.filter(a => String(a.sexo).toUpperCase() === 'MACHO').map(a => (
-                                            <option key={a.id} value={a.brinco || a.registro || a.nome || ''}>{a.nome || a.registro || a.brinco}</option>
-                                        ))}
-                                    </datalist>
-                                </div>
-                            )}
+                            
 
                             {/* Sexo */}
                             <div>
@@ -3492,44 +3468,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             </button>
                         </div>}
 
-                        {isPoMode && (
-                            <div className="mt-5 space-y-2 border-t border-[var(--eixo-border)] pt-4">
-                                <label className="block text-sm font-semibold text-[#2F2F2F]">Correção auditada da genealogia</label>
-                                <p className="text-xs text-[#5E5E5E]">A matriz responsável e a tatuagem não mudam nesta ação.</p>
-                                <select value={biologicalMotherId} onChange={(event) => setBiologicalMotherId(event.target.value)} className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm">
-                                    <option value="">Mãe biológica não informada</option>
-                                    {animals.filter((animal) => animal.id !== identificationAnimal.id && ['FÊMEA', 'FEMEA'].includes(String(animal.sexo).toUpperCase())).map((animal) => (
-                                        <option key={animal.id} value={animal.id}>{animal.identificacao}{animal.nome ? ` — ${animal.nome}` : ''}</option>
-                                    ))}
-                                </select>
-                                <select value={biologicalFatherId} onChange={(event) => setBiologicalFatherId(event.target.value)} className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm">
-                                    <option value="">Pai biológico não informado</option>
-                                    {animals.filter((animal) => animal.id !== identificationAnimal.id && String(animal.sexo).toUpperCase() === 'MACHO').map((animal) => (
-                                        <option key={animal.id} value={animal.id}>{animal.identificacao}{animal.nome ? ` — ${animal.nome}` : ''}</option>
-                                    ))}
-                                </select>
-                                <button
-                                    type="button"
-                                    disabled={identificationSaving}
-                                    onClick={async () => {
-                                        setIdentificationSaving(true);
-                                        setIdentificationError(null);
-                                        try {
-                                            await updatePoGenealogy(identificationAnimal.id, biologicalMotherId || null, biologicalFatherId || null);
-                                            await loadData();
-                                            setIdentificationAnimal(null);
-                                        } catch (error: any) {
-                                            setIdentificationError(error.message || 'Erro ao corrigir genealogia P.O.');
-                                        } finally {
-                                            setIdentificationSaving(false);
-                                        }
-                                    }}
-                                    className="w-full rounded-xl border border-[#9fc431] px-4 py-2 text-sm font-bold text-[#3a5c10] disabled:opacity-50"
-                                >
-                                    Salvar correção da genealogia
-                                </button>
-                            </div>
-                        )}
+                        
 
                         {identificationError && (
                             <p className="mt-4 rounded-xl bg-[#fce8e8] px-3 py-2 text-sm text-[#8c2020]">{identificationError}</p>

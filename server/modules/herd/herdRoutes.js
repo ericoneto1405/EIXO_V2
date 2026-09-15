@@ -12,6 +12,7 @@ import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../config/env.js
 import { createIntegratedTransaction, upsertAutomaticResult } from '../financial/financialService.js';
 import { normalizeSexoImport, normalizeTipoRacaImport, parseImportDate, parseNascimentoImport, parsePesagemImport } from './herdImportRules.js';
 import { normalizarCategoriaParaGravar } from './animalCategories.js';
+import { normalizeSpreadsheetDates } from './herdSpreadsheetDates.js';
 const prisma = new PrismaClient();
 
 const VALID_EVENT_TYPES = ['NASCIMENTO', 'COMPRA', 'VENDA', 'MORTE'];
@@ -735,23 +736,10 @@ const getOrganizationFarmFilter = (farm) => (
 
 async function loadOrganizationAnimalReferences(farm) {
   const farmFilter = getOrganizationFarmFilter(farm);
-  const [commercialAnimals, poAnimals] = await Promise.all([
-    prisma.animal.findMany({
+  const commercialAnimals = await prisma.animal.findMany({
       where: { farm: farmFilter },
       select: { identityKey: true, registro: true, farm: { select: { name: true } } },
-    }),
-    prisma.poAnimal.findMany({
-      where: { farm: farmFilter },
-      select: {
-        identityKey: true,
-        brinco: true,
-        registro: true,
-        registrationEntity: true,
-        registrationNumber: true,
-        farm: { select: { name: true } },
-      },
-    }),
-  ]);
+    });
   const identities = new Map();
   const registrations = new Map();
   const legacyRegistrations = new Map();
@@ -771,10 +759,7 @@ async function loadOrganizationAnimalReferences(farm) {
     addIdentity(animal.identityKey, 'rebanho Comercial', animal.farm.name);
     addRegistration(null, animal.registro, 'rebanho Comercial', animal.farm.name);
   });
-  poAnimals.forEach((animal) => {
-    addIdentity(animal.identityKey || animal.brinco, 'plantel P.O.', animal.farm.name);
-    addRegistration(animal.registrationEntity, animal.registrationNumber || animal.registro, 'plantel P.O.', animal.farm.name);
-  });
+
   return { identities, registrations, legacyRegistrations };
 }
 
@@ -793,7 +778,7 @@ function findRegistrationConflict(references, entity, number) {
 
 function parseSpreadsheet(buffer, originalName) {
   // SheetJS lê .xlsx, .xls e .csv direto do buffer
-  const wb = XLSX.read(buffer, { type: 'buffer' });
+  const wb = XLSX.read(buffer, { type: 'buffer', cellNF: true });
   // Procura a aba "Dados" (case-insensitive); se não achar, usa a primeira
   const sheetName = wb.SheetNames.find((n) => n.toLowerCase() === 'dados') || wb.SheetNames[0];
   const sheet = wb.Sheets[sheetName];
@@ -815,6 +800,7 @@ function parseSpreadsheet(buffer, originalName) {
 
   const headers = (rawRows[headerRowIdx] || []).map(normalizeHeader);
   const keys = headers.map((h) => LABEL_TO_KEY[h] || null);
+  normalizeSpreadsheetDates(wb, sheet, rawRows, keys, headerRowIdx, originalName);
 
   const EXAMPLE_IDS = new Set(['EXEMPLO-1', 'EXEMPLO-2']);
 
@@ -1415,382 +1401,6 @@ app.post('/herd/import/erros-xlsx', requireAuth, async (req, res) => {
   }
 });
 
-const REGISTRATION_ENTITIES = [
-  'ABCZ', 'ANC / Herd-Book Collares', 'ABHB', 'Brangus', 'Senepol',
-  'Simental e Simbrasil', 'Angus e Ultrablack', 'Santa Gertrudis',
-  'Caracu', 'Limousin', 'Bonsmara', 'Wagyu', 'Outra',
-];
-
-const PO_TEMPLATE_COLUMNS = [
-  { key: 'identificacao', label: 'Identificação', required: true, type: 'text', description: 'Identificação usada no manejo da fazenda.' },
-  { key: 'nome', label: 'Nome do animal', required: true, type: 'text', description: 'Nome oficial ou nome usado na fazenda.' },
-  { key: 'raca', label: 'Raça', required: true, type: 'text', description: 'Raça do animal.' },
-  { key: 'sexo', label: 'Sexo', required: true, type: 'list', options: ['MACHO', 'FEMEA'], description: 'MACHO ou FEMEA.' },
-  { key: 'entidade_registradora', label: 'Entidade registradora', required: true, type: 'list', options: REGISTRATION_ENTITIES, description: 'Associação responsável pelo registro ou controle genealógico.' },
-  { key: 'numero_registro', label: 'Número do registro / controle', required: true, type: 'text', description: 'Número exatamente como aparece no documento da entidade.' },
-  { key: 'tipo_registro', label: 'Tipo do registro', required: false, type: 'text', description: 'Ex.: nascimento, definitivo, genealógico ou controle.' },
-  { key: 'categoria_registro', label: 'Categoria do registro', required: false, type: 'text', description: 'Ex.: PO, LA, PC, CCG ou categoria usada pela entidade.' },
-  { key: 'data_nascimento', label: 'Data de nascimento', required: false, type: 'date', description: 'Use DD/MM/AAAA.' },
-  { key: 'ultimo_peso_kg', label: 'Último peso (kg)', required: false, type: 'number', description: 'Peso mais recente em quilogramas.' },
-  { key: 'data_pesagem', label: 'Data da pesagem', required: false, type: 'date', description: 'Data do peso informado.' },
-  { key: 'categoria', label: 'Categoria no rebanho', required: false, type: 'text', description: 'Ex.: bezerra, matriz, touro.' },
-  { key: 'pasto_destino', label: 'Pasto de destino', required: false, type: 'destination', description: 'Escolha um pasto cadastrado no EIXO. Em branco, usa o pasto padrão escolhido na tela.' },
-  { key: 'lote_destino', label: 'Lote de destino', required: false, type: 'destination', description: 'Escolha um lote P.O. cadastrado no EIXO. Em branco, usa o lote padrão escolhido na tela.' },
-  { key: 'status_reprodutivo', label: 'Status reprodutivo', required: false, type: 'list', options: ['RECRIA', 'CICLANDO', 'VAZIA', 'PRENHE', 'PARIDA'], description: 'Somente para fêmeas.' },
-  { key: 'previsao_parto', label: 'Previsão de parto', required: false, type: 'date', description: 'Obrigatória quando houver previsão conhecida para animal PRENHE.' },
-  { key: 'em_te', label: 'Em TE?', required: false, type: 'list', options: ['NÃO', 'SIM'], description: 'Indica participação atual em transferência de embrião.' },
-  { key: 'marcado_descarte', label: 'Marcado para descarte?', required: false, type: 'list', options: ['NÃO', 'SIM'], description: 'Indica decisão de descarte já tomada.' },
-  { key: 'motivo_descarte', label: 'Motivo do descarte', required: false, type: 'text', description: 'Explique o motivo quando marcado para descarte.' },
-  { key: 'mae', label: 'Mãe (identificação ou registro)', required: false, type: 'text', description: 'A mãe precisa existir na mesma fazenda ou estar nesta planilha.' },
-  { key: 'pai', label: 'Pai (identificação ou registro)', required: false, type: 'text', description: 'O pai precisa existir na mesma fazenda ou estar nesta planilha.' },
-  { key: 'observacoes', label: 'Observações', required: false, type: 'text', description: 'Informações adicionais.' },
-];
-
-const parsePoSpreadsheet = (buffer) => {
-  const workbook = XLSX.read(buffer, { type: 'buffer' });
-  const sheet = workbook.Sheets[workbook.SheetNames.find((name) => normalizeHeader(name) === 'dados') || workbook.SheetNames[0]];
-  if (!sheet) throw new Error('Planilha vazia ou sem abas.');
-  const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false });
-  const labels = new Map(PO_TEMPLATE_COLUMNS.flatMap((column) => [[normalizeHeader(column.label), column.key], [normalizeHeader(column.key), column.key]]));
-  labels.set(normalizeHeader('Registro'), 'numero_registro');
-  labels.set(normalizeHeader('Brinco'), 'identificacao');
-  const headerIndex = rawRows.findIndex((row, index) => index < 6 && row.some((cell) => labels.has(normalizeHeader(cell))));
-  if (headerIndex < 0) throw new Error('Cabeçalho da planilha P.O. não encontrado.');
-  const keys = rawRows[headerIndex].map((cell) => labels.get(normalizeHeader(cell)) || null);
-  return rawRows.slice(headerIndex + 1).map((row, index) => {
-    const data = { __line: headerIndex + index + 2 };
-    keys.forEach((key, columnIndex) => {
-      if (key && row[columnIndex] !== undefined && row[columnIndex] !== null && row[columnIndex] !== '') data[key] = row[columnIndex];
-    });
-    return data;
-  }).filter((row) => Object.keys(row).length > 1);
-};
-
-const parseOptionalBooleanImport = (value) => {
-  const normalized = normalizeHeader(value);
-  if (!normalized) return null;
-  if (['sim', 's', 'yes'].includes(normalized)) return true;
-  if (['nao', 'n', 'no'].includes(normalized)) return false;
-  return undefined;
-};
-
-app.get('/po/herd/import/template', requireAuth, async (req, res) => {
-  try {
-    const farmId = String(req.query?.farmId || req.saas?.farmId || '');
-    if (!farmId) return res.status(400).json({ message: 'Selecione uma fazenda para gerar a planilha modelo.' });
-    const farm = await prisma.farm.findFirst({
-      where: buildFarmScopeFilter(req, { id: farmId }),
-      select: { id: true, name: true },
-    });
-    if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada ou sem acesso.' });
-    const [paddocks, lots] = await Promise.all([
-      prisma.paddock.findMany({ where: { farmId }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
-      prisma.poLot.findMany({ where: { farmId }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
-    ]);
-    const workbook = new ExcelJS.Workbook();
-    workbook.creator = 'EIXO';
-    const sheet = workbook.addWorksheet('Dados');
-    const lastPoColumnLetter = String.fromCharCode(64 + PO_TEMPLATE_COLUMNS.length);
-    sheet.mergeCells(`A1:${lastPoColumnLetter}1`);
-    const poTitle = sheet.getCell('A1');
-    poTitle.value = 'EIXO — Planilha de Importação do Rebanho';
-    poTitle.font = { bold: true, color: { argb: 'FFFFFF' }, size: 16, name: 'Arial' };
-    poTitle.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2F8A3E' } };
-    poTitle.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    poTitle.protection = { locked: true };
-    sheet.getRow(1).height = 30;
-
-    sheet.mergeCells(`A2:${lastPoColumnLetter}2`);
-    const poBanner = sheet.getCell('A2');
-    poBanner.value = '💡  Cole seus dados abaixo do cabeçalho. Escolha pasto e lote por linha ou deixe em branco para usar o padrão da tela.';
-    poBanner.font = { bold: true, color: { argb: '1F2937' }, size: 11, name: 'Arial' };
-    poBanner.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'ECFDF5' } };
-    poBanner.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 };
-    poBanner.protection = { locked: true };
-    poBanner.border = { bottom: { style: 'medium', color: { argb: '2F8A3E' } } };
-    sheet.getRow(2).height = 32;
-
-    sheet.getRow(3).values = PO_TEMPLATE_COLUMNS.map((column) => `${column.label}${column.required ? ' *' : ''}`);
-    sheet.getRow(3).font = { bold: true, color: { argb: 'FFFFFF' } };
-    sheet.getRow(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2F8A3E' } };
-    sheet.getRow(3).height = 44;
-    sheet.views = [{ state: 'frozen', ySplit: 3 }];
-    PO_TEMPLATE_COLUMNS.forEach((column, columnIndex) => {
-      const headerCell = sheet.getCell(3, columnIndex + 1);
-      headerCell.note = column.description;
-      headerCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      headerCell.border = IMPORT_CELL_BORDER;
-      headerCell.protection = { locked: true };
-      sheet.getColumn(columnIndex + 1).width = IMPORT_COLUMN_WIDTHS[column.type] || 18;
-      if (column.type === 'date') sheet.getColumn(columnIndex + 1).numFmt = 'dd/mm/yyyy';
-      if (column.type === 'number') sheet.getColumn(columnIndex + 1).numFmt = '0.##';
-      const horizontal = (column.type === 'date' || column.type === 'number') ? 'center' : 'left';
-      for (let row = 4; row <= 1003; row += 1) {
-        const cell = sheet.getCell(row, columnIndex + 1);
-        cell.alignment = { vertical: 'middle', horizontal, wrapText: true };
-        cell.border = IMPORT_CELL_BORDER;
-        cell.protection = { locked: false };
-      }
-      if (column.type === 'list') {
-        for (let row = 4; row <= 1003; row += 1) {
-          sheet.getCell(row, columnIndex + 1).dataValidation = {
-            type: 'list',
-            allowBlank: !column.required,
-            formulae: [`"${column.options.join(',')}"`],
-            showErrorMessage: true,
-            errorTitle: 'Valor inválido',
-            error: `Use uma opção válida para ${column.label}.`,
-          };
-        }
-      }
-    });
-    const instructions = workbook.addWorksheet('Instruções');
-    instructions.addRows([
-      ['EIXO — Importação de animais P.O.'],
-      ['Cole os dados por coluna na aba Dados. Cada coluna representa uma informação e cada linha identifica um animal.'],
-      ['A planilha funciona no Excel e no Google Sheets. No Google Sheets, faça o download como Microsoft Excel (.xlsx) antes de enviar ao EIXO.'],
-      ['Identificação, nome, raça, sexo, entidade registradora e número do registro/controle são obrigatórios.'],
-      ['Pasto e lote podem ser escolhidos por linha. Em branco, será usado o destino padrão selecionado no EIXO.'],
-      ['RGN, RGD e outras siglas não são universais. Informe o tipo e a categoria exatamente como a entidade utiliza.'],
-      ['Mãe e pai podem ser informados por identificação ou registro e devem pertencer à mesma fazenda.'],
-      ['A importação é tudo ou nada: qualquer erro impede a criação de todas as linhas.'],
-      [],
-      ['Coluna', 'Obrigatória?', 'Descrição'],
-      ...PO_TEMPLATE_COLUMNS.map((column) => [column.label, column.required ? 'Sim' : 'Não', column.description]),
-    ]);
-    instructions.mergeCells('A1:C1');
-    instructions.getRow(1).font = { bold: true, size: 15 };
-    instructions.getCell('A1').alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    instructions.getRow(1).height = 28;
-    instructions.getRow(10).font = { bold: true, color: { argb: 'FFFFFF' } };
-    instructions.getRow(10).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2F8A3E' } };
-    for (let row = 10; row <= 10 + PO_TEMPLATE_COLUMNS.length; row += 1) {
-      for (let column = 1; column <= 3; column += 1) {
-        const cell = instructions.getCell(row, column);
-        cell.alignment = { vertical: 'middle', horizontal: row === 10 ? 'center' : 'left', wrapText: true };
-        cell.border = IMPORT_CELL_BORDER;
-      }
-    }
-    instructions.getColumn(1).width = 34;
-    instructions.getColumn(2).width = 16;
-    instructions.getColumn(3).width = 80;
-    const destinationRanges = addFarmDestinationCatalog(workbook, paddocks, lots);
-    applyFarmDestinationValidations(sheet, PO_TEMPLATE_COLUMNS, destinationRanges);
-    await sheet.protect('', {
-      selectLockedCells: false,
-      selectUnlockedCells: true,
-      spinCount: 1000,
-    });
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
-    const filename = `[EIXO] ${farm.name} - Cadastro de Rebanho.xlsx`;
-    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`);
-    return res.send(Buffer.from(buffer));
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Erro ao gerar modelo do Plantel P.O.' });
-  }
-});
-
-app.post('/po/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, res) => {
-  try {
-    const farmId = String(req.body?.farmId || '');
-    const paddockId = String(req.body?.paddockId || '');
-    const lotId = String(req.body?.lotId || '');
-    if (!farmId || !req.file) return res.status(400).json({ message: 'Informe fazenda e arquivo.' });
-    const farm = await prisma.farm.findFirst({ where: buildFarmScopeFilter(req, { id: farmId }) });
-    if (!farm) return res.status(404).json({ message: 'Fazenda não encontrada ou sem acesso.' });
-    let rows;
-    try { rows = parsePoSpreadsheet(req.file.buffer); } catch (error) { return res.status(400).json({ message: error.message }); }
-    if (!rows.length) return res.status(400).json({ message: 'Planilha P.O. sem linhas para importar.' });
-    if (rows.length > 1000) return res.status(400).json({ message: 'Limite de 1000 linhas por importação.' });
-
-    const [paddocks, lots, existingAnimals, organizationReferences] = await Promise.all([
-      prisma.paddock.findMany({ where: { farmId }, select: { id: true, name: true } }),
-      prisma.poLot.findMany({ where: { farmId }, select: { id: true, name: true } }),
-      prisma.poAnimal.findMany({ where: { farmId }, select: { id: true, brinco: true, registro: true, registrationNumber: true, sexo: true } }),
-      loadOrganizationAnimalReferences(farm),
-    ]);
-    const defaultPaddock = paddockId ? paddocks.find((item) => item.id === paddockId) : null;
-    const defaultLot = lotId ? lots.find((item) => item.id === lotId) : null;
-    if (paddockId && !defaultPaddock) return res.status(400).json({ message: 'Pasto padrão inválido para esta fazenda.' });
-    if (lotId && !defaultLot) return res.status(400).json({ message: 'Lote P.O. padrão inválido para esta fazenda.' });
-    const paddockLookup = buildDestinationLookup(paddocks);
-    const lotLookup = buildDestinationLookup(lots);
-    const existingByRef = new Map();
-    existingAnimals.forEach((animal) => {
-      if (animal.brinco) existingByRef.set(normalizeHeader(animal.brinco), animal);
-      if (animal.registrationNumber || animal.registro) existingByRef.set(normalizeHeader(animal.registrationNumber || animal.registro), animal);
-    });
-    const errors = [];
-    const prepared = [];
-    const usedIds = new Set();
-    const usedRegistrations = new Set();
-    for (const row of rows) {
-      const line = row.__line;
-      const nome = String(row.nome || '').trim();
-      const brinco = String(row.identificacao || '').trim();
-      const registrationEntity = String(row.entidade_registradora || '').trim();
-      const registrationNumber = String(row.numero_registro || '').trim();
-      const raca = String(row.raca || '').trim();
-      const sexo = normalizeSexoImport(String(row.sexo || ''));
-      const birthDate = row.data_nascimento ? parseImportDate(row.data_nascimento) : null;
-      const weighingDate = row.data_pesagem ? parseImportDate(row.data_pesagem) : null;
-      const weight = row.ultimo_peso_kg ? parseNumber(row.ultimo_peso_kg) : null;
-      const birthForecast = row.previsao_parto ? parseImportDate(row.previsao_parto) : null;
-      const reproductiveStatus = normalizeHeader(row.status_reprodutivo).replace(/ /g, '_').toUpperCase() || null;
-      const embryoTransferValue = parseOptionalBooleanImport(row.em_te);
-      const markedForDiscardValue = parseOptionalBooleanImport(row.marcado_descarte);
-      const embryoTransfer = embryoTransferValue === true;
-      const markedForDiscard = markedForDiscardValue === true;
-      const identityKey = normalizeAnimalIdentityKey(brinco);
-      const registrationKey = normalizeAnimalIdentityKey(registrationNumber);
-      const identityReferenceKey = normalizeHeader(identityKey);
-      const registrationNumberReferenceKey = normalizeHeader(registrationKey);
-      const registrationReferenceKey = `${normalizeHeader(registrationEntity)}|${registrationNumberReferenceKey}`;
-      const reasons = [];
-      if (!brinco) reasons.push('Identificação é obrigatória');
-      if (!nome) reasons.push('Nome do animal é obrigatório');
-      if (!raca) reasons.push('Raça é obrigatória');
-      if (!sexo) reasons.push('Sexo é obrigatório e deve ser MACHO ou FEMEA');
-      if (!registrationEntity) reasons.push('Entidade registradora é obrigatória');
-      if (!registrationNumber) reasons.push('Número do registro / controle é obrigatório');
-      if (usedIds.has(identityReferenceKey)) reasons.push('Identificação duplicada na planilha');
-      if (registrationNumberReferenceKey && usedRegistrations.has(registrationReferenceKey)) reasons.push('Número do registro/controle duplicado na planilha para a mesma entidade');
-      const identityConflict = organizationReferences.identities.get(identityReferenceKey);
-      const registrationConflict = findRegistrationConflict(organizationReferences, registrationEntity, registrationNumberReferenceKey);
-      const conflict = identityConflict || registrationConflict;
-      if (conflict) reasons.push(`Animal já existe na organização (${conflict.source}, fazenda ${conflict.farmName})`);
-      if (row.data_nascimento && !birthDate) reasons.push('Data de nascimento inválida');
-      if (row.data_pesagem && !weighingDate) reasons.push('Data de pesagem inválida');
-      if (row.ultimo_peso_kg && (!weight || weight <= 0)) reasons.push('Peso inválido');
-      if (row.previsao_parto && !birthForecast) reasons.push('Previsão de parto inválida');
-      if (birthForecast && reproductiveStatus !== 'PRENHE') reasons.push('Previsão de parto exige status reprodutivo PRENHE');
-      if (sexo === 'MACHO' && (reproductiveStatus || birthForecast || embryoTransfer)) reasons.push('Status de fêmea, previsão de parto e TE não podem ser aplicados a macho');
-      if (row.status_reprodutivo && !['RECRIA', 'CICLANDO', 'VAZIA', 'PRENHE', 'PARIDA'].includes(reproductiveStatus)) reasons.push('Status reprodutivo inválido');
-      if (embryoTransferValue === undefined) reasons.push('Em TE? deve ser SIM ou NÃO');
-      if (markedForDiscardValue === undefined) reasons.push('Marcado para descarte? deve ser SIM ou NÃO');
-      const paddock = resolveImportDestination(row.pasto_destino, defaultPaddock, paddockLookup, 'Pasto de destino', reasons, { farmId, line });
-      const lot = resolveImportDestination(row.lote_destino, defaultLot, lotLookup, 'Lote de destino', reasons, { farmId, line });
-      if (!paddock && !String(row.pasto_destino || '').trim() && !defaultPaddock) {
-        reasons.push('Informe o pasto de destino na planilha ou escolha um pasto padrão no EIXO');
-      }
-      if (reasons.length) errors.push({ line, identificacao: brinco, motivos: reasons, dados: { ...row } });
-      else {
-        usedIds.add(identityReferenceKey);
-        usedRegistrations.add(registrationReferenceKey);
-        prepared.push({ line, nome, brinco, identityKey, registrationEntity, registrationNumber, registrationType: String(row.tipo_registro || '').trim(), registrationCategory: String(row.categoria_registro || '').trim(), raca, sexo, birthDate, weighingDate, weight, reproductiveStatus, birthForecast, embryoTransfer, markedForDiscard, discardReason: String(row.motivo_descarte || '').trim(), maeRef: String(row.mae || '').trim(), paiRef: String(row.pai || '').trim(), categoria: String(row.categoria || '').trim(), observacoes: String(row.observacoes || '').trim(), paddock, lot, raw: { ...row } });
-      }
-    }
-
-    const preparedByRef = new Map();
-    prepared.forEach((item) => {
-      preparedByRef.set(normalizeHeader(item.brinco), item);
-      preparedByRef.set(normalizeHeader(item.registrationNumber), item);
-    });
-    prepared.forEach((item) => {
-      for (const [kind, ref, expectedSex] of [['Mãe', item.maeRef, 'FEMEA'], ['Pai', item.paiRef, 'MACHO']]) {
-        if (!ref) continue;
-        const parent = existingByRef.get(normalizeHeader(ref)) || preparedByRef.get(normalizeHeader(ref));
-        if (!parent) errors.push({ line: item.line, identificacao: item.brinco, motivos: [`${kind} não encontrado(a)`], dados: item.raw });
-        else if (parent === item || parent.sexo !== expectedSex) errors.push({ line: item.line, identificacao: item.brinco, motivos: [`${kind} inválido(a)`], dados: item.raw });
-      }
-    });
-    if (errors.length) {
-      const linhasCorrecao = buildImportCorrectionRows(rows, errors);
-      const linhasComErro = linhasCorrecao.filter((item) => item.motivos.length > 0);
-      return res.status(422).json({ total: rows.length, criados: 0, ignorados: 0, erros: linhasComErro.length, detalhes: { criados: [], ignorados: [], erros: linhasComErro, linhasCorrecao } });
-    }
-
-    const created = await prisma.$transaction(async (tx) => {
-      const createdByRef = new Map();
-      const result = [];
-      for (const item of prepared) {
-        const animal = await tx.poAnimal.create({ data: { farmId, nome: item.nome, brinco: item.brinco, identityKey: item.identityKey, registro: item.registrationNumber, registrationEntity: item.registrationEntity, registrationNumber: item.registrationNumber, registrationType: item.registrationType || null, registrationCategory: item.registrationCategory || null, raca: item.raca, sexo: item.sexo, dataNascimento: item.birthDate, pesoAtual: item.weight || 0, categoria: item.categoria || null, observacoes: item.observacoes || null, statusReprodutivo: item.reproductiveStatus, previsaoParto: item.birthForecast, emTransferenciaEmbriao: item.embryoTransfer, marcadoDescarte: item.markedForDiscard, motivoDescarte: item.discardReason || null, currentPaddockId: item.paddock.id, lotId: item.lot?.id || null } });
-        createdByRef.set(normalizeHeader(item.brinco), animal);
-        createdByRef.set(normalizeHeader(item.registrationNumber), animal);
-        await tx.paddockMove.create({ data: { farmId, paddockId: item.paddock.id, poAnimalId: animal.id, startAt: item.weighingDate || item.birthDate || new Date() } });
-        if (item.weight && item.weighingDate) await tx.poWeighing.create({ data: { farmId, poAnimalId: animal.id, data: item.weighingDate, peso: item.weight, gmd: 0 } });
-        result.push({ line: item.line, id: animal.id, identificacao: item.brinco });
-      }
-      for (const item of prepared) {
-        if (!item.maeRef && !item.paiRef) continue;
-        const animal = createdByRef.get(normalizeHeader(item.brinco));
-        const mae = item.maeRef ? (existingByRef.get(normalizeHeader(item.maeRef)) || createdByRef.get(normalizeHeader(item.maeRef))) : null;
-        const pai = item.paiRef ? (existingByRef.get(normalizeHeader(item.paiRef)) || createdByRef.get(normalizeHeader(item.paiRef))) : null;
-        await tx.poAnimal.update({ where: { id: animal.id }, data: { maeId: mae?.id || null, paiId: pai?.id || null, matrizResponsavelId: mae?.id || null, tatuagemOrelhaEsquerda: mae?.brinco || mae?.registro || null } });
-      }
-      return result;
-    });
-    return res.json({ total: rows.length, criados: created.length, ignorados: 0, erros: 0, detalhes: { criados: created, ignorados: [], erros: [] } });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Erro interno ao importar Plantel P.O.' });
-  }
-});
-
-app.post('/po/herd/import/erros-xlsx', requireAuth, async (req, res) => {
-  try {
-    const linhasCorrecao = Array.isArray(req.body?.linhasCorrecao) ? req.body.linhasCorrecao : [];
-    const errors = linhasCorrecao.length > 0 ? linhasCorrecao : (Array.isArray(req.body?.erros) ? req.body.erros : []);
-    if (!errors.length) return res.status(400).json({ message: 'Nenhuma linha para correção informada.' });
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Erros P.O.');
-    const totalColumns = PO_TEMPLATE_COLUMNS.length + 1;
-    const lastColumnLetter = String.fromCharCode(64 + totalColumns);
-    sheet.mergeCells(`A1:${lastColumnLetter}1`);
-    const banner = sheet.getCell('A1');
-    banner.value = '⚠  Esta planilha contém todas as linhas originais. Corrija somente as linhas com motivo em vermelho e use "Enviar planilha corrigida" no EIXO.';
-    banner.font = { bold: true, color: { argb: '7F1D1D' }, size: 11, name: 'Arial' };
-    banner.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEE2E2' } };
-    banner.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true, indent: 1 };
-    banner.border = { bottom: { style: 'medium', color: { argb: 'A32D2D' } } };
-    sheet.getRow(1).height = 32;
-    sheet.addRow([...PO_TEMPLATE_COLUMNS.map((column) => column.label), 'Motivo do erro']);
-    errors.forEach((error) => {
-      const row = sheet.addRow([...PO_TEMPLATE_COLUMNS.map((column) => error?.dados?.[column.key] ?? ''), (error?.motivos || []).join(' · ')]);
-      row.eachCell({ includeEmpty: true }, (cell) => {
-        cell.font = { size: 10, name: 'Arial' };
-        cell.alignment = { vertical: 'middle', wrapText: true };
-        cell.border = IMPORT_CELL_BORDER;
-      });
-      if ((error?.motivos || []).length > 0) {
-        const reasonCell = row.getCell(PO_TEMPLATE_COLUMNS.length + 1);
-        reasonCell.font = { color: { argb: 'A32D2D' }, bold: true };
-        reasonCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FEE2E2' } };
-      }
-    });
-    sheet.getRow(2).font = { bold: true, color: { argb: 'FFFFFF' }, name: 'Arial' };
-    sheet.getRow(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2F8A3E' } };
-    sheet.getRow(2).height = 44;
-    PO_TEMPLATE_COLUMNS.forEach((column, index) => {
-      const headerCell = sheet.getCell(2, index + 1);
-      headerCell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-      headerCell.border = IMPORT_CELL_BORDER;
-      sheet.getColumn(index + 1).width = IMPORT_COLUMN_WIDTHS[column.type] || 18;
-    });
-    const reasonHeader = sheet.getCell(2, totalColumns);
-    reasonHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'A32D2D' } };
-    reasonHeader.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
-    reasonHeader.border = IMPORT_CELL_BORDER;
-    sheet.getColumn(totalColumns).width = 50;
-    sheet.views = [{ state: 'frozen', ySplit: 2 }];
-    const buffer = await workbook.xlsx.writeBuffer();
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', 'attachment; filename="[EIXO] Planilha completa PO para correcao.xlsx"');
-    return res.send(Buffer.from(buffer));
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: 'Erro ao gerar planilha de erros P.O.' });
-  }
-});
-
-// =============================================
-// IMPORTAÇÃO DE PLANILHA — Rebanho Comercial (rota antiga em JSON, mantida)
-// =============================================
-
 const REQUIRED_COLUMNS = ['identificacao'];
 const OPTIONAL_COLUMNS = [
   'brinco_eletronico', 'nome', 'sexo', 'categoria', 'possui_registro',
@@ -2124,161 +1734,15 @@ app.post('/herd/import', requireAuth, async (req, res) => {
 // EVENTOS DE INVENTÁRIO — Plantel P.O.
 // =============================================
 
-app.get('/po/animals/:id/eventos', async (req, res) => {
-    const { id } = req.params;
-    try {
-        const animal = await prisma.poAnimal.findFirst({
-            where: { id, farm: buildFarmRelationFilter(req) },
-        });
-        if (!animal) {
-            return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
-        }
-        const events = await prisma.herdEvent.findMany({
-            where: { poAnimalId: id },
-            orderBy: { date: 'desc' },
-        });
-        return res.json({ events: events.map(serializeHerdEvent) });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erro ao listar eventos.' });
-    }
-});
 
-app.post('/po/animals/:id/eventos', requireAuth, async (req, res) => {
-    const { id } = req.params;
-    const { type, date, peso, valor, origem, destino, observacoes, purchasePurpose } = req.body || {};
 
-    if (!VALID_EVENT_TYPES.includes(type?.toUpperCase?.())) {
-        return res.status(400).json({ message: 'Tipo inválido. Use NASCIMENTO, COMPRA, VENDA ou MORTE.' });
-    }
-    const eventDate = parseDateValue(date);
-    if (!eventDate) {
-        return res.status(400).json({ message: 'Data do evento inválida.' });
-    }
 
-    try {
-        const animal = await prisma.poAnimal.findFirst({
-            where: { id, farm: buildFarmRelationFilter(req) },
-        });
-        if (!animal) {
-            return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
-        }
-        const eventType = type.toUpperCase();
-        if (purchasePurpose && !['PRODUCTION', 'BREEDING'].includes(purchasePurpose)) {
-            return res.status(400).json({ message: 'Finalidade da compra inválida.' });
-        }
-        const resolvedPurchasePurpose = eventType === 'COMPRA' ? (purchasePurpose || 'PRODUCTION') : null;
-        const event = await prisma.$transaction(async (tx) => {
-            const createdEvent = await tx.herdEvent.create({ data: {
-                farmId: animal.farmId, poAnimalId: id, type: eventType, date: eventDate,
-                peso: parseNumber(peso), valor: parseNumber(valor), origem: origem?.trim() || null,
-                destino: destino?.trim() || null, observacoes: observacoes?.trim() || null,
-                purchasePurpose: resolvedPurchasePurpose,
-            } });
-            const financialMap = HERD_EVENT_CATEGORY_MAP[eventType];
-            const parsedValor = parseNumber(valor);
-            if (financialMap && parsedValor && parsedValor > 0) {
-                await createIntegratedTransaction(tx, {
-                    farmId: animal.farmId, type: financialMap.type, categoria: financialMap.categoria,
-                    accountCategoryId: eventType === 'COMPRA'
-                        ? (resolvedPurchasePurpose === 'BREEDING' ? 'sys-compra-reprodutores' : 'sys-compra-animais-producao')
-                        : financialMap.categoryId,
-                    amount: parsedValor, competenceDate: eventDate,
-                    description: `${eventType === 'COMPRA' ? 'Compra' : 'Venda'} P.O. — ${animal.brinco || animal.nome || id}`,
-                    herdEventId: createdEvent.id, poAnimalId: animal.id,
-                    allocations: (animal.lotId || animal.currentPaddockId) ? [{ poLotId: animal.lotId, paddockId: animal.currentPaddockId }] : [],
-                });
-            }
-            return createdEvent;
-        });
-
-        return res.status(201).json({ event: serializeHerdEvent(event) });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erro ao salvar evento.' });
-    }
-});
 
 // =============================================
 // MANEJO SANITÁRIO — Plantel P.O.
 // =============================================
 
-app.get('/po/animals/:id/sanitario', async (req, res) => {
-    const { id } = req.params;
-    try {
-        const animal = await prisma.poAnimal.findFirst({
-            where: { id, farm: buildFarmRelationFilter(req) },
-        });
-        if (!animal) {
-            return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
-        }
-        const records = await prisma.sanitaryRecord.findMany({
-            where: { poAnimalId: id },
-            orderBy: { date: 'desc' },
-        });
-        return res.json({ records: records.map(serializeSanitaryRecord) });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erro ao listar registros sanitários.' });
-    }
-});
 
-app.post('/po/animals/:id/sanitario', requireAuth, async (req, res) => {
-    const { id } = req.params;
-    const { tipo, produto, date, dose, proximaAplicacao, observacoes, valorUnitario } = req.body || {};
 
-    if (!VALID_SANITARY_TIPOS.includes(tipo?.toUpperCase?.())) {
-        return res.status(400).json({ message: 'Tipo inválido. Use VACINA, VERMIFUGO ou TRATAMENTO.' });
-    }
-    if (!produto?.trim()) {
-        return res.status(400).json({ message: 'Nome do produto é obrigatório.' });
-    }
-    const eventDate = parseDateValue(date);
-    if (!eventDate) {
-        return res.status(400).json({ message: 'Data do registro inválida.' });
-    }
 
-    try {
-        const animal = await prisma.poAnimal.findFirst({
-            where: { id, farm: buildFarmRelationFilter(req) },
-        });
-        if (!animal) {
-            return res.status(404).json({ message: 'Animal P.O. não encontrado.' });
-        }
-        const tipoUpper = tipo.toUpperCase();
-        const parsedValor = parseNumber(valorUnitario);
-        const record = await prisma.$transaction(async (tx) => {
-            const createdRecord = await tx.sanitaryRecord.create({ data: {
-                farmId: animal.farmId, poAnimalId: id, tipo: tipoUpper, produto: produto.trim(),
-                date: eventDate, dose: dose?.trim() || null, proximaAplicacao: parseDateValue(proximaAplicacao),
-                observacoes: observacoes?.trim() || null, valorUnitario: parsedValor || null,
-            } });
-            const sanitaryMap = SANITARY_CATEGORY_MAP[tipoUpper];
-            if (sanitaryMap && parsedValor && parsedValor > 0) {
-                await upsertAutomaticResult(tx, {
-                    farmId: animal.farmId, accountCategoryId: sanitaryMap.categoryId,
-                    sourceKey: `SANITARY_RECORD:${createdRecord.id}:APPLICATION`, sourceType: 'SANITARY_APPLICATION',
-                    sourceId: createdRecord.id, sanitaryRecordId: createdRecord.id, resultClass: 'PRODUCTION_COST',
-                    amount: parsedValor, competenceDate: eventDate,
-                    description: `${produto.trim()} P.O. — ${animal.brinco || animal.nome || id}`,
-                    allocations: (animal.lotId || animal.currentPaddockId) ? [{ poLotId: animal.lotId, paddockId: animal.currentPaddockId }] : [],
-                });
-            }
-            return createdRecord;
-        });
-
-        await logActivity(prisma, req, {
-            action: `SANITARIO_PO_${tipoUpper}`,
-            entity: 'SanitaryRecord',
-            entityId: record.id,
-            description: `Registrou ${tipoUpper.toLowerCase()} (${produto.trim()}) no animal P.O. ${animal.brinco || animal.nome || id}`,
-            farmId: animal.farmId,
-        });
-
-        return res.status(201).json({ record: serializeSanitaryRecord(record) });
-    } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Erro ao salvar registro sanitário.' });
-    }
-});
 }

@@ -83,22 +83,21 @@ export const resolveAllocations = async (db, farmId, totalAmount, allocations = 
         allocated = toMoney(allocated + amount);
 
         let lot = null;
-        let poLot = null;
         let paddock = null;
         if (item.lotId) lot = await db.lot.findFirst({ where: { id: String(item.lotId), farmId } });
-        if (item.poLotId) poLot = await db.poLot.findFirst({ where: { id: String(item.poLotId), farmId } });
+        if (item.poLotId) throw new Error("Referência ao lote P.O. antigo não é mais aceita.");
         if (item.paddockId) paddock = await db.paddock.findFirst({ where: { id: String(item.paddockId), farmId } });
-        if ((item.lotId && !lot) || (item.poLotId && !poLot) || (item.paddockId && !paddock)) {
+        if ((item.lotId && !lot) || (item.paddockId && !paddock)) {
             throw new Error('Um dos destinos informados não pertence à fazenda.');
         }
-        const productionPhase = item.productionPhase || lot?.productionPhase || poLot?.productionPhase || null;
+        const productionPhase = item.productionPhase || lot?.productionPhase || null;
         resolved.push({
             amount,
             lotId: lot?.id || null,
-            poLotId: poLot?.id || null,
+
             paddockId: paddock?.id || null,
             productionPhase,
-            lotNameSnapshot: lot?.name || poLot?.name || null,
+            lotNameSnapshot: lot?.name || null,
             paddockNameSnapshot: paddock?.name || null,
             phaseLabelSnapshot: productionPhase || null,
         });
@@ -235,13 +234,13 @@ export const createIntegratedTransaction = async (db, payload) => {
     });
     await syncTransactionResult(db, transaction, category, payload.allocations || []);
 
-    if (payload.type === 'ENTRADA' && payload.herdEventId && (payload.animalId || payload.poAnimalId)) {
+    if (payload.type === 'ENTRADA' && payload.herdEventId && payload.animalId) {
         const purchase = await db.herdEvent.findFirst({
             where: {
                 farmId: payload.farmId,
                 type: 'COMPRA',
                 OR: [{ purchasePurpose: null }, { purchasePurpose: 'PRODUCTION' }],
-                ...(payload.animalId ? { animalId: payload.animalId } : { poAnimalId: payload.poAnimalId }),
+                animalId: payload.animalId,
                 valor: { gt: 0 },
                 date: { lte: payload.competenceDate },
             },

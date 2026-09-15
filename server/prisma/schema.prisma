@@ -265,9 +265,6 @@ model Farm {
   pharmacyProducts        PharmacyProduct[]
   pharmacyBatches         PharmacyBatch[]
   pharmacyMovements       PharmacyMovement[]
-  poAnimals               PoAnimal[]
-  poLots                  PoLot[]
-  poWeighings             PoWeighing[]
   reproEvents             ReproEvent[]
   sanitaryRecords         SanitaryRecord[]
   selectionDecisions      SelectionDecision[]
@@ -302,7 +299,6 @@ model Paddock {
   fieldOccurrences     FieldOccurrence[]
   farm                 Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
   paddockMoves         PaddockMove[]
-  currentPoAnimals     PoAnimal[]                  @relation("PoAnimalCurrentPaddock")
   financialAllocations FinancialResultAllocation[]
 
   @@index([farmId])
@@ -472,7 +468,6 @@ model WeighingSession {
   responsibleName String?
   herdType        String     @default("COMMERCIAL")
   weighings       Weighing[]
-  poWeighings     PoWeighing[]
   farm            Farm       @relation(fields: [farmId], references: [id], onDelete: Cascade)
 
   @@index([farmId])
@@ -483,7 +478,6 @@ model CriaMortality {
   id         String    @id
   farmId     String
   animalId   String?
-  poAnimalId String?
   category   String
   cause      String
   date       DateTime
@@ -492,11 +486,9 @@ model CriaMortality {
   updatedAt  DateTime  @updatedAt
   animal     Animal?   @relation(fields: [animalId], references: [id])
   farm       Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  poAnimal   PoAnimal? @relation(fields: [poAnimalId], references: [id])
 
   @@index([animalId])
   @@index([farmId, date])
-  @@index([poAnimalId])
 }
 
 model Session {
@@ -662,129 +654,8 @@ model SelectionDecision {
   @@index([farmId])
 }
 
-model PoAnimal {
-  id                   String                @id @default(uuid())
-  farmId               String
-  brinco               String?
-  nome                 String
-  raca                 String
-  sexo                 AnimalSexo
-  dataNascimento       DateTime?
-  pesoAtual            Float                 @default(0)
-  gmd                  Float?
-  gmd30                Float?
-  lotId                String?
-  currentPaddockId     String
-  registro             String?
-  identityKey          String?
-  registrationEntity  String?
-  registrationNumber  String?
-  registrationType    String?
-  registrationCategory String?
-  categoria            String?
-  observacoes          String?
-  statusReprodutivo    String?
-  previsaoParto        DateTime?
-  emTransferenciaEmbriao Boolean              @default(false)
-  marcadoDescarte      Boolean                 @default(false)
-  motivoDescarte       String?
-  maeId                String?
-  maeNome              String?
-  paiId                String?
-  paiNome              String?
-  matrizResponsavelId  String?
-  identificacaoProvisoria Boolean              @default(false)
-  identificacaoAnterior   String?
-  identificacaoMatrizSnapshot String?
-  sequenciaMatriz         Int?
-  ultimaSequenciaCria     Int                  @default(0)
-  tatuagemOrelhaEsquerda  String?
-  origemNascimento        String?
-  identificacaoProvisoriaOriginal String?
-  receptoraGestacionalId  String?
-  receptoraGestacionalSnapshot String?
-  doadoraSnapshot         String?
-  touroSnapshot           String?
-  embryoTransferId        String?              @unique
-  desmamadoEm             DateTime?
-  pesoDesmamaKg           Float?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
-  criaMortalities      CriaMortality[]
-  embryoDonorBatches   EmbryoBatch[]         @relation("EmbryoDonor")
-  embryoSireBatches    EmbryoBatch[]         @relation("EmbryoSire")
-  herdEvents           HerdEvent[]
-  nutritionAssignments NutritionAssignment[]
-  paddockMoves         PaddockMove[]
-  currentPaddock       Paddock               @relation("PoAnimalCurrentPaddock", fields: [currentPaddockId], references: [id])
-  farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  lot                  PoLot?                @relation(fields: [lotId], references: [id])
-  mae                  PoAnimal?             @relation("PoAnimalMae", fields: [maeId], references: [id])
-  filhosMae            PoAnimal[]            @relation("PoAnimalMae")
-  pai                  PoAnimal?             @relation("PoAnimalPai", fields: [paiId], references: [id])
-  filhosPai            PoAnimal[]            @relation("PoAnimalPai")
-  matrizResponsavel    PoAnimal?             @relation("PoAnimalMatrizResponsavel", fields: [matrizResponsavelId], references: [id])
-  criasResponsaveis    PoAnimal[]            @relation("PoAnimalMatrizResponsavel")
-  receptoraGestacional PoAnimal?             @relation("PoAnimalReceptoraGestacional", fields: [receptoraGestacionalId], references: [id])
-  criasComoReceptora   PoAnimal[]            @relation("PoAnimalReceptoraGestacional")
-  embryoTransfer       EmbryoTransfer?       @relation("PoAnimalEmbryoTransfer", fields: [embryoTransferId], references: [id])
-  embryoTransfersRecebidos EmbryoTransfer[]  @relation("EmbryoTransferRecipientPoAnimal")
-  pesagens             PoWeighing[]
-  sanitaryRecords      SanitaryRecord[]
-  semenBatches         SemenBatch[]          @relation("SemenBull")
 
-  @@unique([farmId, brinco])
-  @@index([farmId])
-  @@index([identityKey])
-  @@index([registrationEntity, registrationNumber])
-  @@index([lotId])
-  @@index([currentPaddockId])
-  @@index([maeId])
-  @@index([paiId])
-  @@index([matrizResponsavelId])
-  @@index([receptoraGestacionalId])
-  @@index([desmamadoEm])
-  @@index([farmId, identificacaoProvisoria])
-}
 
-model PoLot {
-  id                   String                      @id @default(uuid())
-  name                 String
-  notes                String?
-  createdAt            DateTime                    @default(now())
-  updatedAt            DateTime                    @updatedAt
-  farmId               String
-  productionPhase      ProductionPhase?
-  nutritionAssignments NutritionAssignment[]
-  nutritionCostEntries NutritionCostEntry[]
-  nutritionExecutions  NutritionExecution[]
-  animals              PoAnimal[]
-  farm                 Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  financialAllocations FinancialResultAllocation[]
-
-  @@index([farmId])
-}
-
-model PoWeighing {
-  id         String   @id @default(uuid())
-  data       DateTime
-  peso       Float
-  gmd        Float
-  notes      String?
-  createdAt  DateTime @default(now())
-  poAnimalId String
-  farmId     String
-  weighingSessionId String?
-  farm       Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  poAnimal   PoAnimal @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
-  weighingSession WeighingSession? @relation(fields: [weighingSessionId], references: [id])
-
-  @@unique([poAnimalId, data])
-  @@index([poAnimalId, data])
-  @@index([farmId])
-  @@index([farmId, data])
-  @@index([weighingSessionId])
-}
 
 model NutritionPlan {
   id                            String                       @id @default(uuid())
@@ -827,9 +698,7 @@ model NutritionAssignment {
   farmId       String
   planId       String
   lotId        String?
-  poLotId      String?
   animalId     String?
-  poAnimalId   String?
   startAt      DateTime
   endAt        DateTime?
   reviewStatus ReviewStatus   @default(PENDING)
@@ -840,16 +709,12 @@ model NutritionAssignment {
   farm         Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
   lot          Lot?           @relation(fields: [lotId], references: [id], onDelete: Cascade)
   plan         NutritionPlan  @relation(fields: [planId], references: [id], onDelete: Cascade)
-  poAnimal     PoAnimal?      @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
-  poLot        PoLot?         @relation(fields: [poLotId], references: [id], onDelete: Cascade)
   unit         NutritionUnit? @relation(fields: [unitId], references: [id])
 
   @@index([farmId])
   @@index([planId])
   @@index([lotId])
-  @@index([poLotId])
   @@index([animalId])
-  @@index([poAnimalId])
   @@index([unitId])
   @@index([farmId, startAt])
 }
@@ -1073,7 +938,6 @@ model NutritionCostEntry {
   id           String       @id @default(uuid())
   farmId       String
   lotId        String?
-  poLotId      String?
   date         DateTime
   costType     String
   amount       Float
@@ -1083,11 +947,9 @@ model NutritionCostEntry {
   updatedAt    DateTime     @updatedAt
   farm         Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
   lot          Lot?         @relation(fields: [lotId], references: [id], onDelete: Cascade)
-  poLot        PoLot?       @relation(fields: [poLotId], references: [id], onDelete: Cascade)
 
   @@index([farmId, date])
   @@index([farmId, lotId, date])
-  @@index([farmId, poLotId, date])
   @@index([reviewStatus])
 }
 
@@ -1095,7 +957,6 @@ model NutritionExecution {
   id                 String                 @id @default(uuid())
   farmId             String
   lotId              String?
-  poLotId            String?
   date               DateTime
   plannedDryMatterKg Float?
   actualDryMatterKg  Float
@@ -1132,13 +993,11 @@ model NutritionExecution {
   farm               Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
   lot                Lot?                   @relation(fields: [lotId], references: [id], onDelete: Cascade)
   plan               NutritionPlan?         @relation(fields: [planId], references: [id])
-  poLot              PoLot?                 @relation(fields: [poLotId], references: [id], onDelete: Cascade)
   preparedFeed       NutritionPreparedFeed? @relation(fields: [preparedFeedId], references: [id])
   unit               NutritionUnit?         @relation(fields: [unitId], references: [id])
 
   @@index([farmId, date])
   @@index([farmId, lotId, date])
-  @@index([farmId, poLotId, date])
   @@index([reviewStatus])
   @@index([unitId])
   @@index([planId])
@@ -1185,7 +1044,6 @@ model SemenBatch {
   id                 String      @id @default(uuid())
   farmId             String
   bullAnimalId       String?
-  bullPoAnimalId     String?
   bullName           String?
   bullRegistry       String?
   fornecedor         String?
@@ -1198,25 +1056,21 @@ model SemenBatch {
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
   bullAnimal         Animal?     @relation("SemenBullAnimal", fields: [bullAnimalId], references: [id])
-  bullPoAnimal       PoAnimal?   @relation("SemenBull", fields: [bullPoAnimalId], references: [id])
   farm               Farm        @relation(fields: [farmId], references: [id], onDelete: Cascade)
   moves              SemenMove[]
 
   @@unique([farmId, lote])
   @@index([farmId])
   @@index([bullAnimalId])
-  @@index([bullPoAnimalId])
 }
 
 model EmbryoBatch {
   id                   String          @id @default(uuid())
   farmId               String
   donorAnimalId        String?
-  donorPoAnimalId      String?
   donorName            String?
   donorRegistry        String?
   sireAnimalId         String?
-  sirePoAnimalId       String?
   sireName             String?
   sireRegistry         String?
   tecnica              EmbryoTechnique
@@ -1230,19 +1084,15 @@ model EmbryoBatch {
   createdAt            DateTime        @default(now())
   updatedAt            DateTime        @updatedAt
   donorAnimal          Animal?         @relation("EmbryoDonorAnimal", fields: [donorAnimalId], references: [id])
-  donorPoAnimal        PoAnimal?       @relation("EmbryoDonor", fields: [donorPoAnimalId], references: [id])
   farm                 Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
   sireAnimal           Animal?         @relation("EmbryoSireAnimal", fields: [sireAnimalId], references: [id])
-  sirePoAnimal         PoAnimal?       @relation("EmbryoSire", fields: [sirePoAnimalId], references: [id])
   moves                EmbryoMove[]
   transfers            EmbryoTransfer[]
 
   @@unique([farmId, lote])
   @@index([farmId])
   @@index([donorAnimalId])
-  @@index([donorPoAnimalId])
   @@index([sireAnimalId])
-  @@index([sirePoAnimalId])
 }
 
 model EmbryoTransfer {
@@ -1251,7 +1101,6 @@ model EmbryoTransfer {
   herdType              String
   embryoBatchId         String
   recipientAnimalId     String?
-  recipientPoAnimalId   String?
   transferredAt         DateTime
   status                String       @default("PENDING")
   recipientSnapshot     String
@@ -1265,14 +1114,11 @@ model EmbryoTransfer {
   farm                  Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
   embryoBatch           EmbryoBatch  @relation(fields: [embryoBatchId], references: [id], onDelete: Restrict)
   recipientAnimal       Animal?      @relation("EmbryoTransferRecipientAnimal", fields: [recipientAnimalId], references: [id])
-  recipientPoAnimal     PoAnimal?    @relation("EmbryoTransferRecipientPoAnimal", fields: [recipientPoAnimalId], references: [id])
   childAnimal           Animal?      @relation("AnimalEmbryoTransfer")
-  childPoAnimal         PoAnimal?    @relation("PoAnimalEmbryoTransfer")
 
   @@index([farmId, herdType, status])
   @@index([embryoBatchId])
   @@index([recipientAnimalId])
-  @@index([recipientPoAnimalId])
 }
 
 model EmbryoPairSequence {
@@ -1321,7 +1167,6 @@ model PaddockMove {
   farmId     String
   paddockId  String
   animalId   String?
-  poAnimalId String?
   startAt    DateTime
   endAt      DateTime?
   notes      String?
@@ -1329,12 +1174,10 @@ model PaddockMove {
   animal     Animal?   @relation(fields: [animalId], references: [id], onDelete: Cascade)
   farm       Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
   paddock    Paddock   @relation(fields: [paddockId], references: [id], onDelete: Cascade)
-  poAnimal   PoAnimal? @relation(fields: [poAnimalId], references: [id], onDelete: Cascade)
 
   @@index([farmId])
   @@index([paddockId])
   @@index([animalId])
-  @@index([poAnimalId])
   @@index([farmId, startAt])
 }
 
@@ -1681,7 +1524,6 @@ model FinancialResultAllocation {
   resultEntryId       String
   amount              Decimal              @db.Decimal(12, 2)
   lotId               String?
-  poLotId             String?
   paddockId           String?
   productionPhase     ProductionPhase?
   lotNameSnapshot     String?
@@ -1690,12 +1532,10 @@ model FinancialResultAllocation {
   createdAt           DateTime             @default(now())
   resultEntry         FinancialResultEntry @relation(fields: [resultEntryId], references: [id], onDelete: Cascade)
   lot                 Lot?                 @relation(fields: [lotId], references: [id], onDelete: SetNull)
-  poLot               PoLot?               @relation(fields: [poLotId], references: [id], onDelete: SetNull)
   paddock             Paddock?             @relation(fields: [paddockId], references: [id], onDelete: SetNull)
 
   @@index([resultEntryId])
   @@index([lotId])
-  @@index([poLotId])
   @@index([paddockId])
   @@index([productionPhase])
 }
@@ -2275,7 +2115,6 @@ model HerdEvent {
   id                    String                 @id @default(cuid())
   farmId                String
   animalId              String?
-  poAnimalId            String?
   type                  String
   date                  DateTime
   peso                  Float?
@@ -2289,18 +2128,15 @@ model HerdEvent {
   financialTransactions FinancialTransaction[]
   animal                Animal?                @relation(fields: [animalId], references: [id])
   farm                  Farm                   @relation(fields: [farmId], references: [id])
-  poAnimal              PoAnimal?              @relation(fields: [poAnimalId], references: [id])
 
   @@index([farmId])
   @@index([animalId])
-  @@index([poAnimalId])
 }
 
 model SanitaryRecord {
   id                    String                 @id @default(cuid())
   farmId                String
   animalId              String?
-  poAnimalId            String?
   tipo                  String
   produto               String
   date                  DateTime
@@ -2313,11 +2149,9 @@ model SanitaryRecord {
   financialTransactions FinancialTransaction[]
   animal                Animal?                @relation(fields: [animalId], references: [id])
   farm                  Farm                   @relation(fields: [farmId], references: [id])
-  poAnimal              PoAnimal?              @relation(fields: [poAnimalId], references: [id])
 
   @@index([farmId])
   @@index([animalId])
-  @@index([poAnimalId])
 }
 
 model PharmacyProduct {

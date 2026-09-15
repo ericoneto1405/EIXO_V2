@@ -24,7 +24,8 @@ import { registerAuthRoutes } from "./modules/auth/authRoutes.js";
 import { registerUserRoutes } from "./modules/users/userRoutes.js";
 import { registerFarmRoutes } from "./modules/farms/farmRoutes.js";
 import { registerAnimalRoutes } from "./modules/animals/animalRoutes.js";
-import { registerPORoutes } from "./modules/po/poRoutes.js";
+import { registerHerdWeighingRoutes } from "./modules/animals/herdWeighingRoutes.js";
+import { registerGeneticInventoryRoutes } from "./modules/animals/geneticInventoryRoutes.js";
 import { registerHerdRoutes } from "./modules/herd/herdRoutes.js";
 import { registerReproRoutes } from "./modules/repro/reproRoutes.js";
 import { registerPharmacyRoutes } from "./modules/pharmacy/pharmacyRoutes.js";
@@ -56,7 +57,7 @@ import { sanitizeUser, escapeHtml, parseNumber, parseDateValue, parseInteger, no
 import { ensureActivityLogColumns, logActivity, recordActivityLog } from './modules/utils/activityLog.js';
 import { loginAttempts, otpSendAttempts, otpVerifyAttempts, chatRateAttempts, chatBurstAttempts, forgotPasswordAttempts, isWindowRateLimited, registerWindowAttempt, clearWindowAttempt, getWindowRetryAfterSeconds, isRateLimited, registerFailedLogin, clearLoginAttempts, isAnyLoginRateLimited, registerFailedLogins, clearLoginRateLimits, isAnyForgotPasswordRateLimited, registerForgotPasswordAttempts, clearForgotPasswordAttempts } from './modules/middlewares/rateLimiter.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from './modules/middlewares/farmScope.js';
-import { serializeAnimal, serializePoAnimal, serializeSeason, serializeReproEvent, serializePaddockMove, serializeSemenBatch, serializeNutritionPlan, serializeNutritionAssignment, serializeEmbryoBatch, serializePaddock, serializeFieldOccurrenceAttachment, serializeFieldOccurrence, serializeFinancialTransaction, serializeHerdEvent, serializeSanitaryRecord, getOccurrenceAnimalLabel, getDaysSince, buildFieldOccurrenceAlert } from './modules/utils/serializers.js';
+import { serializeAnimal, serializeSeason, serializeReproEvent, serializePaddockMove, serializeSemenBatch, serializeNutritionPlan, serializeNutritionAssignment, serializeEmbryoBatch, serializePaddock, serializeFieldOccurrenceAttachment, serializeFieldOccurrence, serializeFinancialTransaction, serializeHerdEvent, serializeSanitaryRecord, getOccurrenceAnimalLabel, getDaysSince, buildFieldOccurrenceAlert } from './modules/utils/serializers.js';
 // ─── Módulos Extraídos (Fase 2) ────────────────────────────────────────────────
 import {
     SUPER_ADMIN_ALL_MODULES, BILLING_BLOCKED_STATES, PLAN_ENTITLEMENTS, PLAN_MODULES, ORGANIZATION_ADMIN_ROLES,
@@ -134,7 +135,6 @@ const ACTIVITY_MODULE_FILTERS = {
     'Reprodução': ['ReproEvent', 'ReproCheckupSession', 'EmbryoTransfer'],
     'Nutrição': ['NutritionPlan', 'NutritionAssignment'],
     'Financeiro': ['FinancialTransaction', 'AccountCategory'],
-    'Plantel P.O.': ['PoAnimal', 'PoWeighing'],
     'Fazendas': ['Farm'],
     'Usuários e Permissões': ['User'],
     'Ocorrências de Campo': ['FieldOccurrence'],
@@ -249,7 +249,8 @@ registerAuthRoutes(app);
 registerUserRoutes(app);
 registerFarmRoutes(app);
 registerAnimalRoutes(app);
-registerPORoutes(app);
+registerHerdWeighingRoutes(app);
+registerGeneticInventoryRoutes(app);
 registerHerdRoutes(app);
 registerReproRoutes(app);
 registerPharmacyRoutes(app);
