@@ -396,17 +396,17 @@ const navSections: NavSection[] = [
             { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição', allowedLabels: ['Nutrição'], requiredPlanBadge: 'PRO' },
             { label: 'Eixo Acasalamento', icon: <HerdGeneticIcon />, value: 'Eixo Acasalamento', path: '/genetics/acasalamento', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
             { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Reprodução', path: '/genetics/reproducao', allowedLabels: ['Reprodução'], requiredPlanBadge: 'PRO' },
+            { label: 'Botijão de Sêmen', icon: <SuppliersIcon />, value: 'Estoque e Equipamentos' },
             { label: 'Confinamento e Contratos', icon: <OperationsIcon />, value: 'Confinamento e Contratos', allowedLabels: ['Confinamento e Contratos'], requiredPlanBadge: 'PLUS' },
         ],
     },
     {
         sectionLabel: 'Gestão',
         items: [
-            { label: 'Gestão Comercial', icon: <ChartIcon />, value: 'Gestão Comercial', allowedLabels: ['Gestão Comercial'], requiredPlanBadge: 'PRO' },
-            { label: 'Registro de Atividades', icon: <ReportIcon />, value: 'Registro de Atividades', allowedLabels: ['Registro de Atividades'], requiredPlanBadge: 'PRO' },
+            { label: 'Gestão Comercial (CRM)', icon: <ChartIcon />, value: 'Gestão Comercial', allowedLabels: ['Gestão Comercial'], requiredPlanBadge: 'PRO' },
             { label: 'APP EIXO CAMPO', icon: <ReportIcon />, value: 'APP EIXO CAMPO', allowedLabels: ['APP EIXO CAMPO', 'Fazendas', 'Operações'], requiredPlanBadge: 'PLUS' },
-            { label: 'Botijão de Sêmen', icon: <SuppliersIcon />, value: 'Estoque e Equipamentos' },
             { label: 'Usuários e Permissões', icon: <UsersIcon />, value: 'Usuários e Permissões', allowedLabels: ['Fazendas'] },
+            { label: 'Registro de Atividades', icon: <ReportIcon />, value: 'Registro de Atividades', allowedLabels: ['Registro de Atividades'], requiredPlanBadge: 'PRO' },
         ],
     },
 ];
