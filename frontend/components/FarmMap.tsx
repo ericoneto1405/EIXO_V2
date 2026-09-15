@@ -8,12 +8,16 @@ import { Farm, Paddock } from '../types';
 
 import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
-// Fix leaflet default icon URLs broken by Vite bundler
+// Fix leaflet default icon URLs broken by Vite bundler (usa os arquivos
+// locais do pacote, sem depender de unpkg.com carregar na hora)
 L.Icon.Default.mergeOptions({
-    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-    iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconUrl: markerIcon,
+    iconRetinaUrl: markerIcon2x,
+    shadowUrl: markerShadow,
 });
 
 // ─── Types ───────────────────────────────────────────────────────────────────
