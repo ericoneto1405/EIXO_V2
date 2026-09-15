@@ -81,6 +81,9 @@ app.get('/farms', async (req, res) => {
             where: buildFarmScopeFilter(req),
             include: { paddocks: { orderBy: { createdAt: 'asc' } } },
             orderBy: { createdAt: 'desc' },
+            // mapData e mapAssetPath: campos do "mapa geral" antigo, sem uso
+            // em nenhuma tela hoje (o mapa por pasto usa paddock.mapGeometry).
+            omit: { mapData: true, mapAssetPath: true },
         });
         const items = farms.map((farm) => ({
             ...farm,
