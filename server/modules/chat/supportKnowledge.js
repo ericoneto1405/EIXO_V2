@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-11.1';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-11';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-14.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-14';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
