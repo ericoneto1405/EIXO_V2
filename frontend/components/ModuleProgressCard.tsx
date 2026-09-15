@@ -152,7 +152,9 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
             }
         }
 
-        if (!config || !farmId) return;
+        // Modulo ja concluido: o cartao nao aparece mais, entao nao ha por que
+        // buscar nada de novo (antes buscava sempre, so escondia na tela).
+        if (!config || !farmId || isModuleDone(farmId, activeView)) return;
 
         const cacheKey = `${activeView}::${farmId}`;
         const cached = getCached(cacheKey);
@@ -161,21 +163,29 @@ const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, far
             return;
         }
 
+        // Cada modulo so busca o que o proprio checklist dele usa - antes
+        // buscava sempre os 4 endpoints, mesmo os que aquele modulo nunca le
+        // (ex: Financeiro baixando a lista inteira de animais da fazenda).
+        const needsAnimals = activeView === 'Nutrição' || activeView === 'Eixo Genetics' || activeView === 'Reprodução' || activeView === 'Eixo Acasalamento';
+        const needsWeighings = activeView === 'Nutrição';
+        const needsTransactions = activeView === 'Financeiro';
+        const needsOccurrences = activeView === 'Ocorrências do EIXO Campo';
+
         let isActive = true;
         const run = async () => {
             setLoading(true);
             try {
                 const [animalsRes, weighingsRes, transactionsRes, occurrencesRes] = await Promise.all([
-                    fetch(buildApiUrl(`/animals?farmId=${farmId}`), { credentials: 'include' }),
-                    fetch(buildApiUrl(`/farms/${farmId}/weighings?limit=1`), { credentials: 'include' }),
-                    fetch(buildApiUrl(`/financial/transactions?farmId=${farmId}&limit=3`), { credentials: 'include' }),
-                    fetch(buildApiUrl(`/field-occurrences?farmId=${farmId}&limit=1`), { credentials: 'include' }),
+                    needsAnimals ? fetch(buildApiUrl(`/animals?farmId=${farmId}`), { credentials: 'include' }) : null,
+                    needsWeighings ? fetch(buildApiUrl(`/farms/${farmId}/weighings?limit=1`), { credentials: 'include' }) : null,
+                    needsTransactions ? fetch(buildApiUrl(`/financial/transactions?farmId=${farmId}&limit=3`), { credentials: 'include' }) : null,
+                    needsOccurrences ? fetch(buildApiUrl(`/field-occurrences?farmId=${farmId}&limit=1`), { credentials: 'include' }) : null,
                 ]);
                 const [animalsData, weighingsData, transactionsData, occurrencesData] = await Promise.all([
-                    animalsRes.json().catch(() => ({})),
-                    weighingsRes.json().catch(() => ({})),
-                    transactionsRes.json().catch(() => ({})),
-                    occurrencesRes.json().catch(() => ({})),
+                    animalsRes ? animalsRes.json().catch(() => ({})) : Promise.resolve({} as any),
+                    weighingsRes ? weighingsRes.json().catch(() => ({})) : Promise.resolve({} as any),
+                    transactionsRes ? transactionsRes.json().catch(() => ({})) : Promise.resolve({} as any),
+                    occurrencesRes ? occurrencesRes.json().catch(() => ({})) : Promise.resolve({} as any),
                 ]);
                 const animals = Array.isArray(animalsData?.animals) ? animalsData.animals : [];
                 const transactions = Array.isArray(transactionsData?.transactions) ? transactionsData.transactions : [];
