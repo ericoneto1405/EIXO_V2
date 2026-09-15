@@ -137,7 +137,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     }, [farmId]);
 
     useEffect(() => { loadTransactions(); }, [loadTransactions]);
-    useEffect(() => { loadCategories(); }, [loadCategories]);
+    // Categorias só fazem falta no Plano de Contas e no formulário de novo
+    // lançamento - nas outras abas (Visão Geral, DRE, etc.) ninguém usa.
+    useEffect(() => {
+        if (activeTab === 'plano_contas' || modalOpen) loadCategories();
+    }, [activeTab, modalOpen, loadCategories]);
     useEffect(() => {
         if (!modalOpen || !farmId) return;
         listLots(farmId, 'COMMERCIAL').then(setAvailableLots).catch(() => setAvailableLots([]));
