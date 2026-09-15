@@ -19,7 +19,7 @@ export function registerOverviewRoutes(app) {
 
             const farms = await prisma.farm.findMany({
                 where: buildFarmScopeFilter(req, scope === 'farm' ? { id: farmId } : {}),
-                select: { id: true, name: true, size: true, city: true, lat: true, lng: true, mapData: true },
+                select: { id: true, size: true },
             });
             if (scope === 'farm' && farms.length === 0) {
                 return res.status(404).json({ message: 'Fazenda não encontrada.' });

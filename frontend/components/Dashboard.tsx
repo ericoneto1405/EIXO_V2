@@ -121,7 +121,14 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                     mes: String(mes),
                     ano: String(ano),
                 });
-                const overviewRes = await fetch(buildApiUrl(`/overview/dashboard?${query.toString()}`), { credentials: 'include' });
+                // Pede visão geral e reprodução ao mesmo tempo (antes era em fila:
+                // esperava a visão geral terminar pra só então pedir reprodução).
+                const overviewPromise = fetch(buildApiUrl(`/overview/dashboard?${query.toString()}`), { credentials: 'include' });
+                const reproPromise = (scope === 'farm' && farmId)
+                    ? Promise.all([getReproKpis(farmId), getReproFarol(farmId)]).catch(() => null)
+                    : Promise.resolve(null);
+
+                const [overviewRes, reproResult] = await Promise.all([overviewPromise, reproPromise]);
                 if (!overviewRes.ok) {
                     throw new Error('Falha ao carregar dados da visão geral');
                 }
@@ -143,23 +150,10 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                 });
 
                 // Camada de decisão: reprodução (só por fazenda selecionada)
-                if (scope === 'farm' && farmId) {
-                    try {
-                        const [rk, rf] = await Promise.all([
-                            getReproKpis(farmId),
-                            getReproFarol(farmId),
-                        ]);
-                        if (active) {
-                            setReproKpis(rk);
-                            setReproFarol(rf);
-                        }
-                    } catch {
-                        if (active) {
-                            setReproKpis(null);
-                            setReproFarol(null);
-                        }
-                    }
-                } else if (active) {
+                if (reproResult) {
+                    setReproKpis(reproResult[0]);
+                    setReproFarol(reproResult[1]);
+                } else {
                     setReproKpis(null);
                     setReproFarol(null);
                 }
