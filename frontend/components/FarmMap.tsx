@@ -100,35 +100,76 @@ const divisionColor = (type: string | null | undefined): string => {
     }
 };
 
+// ─── Área em hectares (cálculo geodésico, sem biblioteca extra) ──────────────
+
+/** Área de um anel [lng, lat] em metros quadrados (fórmula esférica). */
+const ringAreaM2 = (ring: number[][]): number => {
+    const R = 6378137;
+    const rad = (deg: number) => (deg * Math.PI) / 180;
+    let total = 0;
+    for (let i = 0; i < ring.length - 1; i++) {
+        const [lng1, lat1] = ring[i];
+        const [lng2, lat2] = ring[i + 1];
+        total += rad(lng2 - lng1) * (2 + Math.sin(rad(lat1)) + Math.sin(rad(lat2)));
+    }
+    return Math.abs((total * R * R) / 2);
+};
+
+/** Área de uma geometria (Polygon/MultiPolygon) em hectares. Buracos são descontados. */
+const geometryAreaHa = (geometry?: Geometry | null): number | null => {
+    if (!geometry) return null;
+    const polygons: number[][][][] =
+        geometry.type === 'Polygon'
+            ? [(geometry as { coordinates: number[][][] }).coordinates]
+            : geometry.type === 'MultiPolygon'
+                ? (geometry as { coordinates: number[][][][] }).coordinates
+                : [];
+    if (!polygons.length) return null;
+    let m2 = 0;
+    for (const poly of polygons) {
+        poly.forEach((ring, i) => {
+            if (ring.length < 4) return;
+            m2 += i === 0 ? ringAreaM2(ring) : -ringAreaM2(ring);
+        });
+    }
+    return m2 / 10000;
+};
+
+/** Área em hectares a partir de pontos do Leaflet (usado enquanto o desenho acontece). */
+const latLngsAreaHa = (latlngs: { lat: number; lng: number }[]): number | null => {
+    if (latlngs.length < 3) return null;
+    const ring = latlngs.map((p) => [p.lng, p.lat]);
+    ring.push(ring[0]);
+    return ringAreaM2(ring) / 10000;
+};
+
+const formatHa = (ha: number): string =>
+    `${ha.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ha`;
+
 // ─── Geoman controller (inner, has access to map instance) ───────────────────
 
 interface GeomanControllerProps {
     enabled: boolean;
     onLayerCreated: (layer: L.Layer) => void;
     onLayerEdited: (layer: L.Layer) => void;
+    onLiveArea: (ha: number | null) => void;
 }
 
-const GeomanController: React.FC<GeomanControllerProps> = ({ enabled, onLayerCreated, onLayerEdited }) => {
+const GeomanController: React.FC<GeomanControllerProps> = ({ enabled, onLayerCreated, onLayerEdited, onLiveArea }) => {
     const map = useMap();
 
     useEffect(() => {
         if (!map.pm) return;
 
-        if (enabled) {
-            map.pm.addControls({
-                position: 'topleft',
-                drawMarker: false,
-                drawCircleMarker: false,
-                drawPolyline: false,
-                drawCircle: false,
-                drawText: false,
-                rotateMode: false,
-                cutPolygon: false,
-            });
-        } else {
-            map.pm.removeControls();
+        // A toolbar padrão do Geoman (ícones sem rótulo) fica escondida.
+        // O EIXO usa botões próprios com texto em português, na barra acima do mapa.
+        map.pm.removeControls();
+
+        if (!enabled) {
             map.pm.disableDraw();
             map.pm.disableGlobalEditMode();
+            map.pm.disableGlobalDragMode?.();
+            map.pm.disableGlobalRemovalMode?.();
         }
     }, [enabled, map]);
 
@@ -138,14 +179,29 @@ const GeomanController: React.FC<GeomanControllerProps> = ({ enabled, onLayerCre
         const handleCreate = (e: { layer: L.Layer }) => onLayerCreated(e.layer);
         const handleEdit = (e: { layer: L.Layer }) => onLayerEdited(e.layer);
 
+        // Área ao vivo: recalcula a cada canto marcado durante o desenho
+        const readWorkingArea = (evt: L.LeafletEvent) => {
+            const e = evt as L.LeafletEvent & { workingLayer?: L.Polyline };
+            const latlngs = e.workingLayer?.getLatLngs?.() as unknown as { lat: number; lng: number }[] | undefined;
+            const flat = Array.isArray(latlngs?.[0]) ? (latlngs as unknown as { lat: number; lng: number }[][])[0] : latlngs;
+            onLiveArea(flat ? latLngsAreaHa(flat) : null);
+        };
+        const clearArea = () => onLiveArea(null);
+
         map.on('pm:create', handleCreate);
         map.on('pm:edit', handleEdit);
+        map.on('pm:drawstart', clearArea);
+        map.on('pm:vertexadded', readWorkingArea);
+        map.on('pm:drawend', clearArea);
 
         return () => {
             map.off('pm:create', handleCreate);
             map.off('pm:edit', handleEdit);
+            map.off('pm:drawstart', clearArea);
+            map.off('pm:vertexadded', readWorkingArea);
+            map.off('pm:drawend', clearArea);
         };
-    }, [map, onLayerCreated, onLayerEdited]);
+    }, [map, onLayerCreated, onLayerEdited, onLiveArea]);
 
     return null;
 };
@@ -171,6 +227,13 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
     const [saveError, setSaveError] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
     const [showImport, setShowImport] = useState(false);
+    const [activeTool, setActiveTool] = useState<'none' | 'draw' | 'edit' | 'drag' | 'remove'>('none');
+    const [liveAreaHa, setLiveAreaHa] = useState<number | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [searchResults, setSearchResults] = useState<{ label: string; lat: number; lng: number }[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [searchError, setSearchError] = useState<string | null>(null);
+    const [searchCooldown, setSearchCooldown] = useState(false);
     const [importedFeatures, setImportedFeatures] = useState<ImportedFeature[]>([]);
     const [importError, setImportError] = useState<string | null>(null);
 
@@ -231,6 +294,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
         const geojson = (layer as L.Polygon).toGeoJSON() as Feature;
         setPendingLayer({ layer, geojson });
         setPendingAssignPaddockId(activePaddocks[0]?.id ?? '');
+        setActiveTool('none');
     }, [activePaddocks]);
 
     const handleLayerEdited = useCallback((layer: L.Layer) => {
@@ -251,6 +315,82 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
     const cancelPendingLayer = () => {
         if (pendingLayer) mapRef.current?.removeLayer(pendingLayer.layer);
         setPendingLayer(null);
+    };
+
+    // ── Ferramentas de desenho (botões próprios, em português) ───────────────
+
+    const applyTool = useCallback((tool: 'none' | 'draw' | 'edit' | 'drag' | 'remove') => {
+        const pm = mapRef.current?.pm;
+        if (!pm) return;
+        pm.disableDraw();
+        pm.disableGlobalEditMode();
+        pm.disableGlobalDragMode?.();
+        pm.disableGlobalRemovalMode?.();
+        if (tool === 'draw') pm.enableDraw('Polygon', { snappable: true, finishOn: null });
+        if (tool === 'edit') pm.enableGlobalEditMode();
+        if (tool === 'drag') pm.enableGlobalDragMode?.();
+        if (tool === 'remove') pm.enableGlobalRemovalMode?.();
+        setActiveTool(tool);
+    }, []);
+
+    // Ao sair do modo edição, desliga qualquer ferramenta ligada
+    useEffect(() => {
+        if (!editMode) {
+            const pm = mapRef.current?.pm;
+            pm?.disableDraw();
+            pm?.disableGlobalEditMode();
+            pm?.disableGlobalDragMode?.();
+            pm?.disableGlobalRemovalMode?.();
+            setActiveTool('none');
+        }
+    }, [editMode]);
+
+    const hasPaddocks = activePaddocks.length > 0;
+
+    const noPaddockWarning = 'Esta fazenda ainda não tem pasto cadastrado. Cadastre o primeiro pasto na aba "Fazendas e Pastos" — sem ele o desenho não tem onde ser guardado.';
+
+    const toolHint: Record<string, string> = {
+        none: 'Escolha uma opção acima para começar.',
+        draw: 'Clique em cada canto da área. Para fechar, clique de novo no primeiro ponto.',
+        edit: 'Arraste as bolinhas brancas para ajustar os cantos.',
+        drag: 'Arraste a área inteira para reposicionar.',
+        remove: 'Clique na área que você quer apagar.',
+    };
+
+    // ── Buscar cidade / endereço (OpenStreetMap, gratuito e sem chave) ────────
+
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const term = searchTerm.trim();
+        if (term.length < 3) return;
+        if (searching || searchCooldown) return;
+        setSearching(true);
+        setSearchCooldown(true);
+        // Libera o botão só depois de 2s — o OpenStreetMap pede no máximo 1 busca por segundo
+        window.setTimeout(() => setSearchCooldown(false), 2000);
+        setSearchError(null);
+        setSearchResults([]);
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&limit=5&countrycodes=br&q=${encodeURIComponent(term)}`;
+            const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+            if (!res.ok) throw new Error();
+            const data = (await res.json()) as { display_name: string; lat: string; lon: string }[];
+            if (!data.length) {
+                setSearchError('Nada encontrado. Tente o nome da cidade e o estado, ex.: Feira de Santana, BA.');
+                return;
+            }
+            setSearchResults(data.map((d) => ({ label: d.display_name, lat: Number(d.lat), lng: Number(d.lon) })));
+        } catch {
+            setSearchError('Não foi possível buscar agora. Verifique a internet e tente de novo.');
+        } finally {
+            setSearching(false);
+        }
+    };
+
+    const goToResult = (result: { lat: number; lng: number }) => {
+        mapRef.current?.flyTo([result.lat, result.lng], 14, { duration: 1 });
+        setSearchResults([]);
+        setSearchTerm('');
     };
 
     // ── Save geometries ────────────────────────────────────────────────────────
@@ -389,7 +529,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                 onClick={() => setShowImport(true)}
                                 className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
                             >
-                                Importar KML / GeoJSON
+                                Tenho o arquivo do mapa
                             </button>
                             <button
                                 type="button"
@@ -433,6 +573,87 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
             {(saveError || saveSuccess) && (
                 <div className={`px-5 py-2 text-sm font-medium ${saveError ? 'bg-[#fff2ef] text-[var(--eixo-danger)]' : 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]'}`}>
                     {saveError ?? saveSuccess}
+                </div>
+            )}
+
+            {/* Buscar cidade / endereço */}
+            <div className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-3">
+                <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2">
+                    <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => { setSearchTerm(e.target.value); setSearchError(null); }}
+                        placeholder="Buscar cidade ou endereço — ex.: Feira de Santana, BA"
+                        className="min-w-[260px] flex-1 rounded-xl border border-[var(--eixo-border)] bg-[#ffffff] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                    />
+                    <button
+                        type="submit"
+                        disabled={searching || searchCooldown || searchTerm.trim().length < 3}
+                        className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6] disabled:opacity-50"
+                    >
+                        {searching ? 'Buscando...' : searchCooldown ? 'Aguarde...' : 'Buscar no mapa'}
+                    </button>
+                </form>
+
+                {searchError && <p className="mt-2 text-xs text-[var(--eixo-danger)]">{searchError}</p>}
+
+                {searchResults.length > 0 && (
+                    <ul className="mt-2 divide-y divide-[var(--eixo-border)] overflow-hidden rounded-xl border border-[var(--eixo-border)] bg-[#ffffff]">
+                        {searchResults.map((result) => (
+                            <li key={`${result.lat}-${result.lng}`}>
+                                <button
+                                    type="button"
+                                    onClick={() => goToResult(result)}
+                                    className="w-full px-3 py-2 text-left text-xs text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-green-soft)]"
+                                >
+                                    {result.label}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+
+            {/* Barra de ferramentas em português + instrução */}
+            {editMode && (
+                <div className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                        {([
+                            { id: 'draw', label: 'Desenhar contorno' },
+                            { id: 'edit', label: 'Ajustar cantos' },
+                            { id: 'drag', label: 'Mover área' },
+                            { id: 'remove', label: 'Apagar área' },
+                        ] as const).map((tool) => (
+                            <button
+                                key={tool.id}
+                                type="button"
+                                onClick={() => applyTool(activeTool === tool.id ? 'none' : tool.id)}
+                                disabled={!hasPaddocks}
+                                className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                    activeTool === tool.id
+                                        ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)] text-[#1a1a1a]'
+                                        : 'border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] hover:bg-[#ece9e6]'
+                                }`}
+                            >
+                                {tool.label}
+                            </button>
+                        ))}
+                        {activeTool !== 'none' && (
+                            <button
+                                type="button"
+                                onClick={() => applyTool('none')}
+                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[#ece9e6]"
+                            >
+                                Parar
+                            </button>
+                        )}
+                    </div>
+                    <p className={`mt-2 text-xs ${hasPaddocks ? 'text-[var(--eixo-text-muted)]' : 'font-semibold text-[var(--eixo-danger)]'}`}>
+                        {hasPaddocks ? toolHint[activeTool] : noPaddockWarning}
+                        {activeTool === 'draw' && liveAreaHa !== null && (
+                            <span className="ml-2 font-semibold text-[var(--eixo-text)]">Área até aqui: {formatHa(liveAreaHa)}</span>
+                        )}
+                    </p>
                 </div>
             )}
 
@@ -495,6 +716,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                             enabled={editMode}
                             onLayerCreated={handleLayerCreated}
                             onLayerEdited={handleLayerEdited}
+                            onLiveArea={setLiveAreaHa}
                         />
 
                         {farm.lat && farm.lng && (
@@ -575,7 +797,18 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                     <div className="absolute inset-0 z-[2000] flex items-center justify-center bg-black/30">
                         <div className="w-80 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-6 shadow-2xl">
                             <h3 className="mb-1 text-base font-bold text-[var(--eixo-text)]">Associar polígono</h3>
-                            <p className="mb-4 text-sm text-[var(--eixo-text-muted)]">A qual divisão este polígono pertence?</p>
+                            <p className="mb-2 text-sm text-[var(--eixo-text-muted)]">
+                                {hasPaddocks ? 'A qual divisão este polígono pertence?' : noPaddockWarning}
+                            </p>
+                            {(() => {
+                                const ha = geometryAreaHa(pendingLayer.geojson.geometry as Geometry);
+                                return ha === null ? null : (
+                                    <p className="mb-4 rounded-xl bg-[var(--eixo-green-soft)] px-3 py-2 text-sm font-semibold text-[var(--eixo-text)]">
+                                        Área desenhada: {formatHa(ha)}
+                                    </p>
+                                );
+                            })()}
+                            {hasPaddocks && (
                             <select
                                 value={pendingAssignPaddockId}
                                 onChange={(e) => setPendingAssignPaddockId(e.target.value)}
@@ -585,18 +818,20 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
                             </select>
+                            )}
                             <div className="flex justify-end gap-2">
                                 <button
                                     type="button"
                                     onClick={cancelPendingLayer}
                                     className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[#ece9e6]"
                                 >
-                                    Cancelar
+                                    {hasPaddocks ? 'Cancelar' : 'Entendi'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={confirmPendingLayer}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
+                                    disabled={!hasPaddocks || !pendingAssignPaddockId}
+                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
                                 >
                                     Confirmar
                                 </button>
@@ -615,7 +850,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                 {!hasPaddocksWithGeometry && (
                     <span className="ml-auto text-xs text-[var(--eixo-text-muted)]">
                         {editMode
-                            ? 'Use as ferramentas à esquerda do mapa para desenhar os polígonos das divisões.'
+                            ? 'Use os botões acima do mapa para desenhar as áreas.'
                             : 'Nenhum polígono cadastrado. Ative "Editar Geometrias" para começar.'}
                     </span>
                 )}
