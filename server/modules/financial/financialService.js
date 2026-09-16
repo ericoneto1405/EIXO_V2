@@ -11,7 +11,12 @@ const addMonthsClamped = (date, months) => {
     return target;
 };
 
-export const buildPurchasePaymentSchedule = ({ amount, condition, purchaseDate, dueDate, installments }) => {
+// Condições de pagamento da compra:
+// PAGO              → à vista, entra como pago na data da compra.
+// PARCELADO         → 1 a 60 parcelas mensais (1 parcela = pagamento único com prazo).
+// ENTRADA_PARCELADO → entrada paga na data da compra + saldo em 1 a 60 parcelas.
+// A_PAGAR           → nome antigo de "PARCELADO com 1 parcela"; ainda aceito.
+export const buildPurchasePaymentSchedule = ({ amount, condition, purchaseDate, dueDate, installments, downPayment }) => {
     const totalCents = Math.round(Number(amount || 0) * 100);
     if (!(totalCents > 0)) throw new Error('Informe um valor de compra válido.');
 
@@ -26,24 +31,45 @@ export const buildPurchasePaymentSchedule = ({ amount, condition, purchaseDate, 
     const firstDueDate = dueDate instanceof Date ? dueDate : new Date(dueDate);
     if (Number.isNaN(firstDueDate.getTime())) throw new Error('Informe a data do primeiro vencimento.');
 
-    const count = normalizedCondition === 'PARCELADO' ? Number(installments) : 1;
-    if (!Number.isInteger(count) || count < 1 || count > 60 || (normalizedCondition === 'PARCELADO' && count < 2)) {
-        throw new Error('Informe uma quantidade de parcelas entre 2 e 60.');
-    }
-    if (!['A_PAGAR', 'PARCELADO'].includes(normalizedCondition)) {
+    if (!['A_PAGAR', 'PARCELADO', 'ENTRADA_PARCELADO'].includes(normalizedCondition)) {
         throw new Error('Condição de pagamento inválida.');
     }
+    const count = normalizedCondition === 'A_PAGAR' ? 1 : Number(installments);
+    if (!Number.isInteger(count) || count < 1 || count > 60) {
+        throw new Error('Informe uma quantidade de parcelas entre 1 e 60.');
+    }
 
-    const baseCents = Math.floor(totalCents / count);
-    const remainder = totalCents - baseCents * count;
-    return Array.from({ length: count }, (_, index) => ({
-        amount: (baseCents + (index < remainder ? 1 : 0)) / 100,
-        status: 'PENDENTE',
-        dueDate: addMonthsClamped(firstDueDate, index),
-        settledAt: null,
-        installment: index + 1,
-        installments: count,
-    }));
+    const schedule = [];
+    let saldoCents = totalCents;
+    if (normalizedCondition === 'ENTRADA_PARCELADO') {
+        const entradaCents = Math.round(Number(downPayment || 0) * 100);
+        if (!(entradaCents > 0)) throw new Error('Informe o valor da entrada.');
+        if (entradaCents >= totalCents) throw new Error('A entrada precisa ser menor que o valor total da compra.');
+        schedule.push({ amount: entradaCents / 100, status: 'PAGO', dueDate: null, settledAt: baseDate, installment: 0, installments: count, downPayment: true });
+        saldoCents = totalCents - entradaCents;
+    }
+
+    const baseCents = Math.floor(saldoCents / count);
+    const remainder = saldoCents - baseCents * count;
+    for (let index = 0; index < count; index += 1) {
+        schedule.push({
+            amount: (baseCents + (index < remainder ? 1 : 0)) / 100,
+            status: 'PENDENTE',
+            dueDate: addMonthsClamped(firstDueDate, index),
+            settledAt: null,
+            installment: index + 1,
+            installments: count,
+            afterDownPayment: normalizedCondition === 'ENTRADA_PARCELADO',
+        });
+    }
+    return schedule;
+};
+
+// Sufixo da descrição do lançamento: " — entrada", " — parcela 2/3"…
+export const describePurchaseInstallment = (item) => {
+    if (item.downPayment) return ' — entrada';
+    if (item.installments > 1 || item.afterDownPayment) return ` — parcela ${item.installment}/${item.installments}`;
+    return '';
 };
 
 export const RESULT_CLASS_LABELS = {

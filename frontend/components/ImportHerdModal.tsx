@@ -12,7 +12,7 @@ type Status = 'idle' | 'uploading' | 'preview' | 'saving' | 'done' | 'error';
 // De onde vieram os animais. Nascimento não entra por aqui: o bezerro é
 // lançado no parto da mãe, em Reprodução.
 type Origem = 'PROPRIO' | 'COMPRA';
-type CondicaoPagamento = 'PAGO' | 'A_PAGAR' | 'PARCELADO';
+type CondicaoPagamento = 'PAGO' | 'ENTRADA_PARCELADO' | 'PARCELADO';
 
 interface DadosCompra {
     fornecedor: string;
@@ -23,6 +23,7 @@ interface DadosCompra {
     condicaoPagamento: CondicaoPagamento;
     vencimento: string;
     parcelas: string;
+    valorEntrada: string;
 }
 
 const compraVazia = (): DadosCompra => ({
@@ -33,7 +34,8 @@ const compraVazia = (): DadosCompra => ({
     finalidade: 'PRODUCTION',
     condicaoPagamento: 'PAGO',
     vencimento: '',
-    parcelas: '2',
+    parcelas: '1',
+    valorEntrada: '',
 });
 
 // "592.000,50" ou "592000.50" → 592000.5
@@ -55,7 +57,16 @@ const problemaNaCompra = (compra: DadosCompra): string | null => {
     if (!compra.fornecedor.trim()) return 'Informe o fornecedor da compra.';
     if (!compra.dataCompra) return 'Informe a data da compra.';
     if (!((lerValor(compra.valorTotal) ?? 0) > 0)) return 'Informe o valor total da compra.';
+    if (compra.condicaoPagamento === 'ENTRADA_PARCELADO') {
+        const entrada = lerValor(compra.valorEntrada) ?? 0;
+        if (!(entrada > 0)) return 'Informe o valor da entrada.';
+        if (entrada >= (lerValor(compra.valorTotal) ?? 0)) return 'Informe uma entrada menor que o valor total.';
+    }
     if (compra.condicaoPagamento !== 'PAGO' && !compra.vencimento) return 'Informe a data do primeiro vencimento.';
+    const parcelas = Number(compra.parcelas);
+    if (compra.condicaoPagamento !== 'PAGO' && (!Number.isInteger(parcelas) || parcelas < 1 || parcelas > 60)) {
+        return 'Informe de 1 a 60 parcelas.';
+    }
     return null;
 };
 
@@ -306,7 +317,8 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             finalidade: compra.finalidade,
                             condicaoPagamento: compra.condicaoPagamento,
                             vencimento: compra.condicaoPagamento === 'PAGO' ? undefined : compra.vencimento,
-                            parcelas: compra.condicaoPagamento === 'PARCELADO' ? Number(compra.parcelas) : undefined,
+                            parcelas: compra.condicaoPagamento === 'PAGO' ? undefined : Number(compra.parcelas),
+                            valorEntrada: compra.condicaoPagamento === 'ENTRADA_PARCELADO' ? lerValor(compra.valorEntrada) : undefined,
                         }
                         : undefined,
                 }),
@@ -500,21 +512,29 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                         <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
                                             Pagamento
                                             <select id="import-compra-pagamento" value={compra.condicaoPagamento} onChange={(e) => atualizarCompra('condicaoPagamento', e.target.value as CondicaoPagamento)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]">
-                                                <option value="PAGO">Pago</option>
-                                                <option value="A_PAGAR">A pagar</option>
+                                                <option value="PAGO">À vista</option>
+                                                <option value="ENTRADA_PARCELADO">Entrada + parcelado</option>
                                                 <option value="PARCELADO">Parcelado</option>
                                             </select>
                                         </label>
+                                        {compra.condicaoPagamento === 'ENTRADA_PARCELADO' && (
+                                            <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                                Valor da entrada (R$)
+                                                <input id="import-compra-entrada" type="text" inputMode="decimal" value={compra.valorEntrada} onChange={(e) => atualizarCompra('valorEntrada', e.target.value)} placeholder="0,00" className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                                <span className="mt-1 block font-normal text-[var(--eixo-text-soft)]">Entra como paga na data da compra.</span>
+                                            </label>
+                                        )}
                                         {compra.condicaoPagamento !== 'PAGO' && (
                                             <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
                                                 Primeiro vencimento
                                                 <input id="import-compra-vencimento" type="date" value={compra.vencimento} onChange={(e) => atualizarCompra('vencimento', e.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
                                             </label>
                                         )}
-                                        {compra.condicaoPagamento === 'PARCELADO' && (
+                                        {compra.condicaoPagamento !== 'PAGO' && (
                                             <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
                                                 Parcelas
-                                                <input id="import-compra-parcelas" type="number" min={2} max={60} value={compra.parcelas} onChange={(e) => atualizarCompra('parcelas', e.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                                <input id="import-compra-parcelas" type="number" min={1} max={60} value={compra.parcelas} onChange={(e) => atualizarCompra('parcelas', e.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                                <span className="mt-1 block font-normal text-[var(--eixo-text-soft)]">1 parcela = pagamento único com prazo.</span>
                                             </label>
                                         )}
                                     </div>

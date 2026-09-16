@@ -18,7 +18,7 @@ import {
     serializeEmbryoBatch, serializePaddock, getOccurrenceAnimalLabel,
 } from '../utils/serializers.js';
 import { REPRO_WINDOW_DAYS, DEFAULT_THRESHOLDS, HERD_EVENT_CATEGORY_MAP } from '../config/env.js';
-import { buildPurchasePaymentSchedule, createIntegratedTransaction } from '../financial/financialService.js';
+import { buildPurchasePaymentSchedule, createIntegratedTransaction, describePurchaseInstallment } from '../financial/financialService.js';
 import { buildProvisionalIdentification, buildTeProvisionalIdentification } from './herdIntegrityService.js';
 import { normalizarCategoriaParaGravar } from '../herd/animalCategories.js';
 import { registerNutritionModuleRoutes } from '../../nutritionModule.js';
@@ -2437,7 +2437,7 @@ app.post('/animals/:id/matriz-responsavel', requireAuth, async (req, res) => {
 
 // ── Entrada de lote: cria múltiplos animais de uma só vez ─────────────────────
 app.post('/animals/batch', requireAuth, async (req, res) => {
-    const { farmId, paddockId, lotId, dataCompra, valorPorCabeca, fornecedor, condicaoPagamento, vencimento, parcelas, animals } = req.body || {};
+    const { farmId, paddockId, lotId, dataCompra, valorPorCabeca, fornecedor, condicaoPagamento, vencimento, parcelas, valorEntrada, animals } = req.body || {};
 
     if (!farmId || !paddockId || !Array.isArray(animals) || animals.length === 0) {
         return res.status(400).json({ message: 'farmId, paddockId e animais são obrigatórios.' });
@@ -2505,6 +2505,7 @@ app.post('/animals/batch', requireAuth, async (req, res) => {
             purchaseDate: compraDate,
             dueDate: vencimento,
             installments: parcelas,
+            downPayment: valorEntrada,
         });
     } catch (error) {
         return res.status(400).json({ message: error.message });
@@ -2574,7 +2575,7 @@ app.post('/animals/batch', requireAuth, async (req, res) => {
                     settledAt: installment.settledAt,
                     status: installment.status,
                     dueDate: installment.dueDate,
-                    description: `Compra de ${results.length} animal(is) — ${supplier}${installment.installments > 1 ? ` — parcela ${installment.installment}/${installment.installments}` : ''}`,
+                    description: `Compra de ${results.length} animal(is) — ${supplier}${describePurchaseInstallment(installment)}`,
                     herdEventId: purchaseEvents[0]?.id || null,
                     allocations: [{ lotId: validLotId, paddockId }],
                 });

@@ -17,6 +17,29 @@ test('compra parcelada preserva o total e vencimentos mensais', () => {
     assert.equal(schedule.reduce((sum, item) => sum + item.amount, 0), 100);
 });
 
+test('parcelado com 1 parcela vira pagamento único com prazo', () => {
+    const schedule = buildPurchasePaymentSchedule({ amount: 900, condition: 'PARCELADO', purchaseDate: '2026-08-18', dueDate: '2026-09-17', installments: 1 });
+    assert.equal(schedule.length, 1);
+    assert.equal(schedule[0].status, 'PENDENTE');
+    assert.equal(schedule[0].dueDate.toISOString().slice(0, 10), '2026-09-17');
+});
+
+test('entrada + parcelado: entrada paga na compra e saldo dividido', () => {
+    const schedule = buildPurchasePaymentSchedule({ amount: 1000, condition: 'ENTRADA_PARCELADO', purchaseDate: '2026-08-18', dueDate: '2026-09-18', installments: 3, downPayment: 400 });
+    assert.equal(schedule.length, 4);
+    assert.equal(schedule[0].amount, 400);
+    assert.equal(schedule[0].status, 'PAGO');
+    assert.equal(schedule[0].downPayment, true);
+    assert.deepEqual(schedule.slice(1).map((item) => item.amount), [200, 200, 200]);
+    assert.equal(schedule.reduce((sum, item) => sum + item.amount, 0), 1000);
+});
+
+test('entrada + parcelado recusa entrada vazia ou maior que o total', () => {
+    const base = { amount: 1000, condition: 'ENTRADA_PARCELADO', purchaseDate: '2026-08-18', dueDate: '2026-09-18', installments: 2 };
+    assert.throws(() => buildPurchasePaymentSchedule({ ...base, downPayment: 0 }), /entrada/);
+    assert.throws(() => buildPurchasePaymentSchedule({ ...base, downPayment: 1000 }), /menor/);
+});
+
 test('DRE separa receita, custo, despesa e resultados financeiros', () => {
     const result = summarizeIncomeStatement([
         { resultClass: 'OPERATING_REVENUE', amount: 1000, accountCategory: { type: 'ENTRADA' } },

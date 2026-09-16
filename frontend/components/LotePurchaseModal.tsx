@@ -78,9 +78,10 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
     const [dataCompra, setDataCompra] = useState(today);
     const [valorPorCabeca, setValorPorCabeca] = useState('');
     const [fornecedor, setFornecedor] = useState('');
-    const [condicaoPagamento, setCondicaoPagamento] = useState<'PAGO' | 'A_PAGAR' | 'PARCELADO'>('PAGO');
+    const [condicaoPagamento, setCondicaoPagamento] = useState<'PAGO' | 'ENTRADA_PARCELADO' | 'PARCELADO'>('PAGO');
+    const [valorEntrada, setValorEntrada] = useState('');
     const [vencimento, setVencimento] = useState('');
-    const [parcelas, setParcelas] = useState('2');
+    const [parcelas, setParcelas] = useState('1');
     const [paddockId, setPaddockId] = useState('');
     const [lotId, setLotId] = useState('');
     const [racaPadrao, setRacaPadrao] = useState('');
@@ -100,7 +101,8 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
         setFornecedor('');
         setCondicaoPagamento('PAGO');
         setVencimento('');
-        setParcelas('2');
+        setParcelas('1');
+        setValorEntrada('');
         setPaddockId(paddocks[0]?.id ?? '');
         setLotId('');
         setRacaPadrao('');
@@ -138,12 +140,17 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
         if (!fornecedor.trim()) { setError('Informe o fornecedor da compra.'); return; }
         if ((parseImportNumber(valorPorCabeca) ?? 0) <= 0) { setError('Informe um valor por cabeça válido.'); return; }
         if (condicaoPagamento !== 'PAGO' && !vencimento) { setError('Informe a data do primeiro vencimento.'); return; }
-        if (condicaoPagamento === 'PARCELADO' && (Number(parcelas) < 2 || Number(parcelas) > 60)) {
-            setError('Informe uma quantidade de parcelas entre 2 e 60.'); return;
+        if (condicaoPagamento !== 'PAGO' && (!Number.isInteger(Number(parcelas)) || Number(parcelas) < 1 || Number(parcelas) > 60)) {
+            setError('Informe uma quantidade de parcelas entre 1 e 60.'); return;
         }
 
         const validRows = rows.filter((r) => r.brinco.trim());
         if (validRows.length === 0) { setError('Informe pelo menos uma identificação.'); return; }
+        if (condicaoPagamento === 'ENTRADA_PARCELADO') {
+            const entrada = parseImportNumber(valorEntrada) ?? 0;
+            if (!(entrada > 0)) { setError('Informe o valor da entrada.'); return; }
+            if (entrada >= valorTotal) { setError('A entrada precisa ser menor que o valor total da compra.'); return; }
+        }
         
 
         const dupBrincos = validRows.map((r) => r.brinco.trim().toLowerCase());
@@ -184,7 +191,8 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                     fornecedor: fornecedor.trim(),
                     condicaoPagamento,
                     vencimento: condicaoPagamento === 'PAGO' ? undefined : vencimento,
-                    parcelas: condicaoPagamento === 'PARCELADO' ? Number(parcelas) : undefined,
+                    parcelas: condicaoPagamento === 'PAGO' ? undefined : Number(parcelas),
+                    valorEntrada: condicaoPagamento === 'ENTRADA_PARCELADO' ? parseImportNumber(valorEntrada) ?? undefined : undefined,
                     animals,
                 }),
             });
@@ -280,8 +288,8 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                                 <div>
                                     <label className="block text-sm font-medium text-[var(--eixo-text)]">Pagamento</label>
                                     <select value={condicaoPagamento} onChange={(e) => setCondicaoPagamento(e.target.value as typeof condicaoPagamento)} className={`mt-1 ${inputCls}`}>
-                                        <option value="PAGO">Pago</option>
-                                        <option value="A_PAGAR">A pagar</option>
+                                        <option value="PAGO">À vista</option>
+                                        <option value="ENTRADA_PARCELADO">Entrada + parcelado</option>
                                         <option value="PARCELADO">Parcelado</option>
                                     </select>
                                 </div>
@@ -291,10 +299,16 @@ const LotePurchaseModal: React.FC<LotePurchaseModalProps> = ({
                                         <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} className={`mt-1 ${inputCls}`} required />
                                     </div>
                                 )}
-                                {condicaoPagamento === 'PARCELADO' && (
+                                {condicaoPagamento === 'ENTRADA_PARCELADO' && (
                                     <div>
-                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Parcelas</label>
-                                        <input type="number" min="2" max="60" value={parcelas} onChange={(e) => setParcelas(e.target.value)} className={`mt-1 ${inputCls}`} required />
+                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Valor da entrada (R$)</label>
+                                        <input type="text" inputMode="decimal" value={valorEntrada} onChange={(e) => setValorEntrada(e.target.value)} placeholder="0,00" className={`mt-1 ${inputCls}`} required />
+                                    </div>
+                                )}
+                                {condicaoPagamento !== 'PAGO' && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-[var(--eixo-text)]">Parcelas <span className="font-normal text-[var(--eixo-text-muted)]">(1 = pagamento único)</span></label>
+                                        <input type="number" min="1" max="60" value={parcelas} onChange={(e) => setParcelas(e.target.value)} className={`mt-1 ${inputCls}`} required />
                                     </div>
                                 )}
                                 <div>

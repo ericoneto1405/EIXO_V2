@@ -10,7 +10,7 @@ import { parseNumber, parseDateValue, normalizeAnimalIdentityKey } from '../util
 import { logActivity } from '../utils/activityLog.js';
 import { serializeHerdEvent, serializeSanitaryRecord } from '../utils/serializers.js';
 import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../config/env.js';
-import { buildPurchasePaymentSchedule, createIntegratedTransaction, upsertAutomaticResult } from '../financial/financialService.js';
+import { buildPurchasePaymentSchedule, createIntegratedTransaction, describePurchaseInstallment, upsertAutomaticResult } from '../financial/financialService.js';
 import { normalizeSexoImport, normalizeTipoRacaImport, parseImportDate, parseNascimentoImport, parsePesagemImport } from './herdImportRules.js';
 import { normalizarCategoriaParaGravar } from './animalCategories.js';
 import { normalizeSpreadsheetDates } from './herdSpreadsheetDates.js';
@@ -1329,6 +1329,7 @@ function lerCompraImportacao(origem, compraBody) {
     condition: dados.condicaoPagamento || 'PAGO',
     dueDate: dados.vencimento || null,
     installments: dados.parcelas,
+    downPayment: parseNumber(dados.valorEntrada),
   };
   try {
     // Só para conferir agora; as parcelas de verdade são montadas por conta.
@@ -1410,6 +1411,11 @@ async function criarAnimaisCompra(farmId, prontos, compra) {
 
   const listaGrupos = [...grupos.values()];
   const centsPorGrupo = repartirCentavos(totalCents, listaGrupos);
+  // A entrada também é repartida entre as contas, na mesma proporção.
+  const entradaCents = compra.pagamento.condition === 'ENTRADA_PARCELADO'
+    ? Math.round(Number(compra.pagamento.downPayment || 0) * 100)
+    : 0;
+  const entradaPorGrupo = entradaCents ? repartirCentavos(entradaCents, listaGrupos) : [];
 
   await prisma.$transaction(async (tx) => {
     await tx.animal.createMany({ data: animais });
@@ -1418,10 +1424,14 @@ async function criarAnimaisCompra(farmId, prontos, compra) {
     await tx.herdEvent.createMany({ data: eventos });
 
     for (const [index, grupo] of listaGrupos.entries()) {
+      const entradaGrupo = entradaCents ? entradaPorGrupo[index] : 0;
       const parcelas = buildPurchasePaymentSchedule({
         amount: centsPorGrupo[index] / 100,
         purchaseDate: compra.data,
         ...compra.pagamento,
+        // Grupo pequeno demais para receber parte da entrada vira só parcelado.
+        ...(entradaCents && entradaGrupo === 0 ? { condition: 'PARCELADO' } : {}),
+        downPayment: entradaGrupo / 100,
       });
       const destinos = [...grupo.destinos.values()];
       const semDestino = grupo.quantidade - destinos.reduce((soma, d) => soma + d.quantidade, 0);
@@ -1446,7 +1456,7 @@ async function criarAnimaisCompra(farmId, prontos, compra) {
           settledAt: parcela.settledAt,
           status: parcela.status,
           dueDate: parcela.dueDate,
-          description: `Compra de ${grupo.quantidade} animal(is) — ${compra.fornecedor}${compra.gta ? ` — GTA ${compra.gta}` : ''}${parcela.installments > 1 ? ` — parcela ${parcela.installment}/${parcela.installments}` : ''}`,
+          description: `Compra de ${grupo.quantidade} animal(is) — ${compra.fornecedor}${compra.gta ? ` — GTA ${compra.gta}` : ''}${describePurchaseInstallment(parcela)}`,
           herdEventId: grupo.eventoId,
           allocations,
         });
