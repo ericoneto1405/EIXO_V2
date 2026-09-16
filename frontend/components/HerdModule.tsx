@@ -1323,8 +1323,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const renderHeaderFilter = (column: Exclude<AnimalHeaderFilterKey, null>) => {
         if (activeHeaderFilter !== column) return null;
 
+        // O clique dentro da caixinha não pode subir até o título da coluna:
+        // lá ele abre/fecha o filtro, e fechava a caixinha antes de escolher.
         return (
-            <div className="absolute left-0 top-full z-30 mt-1 min-w-[210px] rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 shadow-lg">
+            <div
+                onClick={(event) => event.stopPropagation()}
+                className="absolute left-0 top-full z-30 mt-1 min-w-[210px] cursor-default rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 font-normal normal-case tracking-normal shadow-lg"
+            >
                 {column === 'identificacao' && (
                     <select
                         value={filterIdentificacao}
