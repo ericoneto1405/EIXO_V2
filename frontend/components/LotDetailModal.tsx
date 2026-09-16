@@ -50,7 +50,7 @@ const LOT_OBJECTIVE_HELP = [
 const LOT_STATUS_OPTIONS = ['ATIVO', 'INATIVO'];
 const PRODUCTION_PHASE_OPTIONS = [
     ['CRIA', 'Cria'], ['RECRIA', 'Recria'], ['ENGORDA', 'Engorda'],
-    ['REPRODUCAO', 'Reprodução'], ['OUTRA', 'Outra'],
+    ['REPRODUCAO', 'Reprodução'], ['CONFINAMENTO', 'Confinamento'], ['OUTRA', 'Outra'],
 ] as const;
 
 const formatDateInput = (value?: string | null) => {
@@ -191,7 +191,7 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
             await updateLot(lot.id, resolvedMode, {
                 name: editName.trim(),
                 objective: editObjective || undefined,
-                productionPhase: editProductionPhase as 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'OUTRA',
+                productionPhase: editProductionPhase as 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'CONFINAMENTO' | 'OUTRA',
                 status: editStatus,
                 startDate: editStartDate || undefined,
                 notes: editNotes.trim() || undefined,

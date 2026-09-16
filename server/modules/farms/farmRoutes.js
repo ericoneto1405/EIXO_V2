@@ -1040,10 +1040,22 @@ app.get('/lots', async (req, res) => {
     }
 });
 
-const PRODUCTION_PHASES = ['CRIA', 'RECRIA', 'ENGORDA', 'REPRODUCAO', 'OUTRA'];
+const PRODUCTION_PHASES = ['CRIA', 'RECRIA', 'ENGORDA', 'REPRODUCAO', 'CONFINAMENTO', 'OUTRA'];
+const DAY_MS = 86400000;
+
+const parseOptionalPositive = (value) => {
+    if (value === undefined || value === null || value === '') return { ok: true, value: null };
+    const parsed = parseNumber(value);
+    if (parsed === null || parsed <= 0) return { ok: false, value: null };
+    return { ok: true, value: parsed };
+};
 
 app.post('/lots', requireNonFieldWorker, async (req, res) => {
-    const { farmId, name, notes, objective, phase, productionPhase, status, startDate } = req.body || {};
+    const {
+        farmId, name, notes, objective, phase, productionPhase, status, startDate,
+        categoria, paddockId, entryHeadcount, entryWeightAvg, targetGmd, targetExitWeight, weighIntervalDays,
+        animalIds, entryWeights,
+    } = req.body || {};
     if (!farmId || !name?.trim()) {
         return res.status(400).json({ message: 'Informe fazenda e nome do lote.' });
     }
@@ -1055,6 +1067,34 @@ app.post('/lots', requireNonFieldWorker, async (req, res) => {
         return res.status(400).json({ message: 'Informe a fase produtiva do lote.' });
     }
 
+    const numbers = {
+        entryHeadcount: parseOptionalPositive(entryHeadcount),
+        entryWeightAvg: parseOptionalPositive(entryWeightAvg),
+        targetGmd: parseOptionalPositive(targetGmd),
+        targetExitWeight: parseOptionalPositive(targetExitWeight),
+        weighIntervalDays: parseOptionalPositive(weighIntervalDays),
+    };
+    const invalidField = Object.entries(numbers).find(([, parsed]) => !parsed.ok);
+    if (invalidField) {
+        return res.status(400).json({ message: 'Confira os números do lote: use apenas valores maiores que zero.' });
+    }
+
+    const selectedIds = Array.isArray(animalIds)
+        ? [...new Set(animalIds.map((id) => String(id)).filter(Boolean))]
+        : [];
+    const weightList = Array.isArray(entryWeights) ? entryWeights : [];
+    const weightByAnimal = new Map();
+    for (const item of weightList) {
+        const animalId = String(item?.animalId || '');
+        if (!animalId || !selectedIds.includes(animalId)) continue;
+        const peso = parseNumber(item?.peso);
+        if (peso === null) continue;
+        if (peso <= 0 || peso > 2000) {
+            return res.status(400).json({ message: 'Há peso de entrada fora do normal. Confira os valores.' });
+        }
+        weightByAnimal.set(animalId, peso);
+    }
+
     try {
         const farm = await prisma.farm.findFirst({
             where: buildFarmScopeFilter(req, { id: farmId }),
@@ -1063,18 +1103,92 @@ app.post('/lots', requireNonFieldWorker, async (req, res) => {
             return res.status(404).json({ message: 'Fazenda não encontrada.' });
         }
 
-        const lot = await prisma.lot.create({
-            data: {
-                farmId,
-                name: name.trim(),
-                notes: notes?.trim() || null,
-                objective: objective?.trim() || null,
-                phase: phase?.trim() || null,
-                productionPhase,
-                status: status?.trim() || 'ATIVO',
-                startDate: parsedStartDate,
-            },
-        });
+        if (paddockId) {
+            const paddock = await prisma.paddock.findFirst({ where: { id: String(paddockId), farmId: farm.id } });
+            if (!paddock) return res.status(400).json({ message: 'Pasto não encontrado nesta fazenda.' });
+        }
+
+        if (selectedIds.length) {
+            const found = await prisma.animal.count({ where: { id: { in: selectedIds }, farmId: farm.id } });
+            if (found !== selectedIds.length) {
+                return res.status(400).json({ message: 'Alguns animais escolhidos não pertencem a esta fazenda.' });
+            }
+        }
+
+        const entryDate = parsedStartDate || new Date();
+        const weights = [...weightByAnimal.values()];
+        const avgFromWeights = weights.length
+            ? Math.round((weights.reduce((sum, value) => sum + value, 0) / weights.length) * 10) / 10
+            : null;
+
+        const lot = await prisma.$transaction(async (tx) => {
+            const created = await tx.lot.create({
+                data: {
+                    farmId: farm.id,
+                    name: name.trim(),
+                    notes: notes?.trim() || null,
+                    objective: objective?.trim() || null,
+                    phase: phase?.trim() || null,
+                    productionPhase,
+                    status: status?.trim() || 'ATIVO',
+                    startDate: parsedStartDate,
+                    categoria: categoria?.trim() || null,
+                    paddockId: paddockId ? String(paddockId) : null,
+                    entryHeadcount: selectedIds.length || (numbers.entryHeadcount.value ? Math.round(numbers.entryHeadcount.value) : null),
+                    entryWeightAvg: avgFromWeights ?? numbers.entryWeightAvg.value,
+                    targetGmd: numbers.targetGmd.value,
+                    targetExitWeight: numbers.targetExitWeight.value,
+                    weighIntervalDays: numbers.weighIntervalDays.value ? Math.round(numbers.weighIntervalDays.value) : null,
+                },
+            });
+
+            if (!selectedIds.length) return created;
+
+            await tx.animal.updateMany({
+                where: { id: { in: selectedIds }, farmId: farm.id },
+                data: {
+                    lotId: created.id,
+                    ...(paddockId ? { currentPaddockId: String(paddockId) } : {}),
+                },
+            });
+
+            if (paddockId) {
+                await tx.paddockMove.updateMany({
+                    where: { farmId: farm.id, animalId: { in: selectedIds }, endAt: null },
+                    data: { endAt: entryDate },
+                });
+                await tx.paddockMove.createMany({
+                    data: selectedIds.map((animalId) => ({
+                        farmId: farm.id,
+                        paddockId: String(paddockId),
+                        animalId,
+                        startAt: entryDate,
+                        notes: `Entrada no lote "${created.name}"`,
+                    })),
+                });
+            }
+
+            for (const [animalId, peso] of weightByAnimal) {
+                const previous = await tx.weighing.findFirst({
+                    where: { animalId, data: { lt: entryDate } },
+                    orderBy: { data: 'desc' },
+                });
+                const days = previous ? (entryDate.getTime() - previous.data.getTime()) / DAY_MS : 0;
+                const gmd = previous && days > 0 ? Math.round(((peso - previous.peso) / days) * 1000) / 1000 : 0;
+                await tx.weighing.upsert({
+                    where: { animalId_data: { animalId, data: entryDate } },
+                    create: { animalId, data: entryDate, peso, gmd, source: 'MANUAL' },
+                    update: { peso, gmd },
+                });
+                const newer = await tx.weighing.count({ where: { animalId, data: { gt: entryDate } } });
+                if (!newer) {
+                    await tx.animal.update({ where: { id: animalId }, data: { pesoAtual: peso } });
+                }
+            }
+
+            return created;
+        }, { timeout: 30000 });
+
         logActivity(prisma, req, { action: 'LOTE_CRIADO', entity: 'Lot', entityId: lot.id, description: `Criou o lote "${lot.name}"`, farmId: lot.farmId });
         return res.status(201).json({ lot });
     } catch (error) {

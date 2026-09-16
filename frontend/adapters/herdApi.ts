@@ -648,7 +648,7 @@ export const updateLot = async (
         notes?: string;
         objective?: string;
         phase?: string;
-        productionPhase?: 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'OUTRA';
+        productionPhase?: 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'CONFINAMENTO' | 'OUTRA';
         status?: string;
         startDate?: string;
     },

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import HerdAnimalModal from './AnimalDetailModal';
 import LotDetailModal from './LotDetailModal';
 import LotePurchaseModal from './LotePurchaseModal';
+import NewLotForm from './NewLotForm';
 import WeighingsTab from './WeighingsTab';
 import HerdSettingsTab from './HerdSettingsTab';
 import ImportHerdModal from './ImportHerdModal';
@@ -14,7 +15,6 @@ import {
     createEmbryoTransfer,
     assignDefinitiveIdentification,
     createBirthAnimal,
-    createLot,
     listAnimals,
     listEmbryoTransfers,
     listLots,
@@ -112,20 +112,6 @@ const LOT_OBJECTIVE_OPTIONS = [
     'Manejo sanitário',
     'Observação',
 ];
-const LOT_OBJECTIVE_HELP = [
-    'Cria: produção de bezerros.',
-    'Recria: crescimento dos animais.',
-    'Engorda: ganho de peso para venda.',
-    'Matrizes: vacas do rebanho.',
-    'Bezerros: animais jovens separados.',
-    'Apartação: separação temporária.',
-    'Venda: animais separados para negociação.',
-    'Confinamento: sistema intensivo no cocho.',
-    'Semi-confinamento: pasto com suplementação forte.',
-    'Manejo sanitário: vacina, vermífugo ou tratamento.',
-    'Observação: animais que exigem acompanhamento.',
-];
-const LOT_STATUS_OPTIONS = ['ATIVO', 'INATIVO'];
 
 const isReadyForWeaning = (animal: HerdAnimal) => {
     if (!animal.identificacaoProvisoria || animal.desmamadoEm) return false;
@@ -135,27 +121,6 @@ const isReadyForWeaning = (animal: HerdAnimal) => {
     const weight = animal.ultimoPeso ?? 0;
     return ageInMonths >= 7 || (sex === 'FEMEA' && weight >= 180) || (sex === 'MACHO' && weight >= 200);
 };
-const PRODUCTION_PHASE_OPTIONS = [
-    { value: 'CRIA', label: 'Cria' },
-    { value: 'RECRIA', label: 'Recria' },
-    { value: 'ENGORDA', label: 'Engorda' },
-    { value: 'REPRODUCAO', label: 'Reprodução' },
-    { value: 'OUTRA', label: 'Outra' },
-] as const;
-
-const LotObjectiveHelp: React.FC = () => (
-    <span className="group relative inline-flex">
-        <span className="flex h-5 w-5 cursor-help items-center justify-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-xs font-bold text-[var(--eixo-text-muted)]">
-            ?
-        </span>
-        <span className="pointer-events-none absolute left-1/2 top-7 z-20 hidden w-[320px] -translate-x-1/2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4 text-left text-xs font-normal leading-5 text-[var(--eixo-text-muted)] shadow-xl group-hover:block">
-            <span className="mb-2 block font-semibold text-[var(--eixo-text)]">Escolha para que este lote existe.</span>
-            {LOT_OBJECTIVE_HELP.map((item) => (
-                <span key={item} className="block">{item}</span>
-            ))}
-        </span>
-    </span>
-);
 
 interface HerdModuleProps {
     farmId?: string | null;
@@ -357,7 +322,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [animalFormOpen, setAnimalFormOpen] = useState(false);
     const [loteModalOpen, setLoteModalOpen] = useState(false);
     const [animalFormError, setAnimalFormError] = useState<string | null>(null);
-    const [lotFormError, setLotFormError] = useState<string | null>(null);
     const headerFilterRef = useRef<HTMLDivElement | null>(null);
 
     // Mantidos temporariamente para compatibilidade do formulário legado, sem atalho na aba Animais.
@@ -385,14 +349,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [weaningForm, setWeaningForm] = useState({ date: new Date().toISOString().slice(0, 10), peso: '', identificacaoDefinitiva: '', paddockId: '', lotId: '', observacoes: '' });
 
     const [animalForm, setAnimalForm] = useState<AnimalFormState>(createInitialAnimalForm);
-    const [lotForm, setLotForm] = useState({
-        name: '',
-        objective: '',
-        productionPhase: '',
-        status: 'ATIVO',
-        startDate: '',
-        notes: '',
-    });
     const [paddocks, setPaddocks] = useState<Paddock[]>([]);
     const [farmBreeds, setFarmBreeds] = useState<string[]>([]);
     
@@ -999,10 +955,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setAnimalForm(createInitialAnimalForm());
     };
 
-    const resetLotForm = () => {
-        setLotForm({ name: '', objective: '', productionPhase: '', status: 'ATIVO', startDate: '', notes: '' });
-    };
-
     const openAnimalForm = () => {
         setAnimalFormError(null);
         setAnimalFormOpen(true);
@@ -1015,14 +967,11 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     };
 
     const openLotForm = () => {
-        setLotFormError(null);
         setLotModalOpen(true);
     };
 
     const closeLotForm = () => {
-        setLotFormError(null);
         setLotModalOpen(false);
-        resetLotForm();
     };
 
     const handleCreateAnimal = async (event: React.FormEvent) => {
@@ -1078,37 +1027,6 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             window.dispatchEvent(new Event('eixo:herd-onboarding-progress-changed'));
         } catch (error: any) {
             setAnimalFormError(error?.message || 'Não foi possível salvar o animal.');
-        }
-    };
-
-    const handleCreateLot = async (event: React.FormEvent) => {
-        event.preventDefault();
-        if (!farmId) {
-            setLotFormError('Selecione uma fazenda para criar lote.');
-            return;
-        }
-        if (!lotForm.name.trim()) {
-            setLotFormError('Informe o nome do lote.');
-            return;
-        }
-        if (!lotForm.productionPhase) {
-            setLotFormError('Informe a fase produtiva do lote.');
-            return;
-        }
-        try {
-            setLotFormError(null);
-            await createLot(farmId, resolvedMode, {
-                name: lotForm.name.trim(),
-                objective: lotForm.objective || undefined,
-                productionPhase: lotForm.productionPhase,
-                status: lotForm.status,
-                startDate: lotForm.startDate || undefined,
-                notes: lotForm.notes.trim() || undefined,
-            });
-            closeLotForm();
-            await loadData();
-        } catch (error: any) {
-            setLotFormError(error?.message || 'Não foi possível salvar o lote.');
         }
     };
 
@@ -2967,122 +2885,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 </div>
             )}
 
-            {lotModalOpen && (
-                <div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-                    role="dialog"
-                    aria-modal="true"
-                    onClick={closeLotForm}
-                >
-                    <div
-                        className="w-full max-w-2xl rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        <header className="flex items-center justify-between border-b border-[var(--eixo-border)] p-5">
-                            <h3 className="text-lg font-bold text-[var(--eixo-text)]">Criar lote</h3>
-                            <button
-                                type="button"
-                                className="rounded-full p-2 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
-                                onClick={closeLotForm}
-                                aria-label="Fechar modal"
-                            >
-                                ✕
-                            </button>
-                        </header>
-                        <form onSubmit={handleCreateLot} className="space-y-4 p-6">
-                            <div>
-                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Nome</label>
-                                <input
-                                    type="text"
-                                    value={lotForm.name}
-                                    onChange={(event) => setLotForm((prev) => ({ ...prev, name: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                    required
-                                />
-                            </div>
-                            <div>
-                                <label className="flex items-center gap-2 text-sm font-medium text-[var(--eixo-text)]">
-                                    <span>Finalidade do lote</span>
-                                    <LotObjectiveHelp />
-                                </label>
-                                <select
-                                    value={lotForm.objective}
-                                    onChange={(event) => setLotForm((prev) => ({ ...prev, objective: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                >
-                                    <option value="">Não definida</option>
-                                    {LOT_OBJECTIVE_OPTIONS.map((option) => (
-                                        <option key={option} value={option}>{option}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Fase produtiva</label>
-                                    <select
-                                        value={lotForm.productionPhase}
-                                        onChange={(event) => setLotForm((prev) => ({ ...prev, productionPhase: event.target.value }))}
-                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none"
-                                        required
-                                    >
-                                        <option value="">Selecione...</option>
-                                        {PRODUCTION_PHASE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Status</label>
-                                    <select
-                                        value={lotForm.status}
-                                        onChange={(event) => setLotForm((prev) => ({ ...prev, status: event.target.value }))}
-                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                    >
-                                        {LOT_STATUS_OPTIONS.map((option) => (
-                                            <option key={option} value={option}>{option === 'INATIVO' ? 'Inativo' : 'Ativo'}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">Data de início</label>
-                                    <input
-                                        type="date"
-                                        value={lotForm.startDate}
-                                        onChange={(event) => setLotForm((prev) => ({ ...prev, startDate: event.target.value }))}
-                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                    />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-[var(--eixo-text)]">Observações</label>
-                                <textarea
-                                    value={lotForm.notes}
-                                    onChange={(event) => setLotForm((prev) => ({ ...prev, notes: event.target.value }))}
-                                    className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm shadow-sm focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/10"
-                                    rows={3}
-                                />
-                            </div>
-                            {lotFormError && (
-                                <p className="text-sm text-[var(--eixo-danger)]">{lotFormError}</p>
-                            )}
-                            <div className="flex justify-end gap-3">
-                                <button
-                                    type="button"
-                                    className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
-                                    onClick={closeLotForm}
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
-                                >
-                                    Salvar
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
+            {lotModalOpen && farmId && (
+                <NewLotForm
+                    farmId={farmId}
+                    herdType={resolvedMode}
+                    animals={animals}
+                    lots={lots}
+                    paddocks={paddocks}
+                    objectiveOptions={LOT_OBJECTIVE_OPTIONS}
+                    onClose={closeLotForm}
+                    onCreated={async () => {
+                        closeLotForm();
+                        await loadData();
+                    }}
+                />
             )}
-
 
             {selectedAnimal && (
                 <HerdAnimalModal

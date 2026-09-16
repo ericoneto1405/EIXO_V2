@@ -303,6 +303,7 @@ model Paddock {
   farm                 Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
   paddockMoves         PaddockMove[]
   financialAllocations FinancialResultAllocation[]
+  lots                 Lot[]
 
   @@index([farmId])
 }
@@ -319,8 +320,16 @@ model Lot {
   productionPhase      ProductionPhase?
   startDate            DateTime?
   status               String                      @default("ATIVO")
+  categoria            String?
+  paddockId            String?
+  entryHeadcount       Int?
+  entryWeightAvg       Float?
+  targetGmd            Float?
+  targetExitWeight     Float?
+  weighIntervalDays    Int?
   animals              Animal[]
   farm                 Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  paddock              Paddock?                    @relation(fields: [paddockId], references: [id], onDelete: SetNull)
   nutritionAssignments NutritionAssignment[]
   nutritionCostEntries NutritionCostEntry[]
   nutritionExecutions  NutritionExecution[]
@@ -328,6 +337,7 @@ model Lot {
   financialAllocations FinancialResultAllocation[]
 
   @@index([farmId])
+  @@index([paddockId])
 }
 
 model Animal {
@@ -2642,6 +2652,7 @@ enum ProductionPhase {
   RECRIA
   ENGORDA
   REPRODUCAO
+  CONFINAMENTO
   OUTRA
 }
 

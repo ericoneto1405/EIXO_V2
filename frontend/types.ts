@@ -70,10 +70,17 @@ export interface LotUI {
     notes?: string | null;
     objective?: string | null;
     phase?: string | null;
-    productionPhase?: 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'OUTRA' | null;
+    productionPhase?: 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'CONFINAMENTO' | 'OUTRA' | null;
     status?: string | null;
     startDate?: string | null;
     farmId: string;
+    categoria?: string | null;
+    paddockId?: string | null;
+    entryHeadcount?: number | null;
+    entryWeightAvg?: number | null;
+    targetGmd?: number | null;
+    targetExitWeight?: number | null;
+    weighIntervalDays?: number | null;
 }
 
 export interface AnimalUI {
@@ -169,7 +176,7 @@ export interface Lot {
     notes?: string | null;
     objective?: string | null;
     phase?: string | null;
-    productionPhase?: 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'OUTRA' | null;
+    productionPhase?: 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'CONFINAMENTO' | 'OUTRA' | null;
     status?: string | null;
     startDate?: string | null;
     farmId: string;
