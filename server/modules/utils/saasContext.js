@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 export const SUPER_ADMIN_ALL_MODULES = [
     'Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Mapa da Fazenda',
     'Rebanho Comercial', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial',
-    'Confinamento e Contratos', 'Plantel P.O.', 'Estoque e Equipamentos',
+    'Confinamento e Contratos', 'Meus Leilões', 'Plantel P.O.', 'Estoque e Equipamentos',
     'Editar Animais', 'Ver Atividades de Todos', 'Ocorrências do EIXO Campo',
     'Fornecedores', 'Remédios', 'Rações', 'Suplementos',
     'Nutrição', 'Financeiro',
@@ -22,7 +22,7 @@ export const PLAN_ENTITLEMENTS = {
 export const PLAN_MODULES = {
     GRATIS: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'],
     EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Gestão Comercial', 'Reprodução'],
-    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Confinamento e Contratos'],
+    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Confinamento e Contratos', 'Meus Leilões'],
 };
 
 export const PLAN_LIMITS = {

@@ -29,6 +29,7 @@ const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
 const HQPage = React.lazy(() => import('./components/HQPage'));
 const CommercialManagement = React.lazy(() => import('./components/CommercialManagement'));
+const MeusLeiloes = React.lazy(() => import('./components/MeusLeiloes'));
 const Dashboard = React.lazy(() => import('./components/Dashboard'));
 const Operations = React.lazy(() => import('./components/Operations'));
 const AppEixoCampo = React.lazy(() => import('./components/AppEixoCampo'));
@@ -86,7 +87,7 @@ interface User {
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Plantel P.O.', 'Estoque e Equipamentos'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Meus Leilões', 'Plantel P.O.', 'Estoque e Equipamentos'],
     },
     {
         title: 'Cadastros',
@@ -261,6 +262,19 @@ const UPGRADE_CONTENT: Record<string, {
             'Tenha uma base clara para evoluir decisões e controles da operação.',
         ],
         previewItems: ['Lotes de confinamento', 'Contratos comerciais', 'Rotinas da operação'],
+        icon: <UpgradeChartIcon />,
+    },
+    'Meus Leilões': {
+        accessLabels: ['Meus Leilões'],
+        requiredPlan: 'PLUS',
+        moduleName: 'Meus Leilões',
+        tagline: 'O patrimônio do seu plantel de leilão, sem taxa por animal',
+        benefits: [
+            'Controle sócios e cotas de cada animal, com despesas e receitas divididas pela cota.',
+            'Guarde registro ABCZ, contratos e notas de leilão na ficha do animal.',
+            'Veja quanto investiu, quanto vale e quanto rendeu cada animal, de qualquer leiloeira.',
+        ],
+        previewItems: ['Plantel com valor e resultado', 'Condomínio e cotas', 'Documentos e vídeo do animal'],
         icon: <UpgradeChartIcon />,
     },
 };
@@ -1219,6 +1233,8 @@ const AppContent: React.FC = () => {
                 return <HQPage />;
             case 'Gestão Comercial':
                 return <CommercialManagement farmId={selectedFarmId} farmName={selectedFarm?.name} />;
+            case 'Meus Leilões':
+                return <MeusLeiloes farmId={selectedFarmId} farmName={selectedFarm?.name} />;
             case 'Visão Geral':
             default:
                 return <Dashboard

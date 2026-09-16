@@ -87,7 +87,9 @@ export const resolveAllocations = async (db, farmId, totalAmount, allocations = 
         if (item.lotId) lot = await db.lot.findFirst({ where: { id: String(item.lotId), farmId } });
         if (item.poLotId) throw new Error("Referência ao lote P.O. antigo não é mais aceita.");
         if (item.paddockId) paddock = await db.paddock.findFirst({ where: { id: String(item.paddockId), farmId } });
-        if ((item.lotId && !lot) || (item.paddockId && !paddock)) {
+        let animal = null;
+        if (item.animalId) animal = await db.animal.findFirst({ where: { id: String(item.animalId), farmId }, select: { id: true, brinco: true, nome: true } });
+        if ((item.lotId && !lot) || (item.paddockId && !paddock) || (item.animalId && !animal)) {
             throw new Error('Um dos destinos informados não pertence à fazenda.');
         }
         const productionPhase = item.productionPhase || lot?.productionPhase || null;
@@ -100,6 +102,8 @@ export const resolveAllocations = async (db, farmId, totalAmount, allocations = 
             lotNameSnapshot: lot?.name || null,
             paddockNameSnapshot: paddock?.name || null,
             phaseLabelSnapshot: productionPhase || null,
+            animalId: animal?.id || null,
+            animalLabelSnapshot: animal ? [animal.brinco, animal.nome].filter(Boolean).join(' - ') : null,
         });
     }
     if (allocated > toMoney(totalAmount)) throw new Error('A soma das divisões não pode superar o valor do lançamento.');

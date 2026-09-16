@@ -434,6 +434,8 @@ app.use(
 
 app.use(['/seasons', '/repro-events', '/repro'], requireAuth, requireModule('Reprodução'));
 
+app.use('/leiloes', requireAuth, requireBillingAccess, requireModule('Meus Leilões'));
+
 // Módulos exclusivos de planos pagos — bloqueados no backend por entitlement
 // Botijão de sêmen fica dentro de Reprodução (plano Gestão em diante)
 const isSemenTankRoute = (req) => req.baseUrl === '/po' && req.path.startsWith('/semen');

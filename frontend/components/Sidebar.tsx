@@ -62,6 +62,12 @@ const MODULE_INFO: Record<string, ModuleInfo> = {
         description: 'Controle botijão de sêmen e estoque técnico usado nas decisões do EIXO.',
         cta: 'Conhecer EIXO Performance',
     },
+    'Meus Leilões': {
+        plan: 'PLUS',
+        title: 'Disponível no EIXO Performance',
+        description: 'Patrimônio, sócios e documentos do plantel de leilão, sem taxa por animal.',
+        cta: 'Conhecer EIXO Performance',
+    },
     'Gestão Comercial': {
         plan: 'PRO',
         title: 'Disponível no EIXO Gestão',
@@ -403,6 +409,7 @@ const navSections: NavSection[] = [
         sectionLabel: 'Gestão',
         items: [
             { label: 'Gestão Comercial (CRM)', icon: <ChartIcon />, value: 'Gestão Comercial', allowedLabels: ['Gestão Comercial'], requiredPlanBadge: 'PRO' },
+            { label: 'Meus Leilões', icon: <MoneyDownIcon />, value: 'Meus Leilões', allowedLabels: ['Meus Leilões'], requiredPlanBadge: 'PLUS' },
             { label: 'APP EIXO CAMPO', icon: <ReportIcon />, value: 'APP EIXO CAMPO', allowedLabels: ['APP EIXO CAMPO', 'Fazendas', 'Operações'], requiredPlanBadge: 'PLUS' },
             { label: 'Usuários e Permissões', icon: <UsersIcon />, value: 'Usuários e Permissões', allowedLabels: ['Fazendas'] },
             { label: 'Registro de Atividades', icon: <ReportIcon />, value: 'Registro de Atividades', allowedLabels: ['Registro de Atividades'], requiredPlanBadge: 'PRO' },

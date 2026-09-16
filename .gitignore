@@ -34,3 +34,6 @@ eixo-github-actions-deploy*
 *.sln
 *.sw?
 _to_delete/
+
+# Documentos privados dos animais (Meus Leilões) nunca vão para o git
+server/uploads/animal-documents/

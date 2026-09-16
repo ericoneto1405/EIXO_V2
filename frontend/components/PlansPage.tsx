@@ -67,6 +67,7 @@ const PLANS: Plan[] = [
             { text: 'App EIXO Campo com operação offline', included: false },
             { text: 'Eixo Acasalamento', included: false },
             { text: 'Confinamento e contratos', included: false },
+            { text: 'Meus Leilões: sócios, documentos e resultado do plantel', included: false },
         ],
     },
     {
@@ -75,7 +76,7 @@ const PLANS: Plan[] = [
         name: 'EIXO Performance',
         price: 'R$247/mês',
         priceNote: 'R$197/mês no plano anual',
-        description: 'Genética e confinamento para quem opera em escala, sem limite de fazendas.',
+        description: 'Genética, confinamento e plantel de leilão para quem opera em escala, sem limite de fazendas.',
         cta: 'Solicitar upgrade',
         ctaVariant: 'dark',
         features: [
@@ -85,6 +86,7 @@ const PLANS: Plan[] = [
             { text: 'App EIXO Campo com operação offline', included: true },
             { text: 'Eixo Acasalamento', included: true },
             { text: 'Confinamento e contratos', included: true },
+            { text: 'Meus Leilões: sócios, documentos e resultado do plantel, sem taxa por animal', included: true },
             { text: 'Suporte prioritário', included: true },
         ],
     },

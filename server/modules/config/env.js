@@ -13,6 +13,7 @@ dotenv.config({ path: path.join(serverDir, '.env.local'), override: true });
 // ─── Constantes de Caminhos ────────────────────────────────────────────────────
 export const FIELD_OCCURRENCE_UPLOAD_ROOT = path.join(serverDir, 'uploads', 'field-occurrences');
 export const AVATAR_UPLOAD_ROOT = path.join(serverDir, 'uploads', 'avatars');
+export const ANIMAL_DOCUMENT_UPLOAD_ROOT = path.join(serverDir, 'uploads', 'animal-documents');
 
 // ─── Constantes de Domínio ─────────────────────────────────────────────────────
 export const FIELD_WORKER_ROLE = 'field_worker';
@@ -67,6 +68,10 @@ export const SUPPORT_AI_FALLBACK_PROVIDER = String(process.env.SUPPORT_AI_FALLBA
 export const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 export const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 export const GOOGLE_CLOUD_PROJECT = process.env.GOOGLE_CLOUD_PROJECT || '';
+// Leitura de documentos com IA (Meus Leilões). "free" = Gemini gratuito, só super admin testa;
+// "paid" = libera para clientes do Performance. Ver termos: não enviar dado pessoal no gratuito.
+export const DOCUMENT_AI_TIER = String(process.env.DOCUMENT_AI_TIER || 'free').trim().toLowerCase();
+export const DOCUMENT_AI_MODEL = String(process.env.DOCUMENT_AI_MODEL || 'gemini-2.5-flash').trim();
 export const GOOGLE_CLOUD_LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'global';
 export const SUPPORT_MODEL_NAME = process.env.SUPPORT_MODEL_NAME
     || (SUPPORT_AI_PROVIDER === 'groq' ? 'openai/gpt-oss-20b' : 'gemini-2.5-flash');

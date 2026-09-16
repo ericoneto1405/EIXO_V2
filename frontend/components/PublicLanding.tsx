@@ -67,12 +67,24 @@ const FAQS = [
     a: 'Os planos pagos fazem sentido quando você precisa de múltiplas fazendas, mais usuários ou módulos avançados. Você escolhe quando evoluir.',
   },
   {
+    q: 'Já uso um app só para os animais de leilão. Preciso dos dois?',
+    a: 'Não. No EIXO Performance, o módulo Meus Leilões guarda sócios e cotas, documentos (registro ABCZ, contrato, nota), vídeo, valor e resultado de cada animal — de qualquer leiloeira, sem taxa por cabeça e sem limite de animais. E o mesmo animal já está no manejo, na reprodução e no financeiro.',
+  },
+  {
     q: 'Serve para gado comercial e P.O.?',
     a: 'Sim. O EIXO foi pensado para organizar tanto rebanho comercial quanto animais P.O., respeitando as diferenças de registro, genealogia, reprodução e seleção.',
   },
 ];
 
-const NAV_SECTION_IDS = ['gratis', 'antes-depois', 'como', 'faq'] as const;
+const LEILAO_COMPARISON = [
+  { topic: 'Como cobra', others: 'Faixas por número de animais + taxa de cadastro por cabeça', eixo: 'Mensalidade fixa. Animais ilimitados, sem taxa por cabeça' },
+  { topic: 'De qual leiloeira', others: 'Cadastro sem custo costuma valer só para a leiloeira parceira', eixo: 'Qualquer leiloeira ou compra direta' },
+  { topic: 'Sócios e cotas', others: 'Lista de sócios por animal', eixo: 'Cotas com despesas e receitas divididas por sócio' },
+  { topic: 'Documentos e vídeo', others: 'Sim', eixo: 'Sim: registro ABCZ, contrato, nota, exames e vídeo' },
+  { topic: 'Dia a dia do animal', others: 'Foco só no patrimônio', eixo: 'Pesagem, reprodução, botijão de sêmen e financeiro no mesmo lugar' },
+];
+
+const NAV_SECTION_IDS = ['gratis', 'antes-depois', 'leiloes', 'como', 'faq'] as const;
 type NavSectionId = typeof NAV_SECTION_IDS[number];
 
 const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) => {
@@ -129,6 +141,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
   const navItems: Array<{ label: string; id: string; action: () => void }> = [
     { label: 'O que você ganha', id: 'gratis', action: () => scrollTo('gratis') },
     { label: 'Antes e Depois', id: 'antes-depois', action: () => scrollTo('antes-depois') },
+    { label: 'Leilões', id: 'leiloes', action: () => scrollTo('leiloes') },
     { label: 'Como funciona', id: 'como', action: () => scrollTo('como') },
     { label: 'Dúvidas', id: 'faq', action: () => scrollTo('faq') },
     { label: 'Ver Planos', id: 'planos', action: () => { window.location.href = '/planos'; } },
@@ -489,6 +502,42 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
                 </div>
                 <p className="mt-4 text-sm text-[var(--eixo-text-muted)] italic">Cada informação no lugar certo, com contexto.</p>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Meus Leilões ── */}
+        <section id="leiloes" className="bg-[var(--eixo-text)] py-20 lg:py-28">
+          <div className="mx-auto max-w-5xl px-4 lg:px-8">
+            <div className="mb-12 text-center">
+              <p className="text-sm font-bold uppercase tracking-wider text-[var(--eixo-green)]">EIXO Performance · Meus Leilões</p>
+              <h2 className="mt-3 font-brand text-3xl font-extrabold text-white lg:text-4xl">Compra em leilão? Não pague por cabeça para controlar seu plantel.</h2>
+              <p className="mx-auto mt-4 max-w-2xl text-lg text-white/70">
+                Sócios, cotas, documentos e resultado de cada animal, no mesmo sistema onde você já faz o manejo. Com o EIXO, você não precisa de outro app.
+              </p>
+            </div>
+
+            <div className="overflow-hidden rounded-2xl border border-white/10">
+              <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)] bg-white/5 text-xs font-bold uppercase tracking-wide text-white/60 sm:text-sm">
+                <div className="p-3 sm:p-4" />
+                <div className="p-3 sm:p-4">Apps só de patrimônio</div>
+                <div className="bg-[var(--eixo-green)] p-3 text-[#1a1a1a] sm:p-4">EIXO Performance</div>
+              </div>
+              {LEILAO_COMPARISON.map((row) => (
+                <div key={row.topic} className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(0,1fr)] border-t border-white/10 text-sm">
+                  <div className="p-3 font-semibold text-white sm:p-4">{row.topic}</div>
+                  <div className="p-3 text-white/60 sm:p-4">{row.others}</div>
+                  <div className="bg-white/5 p-3 font-semibold text-white sm:p-4">{row.eixo}</div>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-center text-xs text-white/40">Comparação com modelos de cobrança publicados por apps de gestão patrimonial de rebanho em 2026.</p>
+
+            <div className="mt-10 text-center">
+              <button type="button" onClick={onRegister} className={`${btnPrimary} h-12 px-8`}>
+                Criar minha conta grátis
+                <ArrowRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </section>

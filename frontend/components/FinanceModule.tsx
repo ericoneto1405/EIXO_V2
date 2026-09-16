@@ -12,6 +12,7 @@ import {
     updateTransaction,
 } from '../adapters/financialApi';
 import { HerdLot, listLots } from '../adapters/herdApi';
+import { AuctionAnimalListItem, getPlantel } from '../adapters/auctionApi';
 import { buildApiUrl } from '../api';
 import { Paddock } from '../types';
 import {
@@ -86,9 +87,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
     const [formDescricao, setFormDescricao] = useState('');
     const [formStatus, setFormStatus] = useState<TransactionStatus>('PAGO');
     const [formVencimento, setFormVencimento] = useState('');
-    const [allocationRows, setAllocationRows] = useState<Array<{ lotId: string; paddockId: string; percent: string }>>([]);
+    const [allocationRows, setAllocationRows] = useState<Array<{ lotId: string; paddockId: string; animalId: string; percent: string }>>([]);
     const [availableLots, setAvailableLots] = useState<HerdLot[]>([]);
     const [availablePaddocks, setAvailablePaddocks] = useState<Paddock[]>([]);
+    const [availableAuctionAnimals, setAvailableAuctionAnimals] = useState<AuctionAnimalListItem[]>([]);
     const [formError, setFormError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
 
@@ -147,6 +149,8 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
         listLots(farmId, 'COMMERCIAL').then(setAvailableLots).catch(() => setAvailableLots([]));
         fetch(buildApiUrl(`/pastos?farmId=${farmId}`), { credentials: 'include' })
             .then((response) => response.json()).then((payload) => setAvailablePaddocks(payload.items || [])).catch(() => setAvailablePaddocks([]));
+        // Só quem tem Meus Leilões recebe a lista; nos outros planos a API recusa e o campo some.
+        getPlantel(farmId).then((plantel) => setAvailableAuctionAnimals(plantel.items)).catch(() => setAvailableAuctionAnimals([]));
     }, [modalOpen, farmId]);
     useEffect(() => {
         if (activeTab === 'contas_pagar' || activeTab === 'contas_receber') loadPending();
@@ -252,9 +256,10 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                     descricao: formDescricao || undefined,
                     status: formStatus,
                     vencimento: formVencimento || undefined,
-                    allocations: allocationRows.filter((row) => row.lotId || row.paddockId).map((row) => ({
+                    allocations: allocationRows.filter((row) => row.lotId || row.paddockId || row.animalId).map((row) => ({
                         lotId: row.lotId || undefined,
                         paddockId: row.paddockId || undefined,
+                        animalId: row.animalId || undefined,
                         percent: Number(row.percent),
                     })),
                 });
@@ -524,10 +529,11 @@ const FinanceModule: React.FC<FinanceModuleProps> = ({ farmId, farmName, isFreeP
                             </div>
                             {!editingTransaction && (
                                 <div className="space-y-2 rounded-xl border border-[var(--eixo-border)] p-3">
-                                    <div className="flex items-center justify-between"><div><p className={labelCls}>Dividir entre destinos <span className="text-[var(--eixo-text-muted)]">(opcional)</span></p><p className="text-xs text-[var(--eixo-text-muted)]">O restante ficará como não atribuído.</p></div><button type="button" onClick={() => setAllocationRows((rows) => [...rows, { lotId: '', paddockId: '', percent: '' }])} className="rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-xs font-semibold">Adicionar divisão</button></div>
-                                    {allocationRows.map((row, index) => <div key={index} className="grid grid-cols-[1fr_1fr_80px_auto] gap-2">
+                                    <div className="flex items-center justify-between"><div><p className={labelCls}>Dividir entre destinos <span className="text-[var(--eixo-text-muted)]">(opcional)</span></p><p className="text-xs text-[var(--eixo-text-muted)]">O restante ficará como não atribuído.</p></div><button type="button" onClick={() => setAllocationRows((rows) => [...rows, { lotId: '', paddockId: '', animalId: '', percent: '' }])} className="rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-xs font-semibold">Adicionar divisão</button></div>
+                                    {allocationRows.map((row, index) => <div key={index} className={`grid gap-2 ${availableAuctionAnimals.length ? 'grid-cols-[1fr_1fr_1fr_80px_auto]' : 'grid-cols-[1fr_1fr_80px_auto]'}`}>
                                         <select value={row.lotId} onChange={(e) => setAllocationRows((rows) => rows.map((item, i) => i === index ? { ...item, lotId: e.target.value } : item))} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="">Sem lote</option>{availableLots.map((lot) => <option key={lot.id} value={lot.id}>{lot.name}</option>)}</select>
                                         <select value={row.paddockId} onChange={(e) => setAllocationRows((rows) => rows.map((item, i) => i === index ? { ...item, paddockId: e.target.value } : item))} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="">Sem pasto</option>{availablePaddocks.map((paddock) => <option key={paddock.id} value={paddock.id}>{paddock.name}</option>)}</select>
+                                        {availableAuctionAnimals.length > 0 && <select value={row.animalId} onChange={(e) => setAllocationRows((rows) => rows.map((item, i) => i === index ? { ...item, animalId: e.target.value } : item))} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="">Sem animal</option>{availableAuctionAnimals.map((animal) => <option key={animal.id} value={animal.id}>{[animal.nome, animal.brinco].filter(Boolean).join(' · ')}</option>)}</select>}
                                         <input type="number" min="0.01" max="100" step="0.01" value={row.percent} onChange={(e) => setAllocationRows((rows) => rows.map((item, i) => i === index ? { ...item, percent: e.target.value } : item))} placeholder="%" className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs" required />
                                         <button type="button" aria-label="Remover divisão" onClick={() => setAllocationRows((rows) => rows.filter((_, i) => i !== index))} className="text-[var(--eixo-danger)]">✕</button>
                                     </div>)}

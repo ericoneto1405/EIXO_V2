@@ -55,6 +55,7 @@ export interface FinancialAllocationInput {
   lotId?: string;
   poLotId?: string;
   paddockId?: string;
+  animalId?: string;
   productionPhase?: 'CRIA' | 'RECRIA' | 'ENGORDA' | 'REPRODUCAO' | 'OUTRA';
   amount?: number;
   percent?: number;

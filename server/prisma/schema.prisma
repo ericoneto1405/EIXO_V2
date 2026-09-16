@@ -273,6 +273,9 @@ model Farm {
   weighingSessions        WeighingSession[]
   reproCheckupRecords     ReproCheckupRecord[]
   reproCheckupSessions    ReproCheckupSession[]
+  animalPartners          AnimalPartner[]
+  animalDocuments         AnimalDocument[]
+  animalValuations        AnimalValuation[]
 
   @@index([userId])
   @@index([organizationId])
@@ -379,6 +382,7 @@ model Animal {
   embryoTransferId        String?              @unique
   desmamadoEm             DateTime?
   pesoDesmamaKg           Float?
+  videoUrl                String?
   status               AnimalStatus          @default(VIVO)
   currentPaddock       Paddock?              @relation("AnimalCurrentPaddock", fields: [currentPaddockId], references: [id], onDelete: Restrict)
   farm                 Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
@@ -408,6 +412,10 @@ model Animal {
   embryoDonorBatches   EmbryoBatch[]         @relation("EmbryoDonorAnimal")
   embryoSireBatches    EmbryoBatch[]         @relation("EmbryoSireAnimal")
   editLogs             AnimalEditLog[]
+  partners             AnimalPartner[]
+  documents            AnimalDocument[]
+  valuations           AnimalValuation[]
+  financialAllocations FinancialResultAllocation[]
 
   @@unique([farmId, identityKey])
   @@index([farmId, brinco])
@@ -1529,12 +1537,16 @@ model FinancialResultAllocation {
   lotNameSnapshot     String?
   paddockNameSnapshot String?
   phaseLabelSnapshot  String?
+  animalId            String?
+  animalLabelSnapshot String?
   createdAt           DateTime             @default(now())
   resultEntry         FinancialResultEntry @relation(fields: [resultEntryId], references: [id], onDelete: Cascade)
   lot                 Lot?                 @relation(fields: [lotId], references: [id], onDelete: SetNull)
   paddock             Paddock?             @relation(fields: [paddockId], references: [id], onDelete: SetNull)
+  animal              Animal?              @relation(fields: [animalId], references: [id], onDelete: SetNull)
 
   @@index([resultEntryId])
+  @@index([animalId])
   @@index([lotId])
   @@index([paddockId])
   @@index([productionPhase])
@@ -2766,4 +2778,77 @@ enum AcasalamentoIssueSeverity {
   INFO
   WARNING
   CRITICAL
+}
+
+// ── Meus Leilões ─────────────────────────────────────────────────────────────
+
+enum AnimalDocumentType {
+  REGISTRO_ABCZ
+  CONTRATO
+  NOTA
+  CATALOGO
+  EXAME
+  OUTRO
+}
+
+enum AnimalValuationSource {
+  LEILAO
+  AVALIACAO
+  OFERTA
+}
+
+model AnimalPartner {
+  id         String   @id @default(uuid())
+  farmId     String
+  animalId   String
+  name       String
+  document   String?
+  phone      String?
+  email      String?
+  sharePct   Decimal  @db.Decimal(5, 2)
+  isOwnFarm  Boolean  @default(false)
+  since      DateTime?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  farm       Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  animal     Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@index([farmId])
+  @@index([animalId])
+}
+
+model AnimalDocument {
+  id           String             @id @default(uuid())
+  farmId       String
+  animalId     String
+  type         AnimalDocumentType
+  title        String?
+  fileName     String
+  storagePath  String
+  mimeType     String
+  sizeBytes    Int
+  uploadedById String
+  createdAt    DateTime           @default(now())
+  farm         Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  animal       Animal             @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@index([farmId])
+  @@index([animalId])
+}
+
+model AnimalValuation {
+  id        String                @id @default(uuid())
+  farmId    String
+  animalId  String
+  date      DateTime
+  value     Decimal               @db.Decimal(14, 2)
+  source    AnimalValuationSource
+  notes     String?
+  createdAt DateTime              @default(now())
+  farm      Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  animal    Animal                @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@index([farmId])
+  @@index([animalId, date])
 }

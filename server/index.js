@@ -31,6 +31,7 @@ import { registerHerdRoutes } from "./modules/herd/herdRoutes.js";
 import { registerReproRoutes } from "./modules/repro/reproRoutes.js";
 import { registerPharmacyRoutes } from "./modules/pharmacy/pharmacyRoutes.js";
 import { registerCommercialRoutes } from "./modules/commercial/commercialRoutes.js";
+import { registerAuctionRoutes } from "./modules/auctions/auctionRoutes.js";
 
 // ─── Módulos Extraídos (Fase 1) ────────────────────────────────────────────────
 import {
@@ -98,12 +99,15 @@ app.use(createSecurityHeadersMiddleware(IS_PROD, CORS_ORIGIN));
 // está na própria rota, depois da autenticação (ver herdRoutes.js).
 const parserJsonPadrao = express.json();
 const ROTAS_JSON_GRANDE = new Set(['/herd/import/confirmar']);
+// Envio de documento do animal (Meus Leilões): PDF/foto em base64, até 7 MB.
+const ROTAS_JSON_GRANDE_PADRAO = [/^\/leiloes\/animais\/[^/]+\/documentos$/];
 app.use((req, res, next) => {
     // O roteamento do Express ignora barra final e caixa, então a comparação
     // aqui precisa fazer o mesmo — senão "/herd/import/confirmar/" chega na rota
     // com o corpo já recusado pelo parser de 100 kb.
     const caminho = req.path.toLowerCase().replace(/\/+$/, '') || '/';
     if (ROTAS_JSON_GRANDE.has(caminho)) return next();
+    if (ROTAS_JSON_GRANDE_PADRAO.some((padrao) => padrao.test(caminho))) return next();
     return parserJsonPadrao(req, res, next);
 });
 app.use(cookieParser());
@@ -249,6 +253,7 @@ registerHerdRoutes(app);
 registerReproRoutes(app);
 registerPharmacyRoutes(app);
 registerCommercialRoutes(app);
+registerAuctionRoutes(app);
 
 registerChatRoutes(app);
 registerHQRoutes(app);

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-15.6';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-15';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.3';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-16';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -19,6 +19,7 @@ export const SUPPORT_MODULE_CATALOG = [
     { name: 'Reprodução', href: '/genetics/reproducao', entitlementCodes: ['GENETICS', 'PO', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'organiza coberturas, diagnósticos, partos e indicadores reprodutivos.', salesTrigger: 'prenhez, parto, matriz, cobertura, IATF ou estação de monta.' },
     { name: 'EIXO Acasalamento', href: '/genetics/acasalamento', entitlementCodes: ['GENETICS', 'EIXO_DECISAO'], benefit: 'apoia decisões de acasalamento com histórico e objetivo produtivo.', salesTrigger: 'acasalamento, touro, sêmen, botijão, matriz ou genética.' },
     { name: 'Gestão Comercial', href: 'eixo:view:Gest%C3%A3o%20Comercial', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'CRM da fazenda: clientes, pipeline de negociação por etapas, contrato e lembretes de aniversário/recompra.', salesTrigger: 'venda, cliente, comprador, negociação, pipeline, contrato ou aniversário de cliente.' },
+    { name: 'Meus Leilões', href: 'eixo:view:Meus%20Leil%C3%B5es', entitlementCodes: ['EIXO_DECISAO'], benefit: 'patrimônio do plantel de leilão: sócios e cotas, documentos (ABCZ, contrato, nota), vídeo, avaliações e resultado por animal, sem taxa por animal e de qualquer leiloeira.', salesTrigger: 'leilão, condomínio, sócio, cota, animal P.O., registro ABCZ, contrato de compra, valorização ou patrimônio do plantel.' },
     { name: 'Botijão de Sêmen', href: '/genetics/reproducao', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'organiza o estoque de sêmen usado no EIXO Acasalamento.', salesTrigger: 'sêmen, botijão, doses, estoque de touro ou acasalamento.' },
 ];
 
@@ -164,6 +165,19 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         guidance: [
             'Cadastre clientes (frigorífico, pecuarista ou leilão/corretor) e acompanhe o pipeline de negociação por etapas, da prospecção ao fechamento.',
             'Negociação fechada (Ganho) permite gerar contrato com comissão. A aba Alertas avisa aniversário de cliente e quem não compra há 90+ dias.',
+        ],
+    },
+    {
+        id: 'meus-leiloes',
+        title: 'Meus Leilões (plantel, sócios e documentos)',
+        keywords: ['meus leilões', 'leilão', 'leilao', 'condomínio', 'sócio', 'cota', 'plantel', 'abcz', 'contrato de compra', 'valorização', 'patrimônio'],
+        href: 'eixo:view:Meus%20Leil%C3%B5es',
+        guidance: [
+            'Animais com registro (P.O.) aparecem sozinhos no plantel. Para outro animal do Rebanho, use "Colocar animal no plantel".',
+            'Na ficha do animal: Sócios (cota de cada um e marca "minha fazenda"), Documentos (PDF ou foto até 7 MB), Dinheiro (compra, gastos, receitas e quanto vale) e Genética (sêmen, embriões e reprodução).',
+            'Gastos e receitas do animal são lançados no Financeiro: em "Dividir entre destinos", escolha o animal. A compra e a venda vêm do Rebanho, sem lançar de novo.',
+            'Não há taxa por animal nem limite de animais; serve para animal comprado em qualquer leiloeira.',
+            'Leitura automática de PDF (contrato, nota ou catálogo) ainda está em teste e não está liberada para clientes; enquanto isso, preencha os dados na ficha.',
         ],
     },
     {
