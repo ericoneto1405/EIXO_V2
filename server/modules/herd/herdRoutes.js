@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import express from 'express';
+import { randomUUID } from 'node:crypto';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
@@ -9,7 +10,7 @@ import { parseNumber, parseDateValue, normalizeAnimalIdentityKey } from '../util
 import { logActivity } from '../utils/activityLog.js';
 import { serializeHerdEvent, serializeSanitaryRecord } from '../utils/serializers.js';
 import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../config/env.js';
-import { createIntegratedTransaction, upsertAutomaticResult } from '../financial/financialService.js';
+import { buildPurchasePaymentSchedule, createIntegratedTransaction, upsertAutomaticResult } from '../financial/financialService.js';
 import { normalizeSexoImport, normalizeTipoRacaImport, parseImportDate, parseNascimentoImport, parsePesagemImport } from './herdImportRules.js';
 import { normalizarCategoriaParaGravar } from './animalCategories.js';
 import { normalizeSpreadsheetDates } from './herdSpreadsheetDates.js';
@@ -251,6 +252,10 @@ const TEMPLATE_COLUMNS = [
   { key: 'status_reprodutivo', label: 'Status Reprodutivo',      tier: 'optional',     type: 'list',   options: STATUS_REPRODUTIVOS,           example: 'CICLANDO',                   description: 'Só para fêmeas. PRENHE, VAZIA, CICLANDO ou RECRIA.' },
   { key: 'previsao_parto',     label: 'Previsão de Parto',       tier: 'optional',     type: 'date',   example: '15/01/2027',                 description: 'Só preencher se Status Reprodutivo = PRENHE.' },
   // --- Destino ---
+  // --- P.O. (só para animais com registro genealógico) ---
+  { key: 'registro',           label: 'Registro (P.O.)',         tier: 'optional',     type: 'text',   example: '',                           description: 'Só para animal P.O.: número do registro genealógico (RGN/RGD). Preenchido, o animal entra como P.O.' },
+  { key: 'pai_nome',           label: 'Pai (P.O.)',              tier: 'optional',     type: 'text',   example: '',                           description: 'Só para animal P.O.: nome ou registro do pai.' },
+  { key: 'mae_nome',           label: 'Mãe (P.O.)',              tier: 'optional',     type: 'text',   example: '',                           description: 'Só para animal P.O.: nome ou registro da mãe.' },
   // --- Livre ---
   { key: 'observacoes',        label: 'Observações',             tier: 'optional',     type: 'text',   example: 'Comprado da Fazenda Boa Vista.', description: 'Qualquer informação adicional sobre o animal.' },
 ];
@@ -267,8 +272,8 @@ const LEGACY_TEMPLATE_COLUMNS = [
   { key: 'padrao_racial',      labels: ['Padrão Racial'] },
   { key: 'registro',           labels: ['Registro'] },
   { key: 'nome',               labels: ['Nome'] },
-  { key: 'pai_nome',           labels: ['Nome do Pai'] },
-  { key: 'mae_nome',           labels: ['Nome da Mãe'] },
+  { key: 'pai_nome',           labels: ['Nome do Pai', 'Pai'] },
+  { key: 'mae_nome',           labels: ['Nome da Mãe', 'Mãe'] },
   { key: 'raca',               labels: ['Raça (se Pura)', 'Raça'] },
   { key: 'data_nascimento',    labels: ['Data de Nascimento'] },
   { key: 'brinco_eletronico',  labels: ['Brinco Eletrônico'] },
@@ -395,6 +400,50 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
       }
       instrucoes.getCell(rowNum, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: TIER_COLORS[col.tier] };
       instrucoes.getCell(rowNum, 1).font = { size: 10, bold: true, color: TIER_FONT_COLORS[col.tier], name: 'Arial' };
+    });
+
+    // Guia para quem está trazendo o rebanho de outro sistema ou caderno.
+    let guiaRow = tabelaHeaderRow + TEMPLATE_COLUMNS.length + 3;
+    instrucoes.getCell(`A${guiaRow}`).value = 'Veio de outro sistema?';
+    instrucoes.getCell(`A${guiaRow}`).font = { bold: true, size: 12, name: 'Arial' };
+    guiaRow += 1;
+    [
+      'Copie coluna por coluna do seu arquivo e cole aqui usando "Colar somente valores" (Ctrl+Shift+V). Assim as listas do modelo continuam funcionando.',
+      'Não precisa preencher tudo: só Identificação e Sexo são obrigatórios.',
+      'Sexo pode vir como M/F, Macho/Fêmea. Nascimento aceita a data completa ou só mês/ano (03/2021). Peso vai só com o número, sem "kg".',
+      'O que não tiver coluna própria (vacinas, observações do manejo, nome do animal) pode ir em Observações.',
+    ].forEach((texto) => {
+      instrucoes.mergeCells(`A${guiaRow}:D${guiaRow}`);
+      instrucoes.getCell(`A${guiaRow}`).value = `• ${texto}`;
+      instrucoes.getCell(`A${guiaRow}`).font = { size: 10, name: 'Arial' };
+      instrucoes.getCell(`A${guiaRow}`).alignment = { wrapText: true, vertical: 'middle' };
+      instrucoes.getRow(guiaRow).height = 30;
+      guiaRow += 1;
+    });
+    guiaRow += 1;
+    ['Nome no outro sistema', 'Coluna no EIXO'].forEach((h, idx) => {
+      const c = instrucoes.getCell(guiaRow, idx + 1);
+      c.value = h;
+      c.font = { bold: true, color: { argb: 'FFFFFF' }, name: 'Arial' };
+      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '2F8A3E' } };
+    });
+    guiaRow += 1;
+    [
+      ['Brinco, Nº, Número, ID, SISBOV, Tatuagem', 'Identificação'],
+      ['M/F, Macho/Fêmea, Gênero', 'Sexo'],
+      ['Data nasc., DN, Nascido em, Safra', 'Nascimento'],
+      ['Peso atual, PV, Peso vivo', 'Último Peso (kg)'],
+      ['Data do peso, Última pesagem', 'Data da Pesagem'],
+      ['Raça, Grau de sangue, Cruzamento', 'Raça ou composição'],
+      ['Situação reprodutiva, Diagnóstico', 'Status Reprodutivo'],
+      ['RGN, RGD, Registro ABCZ', 'Registro (P.O.)'],
+    ].forEach(([deOnde, paraOnde]) => {
+      instrucoes.getCell(guiaRow, 1).value = deOnde;
+      instrucoes.getCell(guiaRow, 2).value = paraOnde;
+      instrucoes.getCell(guiaRow, 1).font = { size: 10, name: 'Arial' };
+      instrucoes.getCell(guiaRow, 2).font = { size: 10, bold: true, name: 'Arial' };
+      instrucoes.getCell(guiaRow, 1).alignment = { wrapText: true, vertical: 'middle' };
+      guiaRow += 1;
     });
 
     instrucoes.getColumn(1).width = 28;
@@ -1047,7 +1096,9 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
         padraoRacial: racaResolvida.padraoRacial,
         composicaoMestica: racaResolvida.composicaoMestica,
         racaPredominante: racaResolvida.racaPredominante,
-        tipoCadastro: 'MESTICO', // refinado depois pela tela de animal
+        // Registro genealógico preenchido = animal P.O. Todo animal entra pela
+        // mesma planilha; é o registro que diferencia, não um módulo separado.
+        tipoCadastro: registro ? 'PO' : 'MESTICO',
         sexo,
         dataNascimento,
         // Mês/ano entra como estimativa assumida (dia 15), para a tela mostrar
@@ -1253,11 +1304,168 @@ app.post('/herd/import/validar', requireAuth, uploadHerdImportFile, async (req, 
 // O parser de 10 MB fica DEPOIS do requireAuth de propósito: assim um request
 // anônimo leva 401 sem o servidor bufferizar megabytes. O express.json() global
 // pula esta rota (ver server/index.js).
+// =============================================
+// ORIGEM DA ENTRADA — rebanho que já era do produtor ou compra
+// =============================================
+// Nascimento NÃO entra por aqui: o bezerro é lançado no parto da mãe
+// (Reprodução), senão perde o vínculo com a vaca.
+const FINALIDADES_COMPRA = ['PRODUCTION', 'BREEDING'];
+
+// Confere os dados da compra digitados na tela. Devolve { compra } ou { erro }.
+function lerCompraImportacao(origem, compraBody) {
+  if (String(origem || 'PROPRIO').toUpperCase() !== 'COMPRA') return { compra: null };
+  const dados = (compraBody && typeof compraBody === 'object') ? compraBody : {};
+  const fornecedor = String(dados.fornecedor || '').trim();
+  const data = dados.dataCompra ? parseDateValue(dados.dataCompra) : null;
+  const valorTotal = parseNumber(dados.valorTotal);
+  const finalidade = String(dados.finalidade || 'PRODUCTION').toUpperCase();
+  const gta = String(dados.gta || '').trim() || null;
+  if (!fornecedor) return { erro: 'Informe o fornecedor da compra.' };
+  if (!data) return { erro: 'Informe a data da compra.' };
+  if (data.getTime() > Date.now()) return { erro: 'A data da compra não pode ser no futuro.' };
+  if (!(valorTotal > 0)) return { erro: 'Informe o valor total da compra.' };
+  if (!FINALIDADES_COMPRA.includes(finalidade)) return { erro: 'Finalidade da compra inválida.' };
+  const pagamento = {
+    condition: dados.condicaoPagamento || 'PAGO',
+    dueDate: dados.vencimento || null,
+    installments: dados.parcelas,
+  };
+  try {
+    // Só para conferir agora; as parcelas de verdade são montadas por conta.
+    buildPurchasePaymentSchedule({ amount: valorTotal, purchaseDate: data, ...pagamento });
+  } catch (error) {
+    return { erro: error.message };
+  }
+  return { compra: { fornecedor, data, valorTotal, finalidade, gta, pagamento } };
+}
+
+function contaDaCompra(finalidade, sexo) {
+  if (finalidade !== 'BREEDING') return 'sys-compra-animais-producao';
+  return sexo === 'MACHO' ? 'sys-compra-reprodutores' : 'sys-compra-matrizes';
+}
+
+// Reparte `cents` entre itens com { quantidade } sem sobrar nem faltar centavo.
+function repartirCentavos(cents, itens) {
+  const total = itens.reduce((soma, item) => soma + item.quantidade, 0);
+  let restante = cents;
+  return itens.map((item, index) => {
+    const parte = index === itens.length - 1 ? restante : Math.floor((cents * item.quantidade) / total);
+    restante -= parte;
+    return parte;
+  });
+}
+
+// Compra é tudo ou nada: o valor total vai inteiro para o Financeiro, então os
+// animais, as pesagens, os eventos de compra e as parcelas entram juntos.
+async function criarAnimaisCompra(farmId, prontos, compra) {
+  const farm = String(farmId);
+  const totalCents = Math.round(compra.valorTotal * 100);
+  const valorPorCabeca = Math.round(totalCents / prontos.length) / 100;
+  const catMap = HERD_EVENT_CATEGORY_MAP.COMPRA;
+  const obsBase = `Compra de ${compra.fornecedor}${compra.gta ? ` — GTA ${compra.gta}` : ''}`;
+  const animais = [];
+  const movimentos = [];
+  const pesagens = [];
+  const eventos = [];
+  const criados = [];
+  const grupos = new Map();
+
+  prontos.forEach((item) => {
+    const animalId = randomUUID();
+    const eventoId = randomUUID();
+    animais.push({ ...item.data, id: animalId });
+    if (item.paddock) {
+      movimentos.push({ farmId: farm, paddockId: item.paddock.id, animalId, startAt: compra.data });
+    }
+    if (item.dataPesagem && item.pesoAtual) {
+      pesagens.push({ animalId, data: item.dataPesagem, peso: item.pesoAtual, gmd: 0, source: 'MANUAL' });
+    }
+    eventos.push({
+      id: eventoId,
+      farmId: farm,
+      animalId,
+      type: 'COMPRA',
+      date: compra.data,
+      peso: item.pesoAtual ?? null,
+      valor: valorPorCabeca,
+      origem: compra.fornecedor,
+      observacoes: `${obsBase} — identificação ${item.brinco}`,
+      purchasePurpose: compra.finalidade,
+    });
+    criados.push({ line: item.line, id: animalId, identificacao: item.brinco });
+
+    const conta = contaDaCompra(compra.finalidade, item.data.sexo);
+    if (!grupos.has(conta)) grupos.set(conta, { conta, quantidade: 0, eventoId, destinos: new Map() });
+    const grupo = grupos.get(conta);
+    grupo.quantidade += 1;
+    const lotId = item.data.lotId || null;
+    const paddockId = item.paddock?.id || null;
+    if (lotId || paddockId) {
+      const chave = `${lotId || ''}|${paddockId || ''}`;
+      const destino = grupo.destinos.get(chave) || { lotId, paddockId, quantidade: 0 };
+      destino.quantidade += 1;
+      grupo.destinos.set(chave, destino);
+    }
+  });
+
+  const listaGrupos = [...grupos.values()];
+  const centsPorGrupo = repartirCentavos(totalCents, listaGrupos);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.animal.createMany({ data: animais });
+    if (movimentos.length) await tx.paddockMove.createMany({ data: movimentos });
+    if (pesagens.length) await tx.weighing.createMany({ data: pesagens });
+    await tx.herdEvent.createMany({ data: eventos });
+
+    for (const [index, grupo] of listaGrupos.entries()) {
+      const parcelas = buildPurchasePaymentSchedule({
+        amount: centsPorGrupo[index] / 100,
+        purchaseDate: compra.data,
+        ...compra.pagamento,
+      });
+      const destinos = [...grupo.destinos.values()];
+      const semDestino = grupo.quantidade - destinos.reduce((soma, d) => soma + d.quantidade, 0);
+      for (const parcela of parcelas) {
+        const parcelaCents = Math.round(parcela.amount * 100);
+        // Divide cada parcela entre pasto/lote na proporção de animais.
+        // Animais sem destino ficam com a sua parte fora da divisão.
+        const itensDivisao = semDestino > 0 ? [...destinos, { quantidade: semDestino }] : destinos;
+        const partes = itensDivisao.length ? repartirCentavos(parcelaCents, itensDivisao) : [];
+        const allocations = destinos.length === 1 && semDestino === 0
+          ? [{ lotId: destinos[0].lotId, paddockId: destinos[0].paddockId }]
+          : destinos
+            .map((d, i) => ({ lotId: d.lotId, paddockId: d.paddockId, amount: partes[i] / 100 }))
+            .filter((d) => d.amount > 0);
+        await createIntegratedTransaction(tx, {
+          farmId: farm,
+          type: catMap.type,
+          categoria: catMap.categoria,
+          accountCategoryId: grupo.conta,
+          amount: parcela.amount,
+          competenceDate: compra.data,
+          settledAt: parcela.settledAt,
+          status: parcela.status,
+          dueDate: parcela.dueDate,
+          description: `Compra de ${grupo.quantidade} animal(is) — ${compra.fornecedor}${compra.gta ? ` — GTA ${compra.gta}` : ''}${parcela.installments > 1 ? ` — parcela ${parcela.installment}/${parcela.installments}` : ''}`,
+          herdEventId: grupo.eventoId,
+          allocations,
+        });
+      }
+    }
+  }, { maxWait: 10000, timeout: 120000 });
+
+  return criados;
+}
+
 app.post('/herd/import/confirmar', requireAuth, express.json({ limit: '10mb' }), async (req, res) => {
   try {
-    const { farmId, paddockId, lotId, racaPadrao, linhas } = req.body || {};
+    const { farmId, paddockId, lotId, racaPadrao, linhas, origem, compra: compraBody } = req.body || {};
     if (!farmId) {
       return res.status(400).json({ message: 'farmId é obrigatório.' });
+    }
+    const leituraCompra = lerCompraImportacao(origem, compraBody);
+    if (leituraCompra.erro) {
+      return res.status(400).json({ message: leituraCompra.erro });
     }
     if (!Array.isArray(linhas) || linhas.length === 0) {
       return res.status(400).json({ message: 'Nenhuma linha recebida para importar.' });
@@ -1287,6 +1495,30 @@ app.post('/herd/import/confirmar', requireAuth, express.json({ limit: '10mb' }),
     }
 
     const { erros, prontos } = await analisarLinhasImportacao(rows, contexto, farmId);
+
+    if (leituraCompra.compra) {
+      // Na compra nada é gravado se alguma linha tiver erro.
+      if (erros.length || !prontos.length) {
+        return res.json({ ...montarRespostaImportacao(rows, erros, []), compraBloqueada: true });
+      }
+      try {
+        const criados = await criarAnimaisCompra(farmId, prontos, leituraCompra.compra);
+        await logActivity(prisma, req, {
+          action: 'LOTE_CRIADO',
+          entity: 'Animal',
+          description: `Importou compra de ${criados.length} animal(is) — ${leituraCompra.compra.fornecedor}`,
+          farmId: String(farmId),
+        });
+        return res.json(montarRespostaImportacao(rows, erros, criados));
+      } catch (error) {
+        console.error('Erro ao gravar compra importada:', error);
+        if (error?.code === 'P2002') {
+          return res.status(409).json({ message: 'Uma ou mais identificações já estão cadastradas. Nenhum animal foi gravado.' });
+        }
+        return res.status(500).json({ message: error?.message?.startsWith('Informe') || error?.message?.startsWith('Um dos destinos') ? error.message : 'Erro ao gravar a compra. Nenhum animal foi gravado.' });
+      }
+    }
+
     const criados = await criarAnimaisImportacao(farmId, prontos, erros);
 
     return res.json(montarRespostaImportacao(rows, erros, criados));

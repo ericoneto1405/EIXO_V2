@@ -9,6 +9,56 @@ import type { PreviewCatalogos, PreviewLinha } from './ImportPreviewTable';
 // saving  = o produtor confirmou e o servidor está criando os animais.
 type Status = 'idle' | 'uploading' | 'preview' | 'saving' | 'done' | 'error';
 
+// De onde vieram os animais. Nascimento não entra por aqui: o bezerro é
+// lançado no parto da mãe, em Reprodução.
+type Origem = 'PROPRIO' | 'COMPRA';
+type CondicaoPagamento = 'PAGO' | 'A_PAGAR' | 'PARCELADO';
+
+interface DadosCompra {
+    fornecedor: string;
+    gta: string;
+    dataCompra: string;
+    valorTotal: string;
+    finalidade: 'PRODUCTION' | 'BREEDING';
+    condicaoPagamento: CondicaoPagamento;
+    vencimento: string;
+    parcelas: string;
+}
+
+const compraVazia = (): DadosCompra => ({
+    fornecedor: '',
+    gta: '',
+    dataCompra: new Date().toISOString().slice(0, 10),
+    valorTotal: '',
+    finalidade: 'PRODUCTION',
+    condicaoPagamento: 'PAGO',
+    vencimento: '',
+    parcelas: '2',
+});
+
+// "592.000,50" ou "592000.50" → 592000.5
+const lerValor = (raw: string): number | null => {
+    const limpo = String(raw || '').trim().replace(/[^\d,.]/g, '');
+    if (!limpo) return null;
+    // Sem vírgula, "1.000" e "592.000" são milhar (jeito brasileiro); "592000.50" é decimal.
+    const soMilhar = !limpo.includes(',') && /^\d{1,3}(\.\d{3})+$/.test(limpo);
+    const normalizado = limpo.includes(',') || soMilhar ? limpo.replace(/\./g, '').replace(',', '.') : limpo;
+    const numero = Number(normalizado);
+    return Number.isFinite(numero) ? numero : null;
+};
+
+const formatarReais = (valor: number) =>
+    valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// Confere só o básico para avisar cedo; quem decide é o servidor.
+const problemaNaCompra = (compra: DadosCompra): string | null => {
+    if (!compra.fornecedor.trim()) return 'Informe o fornecedor da compra.';
+    if (!compra.dataCompra) return 'Informe a data da compra.';
+    if (!((lerValor(compra.valorTotal) ?? 0) > 0)) return 'Informe o valor total da compra.';
+    if (compra.condicaoPagamento !== 'PAGO' && !compra.vencimento) return 'Informe a data do primeiro vencimento.';
+    return null;
+};
+
 interface ValidacaoResposta {
     total: number;
     prontos: number;
@@ -76,9 +126,10 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
     const [racaPadrao, setRacaPadrao] = useState('');
     const [previewLinhas, setPreviewLinhas] = useState<PreviewLinha[]>([]);
     const [catalogos, setCatalogos] = useState<PreviewCatalogos | null>(null);
+    const [origem, setOrigem] = useState<Origem>('PROPRIO');
+    const [compra, setCompra] = useState<DadosCompra>(compraVazia);
+    const [avisoCompra, setAvisoCompra] = useState('');
 
-    // O Plantel P.O. ainda não tem as rotas de prévia — segue no envio direto.
-    const temPrevia = true;
     const contagem = useMemo(() => contarLinhas(previewLinhas), [previewLinhas]);
 
     if (!open) return null;
@@ -95,7 +146,15 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
         setDownloadMessage('');
         setPreviewLinhas([]);
         setCatalogos(null);
+        setOrigem('PROPRIO');
+        setCompra(compraVazia());
+        setAvisoCompra('');
         if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const atualizarCompra = <K extends keyof DadosCompra>(campo: K, valor: DadosCompra[K]) => {
+        setCompra((atual) => ({ ...atual, [campo]: valor }));
+        setAvisoCompra('');
     };
 
     const handleClose = () => {
@@ -134,6 +193,13 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
             setStatus('error');
             return;
         }
+        if (origem === 'COMPRA') {
+            const problema = problemaNaCompra(compra);
+            if (problema) {
+                setAvisoCompra(problema);
+                return;
+            }
+        }
         fileInputRef.current?.click();
     };
 
@@ -159,8 +225,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
             if (lotId) formData.append('lotId', lotId);
             if (racaPadrao) formData.append('racaPadrao', racaPadrao);
 
-            // Rebanho comercial: só CONFERE. Nada é gravado até o produtor
-            // olhar a prévia e confirmar. O Plantel P.O. segue no fluxo antigo.
+            // A importação só confere. Nada é gravado até confirmar a prévia.
             const uploadPath = '/herd/import/validar';
             const res = await fetch(buildApiUrl(uploadPath), {
                 method: 'POST',
@@ -226,6 +291,19 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                     lotId: lotId || undefined,
                     racaPadrao: racaPadrao || undefined,
                     linhas: linhasParaConfirmar,
+                    origem,
+                    compra: origem === 'COMPRA'
+                        ? {
+                            fornecedor: compra.fornecedor.trim(),
+                            gta: compra.gta.trim() || undefined,
+                            dataCompra: compra.dataCompra,
+                            valorTotal: lerValor(compra.valorTotal),
+                            finalidade: compra.finalidade,
+                            condicaoPagamento: compra.condicaoPagamento,
+                            vencimento: compra.condicaoPagamento === 'PAGO' ? undefined : compra.vencimento,
+                            parcelas: compra.condicaoPagamento === 'PARCELADO' ? Number(compra.parcelas) : undefined,
+                        }
+                        : undefined,
                 }),
             });
             const data = await res.json().catch(() => ({}));
@@ -363,6 +441,85 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 {status === 'idle' && (
                     <div className="grid gap-3 px-6 py-5 sm:grid-cols-2">
                         <div className="sm:col-span-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
+                            <p className="text-sm font-semibold text-[var(--eixo-text)]">De onde vieram esses animais?</p>
+                            <div className="mt-3 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Origem dos animais">
+                                {([
+                                    { valor: 'PROPRIO', titulo: 'Rebanho que já era meu', texto: 'Animais que você já tinha e está trazendo de outro sistema ou caderno.' },
+                                    { valor: 'COMPRA', titulo: 'Compra', texto: 'Animais comprados de outro produtor ou leilão. O valor vai para o Financeiro.' },
+                                ] as const).map((opcao) => (
+                                    <button
+                                        key={opcao.valor}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={origem === opcao.valor}
+                                        onClick={() => { setOrigem(opcao.valor); setAvisoCompra(''); }}
+                                        className={`rounded-xl border-2 p-3 text-left transition-colors ${origem === opcao.valor ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)]/10' : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:border-[var(--eixo-green)]/60'}`}
+                                    >
+                                        <span className="block text-sm font-semibold text-[var(--eixo-text)]">{opcao.titulo}</span>
+                                        <span className="mt-1 block text-xs text-[var(--eixo-text-muted)]">{opcao.texto}</span>
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="mt-2 text-xs text-[var(--eixo-text-soft)]">
+                                Bezerro nascido na fazenda não entra por aqui: é lançado no parto da mãe, em Reprodução.
+                            </p>
+
+                            {origem === 'COMPRA' && (
+                                <div className="mt-4 border-t border-[var(--eixo-border)] pt-4">
+                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">Dados da compra</p>
+                                    <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Valem para todos os animais da planilha.</p>
+                                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                            Fornecedor
+                                            <input id="import-compra-fornecedor" type="text" value={compra.fornecedor} onChange={(e) => atualizarCompra('fornecedor', e.target.value)} placeholder="Nome do vendedor ou leilão" className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                        </label>
+                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                            Nº da GTA (opcional)
+                                            <input id="import-compra-gta" type="text" value={compra.gta} onChange={(e) => atualizarCompra('gta', e.target.value)} placeholder="Ex.: BA-123456" className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                        </label>
+                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                            Data da compra
+                                            <input id="import-compra-data" type="date" max={new Date().toISOString().slice(0, 10)} value={compra.dataCompra} onChange={(e) => atualizarCompra('dataCompra', e.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                        </label>
+                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                            Valor total da compra (R$)
+                                            <input id="import-compra-valor" type="text" inputMode="decimal" value={compra.valorTotal} onChange={(e) => atualizarCompra('valorTotal', e.target.value)} placeholder="0,00" className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                        </label>
+                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                            Finalidade
+                                            <select id="import-compra-finalidade" value={compra.finalidade} onChange={(e) => atualizarCompra('finalidade', e.target.value as DadosCompra['finalidade'])} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]">
+                                                <option value="PRODUCTION">Engorda / produção</option>
+                                                <option value="BREEDING">Reprodução (matrizes e touros)</option>
+                                            </select>
+                                        </label>
+                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                            Pagamento
+                                            <select id="import-compra-pagamento" value={compra.condicaoPagamento} onChange={(e) => atualizarCompra('condicaoPagamento', e.target.value as CondicaoPagamento)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]">
+                                                <option value="PAGO">Pago</option>
+                                                <option value="A_PAGAR">A pagar</option>
+                                                <option value="PARCELADO">Parcelado</option>
+                                            </select>
+                                        </label>
+                                        {compra.condicaoPagamento !== 'PAGO' && (
+                                            <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                                Primeiro vencimento
+                                                <input id="import-compra-vencimento" type="date" value={compra.vencimento} onChange={(e) => atualizarCompra('vencimento', e.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                            </label>
+                                        )}
+                                        {compra.condicaoPagamento === 'PARCELADO' && (
+                                            <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                                Parcelas
+                                                <input id="import-compra-parcelas" type="number" min={2} max={60} value={compra.parcelas} onChange={(e) => atualizarCompra('parcelas', e.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                            </label>
+                                        )}
+                                    </div>
+                                    {avisoCompra && (
+                                        <p className="mt-3 text-xs font-semibold text-[var(--eixo-danger)]" role="alert">{avisoCompra}</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        <div className="sm:col-span-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
                                 <p className="text-sm font-semibold text-[var(--eixo-text)]">Destino no EIXO</p>
                                 <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
                                     Use como padrão nas linhas sem destino. Cada linha da planilha pode escolher outro pasto ou lote.
@@ -411,7 +568,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                 </label>
                                 {paddocks.length === 0 && (
                                     <p className="mt-2 text-xs font-semibold text-[var(--eixo-text-muted)]">
-                                        Nenhum pasto cadastrado nesta fazenda. No Plantel P.O., o pasto é obrigatório para concluir a importação.
+                                        Nenhum pasto cadastrado nesta fazenda.
                                     </p>
                                 )}
                         </div>
@@ -458,6 +615,15 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 {/* PREVIEW — tabela editável, nada gravado ainda */}
                 {(status === 'preview' || status === 'saving') && catalogos && (
                     <div className="px-6 py-5">
+                        {origem === 'COMPRA' && (
+                            <div className="mb-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-xs text-[var(--eixo-text-muted)]">
+                                <span className="font-semibold text-[var(--eixo-text)]">Compra de {compra.fornecedor.trim()}</span>
+                                {compra.gta.trim() && <> · GTA {compra.gta.trim()}</>}
+                                {' · '}{formatarReais(lerValor(compra.valorTotal) ?? 0)}
+                                {contagem.total > 0 && <> · {formatarReais((lerValor(compra.valorTotal) ?? 0) / contagem.total)} por animal</>}
+                                <span className="mt-1 block">Na compra, todas as linhas precisam estar certas: o valor vai inteiro para o Financeiro.</span>
+                            </div>
+                        )}
                         <ImportPreviewTable
                             linhas={previewLinhas}
                             catalogos={catalogos}
@@ -535,7 +701,11 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                 {fileName} · {result.total} linhas validadas
                             </p>
                             {isFullFailure && (
-                                <p className="mt-2 text-xs font-semibold text-[var(--eixo-danger)]">Nenhum animal foi criado. Corrija as linhas indicadas e envie novamente.</p>
+                                <p className="mt-2 text-xs font-semibold text-[var(--eixo-danger)]">
+                                    {origem === 'COMPRA'
+                                        ? 'Nenhum animal nem lançamento da compra foi gravado. Na compra, todas as linhas precisam estar certas. Corrija as indicadas e envie novamente.'
+                                        : 'Nenhum animal foi criado. Corrija as linhas indicadas e envie novamente.'}
+                                </p>
                             )}
                             {isPartial && (
                                 <p className="mt-2 text-xs font-semibold text-[var(--eixo-warning)]">As linhas sem erro já foram cadastradas. Corrija as linhas indicadas para completar o restante.</p>
@@ -590,8 +760,10 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 {/* Footer */}
                 <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--eixo-border)] px-6 py-4">
                     {status === 'preview' && contagem.erro > 0 && (
-                        <p className="mr-auto text-xs text-[var(--eixo-text-muted)]">
-                            {contagem.erro === 1
+                        <p className={`mr-auto text-xs ${origem === 'COMPRA' ? 'font-semibold text-[var(--eixo-danger)]' : 'text-[var(--eixo-text-muted)]'}`}>
+                            {origem === 'COMPRA'
+                                ? `Corrija ${contagem.erro === 1 ? 'a linha com erro' : `as ${contagem.erro} linhas com erro`} para gravar a compra.`
+                                : contagem.erro === 1
                                 ? '1 linha com erro fica de fora.'
                                 : `${contagem.erro} linhas com erro ficam de fora.`}
                         </p>
@@ -613,7 +785,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                         <button
                             type="button"
                             onClick={handleConfirmarImportacao}
-                            disabled={status === 'saving' || contagem.prontos + contagem.revisao === 0}
+                            disabled={status === 'saving' || contagem.prontos + contagem.revisao === 0 || (origem === 'COMPRA' && contagem.erro > 0)}
                             className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             {status === 'saving'

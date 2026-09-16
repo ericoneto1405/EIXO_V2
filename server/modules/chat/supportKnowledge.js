@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-15.5';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-15.6';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-15';
 
 export const SUPPORT_TONE_RULES = [
@@ -60,12 +60,16 @@ const SUPPORT_TOPIC_DEFINITIONS = [
     {
         id: 'animais-importacao',
         title: 'Importar animais por planilha',
-        keywords: ['importar', 'importação', 'planilha', 'xlsx', 'xls', 'csv', 'trazer animais'],
+        keywords: ['importar', 'importação', 'planilha', 'xlsx', 'xls', 'csv', 'trazer animais', 'outro sistema', 'compra em lote', 'gta', 'registro', 'p.o.'],
         href: 'eixo:view:Rebanho%20Comercial?tab=animals',
         guidance: [
             'Acesse Manejo do Rebanho e abra a aba Animais.',
             'Clique em Importar planilha e baixe o modelo.',
+            'Antes de enviar, escolha a origem: "Rebanho que já era meu" ou "Compra".',
+            'Na compra, informe fornecedor, GTA, data, valor total, finalidade e pagamento; o valor vai para o Financeiro e todas as linhas precisam estar certas para gravar.',
+            'Animal P.O. entra pela mesma planilha: basta preencher Registro (P.O.), Pai e Mãe.',
             'Envie a planilha preenchida, revise a prévia e confirme a importação.',
+            'Bezerro nascido na fazenda não entra por planilha: lance no parto da mãe, em Reprodução.',
         ],
     },
     {
