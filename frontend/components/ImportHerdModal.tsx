@@ -126,7 +126,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
     const [racaPadrao, setRacaPadrao] = useState('');
     const [previewLinhas, setPreviewLinhas] = useState<PreviewLinha[]>([]);
     const [catalogos, setCatalogos] = useState<PreviewCatalogos | null>(null);
-    const [origem, setOrigem] = useState<Origem>('PROPRIO');
+    const [origem, setOrigem] = useState<Origem | null>(null);
     const [compra, setCompra] = useState<DadosCompra>(compraVazia);
     const [avisoCompra, setAvisoCompra] = useState('');
 
@@ -146,11 +146,16 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
         setDownloadMessage('');
         setPreviewLinhas([]);
         setCatalogos(null);
-        setOrigem('PROPRIO');
+        setOrigem(null);
         setCompra(compraVazia());
         setAvisoCompra('');
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
+
+    // Uma fase por vez: destino e planilha só liberam depois que a origem
+    // foi escolhida e, na compra, os dados da compra estão completos.
+    const faltaNaCompra = origem === 'COMPRA' ? problemaNaCompra(compra) : null;
+    const faseLiberada = origem !== null && !faltaNaCompra;
 
     const atualizarCompra = <K extends keyof DadosCompra>(campo: K, valor: DadosCompra[K]) => {
         setCompra((atual) => ({ ...atual, [campo]: valor }));
@@ -291,7 +296,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                     lotId: lotId || undefined,
                     racaPadrao: racaPadrao || undefined,
                     linhas: linhasParaConfirmar,
-                    origem,
+                    origem: origem ?? 'PROPRIO',
                     compra: origem === 'COMPRA'
                         ? {
                             fornecedor: compra.fornecedor.trim(),
@@ -519,6 +524,18 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                 </div>
                             )}
                         </div>
+                        {!faseLiberada && (
+                            <p className="sm:col-span-2 rounded-xl border border-dashed border-[var(--eixo-border)] px-4 py-3 text-xs font-semibold text-[var(--eixo-text-muted)]" role="status" aria-live="polite">
+                                {origem === null
+                                    ? 'Escolha de onde vieram os animais para liberar os próximos passos.'
+                                    : `Para continuar: ${faltaNaCompra?.replace(/^Informe /, 'informe ')}`}
+                            </p>
+                        )}
+                        <fieldset
+                            disabled={!faseLiberada}
+                            aria-disabled={!faseLiberada}
+                            className={`sm:col-span-2 m-0 grid min-w-0 gap-3 border-0 p-0 transition-opacity sm:grid-cols-2 ${faseLiberada ? '' : 'cursor-not-allowed opacity-40'}`}
+                        >
                         <div className="sm:col-span-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
                                 <p className="text-sm font-semibold text-[var(--eixo-text)]">Destino no EIXO</p>
                                 <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
@@ -609,6 +626,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                 </p>
                             </div>
                         </button>
+                        </fieldset>
                     </div>
                 )}
 
