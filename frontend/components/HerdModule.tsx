@@ -1627,17 +1627,18 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 <tr>
                                     <td colSpan={12} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         <div className="flex flex-col items-center gap-3 py-4">
-                                            <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum animal cadastrado ainda. Importe uma planilha ou cadastre manualmente.</p>
+                                            <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum animal cadastrado ainda. Muitos animais? Importe pela planilha. Poucos? Cadastre na tela.</p>
                                             <div className="flex flex-wrap items-center justify-center gap-[10px]">
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowImportModal(true)}
+                                                    title="Importe para o Eixo o rebanho que já era seu ou uma compra, tudo de uma vez."
                                                     className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                                                 >
                                                     <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
                                                     </svg>
-                                                    <span className="ml-2">Importar planilha</span>
+                                                    <span className="ml-2">Importar rebanho (via planilha)</span>
                                                 </button>
                                                 <button
                                                     type="button"
@@ -2251,12 +2252,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     <button
                                         type="button"
                                         onClick={() => setShowImportModal(true)}
+                                        title="Importe para o Eixo o rebanho que já era seu ou uma compra, tudo de uma vez."
+                                        aria-label="Importar rebanho (via planilha)"
                                         className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
                                     >
                                         <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
                                         </svg>
-                                        <span className="ml-2 hidden sm:block">Importar planilha</span>
+                                        <span className="ml-2">Importar rebanho (via planilha)</span>
                                     </button>
                                     <div className="relative" ref={entriesMenuRef}>
                                         <button
@@ -2271,12 +2274,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             <span className="ml-2 text-xs">▾</span>
                                         </button>
                                         {entriesMenuOpen && (
-                                            <div role="menu" className="absolute right-0 top-12 z-20 w-64 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-2 shadow-lg">
+                                            <div role="menu" className="absolute right-0 top-12 z-20 w-72 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-2 shadow-lg">
                                                 <button type="button" role="menuitem" onClick={() => { setEntriesMenuOpen(false); openAnimalForm(); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
-                                                    Adicionar um animal
+                                                    Cadastrar um animal
+                                                    <span className="mt-0.5 block text-xs font-normal text-[var(--eixo-text-muted)]">Preencha na tela, um por vez.</span>
                                                 </button>
                                                 <button type="button" role="menuitem" onClick={() => { setEntriesMenuOpen(false); setLoteModalOpen(true); }} className="w-full rounded-lg px-3 py-2 text-left text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
-                                                    Registrar compra de animais
+                                                    Registrar compra (digitando)
+                                                    <span className="mt-0.5 block text-xs font-normal text-[var(--eixo-text-muted)]">Poucos animais comprados, com valor e pagamento.</span>
                                                 </button>
                                             </div>
                                         )}

@@ -414,7 +414,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
                     <div>
                         <h3 id="import-herd-title" className="text-base font-bold text-[var(--eixo-text)]">
-                            {status === 'preview' || status === 'saving' ? 'Conferir antes de importar' : 'Importar planilha'}
+                            {status === 'preview' || status === 'saving' ? 'Conferir antes de importar' : 'Importar rebanho (via planilha)'}
                         </h3>
                         <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">
                             {status === 'done'

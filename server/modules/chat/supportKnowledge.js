@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.6';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.7';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-16';
 
 export const SUPPORT_TONE_RULES = [
@@ -65,7 +65,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         href: 'eixo:view:Rebanho%20Comercial?tab=animals',
         guidance: [
             'Acesse Manejo do Rebanho e abra a aba Animais.',
-            'Clique em Importar planilha e baixe o modelo.',
+            'Clique em Importar rebanho (via planilha) e baixe o modelo. Para poucos animais, use Adicionar animais > Cadastrar um animal ou Registrar compra (digitando).',
             'Antes de enviar, escolha a origem: "Rebanho que já era meu" ou "Compra". Destino e planilha só liberam depois dessa escolha (e, na compra, depois dos dados da compra).',
             'Pagamento da compra: À vista (entra como pago), Entrada + parcelado (entrada paga na data da compra e saldo em parcelas) ou Parcelado (1 a 60 parcelas; 1 parcela = pagamento único com prazo).',
             'Na compra, informe fornecedor, GTA, data, valor total, finalidade e pagamento; o valor vai para o Financeiro e todas as linhas precisam estar certas para gravar.',
