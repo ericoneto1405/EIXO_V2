@@ -1,26 +1,13 @@
-import { rejectLegacyPoReference } from './legacyPoGuard.js';
 import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
-import { requireAuth, requireNonFieldWorker } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
-import { parseNumber, parseDateValue, parseInteger, normalizeSexo, normalizeEmbryoTechnique, normalizeSemenMoveType, normalizeEmbryoMoveType } from '../utils/formatters.js';
-import { normalizarCategoriaParaGravar } from '../herd/animalCategories.js';
-import { logActivity } from '../utils/activityLog.js';
-import {
-    serializeSemenBatch, serializeEmbryoBatch,
-    serializePaddockMove, serializeNutritionPlan,
-} from '../utils/serializers.js';
-import { moveAnimalBetweenPaddocks, moveAnimalsBetweenPaddocks, transferAnimalsToFarm, createBulkWeighings, calculateGmdMetrics, diffDaysFloat, weanCalf } from '../animals/animalRoutes.js';
-import { HERD_EVENT_CATEGORY_MAP } from '../config/env.js';
-import { buildPurchasePaymentSchedule, createIntegratedTransaction } from '../financial/financialService.js';
-import { buildProvisionalIdentification, buildTeProvisionalIdentification } from '../animals/herdIntegrityService.js';
+import { parseDateValue, parseInteger, normalizeEmbryoTechnique, normalizeSemenMoveType, normalizeEmbryoMoveType } from '../utils/formatters.js';
+import { serializeSemenBatch, serializeEmbryoBatch } from '../utils/serializers.js';
 const prisma = new PrismaClient();
 
 
 const findInventoryAnimal = ({ id, farmId }) => prisma.animal.findFirst({ where: { id: String(id), farmId: String(farmId) } });
 
 export function registerGeneticInventoryRoutes(app) {
-app.use(['/animals', '/lots', '/farms', '/po', '/nutrition', '/repro'], rejectLegacyPoReference);
 app.get('/po/semen', async (req, res) => {
     const { farmId } = req.query || {};
     if (!farmId) {
@@ -109,7 +96,7 @@ app.post('/po/semen', async (req, res) => {
         }
 
         let validBullId = null;
-        
+
 
         if (!validAnimalBullId && !validBullId && !trimmedName) {
             return res.status(400).json({ message: 'Informe o nome do reprodutor externo.' });
@@ -119,7 +106,7 @@ app.post('/po/semen', async (req, res) => {
             data: {
                 farmId: farm.id,
                 bullAnimalId: validAnimalBullId,
-                
+
                 bullName: validAnimalBullId || validBullId ? null : trimmedName,
                 bullRegistry: validAnimalBullId || validBullId ? null : trimmedRegistry || null,
                 fornecedor: trimmedFornecedor || null,
@@ -182,7 +169,7 @@ app.patch('/po/semen/:id', async (req, res) => {
                     return res.status(404).json({ message: 'Reprodutor não encontrado no rebanho.' });
                 }
                 updates.bullAnimalId = bull.id;
-                
+
                 updates.bullName = bullName !== undefined ? trimmedName || null : null;
                 updates.bullRegistry = bullRegistry !== undefined ? trimmedRegistry || null : null;
             } else {
@@ -191,7 +178,7 @@ app.patch('/po/semen/:id', async (req, res) => {
         }
 
         const nextBullId = null;
-        
+
 
         if (nextAnimalBullId === null && nextBullId === null) {
             const nextName = bullName !== undefined ? trimmedName : batch.bullName;
@@ -474,7 +461,7 @@ app.post('/po/embryos', async (req, res) => {
         }
 
         let validDonorId = null;
-        
+
 
         let validSireAnimalId = null;
         if (sireAnimalId) {
@@ -486,7 +473,7 @@ app.post('/po/embryos', async (req, res) => {
         }
 
         let validSireId = null;
-        
+
 
         if (!validDonorAnimalId && !validDonorId && !trimmedDonorName) {
             return res.status(400).json({ message: 'Informe o nome da doadora externa.' });
@@ -495,11 +482,11 @@ app.post('/po/embryos', async (req, res) => {
             data: {
                 farmId: farm.id,
                 donorAnimalId: validDonorAnimalId,
-                
+
                 donorName: validDonorAnimalId || validDonorId ? null : trimmedDonorName,
                 donorRegistry: validDonorAnimalId || validDonorId ? null : trimmedDonorRegistry || null,
                 sireAnimalId: validSireAnimalId,
-                
+
                 sireName: validSireAnimalId || validSireId ? null : (trimmedSireName || null),
                 sireRegistry: validSireAnimalId || validSireId ? null : trimmedSireRegistry || null,
                 tecnica: tecnicaEnum,
@@ -571,7 +558,7 @@ app.patch('/po/embryos/:id', async (req, res) => {
                     return res.status(404).json({ message: 'Doadora não encontrada no rebanho.' });
                 }
                 updates.donorAnimalId = donor.id;
-                
+
                 updates.donorName = donorName !== undefined ? trimmedDonorName || null : null;
                 updates.donorRegistry = donorRegistry !== undefined ? trimmedDonorRegistry || null : null;
             } else {
@@ -580,7 +567,7 @@ app.patch('/po/embryos/:id', async (req, res) => {
         }
 
         const nextDonorId = null;
-        
+
 
         let nextSireAnimalId = batch.sireAnimalId;
         if (sireAnimalId !== undefined) {
@@ -591,7 +578,7 @@ app.patch('/po/embryos/:id', async (req, res) => {
                     return res.status(404).json({ message: 'Reprodutor não encontrado no rebanho.' });
                 }
                 updates.sireAnimalId = sire.id;
-                
+
                 updates.sireName = sireName !== undefined ? trimmedSireName || null : null;
                 updates.sireRegistry = sireRegistry !== undefined ? trimmedSireRegistry || null : null;
             } else {
@@ -600,7 +587,7 @@ app.patch('/po/embryos/:id', async (req, res) => {
         }
 
         const nextSireId = null;
-        
+
 
         if (nextDonorAnimalId === null && nextDonorId === null) {
             const nextName = donorName !== undefined ? trimmedDonorName : batch.donorName;

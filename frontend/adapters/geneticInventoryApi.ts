@@ -5,7 +5,6 @@ export interface SemenBatchUI {
   id: string;
   farmId: string;
   bullAnimalId?: string | null;
-  bullPoAnimalId?: string | null;
   bullName?: string | null;
   bullRegistry?: string | null;
   fornecedor?: string | null;
@@ -16,7 +15,6 @@ export interface SemenBatchUI {
   localArmazenamento?: string | null;
   observacoes?: string | null;
   bullAnimal?: Pick<AnimalUI, 'id' | 'brinco' | 'registro' | 'tipoCadastro'> | null;
-  bullPoAnimal?: { id: string; brinco?: string | null; nome?: string | null; registro?: string | null } | null;
 }
 
 export interface SemenBatchPayload {

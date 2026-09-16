@@ -1,4 +1,4 @@
-import { rejectLegacyPoReference } from './legacyPoGuard.js';
+import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, requireNonFieldWorker, requireModule } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
@@ -33,7 +33,6 @@ const findInventoryAnimal = async ({ id, farmId }) => {
         where: { id: String(id), farmId: String(farmId) },
     });
 };
-
 
 
 const diffDays = (later, earlier) => {
@@ -359,7 +358,7 @@ export const weanCalf = async ({ req, animalId }) => {
     if (definitiveId) {
         const duplicateWhere = { farmId: animal.farmId, OR: [{ brinco: definitiveId }, { identityKey: definitiveId }], NOT: { id: animal.id } };
         const duplicate = await animalModel.findFirst({ where: duplicateWhere, select: { id: true } });
-        
+
         if (duplicate) return { error: { status: 409, message: 'Identificação definitiva já cadastrada nesta fazenda.' } };
     }
 
@@ -738,7 +737,6 @@ const computeSelectionKpis = ({ events, animalId, seasonId, exposuresSet }) => {
 };
 
 export function registerAnimalRoutes(app) {
-app.use(['/animals', '/lots', '/farms', '/po', '/nutrition', '/repro'], rejectLegacyPoReference);
 app.patch('/animals/:id', requireAuth, requireModule('Editar Animais'), async (req, res) => {
     const { id } = req.params;
     const { lotId, brinco, raca, sexo, categoria, dataNascimento, registro,
@@ -1759,7 +1757,7 @@ app.post('/nutrition/assignments', async (req, res) => {
                 return res.status(404).json({ message: 'Lote não encontrado.' });
             }
         }
-        
+
         if (animalId) {
             const animal = await prisma.animal.findFirst({
                 where: { id: String(animalId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
@@ -1768,15 +1766,15 @@ app.post('/nutrition/assignments', async (req, res) => {
                 return res.status(404).json({ message: 'Animal não encontrado.' });
             }
         }
-        
+
         const assignment = await prisma.nutritionAssignment.create({
             data: {
                 farmId: farm.id,
                 planId: plan.id,
                 lotId: lotId ? String(lotId) : null,
-                
+
                 animalId: animalId ? String(animalId) : null,
-                
+
                 startAt: parsedStart,
                 endAt: parsedEnd,
             },
@@ -1823,7 +1821,7 @@ app.get('/nutrition/assignments/current', async (req, res) => {
                 return res.status(404).json({ message: 'Lote não encontrado.' });
             }
         }
-        
+
         if (animalId) {
             const animal = await prisma.animal.findFirst({
                 where: { id: String(animalId), farmId: farm.id, farm: buildFarmRelationFilter(req) },
@@ -1832,14 +1830,14 @@ app.get('/nutrition/assignments/current', async (req, res) => {
                 return res.status(404).json({ message: 'Animal não encontrado.' });
             }
         }
-        
+
         const assignment = await prisma.nutritionAssignment.findFirst({
             where: {
                 farmId: farm.id,
                 lotId: lotId ? String(lotId) : null,
-                
+
                 animalId: animalId ? String(animalId) : null,
-                
+
                 startAt: { lte: atDate },
                 OR: [{ endAt: null }, { endAt: { gte: atDate } }],
             },
@@ -2360,7 +2358,7 @@ app.post('/animals/:id/identificacao-definitiva', requireAuth, async (req, res) 
         // A identificação definitiva também não pode repetir em nenhuma
         // fazenda da mesma organização.
         const duplicate = await findDuplicateIdentityInOrganization(prisma, req, { identityKey, excludeAnimalId: animal.id });
-        
+
         if (duplicate) {
             const ondeMsg = duplicate && duplicate.farmId !== animal.farmId ? `na fazenda "${duplicate.farmName || 'outra fazenda'}"` : 'nesta fazenda';
             return res.status(409).json({ message: `Identificação já cadastrada ${ondeMsg}.` });
@@ -2984,9 +2982,6 @@ app.post('/animals/:id/paddock-moves', requireAuth, async (req, res) => {
         return res.status(500).json({ message: 'Erro ao movimentar animal entre pastos.' });
     }
 });
-
-
-
 
 
 app.post('/animals/:id/move-pasto', requireAuth, async (req, res) => {

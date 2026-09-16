@@ -168,7 +168,6 @@ const LotDetailModal: React.FC<LotDetailModalProps> = ({
         getCurrentNutrition({
             farmId: lot.farmId,
             lotId: resolvedMode === 'COMMERCIAL' ? lot.id : undefined,
-            poLotId: undefined,
         })
             .then((payload) => {
                 setPlanName(payload.plan?.nome || null);

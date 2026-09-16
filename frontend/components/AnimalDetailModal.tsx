@@ -351,7 +351,6 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                 const payload = await getCurrentNutrition({
                     farmId,
                     animalId: resolvedMode === 'COMMERCIAL' ? animalId : undefined,
-                    poAnimalId: undefined,
                 });
                 setNutritionPlanName(payload.plan?.nome || null);
                 setNutritionPlanMeta(payload.plan?.metaGmd ?? null);

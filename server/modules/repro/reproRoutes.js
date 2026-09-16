@@ -1,4 +1,3 @@
-import { rejectLegacyPoReference } from '../animals/legacyPoGuard.js';
 import { PrismaClient } from '@prisma/client';
 import { randomUUID } from 'crypto';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
@@ -25,7 +24,6 @@ function stableExternalReference(registry, name) {
 
 // ─── Reprodução: avaliações (toque) por sessão + KPIs de decisão ─────────────
 export function registerReproRoutes(app) {
-app.use(['/animals', '/lots', '/farms', '/po', '/nutrition', '/repro'], rejectLegacyPoReference);
     app.get('/repro/embryo-transfers', requireAuth, requireModule('Reprodução'), async (req, res) => {
         const { farmId, herdType = 'COMMERCIAL', status = 'PENDING' } = req.query || {};
         if (!farmId || !['COMMERCIAL'].includes(String(herdType))) {
@@ -106,7 +104,7 @@ app.use(['/animals', '/lots', '/farms', '/po', '/nutrition', '/repro'], rejectLe
                         herdType: normalizedHerdType,
                         embryoBatchId: batch.id,
                         recipientAnimalId: normalizedHerdType === 'COMMERCIAL' ? recipient.id : null,
-                        
+
                         transferredAt: transferDate,
                         recipientSnapshot,
                         donorKey,

@@ -1,3 +1,4 @@
+import { rejectLegacyPoReference } from './modules/animals/legacyPoGuard.js';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -86,7 +87,6 @@ const __dirname = path.dirname(__filename);
 const prisma = new PrismaClient();
 
 
-
 const app = express();
 app.set('trust proxy', 1);
 app.use(createCorsMiddleware(IS_PROD, CORS_ORIGIN));
@@ -115,14 +115,7 @@ app.get('/health', (_req, res) => {
 });
 
 
-
-
-
-
-
-
 // ─────────────────────────────────────────────────────────────────────────────
-
 
 
 // ── Logs de Atividade ───────────────────────────────────────────────────────
@@ -247,6 +240,7 @@ app.get('/activity-logs/meta', requireAuth, requireModule('Registro de Atividade
 // ─── Registro de Módulos Extraídos (Fase 4) ──────────────────────────────────
 registerAuthRoutes(app);
 registerUserRoutes(app);
+app.use(['/animals', '/lots', '/farms', '/po', '/nutrition', '/repro'], rejectLegacyPoReference);
 registerFarmRoutes(app);
 registerAnimalRoutes(app);
 registerHerdWeighingRoutes(app);

@@ -1,19 +1,11 @@
-import { rejectLegacyPoReference } from './legacyPoGuard.js';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
-import { requireAuth, requireNonFieldWorker } from '../middlewares/requireAuth.js';
+import { requireAuth } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
-import { parseNumber, parseDateValue, parseInteger, normalizeSexo, normalizeSemenMoveType, normalizeEmbryoMoveType } from '../utils/formatters.js';
-import { normalizarCategoriaParaGravar } from '../herd/animalCategories.js';
+import { parseNumber, parseDateValue } from '../utils/formatters.js';
 import { logActivity } from '../utils/activityLog.js';
-import {
-    serializeSemenBatch, serializeEmbryoBatch,
-    serializePaddockMove, serializeNutritionPlan,
-} from '../utils/serializers.js';
-import { moveAnimalBetweenPaddocks, moveAnimalsBetweenPaddocks, transferAnimalsToFarm, createBulkWeighings, calculateGmdMetrics, diffDaysFloat, weanCalf } from '../animals/animalRoutes.js';
-import { HERD_EVENT_CATEGORY_MAP } from '../config/env.js';
-import { buildPurchasePaymentSchedule, createIntegratedTransaction } from '../financial/financialService.js';
-import { buildProvisionalIdentification, buildTeProvisionalIdentification } from '../animals/herdIntegrityService.js';
+import { serializePaddockMove } from '../utils/serializers.js';
+import { moveAnimalBetweenPaddocks, calculateGmdMetrics, diffDaysFloat } from './animalRoutes.js';
 const prisma = new PrismaClient();
 
 const verifyPasswordWithLegacySupport = async (user, password) => {
@@ -87,7 +79,6 @@ const recalculateAnimalWeighingChain = async (tx, animalId) => {
 
 
 export function registerHerdWeighingRoutes(app) {
-app.use(['/animals', '/lots', '/farms', '/po', '/nutrition', '/repro'], rejectLegacyPoReference);
 app.post('/animals/:id/move-pasto', requireAuth, async (req, res) => {
     const { id } = req.params;
     const { pastoId, paddockId, date, startAt, notes, farmId } = req.body || {};
@@ -405,7 +396,7 @@ app.delete('/farms/:farmId/weighing-sessions/:sessionId', requireAuth, async (re
 
         await prisma.$transaction(async (tx) => {
             await tx.weighing.updateMany({ where: { weighingSessionId: session.id }, data: { weighingSessionId: null } });
-            
+
             await tx.weighingSession.delete({ where: { id: session.id } });
         });
 
@@ -454,7 +445,7 @@ app.get('/farms/:farmId/weighing-sessions/summary', requireAuth, async (req, res
                             },
                         },
                     },
-                    
+
                 },
             }),
         ]);

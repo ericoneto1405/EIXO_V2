@@ -14,9 +14,7 @@ interface NutritionAssignment {
     id: string;
     planId: string;
     lotId?: string | null;
-    poLotId?: string | null;
     animalId?: string | null;
-    poAnimalId?: string | null;
     startAt: string;
     endAt?: string | null;
 }
@@ -218,16 +216,12 @@ export const getNutritionDashboard = (farmId: string, date?: string) =>
 export const getCurrentNutrition = async (params: {
     farmId: string;
     animalId?: string;
-    poAnimalId?: string;
     lotId?: string;
-    poLotId?: string;
 }): Promise<NutritionCurrentResponse> => {
     const query = new URLSearchParams();
     query.set('farmId', params.farmId);
     if (params.animalId) query.set('animalId', params.animalId);
-    if (params.poAnimalId) query.set('poAnimalId', params.poAnimalId);
     if (params.lotId) query.set('lotId', params.lotId);
-    if (params.poLotId) query.set('poLotId', params.poLotId);
 
     const response = await fetch(buildApiUrl(`/nutrition/assignments/current?${query.toString()}`), {
         credentials: 'include',
