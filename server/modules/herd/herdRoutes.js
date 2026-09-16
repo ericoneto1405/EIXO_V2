@@ -14,6 +14,8 @@ import { buildPurchasePaymentSchedule, createIntegratedTransaction, describePurc
 import { normalizeSexoImport, normalizeTipoRacaImport, parseImportDate, parseNascimentoImport, parsePesagemImport } from './herdImportRules.js';
 import { normalizarCategoriaParaGravar } from './animalCategories.js';
 import { normalizeSpreadsheetDates } from './herdSpreadsheetDates.js';
+import { calcularCarencias, limparCacheLembretes } from '../sanity/sanityCalendar.js';
+import { avaliarVenda } from '../sanity/sanityStatus.js';
 const prisma = new PrismaClient();
 
 const VALID_EVENT_TYPES = ['NASCIMENTO', 'COMPRA', 'VENDA', 'MORTE'];
@@ -42,7 +44,7 @@ app.get('/animals/:id/eventos', async (req, res) => {
 
 app.post('/animals/:id/eventos', requireAuth, async (req, res) => {
     const { id } = req.params;
-    const { type, date, peso, valor, origem, destino, observacoes, purchasePurpose } = req.body || {};
+    const { type, date, peso, valor, origem, destino, observacoes, purchasePurpose, saleType } = req.body || {};
 
     if (!VALID_EVENT_TYPES.includes(type?.toUpperCase?.())) {
         return res.status(400).json({ message: 'Tipo inválido. Use NASCIMENTO, COMPRA, VENDA ou MORTE.' });
@@ -64,12 +66,27 @@ app.post('/animals/:id/eventos', requireAuth, async (req, res) => {
             return res.status(400).json({ message: 'Finalidade da compra inválida.' });
         }
         const resolvedPurchasePurpose = eventType === 'COMPRA' ? (purchasePurpose || 'PRODUCTION') : null;
+        // Venda para abate com o animal em carência é bloqueada (resíduo de remédio na carne).
+        let avisoVenda = null;
+        let resolvedSaleType = null;
+        if (eventType === 'VENDA') {
+            const carencias = await calcularCarencias(animal.farmId, eventDate);
+            const carencia = carencias.find((item) => item.animalId === animal.id) || null;
+            const avaliacao = avaliarVenda({ saleType: String(saleType || '').toUpperCase(), dataVenda: eventDate, carencia });
+            if (!avaliacao.permitido) {
+                return res.status(409).json({ code: 'withdrawal_period', message: avaliacao.mensagem });
+            }
+            avisoVenda = avaliacao.aviso;
+            resolvedSaleType = avaliacao.tipo;
+        }
         const event = await prisma.$transaction(async (tx) => {
             const createdEvent = await tx.herdEvent.create({ data: {
                 farmId: animal.farmId, animalId: id, type: eventType, date: eventDate,
                 peso: parseNumber(peso), valor: parseNumber(valor), origem: origem?.trim() || null,
-                destino: destino?.trim() || null, observacoes: observacoes?.trim() || null,
+                destino: destino?.trim() || null,
+                observacoes: [observacoes?.trim(), avisoVenda].filter(Boolean).join(' — ') || null,
                 purchasePurpose: resolvedPurchasePurpose,
+                saleType: resolvedSaleType,
             } });
             const financialMap = HERD_EVENT_CATEGORY_MAP[eventType];
             const parsedValor = parseNumber(valor);
@@ -98,7 +115,8 @@ app.post('/animals/:id/eventos', requireAuth, async (req, res) => {
         const label = eventLabels[eventType] || 'Registrou evento';
         const valorStr = parseNumber(valor) ? ` por R$ ${Number(parseNumber(valor)).toLocaleString('pt-BR',{minimumFractionDigits:2})}` : '';
         logActivity(prisma, req, { action: `ANIMAL_${eventType}`, entity: 'Animal', entityId: id, description: `${label} do animal ${animal.brinco || id}${valorStr}`, farmId: animal.farmId });
-        return res.status(201).json({ event: serializeHerdEvent(event) });
+        if (eventType === 'VENDA' || eventType === 'MORTE') limparCacheLembretes(animal.farmId);
+        return res.status(201).json({ event: serializeHerdEvent(event), aviso: avisoVenda });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar evento.' });

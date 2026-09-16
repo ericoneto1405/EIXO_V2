@@ -5,6 +5,8 @@ import { logActivity } from '../utils/activityLog.js';
 import { calculatePharmacyMovement, normalizePharmacyPayment, pharmacyPurchaseAccount } from './pharmacyRules.js';
 import { buildPurchasePaymentSchedule, createIntegratedTransaction, describePurchaseInstallment } from '../financial/financialService.js';
 import { PHARMACY_CATALOG, PHARMACY_CATALOG_REVISION, findCatalogItem } from './pharmacyCatalog.js';
+import { faixaDoProduto, situacaoTemperaturas } from '../sanity/sanityStatus.js';
+import { limparCacheLembretes } from '../sanity/sanityCalendar.js';
 
 const prisma = new PrismaClient();
 const MOVEMENT_TYPES = new Set(['ENTRY', 'EXIT', 'ADJUSTMENT']);
@@ -115,6 +117,19 @@ export function registerPharmacyRoutes(app) {
         const minStock = Number(req.body?.minStock ?? 0);
         const applicationPerUnit = req.body?.applicationPerUnit === '' || req.body?.applicationPerUnit == null ? null : Number(req.body.applicationPerUnit);
         if (applicationPerUnit !== null && !(applicationPerUnit > 0)) return res.status(400).json({ message: 'Rendimento por unidade inválido.' });
+        const parseTemp = (value) => (value === '' || value == null ? null : Number(value));
+        let storageMinTemp = parseTemp(req.body?.storageMinTemp);
+        let storageMaxTemp = parseTemp(req.body?.storageMaxTemp);
+        if ([storageMinTemp, storageMaxTemp].some((value) => value !== null && (!Number.isFinite(value) || value < -30 || value > 60))) {
+            return res.status(400).json({ message: 'Faixa de temperatura inválida.' });
+        }
+        if (storageMinTemp !== null && storageMaxTemp !== null && storageMinTemp > storageMaxTemp) {
+            return res.status(400).json({ message: 'A temperatura mínima não pode ser maior que a máxima.' });
+        }
+        if (refrigerated && storageMinTemp === null && storageMaxTemp === null) {
+            storageMinTemp = 2;
+            storageMaxTemp = 8;
+        }
         const catalogKey = String(req.body?.catalogKey || '').trim() || null;
         const catalogItem = findCatalogItem(catalogKey);
         if (catalogKey && !catalogItem) return res.status(400).json({ message: 'Produto não encontrado na lista EIXO.' });
@@ -147,6 +162,8 @@ export function registerPharmacyRoutes(app) {
                     milkWithdrawalDays,
                     notes,
                     applicationPerUnit,
+                    storageMinTemp,
+                    storageMaxTemp,
                     catalogKey: catalogItem?.key || null,
                     catalogSlaughterWithdrawalDays: catalogItem ? catalogItem.slaughterWithdrawalDays : null,
                 },
@@ -244,6 +261,67 @@ export function registerPharmacyRoutes(app) {
             if (error?.code === 'P2002') return res.status(409).json({ message: 'Este lote já está cadastrado para o produto.' });
             console.error(error);
             return res.status(500).json({ message: 'Erro ao registrar entrada do lote.' });
+        }
+    });
+
+    // ── Temperatura da geladeira / caixa térmica ────────────────────────────
+    app.get('/farms/:farmId/pharmacy/temperaturas', attachScopedFarm, async (req, res) => {
+        const farm = req.pharmacyFarm;
+        try {
+            const [leituras, products] = await Promise.all([
+                prisma.pharmacyTemperatureLog.findMany({ where: { farmId: farm.id }, orderBy: { measuredAt: 'desc' }, take: 60 }),
+                prisma.pharmacyProduct.findMany({
+                    where: { farmId: farm.id, active: true, batches: { some: { quantity: { gt: 0 } } } },
+                    select: { refrigerated: true, storageMinTemp: true, storageMaxTemp: true },
+                }),
+            ]);
+            const temRefrigerado = products.some((product) => {
+                const faixa = faixaDoProduto(product);
+                return faixa && faixa.max !== null && faixa.max <= 10;
+            });
+            return res.json({ leituras, ...situacaoTemperaturas({ leituras, temRefrigerado }) });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao carregar temperaturas.' });
+        }
+    });
+
+    app.post('/farms/:farmId/pharmacy/temperaturas', requireNonFieldWorker, attachScopedFarm, async (req, res) => {
+        const farm = req.pharmacyFarm;
+        const location = String(req.body?.location || '').trim();
+        const tempC = Number(String(req.body?.tempC ?? '').replace(',', '.'));
+        const measuredAt = req.body?.measuredAt ? new Date(req.body.measuredAt) : new Date();
+        if (!location) return res.status(400).json({ message: 'Informe o local (ex.: Geladeira 1).' });
+        if (req.body?.tempC === '' || req.body?.tempC == null || !Number.isFinite(tempC) || tempC < -30 || tempC > 60) {
+            return res.status(400).json({ message: 'Temperatura inválida.' });
+        }
+        if (Number.isNaN(measuredAt.getTime()) || measuredAt.getTime() > Date.now() + 10 * 60 * 1000) {
+            return res.status(400).json({ message: 'Data e hora da leitura inválidas.' });
+        }
+        try {
+            const leitura = await prisma.pharmacyTemperatureLog.create({
+                data: {
+                    farmId: farm.id,
+                    location: location.slice(0, 60),
+                    tempC,
+                    measuredAt,
+                    measuredByName: String(req.body?.measuredByName || '').trim() || req.user?.name || null,
+                    notes: String(req.body?.notes || '').trim() || null,
+                },
+            });
+            limparCacheLembretes(farm.id);
+            const fora = tempC < 2 || tempC > 8;
+            void logActivity(prisma, req, {
+                action: 'FARMACIA_TEMPERATURA',
+                entity: 'PharmacyTemperatureLog',
+                entityId: leitura.id,
+                description: `Registrou ${tempC} °C em ${location}${fora ? ' (fora da faixa)' : ''}`,
+                farmId: farm.id,
+            });
+            return res.status(201).json({ leitura, foraDaFaixa: fora });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao registrar a temperatura.' });
         }
     });
 

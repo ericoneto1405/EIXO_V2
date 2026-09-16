@@ -359,6 +359,7 @@ export function serializeHerdEvent(event) {
         valor: event.valor ?? null,
         origem: event.origem || null,
         destino: event.destino || null,
+        saleType: event.saleType || null,
         observacoes: event.observacoes || null,
         purchasePurpose: event.purchasePurpose || null,
         createdAt: event.createdAt.toISOString(),

@@ -4,6 +4,7 @@ import { findCatalogItem } from '../pharmacy/pharmacyCatalog.js';
 import { marcacoesDoProduto } from './sanityRules.js';
 import { gerarLembretes } from './sanityAlerts.js';
 import { infoDoEstado } from './sanityRegion.js';
+import { calcularSemaforo, situacaoTemperaturas, faixaDoProduto } from './sanityStatus.js';
 
 const prisma = new PrismaClient();
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -100,7 +101,7 @@ function dosesPorMarcacao(products) {
 
 export async function carregarLembretes(farmId, hoje = new Date()) {
     const umAnoEMeio = new Date(hoje.getTime() - 550 * DAY_MS);
-    const [config, animais, aplicacoes, estacoes, carencias, products] = await Promise.all([
+    const [config, animais, aplicacoes, estacoes, carencias, products, leituras] = await Promise.all([
         carregarConfiguracao(farmId),
         prisma.animal.findMany({
             where: { farmId, status: 'VIVO' },
@@ -118,6 +119,11 @@ export async function carregarLembretes(farmId, hoje = new Date()) {
         prisma.pharmacyProduct.findMany({
             where: { farmId, active: true },
             include: { batches: { where: { quantity: { gt: 0 } } } },
+        }),
+        prisma.pharmacyTemperatureLog.findMany({
+            where: { farmId, measuredAt: { gte: new Date(hoje.getTime() - 90 * DAY_MS) } },
+            orderBy: { measuredAt: 'desc' },
+            take: 200,
         }),
     ]);
     const tagCache = new Map();
@@ -141,7 +147,44 @@ export async function carregarLembretes(farmId, hoje = new Date()) {
         lotes,
         estoque: dosesPorMarcacao(products),
     });
-    return { lembretes, config };
+    const temRefrigerado = products.some((product) => product.batches.length > 0 && faixaDoProduto(product)?.max !== undefined && faixaDoProduto(product)?.max !== null && faixaDoProduto(product).max <= 10);
+    const temperaturas = situacaoTemperaturas({ hoje, leituras, temRefrigerado });
+    for (const alerta of temperaturas.alertas) {
+        const fora = alerta.tipo === 'FORA_DA_FAIXA';
+        lembretes.unshift({
+            id: `temperatura-${alerta.tipo.toLowerCase()}-${alerta.location || 'geral'}`,
+            grupo: 'GESTAO',
+            titulo: fora ? 'Geladeira da Farmácia fora da temperatura' : 'Registre a temperatura da geladeira',
+            descricao: fora
+                ? `${alerta.texto} Vacinas fora de 2 a 8 °C podem perder o efeito: confira com o veterinário antes de usar.`
+                : `${alerta.texto} Registre pelo menos uma leitura por semana.`,
+            data: hoje.toISOString(),
+            dias: 0,
+            severidade: fora ? 'VERMELHO' : 'AMARELO',
+            tag: null,
+            acao: 'FARMACIA',
+            totalAnimais: 0,
+            brincos: [],
+        });
+    }
+    return { lembretes, config, animais, temperaturas };
+}
+
+export async function carregarSituacao(farmId, { cache = false } = {}) {
+    const hoje = new Date();
+    const [{ lembretes, config, animais }, comprovacoes] = await Promise.all([
+        cache ? carregarLembretesComCache(farmId) : carregarLembretes(farmId, hoje),
+        prisma.sanitaryCompliance.findMany({ where: { farmId }, orderBy: { deliveredAt: 'desc' } }),
+    ]);
+    const semaforo = calcularSemaforo({
+        hoje,
+        lembretes,
+        comprovacoes,
+        settings: config.settings,
+        estado: config.estado,
+        temFemeas: animais.some((animal) => animal.sexo === 'FEMEA'),
+    });
+    return { ...semaforo, estado: config.estado, historico: comprovacoes };
 }
 
 // A barra de alertas consulta a cada minuto; guarda o resultado por 5 minutos por fazenda.

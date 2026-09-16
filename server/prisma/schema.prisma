@@ -269,6 +269,9 @@ model Farm {
   pharmacyMovements       PharmacyMovement[]
   sanitaryApplications    SanitaryApplication[]
   sanitarySettings        SanitarySettings?
+  sanitaryCompliances     SanitaryCompliance[]
+  sanitaryCases           SanitaryCase[]
+  temperatureLogs         PharmacyTemperatureLog[]
   reproEvents             ReproEvent[]
   sanitaryRecords         SanitaryRecord[]
   selectionDecisions      SelectionDecision[]
@@ -421,6 +424,7 @@ model Animal {
   reproEvents          ReproEvent[]
   sanitaryRecords      SanitaryRecord[]
   sanitaryApplications SanitaryApplication[]
+  sanitaryCases        SanitaryCase[]
   selectionDecisions   SelectionDecision[]
   pesagens             Weighing[]
   reproCheckupRecords  ReproCheckupRecord[]
@@ -2149,6 +2153,7 @@ model HerdEvent {
   valor                 Float?
   origem                String?
   destino               String?
+  saleType              String?                @map("sale_type")
   observacoes           String?
   purchasePurpose       AnimalPurchasePurpose?
   createdAt             DateTime               @default(now())
@@ -2201,6 +2206,8 @@ model PharmacyProduct {
   catalogKey             String?            @map("catalog_key")
   catalogSlaughterWithdrawalDays Int?       @map("catalog_slaughter_withdrawal_days")
   applicationPerUnit     Float?             @map("application_per_unit")
+  storageMinTemp         Float?             @map("storage_min_temp")
+  storageMaxTemp         Float?             @map("storage_max_temp")
   active                 Boolean            @default(true)
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
@@ -2274,6 +2281,66 @@ model SanitarySettings {
   @@map("sanitary_settings")
 }
 
+// Comprovação entregue ao órgão de defesa (ex.: vacinação de brucelose do semestre).
+model SanitaryCompliance {
+  id              String   @id @default(uuid())
+  farmId          String
+  kind            String
+  period          String
+  deliveredAt     DateTime @map("delivered_at")
+  protocol        String?
+  notes           String?
+  createdByUserId String?  @map("created_by_user_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  farm            Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, kind, period])
+  @@map("sanitary_compliances")
+}
+
+// Caso de doença ou morte de um animal.
+model SanitaryCase {
+  id              String    @id @default(uuid())
+  farmId          String
+  animalId        String
+  kind            String
+  disease         String
+  symptoms        String?
+  startedAt       DateTime  @map("started_at")
+  status          String
+  necropsy        Boolean   @default(false)
+  diagnosedBy     String?   @map("diagnosed_by")
+  notes           String?
+  closedAt        DateTime? @map("closed_at")
+  notifiable      Boolean   @default(false)
+  createdByUserId String?   @map("created_by_user_id")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  farm            Farm      @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  animal          Animal    @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, startedAt])
+  @@index([farmId, status])
+  @@index([animalId])
+  @@map("sanitary_cases")
+}
+
+// Leitura de temperatura da geladeira ou caixa térmica da Farmácia.
+model PharmacyTemperatureLog {
+  id             String   @id @default(uuid())
+  farmId         String
+  location       String
+  tempC          Float    @map("temp_c")
+  measuredAt     DateTime @map("measured_at")
+  measuredByName String?  @map("measured_by_name")
+  notes          String?
+  createdAt      DateTime @default(now()) @map("created_at")
+  farm           Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, measuredAt])
+  @@map("pharmacy_temperature_logs")
+}
+
 model SanitaryApplication {
   id                       String          @id @default(uuid())
   farmId                   String
@@ -2292,6 +2359,7 @@ model SanitaryApplication {
   withdrawalUnknown        Boolean         @default(false) @map("withdrawal_unknown")
   unitCost                 Float?          @map("unit_cost")
   notes                    String?
+  coolerTempC              Float?          @map("cooler_temp_c")
   createdByUserId          String?         @map("created_by_user_id")
   createdAt                DateTime        @default(now()) @map("created_at")
   farm                     Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)

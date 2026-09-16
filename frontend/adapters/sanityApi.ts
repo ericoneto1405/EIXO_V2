@@ -20,6 +20,9 @@ export interface SanityProduct {
   applicationUnit: string;
   applicationPerUnit: number | null;
   slaughterWithdrawalDays: number | null;
+  refrigerated: boolean;
+  storageMinTemp: number | null;
+  storageMaxTemp: number | null;
   suggestedRoute: string | null;
   suggestedDose: string | null;
   suggestedDosePerKg: number | null;
@@ -53,6 +56,7 @@ export interface AplicacaoPayload {
   vetName?: string;
   vetCrmv?: string;
   notes?: string;
+  coolerTempC?: number | null;
   aplicarSomenteAptos?: boolean;
 }
 
@@ -159,6 +163,70 @@ export interface ConfiguracaoSanitaria {
   configurada?: boolean;
 }
 
+export type Semaforo = 'VERDE' | 'AMARELO' | 'VERMELHO' | 'CINZA';
+
+export interface SituacaoSanitaria {
+  geral: Semaforo;
+  mensagem: string;
+  brucelose: { status: Semaforo; motivos: string[] };
+  raiva: { status: Semaforo; motivos: string[] };
+  periodoAtual: { period: string; prazo: string; label: string };
+  ultimoPeriodoVencido: { period: string; prazo: string; label: string };
+  comprovacoes: string[];
+  estado: EstadoSanitario;
+  historico: { id: string; period: string; deliveredAt: string; protocol: string | null }[];
+}
+
+export interface OpcaoDoenca {
+  key: string;
+  label: string;
+  notificavel?: boolean;
+}
+
+export interface CasoSanitario {
+  id: string;
+  animalId: string;
+  brinco: string | null;
+  lote: string | null;
+  kind: 'DOENCA' | 'MORTE';
+  disease: string;
+  diseaseLabel: string;
+  symptoms: string | null;
+  startedAt: string;
+  status: 'EM_TRATAMENTO' | 'CURADO' | 'MORTO' | 'DESCARTADO';
+  necropsy: boolean;
+  diagnosedBy: string | null;
+  notes: string | null;
+  closedAt: string | null;
+  notifiable: boolean;
+}
+
+export interface CasosResposta {
+  casos: CasoSanitario[];
+  indicadores: {
+    emTratamento: number;
+    casos12m: number;
+    mortes12m: number;
+    mortalidade12m: number;
+    porCausa: { causa: string; casos: number; mortes: number }[];
+  };
+  doencas: OpcaoDoenca[];
+  causasMorte: OpcaoDoenca[];
+  orgao: string;
+}
+
+export interface NovoCaso {
+  kind: 'DOENCA' | 'MORTE';
+  brinco: string;
+  disease: string;
+  otherDisease?: string;
+  startedAt: string;
+  symptoms?: string;
+  diagnosedBy?: string;
+  necropsy?: boolean;
+  notes?: string;
+}
+
 export class SanityApiError extends Error {
   status: number;
   previa: Previa | null;
@@ -215,6 +283,19 @@ export const buscarConfiguracao = (farmId: string) =>
 
 export const salvarConfiguracao = (farmId: string, config: ConfiguracaoSanitaria) =>
   request<ConfiguracaoSanitaria>(`${base(farmId)}/configuracao`, { method: 'PUT', body: JSON.stringify(config) });
+
+export const buscarSituacao = (farmId: string) => request<SituacaoSanitaria>(`${base(farmId)}/situacao`);
+
+export const registrarComprovacao = (farmId: string, payload: { period: string; deliveredAt: string; protocol?: string; notes?: string }) =>
+  request<SituacaoSanitaria>(`${base(farmId)}/comprovacoes`, { method: 'POST', body: JSON.stringify(payload) });
+
+export const listarCasos = (farmId: string) => request<CasosResposta>(`${base(farmId)}/casos`);
+
+export const registrarCaso = (farmId: string, payload: NovoCaso) =>
+  request<{ caso: CasoSanitario; aviso: string | null }>(`${base(farmId)}/casos`, { method: 'POST', body: JSON.stringify(payload) });
+
+export const encerrarCaso = (farmId: string, caseId: string, payload: { status: CasoSanitario['status']; closedAt?: string; necropsy?: boolean; notes?: string }) =>
+  request<{ ok: boolean }>(`${base(farmId)}/casos/${encodeURIComponent(caseId)}`, { method: 'PATCH', body: JSON.stringify(payload) });
 
 export const listarCarencia = (farmId: string) =>
   request<{ animais: AnimalEmCarencia[] }>(`${base(farmId)}/carencia`);

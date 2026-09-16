@@ -110,3 +110,9 @@ test('gestão: carência acabando e lote vencendo', () => {
     assert.ok(achar(lista, 'validade-l1'));
     assert.equal(lista.some((l) => l.id === 'validade-l2'), false);
 });
+
+test('vermífugo: remédio de tristeza parasitária não conta', () => {
+    const settings = { ...base, dewormEnabled: true, dewormMonths: [9] };
+    const lista = gerar({ settings, animais: [macho('m', 400)], aplicacoes: [aplic('m', 3, ['HEMOPARASITICIDA'], 'ANTIPARASITARIO')] });
+    assert.ok(lista.find((l) => l.id === 'vermifugo-2026-09'));
+});

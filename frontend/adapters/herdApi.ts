@@ -594,7 +594,7 @@ export const createHerdEvent = async (
     animalId: string,
     herdType: HerdType,
     payload: Record<string, any>,
-): Promise<HerdEvent> => {
+): Promise<HerdEvent & { aviso?: string | null }> => {
     const endpoint = `${getAnimalsBasePath(herdType)}/${animalId}/eventos`;
     const response = await fetch(buildApiUrl(endpoint), {
         method: 'POST',
@@ -606,7 +606,7 @@ export const createHerdEvent = async (
     if (!response.ok) {
         throw new Error(data?.message || 'Erro ao salvar evento.');
     }
-    return data.event;
+    return { ...data.event, aviso: data.aviso ?? null };
 };
 
 // ---- Funções novas: Manejo Sanitário ----

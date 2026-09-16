@@ -99,7 +99,8 @@ test('prévia: separa aptos, soma dose, custo e estoque', () => {
     assert.equal(p.resumo.consumoEstoque, 2);
     assert.equal(p.resumo.custoTotal, 6);
     assert.deepEqual(p.bloqueiosGerais, []);
-    assert.equal(p.avisosGerais.length, 1);
+    assert.equal(p.avisosGerais.length, 2);
+    assert.ok(p.avisosGerais.some((aviso) => /até 2 horas/.test(aviso)));
 });
 
 test('prévia: estoque insuficiente e lote vencido bloqueiam tudo', () => {
@@ -112,3 +113,13 @@ test('prévia: estoque insuficiente e lote vencido bloqueiam tudo', () => {
     assert.equal(p.bloqueiosGerais.length, 2);
 });
 
+
+test('prévia: caixa térmica fora da faixa bloqueia vacina refrigerada', () => {
+    const product = { name: 'Raivacel', category: 'VACINA', unit: 'dose', applicationUnit: 'dose', refrigerated: true, slaughterWithdrawalDays: null };
+    const batch = { lotNumber: 'R1', expiresAt: '2027-01-01T00:00:00.000Z', quantity: 10, unitCost: 1 };
+    const animais = [{ id: 'a', brinco: '1', status: 'VIVO', sexo: 'MACHO' }];
+    const quente = montarPrevia({ animais, product, catalogItem: null, batch, appliedAt: HOJE, doseModo: 'FIXA', doseFixa: 1, coolerTempC: 14 });
+    assert.equal(quente.bloqueiosGerais.length, 1);
+    const ok = montarPrevia({ animais, product, catalogItem: null, batch, appliedAt: HOJE, doseModo: 'FIXA', doseFixa: 1, coolerTempC: 6 });
+    assert.deepEqual(ok.bloqueiosGerais, []);
+});

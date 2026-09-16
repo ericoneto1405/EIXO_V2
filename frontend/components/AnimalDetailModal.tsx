@@ -32,7 +32,10 @@ interface OfflineHerdEvent {
     destino?: string;
     observacoes?: string;
     purchasePurpose?: 'PRODUCTION' | 'BREEDING';
+    saleType?: SaleType;
 }
+
+type SaleType = 'ABATE' | 'RECRIA' | 'REPRODUCAO' | 'OUTRO';
 
 interface OfflineSanitaryRecord {
     animalId: string;
@@ -178,6 +181,8 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const [eventPeso, setEventPeso] = useState('');
     const [eventValor, setEventValor] = useState('');
     const [eventPurchasePurpose, setEventPurchasePurpose] = useState<'PRODUCTION' | 'BREEDING'>('PRODUCTION');
+    const [eventSaleType, setEventSaleType] = useState<SaleType>('ABATE');
+    const [eventsWarning, setEventsWarning] = useState<string | null>(null);
     const [eventOrigem, setEventOrigem] = useState('');
     const [eventDestino, setEventDestino] = useState('');
     const [eventObs, setEventObs] = useState('');
@@ -503,9 +508,11 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             destino: eventDestino || undefined,
             observacoes: eventObs || undefined,
             purchasePurpose: eventType === 'COMPRA' ? eventPurchasePurpose : undefined,
+            saleType: eventType === 'VENDA' ? eventSaleType : undefined,
         };
         try {
-            await createHerdEvent(animalId, resolvedMode, eventPayload);
+            const created = await createHerdEvent(animalId, resolvedMode, eventPayload);
+            setEventsWarning(created.aviso || null);
             setEventPeso('');
             setEventValor('');
             setEventOrigem('');
@@ -1133,6 +1140,17 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                         )}
                                         {eventType === 'VENDA' && (
                                             <div className="flex flex-col">
+                                                <label className={labelClass}>Finalidade da venda</label>
+                                                <select value={eventSaleType} onChange={(e) => setEventSaleType(e.target.value as SaleType)} className={inputClass}>
+                                                    <option value="ABATE">Abate (frigorífico)</option>
+                                                    <option value="RECRIA">Recria ou engorda (outra fazenda)</option>
+                                                    <option value="REPRODUCAO">Reprodução</option>
+                                                    <option value="OUTRO">Outra</option>
+                                                </select>
+                                            </div>
+                                        )}
+                                        {eventType === 'VENDA' && (
+                                            <div className="flex flex-col">
                                                 <label className={labelClass}>Destino</label>
                                                 <input type="text" value={eventDestino} onChange={(e) => setEventDestino(e.target.value)} className={inputClass} placeholder="Comprador, frigorífico..." />
                                             </div>
@@ -1154,6 +1172,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                         </div>
                                     )}
                                     {eventsOfflineNotice && <p className="mb-4 text-sm text-[var(--eixo-success)]">{eventsOfflineNotice}</p>}
+                                    {eventsWarning && <p role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">{eventsWarning}</p>}
                                     {eventsError && <p className="mb-4 text-sm text-[var(--eixo-danger)]">{eventsError}</p>}
                                     {isLoadingEvents ? (
                                         <p className="text-sm text-[var(--eixo-text-muted)]">Carregando eventos...</p>

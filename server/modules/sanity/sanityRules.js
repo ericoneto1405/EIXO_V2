@@ -1,3 +1,5 @@
+import { avaliarTemperatura } from './sanityStatus.js';
+
 // Regras puras da aplicação sanitária (sem banco). Tudo que bloqueia ou avisa
 // no curral passa por aqui, para a tela mostrar o problema ANTES de salvar.
 
@@ -121,11 +123,16 @@ export function calcularConsumo({ doseTotal, applicationPerUnit, unit, applicati
     return { unidades: arredondar(doseTotal / rende, 4) };
 }
 
-export function montarPrevia({ animais, product, catalogItem, batch, appliedAt, doseModo, doseFixa, dosePorKg, applicationPerUnit }) {
+export function montarPrevia({ animais, product, catalogItem, batch, appliedAt, doseModo, doseFixa, dosePorKg, applicationPerUnit, coolerTempC = null }) {
     const tags = marcacoesDoProduto(product, catalogItem);
     const lote = validarLote(batch, appliedAt);
     const avisosGerais = [...lote.avisos];
     const bloqueiosGerais = [...lote.bloqueios];
+    const temperatura = avaliarTemperatura(product, coolerTempC);
+    if (temperatura.bloqueio) bloqueiosGerais.push(temperatura.bloqueio);
+    if (temperatura.aviso) avisosGerais.push(temperatura.aviso);
+    if (tags.has('BRUCELOSE_B19')) avisosGerais.push('Vacina viva: depois de preparada, use em até 2 horas e descarte a sobra.');
+    if (tags.has('BRUCELOSE_RB51')) avisosGerais.push('Vacina viva: depois de preparada, use em até 60 minutos e descarte a sobra.');
     const carencia = calcularCarencia(appliedAt, product);
     if (carencia.ate === null) {
         avisosGerais.push(carencia.desconhecida

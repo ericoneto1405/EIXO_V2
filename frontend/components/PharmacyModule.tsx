@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { buildApiUrl } from '../api';
+import PharmacyTemperature from './PharmacyTemperature';
 
 interface PharmacyBatch {
     id: string;
@@ -119,6 +120,8 @@ const emptyProductForm = {
     unit: 'frasco',
     applicationUnit: 'ml',
     applicationPerUnit: '',
+    storageMinTemp: '',
+    storageMaxTemp: '',
     minStock: '',
     storageLocation: '',
     refrigerated: false,
@@ -207,6 +210,8 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
             manufacturer: item.laboratory,
             presentation: item.presentation || '',
             refrigerated: item.refrigerated,
+            storageMinTemp: item.refrigerated ? '2' : '',
+            storageMaxTemp: item.refrigerated ? '8' : '',
             slaughterWithdrawalDays: item.slaughterWithdrawalDays === null ? '' : String(item.slaughterWithdrawalDays),
             milkWithdrawalDays: item.milkWithdrawalDays === null ? '' : String(item.milkWithdrawalDays),
             notes: buildCatalogNotes(item),
@@ -401,7 +406,13 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                             <Field label="Estoque mínimo"><input type="number" min="0" step="0.01" className={inputClass} value={productForm.minStock} onChange={(event) => setProductForm({ ...productForm, minStock: event.target.value })} placeholder="0" /></Field>
                             <Field label="Local de armazenamento"><input className={inputClass} value={productForm.storageLocation} onChange={(event) => setProductForm({ ...productForm, storageLocation: event.target.value })} placeholder="Ex.: geladeira 1" /></Field>
                         </div>
-                        <label className="flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 text-sm font-semibold text-[var(--eixo-text)]"><input type="checkbox" checked={productForm.refrigerated} onChange={(event) => setProductForm({ ...productForm, refrigerated: event.target.checked })} /> Exige refrigeração</label>
+                        <label className="flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 text-sm font-semibold text-[var(--eixo-text)]"><input type="checkbox" checked={productForm.refrigerated} onChange={(event) => setProductForm({ ...productForm, refrigerated: event.target.checked, storageMinTemp: event.target.checked && !productForm.storageMinTemp ? '2' : productForm.storageMinTemp, storageMaxTemp: event.target.checked && !productForm.storageMaxTemp ? '8' : productForm.storageMaxTemp })} /> Exige refrigeração</label>
+                        {productForm.refrigerated && (
+                            <div className="grid grid-cols-2 gap-3">
+                                <Field label="Temperatura mínima (°C)"><input type="number" step="0.5" className={inputClass} value={productForm.storageMinTemp} onChange={(event) => setProductForm({ ...productForm, storageMinTemp: event.target.value })} /></Field>
+                                <Field label="Temperatura máxima (°C)"><input type="number" step="0.5" className={inputClass} value={productForm.storageMaxTemp} onChange={(event) => setProductForm({ ...productForm, storageMaxTemp: event.target.value })} /></Field>
+                            </div>
+                        )}
                         <div className="grid grid-cols-2 gap-3">
                             <Field label="Carência para abate (dias)"><input type="number" min="0" step="1" className={inputClass} value={productForm.slaughterWithdrawalDays} onChange={(event) => setProductForm({ ...productForm, slaughterWithdrawalDays: event.target.value })} /></Field>
                             <Field label="Carência para leite (dias)"><input type="number" min="0" step="1" className={inputClass} value={productForm.milkWithdrawalDays} onChange={(event) => setProductForm({ ...productForm, milkWithdrawalDays: event.target.value })} /></Field>
@@ -474,6 +485,8 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                     </form>
                 </FormCard>
             </div>
+
+            <PharmacyTemperature farmId={farmId} />
 
             <section className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
                 <div className="flex flex-wrap items-end justify-between gap-4">

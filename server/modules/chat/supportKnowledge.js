@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.16';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.17';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-16';
 
 export const SUPPORT_TONE_RULES = [
@@ -204,6 +204,51 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Em Configurar calendário: responda se a raiva é obrigatória (Sim, Não ou Não sei), ligue ou desligue clostridioses e vacinas reprodutivas, e ajuste os meses de vermífugo e carrapaticida. Os meses sugeridos seguem o estado da fazenda.',
             'Vacinas reprodutivas usam a estação de monta cadastrada na Reprodução. O botão Aplicar agora abre a aplicação com os animais e o produto sugerido.',
             'Os vencidos e os que vencem em até 7 dias também aparecem na barra de alertas do topo; clicar leva ao Calendário. O lembrete some quando a aplicação é registrada.',
+        ],
+    },
+    {
+        id: 'sanidade-semaforo',
+        title: 'Situação sanitária da fazenda e GTA',
+        keywords: ['gta', 'semaforo', 'situacao sanitaria', 'comprovacao', 'brucelose', 'raiva', 'pendencia', 'bloqueio'],
+        href: 'eixo:view:Sanidade',
+        guidance: [
+            'No topo da Sanidade aparece a situação da fazenda (verde, amarelo ou vermelho) para brucelose e raiva, com os motivos.',
+            'Vermelho indica pendência que pode fazer o órgão de defesa bloquear a emissão de GTA; o EIXO não emite nem consulta GTA.',
+            'Depois de entregar a comprovação de brucelose ao órgão do estado, use Registrar comprovação de brucelose e escolha o semestre.',
+        ],
+    },
+    {
+        id: 'sanidade-carencia-venda',
+        title: 'Venda de animal em carência',
+        keywords: ['carencia', 'venda bloqueada', 'abate', 'frigorifico', 'residuo', 'vender animal'],
+        href: 'eixo:view:Rebanho%20Comercial',
+        guidance: [
+            'Ao registrar a venda na ficha do animal, escolha a finalidade: abate, recria/engorda, reprodução ou outra.',
+            'Venda para abate é bloqueada enquanto o animal estiver em carência de algum produto aplicado na Sanidade, ou se recebeu produto sem carência cadastrada.',
+            'Para recria ou reprodução a venda é permitida, com aviso para informar o comprador sobre a carência.',
+        ],
+    },
+    {
+        id: 'sanidade-doencas-mortes',
+        title: 'Registrar doenças e mortes',
+        keywords: ['doenca', 'doente', 'morte', 'morreu', 'mortalidade', 'causa da morte', 'necropsia', 'tratamento', 'notificacao'],
+        href: 'eixo:view:Sanidade',
+        guidance: [
+            'Na Sanidade, aba Doenças e mortes: informe a identificação, a data, a doença ou causa e os sinais.',
+            'Doença abre um caso em tratamento; encerre como Curado, Descarte ou Morreu. Morte tira o animal do rebanho ativo e registra o evento Morte.',
+            'Suspeita de raiva, sinais nervosos, feridas na boca e nos cascos, aborto ou morte sem causa: o EIXO lembra de comunicar o órgão de defesa em até 24 horas.',
+            'A aba mostra mortalidade dos últimos 12 meses e as principais causas.',
+        ],
+    },
+    {
+        id: 'sanidade-temperatura',
+        title: 'Temperatura das vacinas',
+        keywords: ['temperatura', 'geladeira', 'caixa termica', 'refrigeracao', 'conservacao', 'vacina quente'],
+        href: 'eixo:view:Sanidade',
+        guidance: [
+            'Na Farmácia, produtos refrigerados usam a faixa de 2 a 8 °C (pode ser ajustada no cadastro).',
+            'Em Temperatura da geladeira, registre as leituras; leitura fora da faixa ou sem leitura há 7 dias gera lembrete no Calendário.',
+            'Na aplicação de produto refrigerado, informe a temperatura da caixa térmica: fora da faixa, o EIXO não deixa aplicar.',
         ],
     },
     {

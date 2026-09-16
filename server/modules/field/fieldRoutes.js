@@ -11,7 +11,7 @@ import { requireAuth } from '../middlewares/requireAuth.js';
 import { canAccessEixoCampo } from '../utils/saasContext.js';
 import { requireEixoCampoPlan } from '../middlewares/requireEixoCampoPlan.js';
 import { hasSanidadeAccess } from '../middlewares/requireAuth.js';
-import { carregarLembretesComCache } from '../sanity/sanityCalendar.js';
+import { carregarLembretesComCache, carregarSituacao } from '../sanity/sanityCalendar.js';
 const prisma = new PrismaClient();
 
 const sanitizeUploadFileName = (value) =>
@@ -232,6 +232,19 @@ export function registerFieldRoutes(app) {
                 if (await hasSanidadeAccess(req)) {
                     for (const farm of farms.slice(0, 10)) {
                         const { lembretes } = await carregarLembretesComCache(farm.id);
+                        const situacao = await carregarSituacao(farm.id, { cache: true });
+                        if (situacao.geral === 'VERMELHO') {
+                            alerts.push({
+                                id: `sanidade-${farm.id}-semaforo`,
+                                type: 'critical',
+                                message: `Pendência sanitária: GTA pode ser bloqueada${farms.length > 1 ? ` (${farm.name})` : ''}`,
+                                source: 'SANIDADE',
+                                sourceType: 'SANIDADE',
+                                sourceId: 'semaforo',
+                                farmId: farm.id,
+                                createdAt: new Date().toISOString(),
+                            });
+                        }
                         lembretes
                             .filter((item) => item.severidade === 'VERMELHO' || item.severidade === 'LARANJA')
                             .forEach((item) => alerts.push({

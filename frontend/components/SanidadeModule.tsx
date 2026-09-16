@@ -18,8 +18,10 @@ import {
 } from '../adapters/sanityApi';
 import PharmacyModule from './PharmacyModule';
 import SanidadeCalendar from './SanidadeCalendar';
+import SanidadeCases from './SanidadeCases';
+import SanidadeStatus from './SanidadeStatus';
 
-export type SanidadeTab = 'APLICACOES' | 'CALENDARIO' | 'FARMACIA';
+export type SanidadeTab = 'APLICACOES' | 'CALENDARIO' | 'CASOS' | 'FARMACIA';
 
 interface SanidadeModuleProps {
     farmId?: string | null;
@@ -91,6 +93,8 @@ const Aviso: React.FC<{ tone: 'danger' | 'warning' | 'success'; children: React.
 const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRequest }) => {
     const [aba, setAba] = useState<Aba>(tabRequest?.tab || 'APLICACOES');
     const [avisoPreenchido, setAvisoPreenchido] = useState<string | null>(null);
+    const [statusKey, setStatusKey] = useState(0);
+    const [coolerTemp, setCoolerTemp] = useState('');
 
     useEffect(() => {
         if (tabRequest) setAba(tabRequest.tab);
@@ -140,6 +144,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
             ]);
             setCustos(custo);
             setOptions(opcoes);
+            setStatusKey((atual) => atual + 1);
             setHistorico(lista.aplicacoes);
             setCarencia(emCarencia.animais);
         } catch (error) {
@@ -190,7 +195,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
         }
         const candidato = options?.products.find((item) => {
             if (!item.batches.length) return false;
-            if (lembrete.tag === 'VERMIFUGO') return item.category === 'VERMIFUGO' || (item.category === 'ANTIPARASITARIO' && !item.tags.includes('CARRAPATICIDA'));
+            if (lembrete.tag === 'VERMIFUGO') return item.category === 'VERMIFUGO' || (item.category === 'ANTIPARASITARIO' && !item.tags.includes('CARRAPATICIDA') && !item.tags.includes('HEMOPARASITICIDA'));
             if (lembrete.tag === 'REPRODUTIVA') return item.tags.includes('REPRODUTIVA') || item.tags.includes('IBR_BVD');
             return lembrete.tag ? item.tags.includes(lembrete.tag) : false;
         });
@@ -212,6 +217,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
         doseFixa: doseModo === 'FIXA' ? Number(doseFixa.replace(',', '.')) : null,
         dosePorKg: doseModo === 'POR_PESO' && Number.isFinite(dosePorKg) ? dosePorKg : null,
         applicationPerUnit: rendimento ? Number(rendimento.replace(',', '.')) : null,
+        coolerTempC: coolerTemp.trim() === '' ? null : Number(coolerTemp.replace(',', '.')),
         route: route || null,
         appliedByName,
         vetName,
@@ -292,11 +298,16 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                 <p className="text-sm text-[var(--eixo-text-muted)]">{farmName ? `${farmName} · ` : ''}Aplicações no curral e estoque de vacinas e remédios.</p>
             </div>
 
-            <div className="flex gap-2" role="tablist">
+            <SanidadeStatus farmId={farmId} refreshKey={statusKey} />
+
+            <div className="flex flex-wrap gap-2" role="tablist">
                 <button type="button" role="tab" aria-selected={aba === 'APLICACOES'} className={aba === 'APLICACOES' ? primaryButton : secondaryButton} onClick={() => setAba('APLICACOES')}>Aplicações</button>
                 <button type="button" role="tab" aria-selected={aba === 'CALENDARIO'} className={aba === 'CALENDARIO' ? primaryButton : secondaryButton} onClick={() => setAba('CALENDARIO')}>Calendário</button>
+                <button type="button" role="tab" aria-selected={aba === 'CASOS'} className={aba === 'CASOS' ? primaryButton : secondaryButton} onClick={() => setAba('CASOS')}>Doenças e mortes</button>
                 <button type="button" role="tab" aria-selected={aba === 'FARMACIA'} className={aba === 'FARMACIA' ? primaryButton : secondaryButton} onClick={() => setAba('FARMACIA')}>Farmácia</button>
             </div>
+
+            {aba === 'CASOS' && <SanidadeCases key={farmId} farmId={farmId} onChanged={() => void carregar()} />}
 
             {aba === 'CALENDARIO' && (
                 <SanidadeCalendar key={farmId} farmId={farmId} onAplicar={aplicarLembrete} onAbrirFarmacia={() => setAba('FARMACIA')} />
@@ -476,6 +487,13 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                                 <input className={inputClass} value={vetCrmv} onChange={(event) => setVetCrmv(event.target.value)} />
                             </label>
                         </div>
+                        {produto.refrigerated && (
+                            <label className={labelClass}>
+                                Temperatura da caixa térmica agora (°C) · faixa do produto {produto.storageMinTemp ?? '—'} a {produto.storageMaxTemp ?? '—'} °C
+                                <input type="text" inputMode="decimal" className={inputClass} value={coolerTemp} onChange={(event) => setCoolerTemp(event.target.value)} placeholder="Ex.: 6" />
+                                <span className="mt-1 block text-[var(--eixo-text-muted)]">Fora da faixa, o EIXO não deixa aplicar: a vacina pode ter perdido o efeito.</span>
+                            </label>
+                        )}
                         {produto.tags.some((tag) => tag.startsWith('BRUCELOSE')) && !vetName.trim() && (
                             <Aviso tone="warning">Vacina de brucelose exige veterinário cadastrado no órgão de defesa do estado. Informe o nome e o CRMV.</Aviso>
                         )}

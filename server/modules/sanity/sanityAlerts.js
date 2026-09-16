@@ -355,7 +355,9 @@ export function gerarLembretes({ hoje = new Date(), animais, aplicacoes, setting
         }));
     }
     if (settings.reproductiveEnabled) lista.push(...reprodutivas({ hoje, femeas, aplicacoes, estacoes }));
-    const ehVermifugo = (aplicacao) => aplicacao.category === 'VERMIFUGO' || (aplicacao.category === 'ANTIPARASITARIO' && !aplicacao.tags.has('CARRAPATICIDA'));
+    // Remédio de tristeza parasitária e carrapaticida não contam como vermífugo.
+    const ehVermifugo = (aplicacao) => aplicacao.category === 'VERMIFUGO'
+        || (aplicacao.category === 'ANTIPARASITARIO' && !aplicacao.tags.has('CARRAPATICIDA') && !aplicacao.tags.has('HEMOPARASITICIDA'));
     if (settings.dewormEnabled && settings.dewormMonths?.length) {
         lista.push(...porMes({ hoje, meses: settings.dewormMonths, aplicacoes, filtro: ehVermifugo, nome: 'Vermífugo', prefixo: 'vermifugo', animaisVivos: vivos, tag: 'VERMIFUGO' }));
     }

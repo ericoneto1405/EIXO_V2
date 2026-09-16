@@ -5,7 +5,9 @@ import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
 import { logActivity } from '../utils/activityLog.js';
 import { findCatalogItem } from '../pharmacy/pharmacyCatalog.js';
 import { calcularCarencia, extrairDosePorPeso, marcacoesDoProduto, montarPrevia } from './sanityRules.js';
-import { RABIES_OPTIONS, calcularCarencias, carregarConfiguracao, carregarLembretes, limparCacheLembretes } from './sanityCalendar.js';
+import { RABIES_OPTIONS, calcularCarencias, carregarConfiguracao, carregarLembretes, carregarSituacao, limparCacheLembretes } from './sanityCalendar.js';
+import { CASE_STATUS, CAUSAS_MORTE, DOENCAS, avisoNotificacao, doencaInfo, indicadoresCasos } from './sanityStatus.js';
+import { infoDoEstado } from './sanityRegion.js';
 
 const prisma = new PrismaClient();
 const MAX_ANIMAIS = 2000;
@@ -95,6 +97,11 @@ async function montarContexto(req, res) {
     const doseFixa = Number(body.doseFixa);
     const dosePorKg = Number(body.dosePorKg);
     const applicationPerUnitInformado = body.applicationPerUnit === '' || body.applicationPerUnit == null ? null : Number(body.applicationPerUnit);
+    const coolerTempC = body.coolerTempC === '' || body.coolerTempC == null ? null : Number(body.coolerTempC);
+    if (coolerTempC !== null && (!Number.isFinite(coolerTempC) || coolerTempC < -30 || coolerTempC > 60)) {
+        res.status(400).json({ message: 'Temperatura da caixa térmica inválida.' });
+        return null;
+    }
     if (applicationPerUnitInformado !== null && !(applicationPerUnitInformado > 0)) {
         res.status(400).json({ message: 'Rendimento por unidade inválido.' });
         return null;
@@ -127,8 +134,9 @@ async function montarContexto(req, res) {
         doseFixa,
         dosePorKg,
         applicationPerUnit: applicationPerUnitInformado ?? product.applicationPerUnit,
+        coolerTempC,
     });
-    return { farm, body, appliedAt, product, batch, catalogItem, selecao, previa, applicationPerUnitInformado };
+    return { farm, body, appliedAt, product, batch, catalogItem, selecao, previa, applicationPerUnitInformado, coolerTempC };
 }
 
 const responderPrevia = (ctx) => ({
@@ -177,6 +185,9 @@ export function registerSanityRoutes(app) {
                         applicationUnit: product.applicationUnit || 'ml',
                         applicationPerUnit: product.applicationPerUnit,
                         slaughterWithdrawalDays: product.slaughterWithdrawalDays,
+                        refrigerated: product.refrigerated,
+                        storageMinTemp: product.storageMinTemp ?? (product.refrigerated ? 2 : null),
+                        storageMaxTemp: product.storageMaxTemp ?? (product.refrigerated ? 8 : null),
                         suggestedRoute: catalogItem?.route || null,
                         suggestedDose: catalogItem?.dose || null,
                         suggestedDosePerKg: extrairDosePorPeso(catalogItem?.dose),
@@ -267,6 +278,7 @@ export function registerSanityRoutes(app) {
                         withdrawalUnknown: carencia.desconhecida,
                         unitCost: custoPorDose === null ? null : Math.round(custoPorDose * linha.dose * 100) / 100,
                         notes: text(body.notes),
+                        coolerTempC: ctx.coolerTempC,
                         createdByUserId: req.user?.id || null,
                     })),
                 });
@@ -491,6 +503,201 @@ export function registerSanityRoutes(app) {
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Erro ao salvar a configuração.' });
+        }
+    });
+
+    // ── Semáforo e comprovações ───────────────────────────────────────────────
+    app.get('/farms/:farmId/sanidade/situacao', async (req, res) => {
+        try {
+            return res.json(await carregarSituacao(req.sanityFarm.id));
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao calcular a situação sanitária.' });
+        }
+    });
+
+    app.post('/farms/:farmId/sanidade/comprovacoes', requireNonFieldWorker, async (req, res) => {
+        const body = req.body || {};
+        const period = String(body.period || '').trim();
+        if (!/^\d{4}-S[12]$/.test(period)) return res.status(400).json({ message: 'Semestre inválido.' });
+        const deliveredAt = parseDataAplicacao(body.deliveredAt);
+        if (!deliveredAt || deliveredAt.getTime() > Date.now() + 24 * 60 * 60 * 1000) return res.status(400).json({ message: 'Data da entrega inválida.' });
+        const data = {
+            deliveredAt,
+            protocol: String(body.protocol || '').trim() || null,
+            notes: String(body.notes || '').trim() || null,
+            createdByUserId: req.user?.id || null,
+        };
+        try {
+            await prisma.sanitaryCompliance.upsert({
+                where: { farmId_kind_period: { farmId: req.sanityFarm.id, kind: 'BRUCELOSE', period } },
+                update: data,
+                create: { farmId: req.sanityFarm.id, kind: 'BRUCELOSE', period, ...data },
+            });
+            limparCacheLembretes(req.sanityFarm.id);
+            void logActivity(prisma, req, {
+                action: 'SANIDADE_COMPROVACAO',
+                entity: 'SanitaryCompliance',
+                entityId: req.sanityFarm.id,
+                description: `Registrou a comprovação de brucelose do semestre ${period}`,
+                farmId: req.sanityFarm.id,
+            });
+            return res.status(201).json(await carregarSituacao(req.sanityFarm.id));
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao registrar a comprovação.' });
+        }
+    });
+
+    // ── Doenças e mortes ──────────────────────────────────────────────────────
+    const serializarCaso = (caso) => ({
+        ...caso,
+        diseaseLabel: doencaInfo(caso.kind, caso.disease)?.label || caso.disease,
+        brinco: caso.animal?.brinco || null,
+        lote: caso.animal?.lot?.name || null,
+        animal: undefined,
+    });
+
+    app.get('/farms/:farmId/sanidade/casos', async (req, res) => {
+        const farm = req.sanityFarm;
+        try {
+            const [casos, vivos, farmInfo] = await Promise.all([
+                prisma.sanitaryCase.findMany({
+                    where: { farmId: farm.id },
+                    include: { animal: { select: { brinco: true, lot: { select: { name: true } } } } },
+                    orderBy: { startedAt: 'desc' },
+                    take: 300,
+                }),
+                prisma.animal.count({ where: { farmId: farm.id, status: 'VIVO' } }),
+                prisma.farm.findUnique({ where: { id: farm.id }, select: { uf: true } }),
+            ]);
+            return res.json({
+                casos: casos.map(serializarCaso),
+                indicadores: indicadoresCasos({ casos, vivos }),
+                doencas: DOENCAS,
+                causasMorte: CAUSAS_MORTE,
+                orgao: infoDoEstado(farmInfo?.uf).orgao,
+            });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao listar casos.' });
+        }
+    });
+
+    // Morte fecha o ciclo do animal do mesmo jeito que o evento "Morte" do Rebanho.
+    async function registrarMorte(tx, { farmId, animal, data, causaLabel }) {
+        await tx.herdEvent.create({
+            data: {
+                farmId,
+                animalId: animal.id,
+                type: 'MORTE',
+                date: data,
+                observacoes: `Causa: ${causaLabel} (Sanidade)`,
+            },
+        });
+        await tx.animal.update({ where: { id: animal.id }, data: { status: 'MORTO' } });
+    }
+
+    app.post('/farms/:farmId/sanidade/casos', requireNonFieldWorker, async (req, res) => {
+        const farm = req.sanityFarm;
+        const body = req.body || {};
+        const kind = body.kind === 'MORTE' ? 'MORTE' : 'DOENCA';
+        const disease = String(body.disease || '').toUpperCase();
+        const info = doencaInfo(kind, disease);
+        if (!info) return res.status(400).json({ message: kind === 'MORTE' ? 'Escolha a causa da morte.' : 'Escolha a doença.' });
+        const startedAt = parseDataAplicacao(body.startedAt);
+        if (!startedAt || startedAt.getTime() > Date.now() + 24 * 60 * 60 * 1000) return res.status(400).json({ message: 'Data inválida.' });
+        const brinco = String(body.brinco || '').trim();
+        if (!brinco) return res.status(400).json({ message: 'Informe a identificação do animal.' });
+        const outra = String(body.otherDisease || '').trim();
+        if (disease === 'OUTRA' && !outra) return res.status(400).json({ message: 'Descreva qual é a doença ou causa.' });
+        try {
+            const selecao = await resolverSelecao(farm.id, { brincos: [brinco] });
+            if (selecao.naoEncontrados.length) return res.status(404).json({ message: `Identificação ${brinco} não encontrada nesta fazenda.` });
+            if (selecao.repetidos.length) return res.status(409).json({ message: `A identificação ${brinco} é usada por mais de um animal. Corrija o cadastro.` });
+            const animal = selecao.animais[0];
+            if (animal.status !== 'VIVO') return res.status(409).json({ message: `O animal ${brinco} já está como ${animal.status === 'MORTO' ? 'morto' : 'vendido'}.` });
+            const farmInfo = await prisma.farm.findUnique({ where: { id: farm.id }, select: { uf: true } });
+            const aviso = avisoNotificacao(kind, disease, infoDoEstado(farmInfo?.uf).orgao);
+            const text = (value) => String(value ?? '').trim() || null;
+            const caso = await prisma.$transaction(async (tx) => {
+                const criado = await tx.sanitaryCase.create({
+                    data: {
+                        farmId: farm.id,
+                        animalId: animal.id,
+                        kind,
+                        disease,
+                        symptoms: text(body.symptoms),
+                        startedAt,
+                        status: kind === 'MORTE' ? 'MORTO' : 'EM_TRATAMENTO',
+                        necropsy: body.necropsy === true,
+                        diagnosedBy: text(body.diagnosedBy),
+                        notes: [outra ? `Descrição: ${outra}` : null, text(body.notes)].filter(Boolean).join(' — ') || null,
+                        closedAt: kind === 'MORTE' ? startedAt : null,
+                        notifiable: Boolean(aviso),
+                        createdByUserId: req.user?.id || null,
+                    },
+                });
+                if (kind === 'MORTE') await registrarMorte(tx, { farmId: farm.id, animal, data: startedAt, causaLabel: outra || info.label });
+                return criado;
+            });
+            limparCacheLembretes(farm.id);
+            void logActivity(prisma, req, {
+                action: kind === 'MORTE' ? 'SANIDADE_MORTE' : 'SANIDADE_DOENCA',
+                entity: 'SanitaryCase',
+                entityId: caso.id,
+                description: `${kind === 'MORTE' ? 'Registrou morte' : 'Registrou doença'} do animal ${animal.brinco}: ${outra || info.label}`,
+                farmId: farm.id,
+            });
+            return res.status(201).json({ caso, aviso });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao registrar o caso.' });
+        }
+    });
+
+    app.patch('/farms/:farmId/sanidade/casos/:caseId', requireNonFieldWorker, async (req, res) => {
+        const farm = req.sanityFarm;
+        const body = req.body || {};
+        const status = String(body.status || '').toUpperCase();
+        if (!CASE_STATUS.has(status)) return res.status(400).json({ message: 'Situação inválida.' });
+        try {
+            const caso = await prisma.sanitaryCase.findFirst({
+                where: { id: String(req.params.caseId), farmId: farm.id },
+                include: { animal: true },
+            });
+            if (!caso) return res.status(404).json({ message: 'Caso não encontrado.' });
+            if (caso.kind === 'MORTE') return res.status(409).json({ message: 'Registro de morte não pode mudar de situação.' });
+            if (caso.status !== 'EM_TRATAMENTO') return res.status(409).json({ message: 'Este caso já foi encerrado.' });
+            const closedAt = status === 'EM_TRATAMENTO' ? null : (parseDataAplicacao(body.closedAt) || new Date());
+            if (closedAt && closedAt < caso.startedAt) return res.status(400).json({ message: 'A data de encerramento é anterior ao início do caso.' });
+            await prisma.$transaction(async (tx) => {
+                await tx.sanitaryCase.update({
+                    where: { id: caso.id },
+                    data: {
+                        status,
+                        closedAt,
+                        necropsy: body.necropsy === true ? true : caso.necropsy,
+                        notes: body.notes ? [caso.notes, String(body.notes).trim()].filter(Boolean).join(' — ') : caso.notes,
+                    },
+                });
+                if (status === 'MORTO' && caso.animal.status === 'VIVO') {
+                    await registrarMorte(tx, { farmId: farm.id, animal: caso.animal, data: closedAt, causaLabel: doencaInfo('DOENCA', caso.disease)?.label || caso.disease });
+                }
+            });
+            limparCacheLembretes(farm.id);
+            const labels = { CURADO: 'curado', MORTO: 'morto', DESCARTADO: 'descartado' };
+            void logActivity(prisma, req, {
+                action: 'SANIDADE_CASO_ENCERRADO',
+                entity: 'SanitaryCase',
+                entityId: caso.id,
+                description: `Encerrou o caso do animal ${caso.animal.brinco} como ${labels[status] || status}`,
+                farmId: farm.id,
+            });
+            return res.json({ ok: true });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao atualizar o caso.' });
         }
     });
 }
