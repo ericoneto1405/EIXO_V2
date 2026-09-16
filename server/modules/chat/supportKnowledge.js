@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.11';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.15';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-16';
 
 export const SUPPORT_TONE_RULES = [
@@ -18,6 +18,7 @@ export const SUPPORT_MODULE_CATALOG = [
     { name: 'Nutrição', href: 'eixo:view:Nutri%C3%A7%C3%A3o', entitlementCodes: ['NUTRITION', 'EIXO_NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'controla dieta, consumo, custo por lote e ingredientes em risco.', salesTrigger: 'cocho, dieta, trato, consumo, suplemento, ração ou custo alimentar.' },
     { name: 'Reprodução', href: '/genetics/reproducao', entitlementCodes: ['GENETICS', 'PO', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'organiza coberturas, diagnósticos, partos e indicadores reprodutivos.', salesTrigger: 'prenhez, parto, matriz, cobertura, IATF ou estação de monta.' },
     { name: 'EIXO Acasalamento', href: '/genetics/acasalamento', entitlementCodes: ['GENETICS', 'EIXO_DECISAO'], benefit: 'apoia decisões de acasalamento com histórico e objetivo produtivo.', salesTrigger: 'acasalamento, touro, sêmen, botijão, matriz ou genética.' },
+    { name: 'Sanidade', href: 'eixo:view:Sanidade', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'farmácia com compra ligada ao Financeiro e registro de vacinas e remédios no curral, com trava de brucelose, lote vencido e carência para abate.', salesTrigger: 'vacina, brucelose, raiva, vermífugo, carrapato, remédio, carência ou calendário sanitário.' },
     { name: 'Gestão Comercial', href: 'eixo:view:Gest%C3%A3o%20Comercial', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'CRM da fazenda: clientes, pipeline de negociação por etapas, contrato e lembretes de aniversário/recompra.', salesTrigger: 'venda, cliente, comprador, negociação, pipeline, contrato ou aniversário de cliente.' },
     { name: 'Meus Leilões', href: 'eixo:view:Meus%20Leil%C3%B5es', entitlementCodes: ['EIXO_DECISAO'], benefit: 'patrimônio do plantel de leilão: sócios e cotas, documentos (ABCZ, contrato, nota), vídeo, avaliações e resultado por animal, sem taxa por animal e de qualquer leiloeira.', salesTrigger: 'leilão, condomínio, sócio, cota, animal P.O., registro ABCZ, contrato de compra, valorização ou patrimônio do plantel.' },
     { name: 'Botijão de Sêmen', href: '/genetics/reproducao', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'organiza o estoque de sêmen usado no EIXO Acasalamento.', salesTrigger: 'sêmen, botijão, doses, estoque de touro ou acasalamento.' },
@@ -48,15 +49,20 @@ const SUPPORT_TOPIC_DEFINITIONS = [
     },
     {
         id: 'farmacia-lista-eixo',
-        title: 'Cadastrar remédios e vacinas na Farmácia',
-        keywords: ['farmacia', 'remedio', 'remedios', 'vacina', 'vacinas', 'carencia', 'lista eixo', 'medicamento'],
-        href: 'eixo:view:Fazendas',
+        title: 'Farmácia: cadastrar e comprar remédios e vacinas',
+        keywords: ['farmacia', 'remedio', 'remedios', 'vacina', 'vacinas', 'carencia', 'lista eixo', 'medicamento', 'compra de remedio', 'estoque de vacina'],
+        href: 'eixo:view:Sanidade',
         guidance: [
-            'Abra a fazenda em Estrutura da Fazenda e vá até a Farmácia.',
+            'A Farmácia fica no módulo Sanidade (EIXO Gestão), na aba Farmácia.',
             'Em Cadastrar produto, use Buscar na lista EIXO e digite a marca, o laboratório ou o princípio ativo.',
             'Ao escolher, os campos são preenchidos com os dados da bula; confira a bula do frasco antes de salvar.',
             'Se o produto não estiver na lista, preencha os campos à mão.',
+            'Quando a unidade de estoque é diferente da de aplicação (ex.: frasco e mL), informe quanto rende cada unidade para o estoque baixar certo.',
             'Mudar a carência sugerida pela lista fica registrado no histórico.',
+            'Em Registrar compra, informe lote, validade, quantidade, custo, fornecedor e forma de pagamento (à vista, a prazo, parcelado, entrada + parcelas ou cartão de crédito).',
+            'A compra entra no estoque e no Financeiro como custo da fazenda (Vacinas, Vermífugos ou Tratamentos): à vista como paga; a prazo, parcelada ou no cartão como Contas a Pagar. No cartão, cada parcela vence na data de pagamento da fatura.',
+            'Produto que vence no estoque já é custo da fazenda e não chega a nenhum lote; a Farmácia mostra o valor perdido.',
+            'Estoque que já estava na fazenda: marque a opção para não lançar no Financeiro.',
         ],
     },
     {
@@ -172,6 +178,19 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         guidance: [
             'Acesse Reprodução, aba Botijão de Sêmen, para consultar botijões e doses de sêmen.',
             'Esse estoque é usado pelo EIXO Acasalamento conforme o acesso do usuário.',
+        ],
+    },
+    {
+        id: 'sanidade-aplicacao',
+        title: 'Registrar vacina ou remédio (Sanidade)',
+        keywords: ['sanidade', 'vacina', 'vacinar', 'brucelose', 'b19', 'rb51', 'raiva', 'vermifugo', 'aplicacao', 'carencia', 'curral'],
+        href: 'eixo:view:Sanidade',
+        guidance: [
+            'Antes, cadastre o produto e registre a compra do frasco na aba Farmácia da Sanidade.',
+            'Em Sanidade, siga os 4 passos: animais (identificações ou lote inteiro), produto e lote do frasco, como aplicar (data, via e dose) e conferir.',
+            'A dose pode ser igual para todos ou calculada pelo último peso de cada animal.',
+            'O EIXO bloqueia vacina de brucelose em macho ou fora da idade, lote vencido e estoque insuficiente. Animais bloqueados aparecem com o motivo; é possível aplicar só nos liberados.',
+            'Ao salvar, o estoque do lote baixa sozinho. O custo do produto usado aparece em Custo sanitário por lote e por animal, sem lançar de novo no resultado (já entrou na compra). A tela mostra quais animais ainda estão em carência para abate.',
         ],
     },
     {

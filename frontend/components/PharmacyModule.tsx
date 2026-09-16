@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { buildApiUrl } from '../api';
-import { Farm } from '../types';
 
 interface PharmacyBatch {
     id: string;
@@ -19,6 +18,7 @@ interface PharmacyProduct {
     manufacturer: string | null;
     presentation: string | null;
     applicationUnit: string | null;
+    applicationPerUnit: number | null;
     minStock: number;
     storageLocation: string | null;
     refrigerated: boolean;
@@ -57,8 +57,42 @@ interface CatalogItem {
 }
 
 interface PharmacyModuleProps {
-    farm: Farm;
+    farmId: string;
+    onStockChanged?: () => void;
 }
+
+type PaymentCondition = 'PAGO' | 'A_PAGAR' | 'PARCELADO' | 'ENTRADA_PARCELADO' | 'CARTAO';
+
+const PAYMENT_OPTIONS: [PaymentCondition, string][] = [
+    ['PAGO', 'À vista (já pago)'],
+    ['A_PAGAR', 'A prazo (uma parcela)'],
+    ['PARCELADO', 'Parcelado'],
+    ['ENTRADA_PARCELADO', 'Entrada + parcelas'],
+    ['CARTAO', 'Cartão de crédito'],
+];
+
+const todayIso = () => {
+    const now = new Date();
+    return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+};
+
+const emptyBatchForm = () => ({
+    productId: '',
+    lotNumber: '',
+    expiresAt: '',
+    quantity: '',
+    unitCost: '',
+    semCompra: false,
+    supplier: '',
+    invoiceNumber: '',
+    purchasedAt: todayIso(),
+    condition: 'PAGO' as PaymentCondition,
+    dueDate: '',
+    installments: '',
+    downPayment: '',
+});
+
+const toNumber = (value: string) => Number(String(value).replace(',', '.'));
 
 const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]';
 const labelClass = 'text-xs font-semibold text-[var(--eixo-text-muted)]';
@@ -84,6 +118,7 @@ const emptyProductForm = {
     presentation: '',
     unit: 'frasco',
     applicationUnit: 'ml',
+    applicationPerUnit: '',
     minStock: '',
     storageLocation: '',
     refrigerated: false,
@@ -103,7 +138,7 @@ const buildCatalogNotes = (item: CatalogItem) =>
         item.notes,
     ].filter(Boolean).join('\n');
 
-const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
+const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged }) => {
     const [products, setProducts] = useState<PharmacyProduct[]>([]);
     const [movements, setMovements] = useState<PharmacyMovement[]>([]);
     const [loading, setLoading] = useState(true);
@@ -117,7 +152,7 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
     const [productForm, setProductForm] = useState(emptyProductForm);
     const [catalog, setCatalog] = useState<CatalogItem[]>([]);
     const [catalogSearch, setCatalogSearch] = useState('');
-    const [batchForm, setBatchForm] = useState({ productId: '', lotNumber: '', expiresAt: '', quantity: '', unitCost: '' });
+    const [batchForm, setBatchForm] = useState(emptyBatchForm);
     const [movementForm, setMovementForm] = useState({ batchId: '', type: 'EXIT', quantity: '', notes: '' });
 
     const request = async (path: string, init?: RequestInit) => {
@@ -131,7 +166,7 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
         setLoading(true);
         setError(null);
         try {
-            const payload = await request(`/farms/${farm.id}/pharmacy`);
+            const payload = await request(`/farms/${farmId}/pharmacy`);
             setProducts(payload.products || []);
             setMovements(payload.movements || []);
         } catch (loadError) {
@@ -139,17 +174,17 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
         } finally {
             setLoading(false);
         }
-    }, [farm.id]);
+    }, [farmId]);
 
     useEffect(() => { void loadInventory(); }, [loadInventory]);
 
     useEffect(() => {
         let cancelled = false;
-        request(`/farms/${farm.id}/pharmacy/catalog`)
+        request(`/farms/${farmId}/pharmacy/catalog`)
             .then((payload) => { if (!cancelled) setCatalog(payload.items || []); })
             .catch(() => { if (!cancelled) setCatalog([]); });
         return () => { cancelled = true; };
-    }, [farm.id]);
+    }, [farmId]);
 
     const catalogMatches = useMemo(() => {
         const term = normalizeSearch(catalogSearch.trim());
@@ -189,9 +224,15 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
         if (!movementForm.batchId && allBatches[0]) setMovementForm((current) => ({ ...current, batchId: allBatches[0].id }));
     }, [allBatches, movementForm.batchId]);
 
+    const selectedBatchProduct = products.find((product) => product.id === batchForm.productId) || null;
+    const batchTotal = (toNumber(batchForm.quantity) || 0) * (toNumber(batchForm.unitCost) || 0);
+
     const lowStockCount = products.filter((product) => product.totalStock <= product.minStock).length;
     const expiryLimit = Date.now() + (60 * 24 * 60 * 60 * 1000);
     const expiringCount = allBatches.filter((batch) => batch.quantity > 0 && batch.expiresAt && new Date(batch.expiresAt).getTime() <= expiryLimit).length;
+    const expiredLoss = allBatches
+        .filter((batch) => batch.quantity > 0 && batch.expiresAt && new Date(batch.expiresAt).getTime() < Date.now())
+        .reduce((sum, batch) => sum + (batch.quantity * (batch.unitCost || 0)), 0);
     const inventoryValue = allBatches.reduce((sum, batch) => sum + (batch.quantity * (batch.unitCost || 0)), 0);
 
     const getProductStatus = (product: PharmacyProduct) => {
@@ -226,6 +267,7 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
         try {
             await action();
             await loadInventory();
+            onStockChanged?.();
         } catch (mutationError) {
             setError(mutationError instanceof Error ? mutationError.message : 'Não foi possível salvar.');
         } finally {
@@ -236,7 +278,7 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
     const handleCreateProduct = (event: React.FormEvent) => {
         event.preventDefault();
         void runMutation(async () => {
-            const payload = await request(`/farms/${farm.id}/pharmacy/products`, {
+            const payload = await request(`/farms/${farmId}/pharmacy/products`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(productForm),
             });
             setProductForm(emptyProductForm);
@@ -248,18 +290,39 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
     const handleCreateBatch = (event: React.FormEvent) => {
         event.preventDefault();
         void runMutation(async () => {
-            await request(`/farms/${farm.id}/pharmacy/batches`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(batchForm),
+            const body = {
+                productId: batchForm.productId,
+                lotNumber: batchForm.lotNumber,
+                expiresAt: batchForm.expiresAt,
+                quantity: toNumber(batchForm.quantity),
+                unitCost: batchForm.unitCost === '' ? null : toNumber(batchForm.unitCost),
+                semCompra: batchForm.semCompra,
+                supplier: batchForm.supplier,
+                invoiceNumber: batchForm.invoiceNumber,
+                purchasedAt: batchForm.purchasedAt,
+                payment: {
+                    condition: batchForm.condition,
+                    dueDate: batchForm.dueDate,
+                    installments: batchForm.installments === '' ? null : Number(batchForm.installments),
+                    downPayment: batchForm.downPayment === '' ? null : toNumber(batchForm.downPayment),
+                },
+            };
+            await request(`/farms/${farmId}/pharmacy/batches`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
             });
-            setBatchForm((current) => ({ ...current, lotNumber: '', expiresAt: '', quantity: '', unitCost: '' }));
-            setSuccess('Entrada do lote registrada.');
+            setBatchForm((current) => ({ ...emptyBatchForm(), productId: current.productId }));
+            setSuccess(batchForm.semCompra
+                ? 'Entrada do lote registrada (sem lançamento no Financeiro).'
+                : batchForm.condition === 'PAGO'
+                    ? 'Compra registrada no estoque e lançada como paga no Financeiro.'
+                    : 'Compra registrada no estoque e lançada em Contas a Pagar.');
         });
     };
 
     const handleMovement = (event: React.FormEvent) => {
         event.preventDefault();
         void runMutation(async () => {
-            await request(`/farms/${farm.id}/pharmacy/movements`, {
+            await request(`/farms/${farmId}/pharmacy/movements`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(movementForm),
             });
             setMovementForm((current) => ({ ...current, quantity: '', notes: '' }));
@@ -277,6 +340,11 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
                 <Summary label="Vencidos ou até 60 dias" value={expiringCount} attention={expiringCount > 0} />
                 <Summary label="Valor estimado do estoque" value={inventoryValue} currency />
             </div>
+            {expiredLoss > 0 && (
+                <div role="alert" className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-[var(--eixo-danger)]">
+                    {expiredLoss.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} em produtos vencidos no estoque. Esse valor já é custo da fazenda e não chega a nenhum lote.
+                </div>
+            )}
 
             {error && <div role="alert" className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-[var(--eixo-danger)]">{error}</div>}
             {success && <div role="status" className="rounded-2xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-4 py-3 text-sm font-semibold text-[var(--eixo-success)]">{success}</div>}
@@ -324,6 +392,11 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
                             <Field label="Unidade de estoque"><select className={inputClass} value={productForm.unit} onChange={(event) => setProductForm({ ...productForm, unit: event.target.value })}><option value="frasco">Frasco</option><option value="dose">Dose</option><option value="ml">ml</option><option value="unidade">Unidade</option><option value="kit">Kit</option></select></Field>
                             <Field label="Unidade de aplicação"><select className={inputClass} value={productForm.applicationUnit} onChange={(event) => setProductForm({ ...productForm, applicationUnit: event.target.value })}><option value="ml">ml</option><option value="dose">Dose</option><option value="unidade">Unidade</option><option value="g">g</option></select></Field>
                         </div>
+                        {productForm.unit !== productForm.applicationUnit && (
+                            <Field label={`Quanto rende 1 ${productForm.unit} (em ${productForm.applicationUnit})`}>
+                                <input type="number" min="0" step="0.01" className={inputClass} value={productForm.applicationPerUnit} onChange={(event) => setProductForm({ ...productForm, applicationPerUnit: event.target.value })} placeholder="Ex.: 500" />
+                            </Field>
+                        )}
                         <div className="grid grid-cols-2 gap-3">
                             <Field label="Estoque mínimo"><input type="number" min="0" step="0.01" className={inputClass} value={productForm.minStock} onChange={(event) => setProductForm({ ...productForm, minStock: event.target.value })} placeholder="0" /></Field>
                             <Field label="Local de armazenamento"><input className={inputClass} value={productForm.storageLocation} onChange={(event) => setProductForm({ ...productForm, storageLocation: event.target.value })} placeholder="Ex.: geladeira 1" /></Field>
@@ -343,25 +416,58 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
                     </form>
                 </FormCard>
 
-                <FormCard title="2. Registrar entrada" description="Informe lote, validade e quantidade recebida.">
+                <FormCard title="2. Registrar compra" description="Entra no estoque e no Financeiro como custo da fazenda.">
                     <form onSubmit={handleCreateBatch} className="space-y-3">
                         <Field label="Produto"><select required className={inputClass} value={batchForm.productId} onChange={(event) => setBatchForm({ ...batchForm, productId: event.target.value })}><option value="">Selecione</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></Field>
                         <div className="grid grid-cols-2 gap-3">
-                            <Field label="Lote"><input required className={inputClass} value={batchForm.lotNumber} onChange={(event) => setBatchForm({ ...batchForm, lotNumber: event.target.value })} /></Field>
+                            <Field label="Lote do frasco"><input required className={inputClass} value={batchForm.lotNumber} onChange={(event) => setBatchForm({ ...batchForm, lotNumber: event.target.value })} /></Field>
                             <Field label="Validade"><input type="date" className={inputClass} value={batchForm.expiresAt} onChange={(event) => setBatchForm({ ...batchForm, expiresAt: event.target.value })} /></Field>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <Field label="Quantidade"><input required type="number" min="0.01" step="0.01" className={inputClass} value={batchForm.quantity} onChange={(event) => setBatchForm({ ...batchForm, quantity: event.target.value })} /></Field>
-                            <Field label="Custo unitário"><input type="number" min="0" step="0.01" className={inputClass} value={batchForm.unitCost} onChange={(event) => setBatchForm({ ...batchForm, unitCost: event.target.value })} /></Field>
+                            <Field label={`Quantidade${selectedBatchProduct ? ` (${selectedBatchProduct.unit})` : ''}`}><input required type="number" min="0.01" step="0.01" className={inputClass} value={batchForm.quantity} onChange={(event) => setBatchForm({ ...batchForm, quantity: event.target.value })} /></Field>
+                            <Field label="Custo unitário (R$)"><input required={!batchForm.semCompra} type="number" min="0" step="0.01" className={inputClass} value={batchForm.unitCost} onChange={(event) => setBatchForm({ ...batchForm, unitCost: event.target.value })} /></Field>
                         </div>
-                        <SaveButton disabled={saving || products.length === 0}>Registrar entrada</SaveButton>
+                        <label className="flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 text-sm font-semibold text-[var(--eixo-text)]">
+                            <input type="checkbox" checked={batchForm.semCompra} onChange={(event) => setBatchForm({ ...batchForm, semCompra: event.target.checked })} />
+                            Estoque que já estava na fazenda (não lançar no Financeiro)
+                        </label>
+                        {!batchForm.semCompra && (
+                            <>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Field label="Fornecedor"><input required className={inputClass} value={batchForm.supplier} onChange={(event) => setBatchForm({ ...batchForm, supplier: event.target.value })} placeholder="Ex.: Casa Agropecuária" /></Field>
+                                    <Field label="Nota fiscal"><input className={inputClass} value={batchForm.invoiceNumber} onChange={(event) => setBatchForm({ ...batchForm, invoiceNumber: event.target.value })} /></Field>
+                                </div>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <Field label="Data da compra"><input required type="date" max={todayIso()} className={inputClass} value={batchForm.purchasedAt} onChange={(event) => setBatchForm({ ...batchForm, purchasedAt: event.target.value })} /></Field>
+                                    <Field label="Pagamento"><select className={inputClass} value={batchForm.condition} onChange={(event) => setBatchForm({ ...batchForm, condition: event.target.value as PaymentCondition })}>{PAYMENT_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
+                                </div>
+                                {batchForm.condition !== 'PAGO' && (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <Field label={batchForm.condition === 'CARTAO' ? 'Pagamento da 1ª fatura' : '1º vencimento'}><input required type="date" className={inputClass} value={batchForm.dueDate} onChange={(event) => setBatchForm({ ...batchForm, dueDate: event.target.value })} /></Field>
+                                        {batchForm.condition !== 'A_PAGAR' && (
+                                            <Field label="Parcelas"><input required={batchForm.condition !== 'CARTAO'} type="number" min="1" max={batchForm.condition === 'CARTAO' ? 24 : 60} step="1" className={inputClass} value={batchForm.installments} onChange={(event) => setBatchForm({ ...batchForm, installments: event.target.value })} placeholder={batchForm.condition === 'CARTAO' ? '1' : ''} /></Field>
+                                        )}
+                                    </div>
+                                )}
+                                {batchForm.condition === 'ENTRADA_PARCELADO' && (
+                                    <Field label="Valor da entrada (R$)"><input required type="number" min="0.01" step="0.01" className={inputClass} value={batchForm.downPayment} onChange={(event) => setBatchForm({ ...batchForm, downPayment: event.target.value })} /></Field>
+                                )}
+                                {batchTotal > 0 && (
+                                    <p className="rounded-xl bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs text-[var(--eixo-text-muted)]">
+                                        Total da compra: <strong className="text-[var(--eixo-text)]">{batchTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+                                        {batchForm.condition === 'CARTAO' ? ' · cada parcela vence na data de pagamento da fatura.' : ''}
+                                    </p>
+                                )}
+                            </>
+                        )}
+                        <SaveButton disabled={saving || products.length === 0}>{batchForm.semCompra ? 'Registrar entrada' : 'Registrar compra'}</SaveButton>
                     </form>
                 </FormCard>
 
                 <FormCard title="3. Movimentar estoque" description="Registre consumo, nova entrada ou correção do saldo.">
                     <form onSubmit={handleMovement} className="space-y-3">
                         <Field label="Produto e lote"><select required className={inputClass} value={movementForm.batchId} onChange={(event) => setMovementForm({ ...movementForm, batchId: event.target.value })}><option value="">Selecione</option>{allBatches.map((batch) => <option key={batch.id} value={batch.id}>{batch.product.name} · {batch.lotNumber} · saldo {batch.quantity}</option>)}</select></Field>
-                        <Field label="Movimentação"><select className={inputClass} value={movementForm.type} onChange={(event) => setMovementForm({ ...movementForm, type: event.target.value })}><option value="EXIT">Saída</option><option value="ENTRY">Entrada adicional</option><option value="ADJUSTMENT">Ajustar saldo</option></select></Field>
+                        <Field label="Movimentação"><select className={inputClass} value={movementForm.type} onChange={(event) => setMovementForm({ ...movementForm, type: event.target.value })}><option value="EXIT">Saída</option><option value="ENTRY">Entrada sem compra (acerto)</option><option value="ADJUSTMENT">Ajustar saldo</option></select></Field>
                         <Field label={movementForm.type === 'ADJUSTMENT' ? 'Novo saldo' : 'Quantidade'}><input required type="number" min="0" step="0.01" className={inputClass} value={movementForm.quantity} onChange={(event) => setMovementForm({ ...movementForm, quantity: event.target.value })} /></Field>
                         <Field label="Motivo ou observação"><input className={inputClass} value={movementForm.notes} onChange={(event) => setMovementForm({ ...movementForm, notes: event.target.value })} placeholder="Ex.: uso no lote 03" /></Field>
                         <SaveButton disabled={saving || allBatches.length === 0}>Salvar movimentação</SaveButton>

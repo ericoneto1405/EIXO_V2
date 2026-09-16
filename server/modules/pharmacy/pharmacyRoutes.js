@@ -1,8 +1,9 @@
 import { PrismaClient } from '@prisma/client';
-import { requireNonFieldWorker } from '../middlewares/requireAuth.js';
+import { requireBillingAccess, requireEntitlement, requireModule, requireNonFieldWorker } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
 import { logActivity } from '../utils/activityLog.js';
-import { calculatePharmacyMovement } from './pharmacyRules.js';
+import { calculatePharmacyMovement, normalizePharmacyPayment, pharmacyPurchaseAccount } from './pharmacyRules.js';
+import { buildPurchasePaymentSchedule, createIntegratedTransaction, describePurchaseInstallment } from '../financial/financialService.js';
 import { PHARMACY_CATALOG, PHARMACY_CATALOG_REVISION, findCatalogItem } from './pharmacyCatalog.js';
 
 const prisma = new PrismaClient();
@@ -55,6 +56,15 @@ const attachScopedFarm = async (req, res, next) => {
 };
 
 export function registerPharmacyRoutes(app) {
+    // Farmácia faz parte do módulo Sanidade (EIXO Gestão). /farms já exige login por prefixo.
+    app.use(
+        '/farms/:farmId/pharmacy',
+        requireNonFieldWorker,
+        requireBillingAccess,
+        requireEntitlement('EIXO_GESTAO', 'EIXO_DECISAO'),
+        requireModule('Sanidade'),
+    );
+
     app.get('/farms/:farmId/pharmacy/catalog', attachScopedFarm, (req, res) => {
         return res.json({ revision: PHARMACY_CATALOG_REVISION, items: PHARMACY_CATALOG });
     });
@@ -103,6 +113,8 @@ export function registerPharmacyRoutes(app) {
         const milkWithdrawalDays = req.body?.milkWithdrawalDays === '' || req.body?.milkWithdrawalDays == null ? null : Number(req.body.milkWithdrawalDays);
         const notes = String(req.body?.notes || '').trim() || null;
         const minStock = Number(req.body?.minStock ?? 0);
+        const applicationPerUnit = req.body?.applicationPerUnit === '' || req.body?.applicationPerUnit == null ? null : Number(req.body.applicationPerUnit);
+        if (applicationPerUnit !== null && !(applicationPerUnit > 0)) return res.status(400).json({ message: 'Rendimento por unidade inválido.' });
         const catalogKey = String(req.body?.catalogKey || '').trim() || null;
         const catalogItem = findCatalogItem(catalogKey);
         if (catalogKey && !catalogItem) return res.status(400).json({ message: 'Produto não encontrado na lista EIXO.' });
@@ -134,6 +146,7 @@ export function registerPharmacyRoutes(app) {
                     slaughterWithdrawalDays,
                     milkWithdrawalDays,
                     notes,
+                    applicationPerUnit,
                     catalogKey: catalogItem?.key || null,
                     catalogSlaughterWithdrawalDays: catalogItem ? catalogItem.slaughterWithdrawalDays : null,
                 },
@@ -164,24 +177,68 @@ export function registerPharmacyRoutes(app) {
         const quantity = Number(req.body?.quantity);
         const unitCost = req.body?.unitCost === '' || req.body?.unitCost == null ? null : Number(req.body.unitCost);
         const expiresAt = parseOptionalDate(req.body?.expiresAt);
+        // Estoque que já estava na fazenda não vira conta no Financeiro.
+        const semCompra = req.body?.semCompra === true;
+        const supplier = String(req.body?.supplier || '').trim() || null;
+        const invoiceNumber = String(req.body?.invoiceNumber || '').trim() || null;
+        const purchasedAt = parseOptionalDate(req.body?.purchasedAt) ?? new Date(`${new Date().toISOString().slice(0, 10)}T12:00:00.000Z`);
         if (!productId || !lotNumber) return res.status(400).json({ message: 'Informe produto e lote.' });
         if (!Number.isFinite(quantity) || quantity <= 0) return res.status(400).json({ message: 'A quantidade de entrada deve ser maior que zero.' });
         if (unitCost !== null && (!Number.isFinite(unitCost) || unitCost < 0)) return res.status(400).json({ message: 'Custo unitário inválido.' });
         if (expiresAt === undefined) return res.status(400).json({ message: 'Data de validade inválida.' });
+        if (purchasedAt === undefined) return res.status(400).json({ message: 'Data da compra inválida.' });
+        if (purchasedAt.getTime() > Date.now() + 24 * 60 * 60 * 1000) return res.status(400).json({ message: 'A data da compra não pode ser no futuro.' });
+
+        const totalCents = unitCost ? Math.round(quantity * unitCost * 100) : 0;
+        let parcelas = [];
+        let isCard = false;
+        if (!semCompra) {
+            if (!supplier) return res.status(400).json({ message: 'Informe o fornecedor da compra.' });
+            if (!(totalCents > 0)) return res.status(400).json({ message: 'Informe o custo unitário para lançar a compra no Financeiro.' });
+            const payment = normalizePharmacyPayment(req.body?.payment);
+            if (payment.error) return res.status(400).json({ message: payment.error });
+            isCard = payment.isCard;
+            try {
+                parcelas = buildPurchasePaymentSchedule({ amount: totalCents / 100, purchaseDate: purchasedAt, ...payment.schedule });
+            } catch (error) {
+                return res.status(400).json({ message: error.message });
+            }
+        }
 
         try {
             const product = await prisma.pharmacyProduct.findFirst({ where: { id: productId, farmId: farm.id, active: true } });
             if (!product) return res.status(404).json({ message: 'Produto não encontrado nesta fazenda.' });
             const batch = await prisma.$transaction(async (tx) => {
                 const created = await tx.pharmacyBatch.create({
-                    data: { farmId: farm.id, productId, lotNumber, expiresAt, quantity, unitCost },
+                    data: { farmId: farm.id, productId, lotNumber, expiresAt, quantity, unitCost, supplier, invoiceNumber, purchasedAt: semCompra ? null : purchasedAt },
                 });
                 await tx.pharmacyMovement.create({
-                    data: { farmId: farm.id, productId, batchId: created.id, type: 'ENTRY', quantity, unitCost, notes: 'Entrada inicial do lote' },
+                    data: { farmId: farm.id, productId, batchId: created.id, type: 'ENTRY', quantity, unitCost, notes: semCompra ? 'Estoque que já estava na fazenda' : `Compra${invoiceNumber ? ` NF ${invoiceNumber}` : ''} — ${supplier}` },
                 });
+                const descricao = `Compra de ${product.name} (lote ${lotNumber}) — ${supplier}${invoiceNumber ? ` — NF ${invoiceNumber}` : ''}${isCard ? ' — cartão de crédito' : ''}`;
+                for (const parcela of parcelas) {
+                    await createIntegratedTransaction(tx, {
+                        farmId: farm.id,
+                        type: 'SAIDA',
+                        categoria: 'MEDICAMENTOS',
+                        accountCategoryId: pharmacyPurchaseAccount(product.category),
+                        amount: parcela.amount,
+                        competenceDate: purchasedAt,
+                        settledAt: parcela.settledAt,
+                        status: parcela.status,
+                        dueDate: parcela.dueDate,
+                        description: `${descricao}${describePurchaseInstallment(parcela)}`,
+                    });
+                }
                 return created;
             });
-            void logActivity(prisma, req, { action: 'FARMACIA_ENTRADA', entity: 'PharmacyBatch', entityId: batch.id, description: `Entrada de ${quantity} ${product.unit} de ${product.name}`, farmId: farm.id });
+            void logActivity(prisma, req, {
+                action: 'FARMACIA_ENTRADA',
+                entity: 'PharmacyBatch',
+                entityId: batch.id,
+                description: `Entrada de ${quantity} ${product.unit} de ${product.name}${semCompra ? ' (estoque existente)' : ` — compra de ${supplier}, ${parcelas.length} lançamento(s) no Financeiro`}`,
+                farmId: farm.id,
+            });
             return res.status(201).json({ batch: serializeBatch(batch) });
         } catch (error) {
             if (error?.code === 'P2002') return res.status(409).json({ message: 'Este lote já está cadastrado para o produto.' });

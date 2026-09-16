@@ -68,6 +68,12 @@ const MODULE_INFO: Record<string, ModuleInfo> = {
         description: 'Patrimônio, sócios e documentos do plantel de leilão, sem taxa por animal.',
         cta: 'Conhecer EIXO Performance',
     },
+    'Sanidade': {
+        plan: 'PRO',
+        title: 'Disponível no EIXO Gestão',
+        description: 'Registre vacinas e remédios no curral, com trava de brucelose, lote vencido e carência.',
+        cta: 'Conhecer EIXO Gestão',
+    },
     'Gestão Comercial': {
         plan: 'PRO',
         title: 'Disponível no EIXO Gestão',
@@ -398,7 +404,7 @@ const navSections: NavSection[] = [
     {
         sectionLabel: 'Produção',
         items: [
-            { label: 'Sanidade', icon: <SanidadeIcon />, value: 'Sanidade', status: 'coming_soon' },
+            { label: 'Sanidade', icon: <SanidadeIcon />, value: 'Sanidade', allowedLabels: ['Sanidade'], requiredPlanBadge: 'PRO' },
             { label: 'Nutrição', icon: <NutritionIcon />, value: 'Nutrição', allowedLabels: ['Nutrição'], requiredPlanBadge: 'PRO' },
             { label: 'Eixo Acasalamento', icon: <HerdGeneticIcon />, value: 'Eixo Acasalamento', path: '/genetics/acasalamento', allowedLabels: ['Eixo Genetics'], requiredPlanBadge: 'PLUS' },
             { label: 'Reprodução', icon: <HerdPoIcon />, value: 'Reprodução', path: '/genetics/reproducao', allowedLabels: ['Reprodução'], requiredPlanBadge: 'PRO' },

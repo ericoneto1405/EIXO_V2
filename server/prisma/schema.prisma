@@ -267,6 +267,7 @@ model Farm {
   pharmacyProducts        PharmacyProduct[]
   pharmacyBatches         PharmacyBatch[]
   pharmacyMovements       PharmacyMovement[]
+  sanitaryApplications    SanitaryApplication[]
   reproEvents             ReproEvent[]
   sanitaryRecords         SanitaryRecord[]
   selectionDecisions      SelectionDecision[]
@@ -418,6 +419,7 @@ model Animal {
   paddockMoves         PaddockMove[]
   reproEvents          ReproEvent[]
   sanitaryRecords      SanitaryRecord[]
+  sanitaryApplications SanitaryApplication[]
   selectionDecisions   SelectionDecision[]
   pesagens             Weighing[]
   reproCheckupRecords  ReproCheckupRecord[]
@@ -2197,12 +2199,14 @@ model PharmacyProduct {
   notes                  String?
   catalogKey             String?            @map("catalog_key")
   catalogSlaughterWithdrawalDays Int?       @map("catalog_slaughter_withdrawal_days")
+  applicationPerUnit     Float?             @map("application_per_unit")
   active                 Boolean            @default(true)
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
   farm                   Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade)
   batches                PharmacyBatch[]
   movements              PharmacyMovement[]
+  sanitaryApplications   SanitaryApplication[]
 
   @@unique([farmId, name])
   @@index([farmId, active])
@@ -2216,11 +2220,15 @@ model PharmacyBatch {
   expiresAt    DateTime?
   quantity     Float              @default(0)
   unitCost     Float?
+  supplier     String?
+  invoiceNumber String?           @map("invoice_number")
+  purchasedAt  DateTime?          @map("purchased_at")
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
   farm         Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade)
   product      PharmacyProduct    @relation(fields: [productId], references: [id], onDelete: Cascade)
   movements    PharmacyMovement[]
+  sanitaryApplications SanitaryApplication[]
 
   @@unique([productId, lotNumber])
   @@index([farmId, expiresAt])
@@ -2245,6 +2253,40 @@ model PharmacyMovement {
   @@index([productId, createdAt])
   @@index([batchId, createdAt])
 }
+// Aplicação sanitária no curral (módulo Sanidade). Uma linha por animal;
+// groupId junta os animais aplicados na mesma lida.
+model SanitaryApplication {
+  id                       String          @id @default(uuid())
+  farmId                   String
+  groupId                  String          @map("group_id")
+  animalId                 String
+  productId                String
+  batchId                  String
+  appliedAt                DateTime        @map("applied_at")
+  dose                     Float
+  doseUnit                 String          @map("dose_unit")
+  route                    String?
+  appliedByName            String?         @map("applied_by_name")
+  vetName                  String?         @map("vet_name")
+  vetCrmv                  String?         @map("vet_crmv")
+  slaughterWithdrawalUntil DateTime?       @map("slaughter_withdrawal_until")
+  withdrawalUnknown        Boolean         @default(false) @map("withdrawal_unknown")
+  unitCost                 Float?          @map("unit_cost")
+  notes                    String?
+  createdByUserId          String?         @map("created_by_user_id")
+  createdAt                DateTime        @default(now()) @map("created_at")
+  farm                     Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  animal                   Animal          @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  product                  PharmacyProduct @relation(fields: [productId], references: [id], onDelete: NoAction)
+  batch                    PharmacyBatch   @relation(fields: [batchId], references: [id], onDelete: NoAction)
+
+  @@index([farmId, appliedAt])
+  @@index([animalId, appliedAt])
+  @@index([farmId, slaughterWithdrawalUntil])
+  @@index([groupId])
+  @@map("sanitary_applications")
+}
+
 
 model HerdSettings {
   id                   String   @id @default(uuid())

@@ -27,6 +27,7 @@ const FinanceModule = React.lazy(() => import('./components/FinanceModule'));
 const GeneticsReproducao = React.lazy(() => import('./components/ReproModule'));
 const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'));
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
+const SanidadeModule = React.lazy(() => import('./components/SanidadeModule'));
 const HQPage = React.lazy(() => import('./components/HQPage'));
 const CommercialManagement = React.lazy(() => import('./components/CommercialManagement'));
 const MeusLeiloes = React.lazy(() => import('./components/MeusLeiloes'));
@@ -87,7 +88,7 @@ interface User {
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Meus Leilões', 'Plantel P.O.', 'Estoque e Equipamentos'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics', 'Reprodução', 'Sanidade', 'Gestão Comercial', 'Meus Leilões', 'Plantel P.O.', 'Estoque e Equipamentos'],
     },
     {
         title: 'Cadastros',
@@ -191,6 +192,19 @@ const UPGRADE_CONTENT: Record<string, {
         ],
         previewItems: ['Planos nutricionais por fase', 'Custos e consumo por lote', 'Comparativo de desempenho e meta'],
         icon: <UpgradeNutritionIcon />,
+    },
+    'Sanidade': {
+        accessLabels: ['Sanidade'],
+        requiredPlan: 'PRO',
+        moduleName: 'Sanidade',
+        tagline: 'Vacina e remédio registrados no curral, sem erro de brucelose nem venda em carência',
+        benefits: [
+            'Registre a aplicação por identificação ou por lote, com dose pelo peso.',
+            'Bloqueie B19 em macho, fêmea fora da idade e lote vencido.',
+            'Saiba quais animais ainda estão em carência antes de vender.',
+        ],
+        previewItems: ['Aplicação em 4 passos', 'Farmácia com baixa automática do estoque', 'Compra em Contas a Pagar e custo sanitário por lote e animal'],
+        icon: <UpgradeReportIcon />,
     },
     'Reprodução': {
         accessLabels: ['Reprodução'],
@@ -1136,6 +1150,17 @@ const AppContent: React.FC = () => {
                     );
                 }
                 return <NutritionModule farmId={selectedFarmId} farmName={selectedFarm?.name} currentUser={currentUser} />;
+            case 'Sanidade':
+                if (!hasSelectedFarm) {
+                    return (
+                        <FarmRequiredPanel
+                            title="Selecione uma fazenda para registrar a sanidade"
+                            actionLabel="Selecionar fazenda"
+                            onAction={() => setActiveView('Fazendas')}
+                        />
+                    );
+                }
+                return <SanidadeModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
             case 'Fazendas':
                 return (
                     <Farms

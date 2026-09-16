@@ -9,7 +9,7 @@ export const SUPER_ADMIN_ALL_MODULES = [
     'Confinamento e Contratos', 'Meus Leilões', 'Plantel P.O.', 'Estoque e Equipamentos',
     'Editar Animais', 'Ver Atividades de Todos', 'Ocorrências do EIXO Campo',
     'Fornecedores', 'Remédios', 'Rações', 'Suplementos',
-    'Nutrição', 'Financeiro',
+    'Nutrição', 'Financeiro', 'Sanidade',
     'Operações', 'Configurações', 'Registro de Atividades',
 ];
 
@@ -21,8 +21,8 @@ export const PLAN_ENTITLEMENTS = {
 };
 export const PLAN_MODULES = {
     GRATIS: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'],
-    EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Gestão Comercial', 'Reprodução'],
-    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Confinamento e Contratos', 'Meus Leilões'],
+    EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Gestão Comercial', 'Reprodução', 'Sanidade'],
+    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Confinamento e Contratos', 'Meus Leilões', 'Sanidade'],
 };
 
 export const PLAN_LIMITS = {
