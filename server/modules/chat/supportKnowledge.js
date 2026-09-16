@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.8';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.9';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-16';
 
 export const SUPPORT_TONE_RULES = [
@@ -91,8 +91,10 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['lote', 'lotes', 'grupo', 'grupos', 'agrupar'],
         href: 'eixo:view:Rebanho%20Comercial?tab=lots',
         guidance: [
-            'Acesse Manejo do Rebanho e abra a aba Lotes.',
-            'Crie o lote e depois selecione os animais que farão parte dele.',
+            'Acesse Manejo do Rebanho, abra a aba Lotes e clique em Criar lote.',
+            'Informe nome, data de entrada, fase, categoria e o pasto onde o lote vai ficar.',
+            'Escolha os animais (pode informar o peso de cada um) ou use Só quantidade com o peso médio. O peso de entrada é obrigatório para calcular o ganho de peso do lote.',
+            'As metas (ganho de peso, peso de saída e intervalo entre pesagens) vêm sugeridas pela fase e época do ano; ajuste se quiser.',
         ],
     },
     {
