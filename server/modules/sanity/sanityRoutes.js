@@ -4,7 +4,8 @@ import { requireBillingAccess, requireEntitlement, requireModule, requireNonFiel
 import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
 import { logActivity } from '../utils/activityLog.js';
 import { findCatalogItem } from '../pharmacy/pharmacyCatalog.js';
-import { calcularCarencia, extrairDosePorPeso, montarPrevia } from './sanityRules.js';
+import { calcularCarencia, extrairDosePorPeso, marcacoesDoProduto, montarPrevia } from './sanityRules.js';
+import { RABIES_OPTIONS, calcularCarencias, carregarConfiguracao, carregarLembretes, limparCacheLembretes } from './sanityCalendar.js';
 
 const prisma = new PrismaClient();
 const MAX_ANIMAIS = 2000;
@@ -179,7 +180,7 @@ export function registerSanityRoutes(app) {
                         suggestedRoute: catalogItem?.route || null,
                         suggestedDose: catalogItem?.dose || null,
                         suggestedDosePerKg: extrairDosePorPeso(catalogItem?.dose),
-                        tags: catalogItem?.tags || [],
+                        tags: [...marcacoesDoProduto(product, catalogItem)],
                         batches: product.batches.map((batch) => ({
                             id: batch.id,
                             lotNumber: batch.lotNumber,
@@ -286,6 +287,7 @@ export function registerSanityRoutes(app) {
                 // por animal (unitCost) para o relatório de custo sanitário por lote e animal.
             });
 
+            limparCacheLembretes(farm.id);
             void logActivity(prisma, req, {
                 action: 'SANIDADE_APLICACAO',
                 entity: 'SanitaryApplication',
@@ -421,45 +423,74 @@ export function registerSanityRoutes(app) {
 
     // Animais que ainda não podem ir para o abate. A etapa 3 usa isto para travar a venda.
     app.get('/farms/:farmId/sanidade/carencia', async (req, res) => {
-        const farm = req.sanityFarm;
-        const agora = new Date();
         try {
-            const registros = await prisma.sanitaryApplication.findMany({
-                where: {
-                    farmId: farm.id,
-                    animal: { status: 'VIVO' },
-                    OR: [{ slaughterWithdrawalUntil: { gt: agora } }, { withdrawalUnknown: true }],
-                },
-                select: {
-                    animalId: true, slaughterWithdrawalUntil: true, withdrawalUnknown: true, appliedAt: true,
-                    animal: { select: { brinco: true, lotId: true } },
-                    product: { select: { name: true, slaughterWithdrawalDays: true } },
-                },
-                orderBy: { slaughterWithdrawalUntil: 'desc' },
-            });
-            const porAnimal = new Map();
-            for (const registro of registros) {
-                // Carência preenchida depois na Farmácia libera o registro antigo "sem carência".
-                let ate = registro.slaughterWithdrawalUntil;
-                let desconhecida = registro.withdrawalUnknown;
-                if (desconhecida && Number.isInteger(registro.product.slaughterWithdrawalDays)) {
-                    ate = new Date(new Date(registro.appliedAt).getTime() + registro.product.slaughterWithdrawalDays * 86400000);
-                    desconhecida = false;
-                    if (ate <= agora) continue;
-                }
-                const atual = porAnimal.get(registro.animalId) || {
-                    animalId: registro.animalId, brinco: registro.animal.brinco, lotId: registro.animal.lotId,
-                    liberaEm: null, semCarencia: false, produtos: [],
-                };
-                if (desconhecida) atual.semCarencia = true;
-                if (ate && (!atual.liberaEm || ate > atual.liberaEm)) atual.liberaEm = ate;
-                if (!atual.produtos.includes(registro.product.name)) atual.produtos.push(registro.product.name);
-                porAnimal.set(registro.animalId, atual);
-            }
-            return res.json({ animais: [...porAnimal.values()] });
+            return res.json({ animais: await calcularCarencias(req.sanityFarm.id) });
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Erro ao consultar carência.' });
+        }
+    });
+
+    app.get('/farms/:farmId/sanidade/lembretes', async (req, res) => {
+        try {
+            const { lembretes, config } = await carregarLembretes(req.sanityFarm.id);
+            return res.json({ lembretes, estado: config.estado, configurada: config.salvo });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao montar o calendário sanitário.' });
+        }
+    });
+
+    app.get('/farms/:farmId/sanidade/configuracao', async (req, res) => {
+        try {
+            const config = await carregarConfiguracao(req.sanityFarm.id);
+            return res.json({ ...config.settings, estado: config.estado, configurada: config.salvo });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao carregar a configuração.' });
+        }
+    });
+
+    app.put('/farms/:farmId/sanidade/configuracao', requireNonFieldWorker, async (req, res) => {
+        const body = req.body || {};
+        const rabiesRequired = String(body.rabiesRequired || '').toUpperCase();
+        if (!RABIES_OPTIONS.has(rabiesRequired)) return res.status(400).json({ message: 'Responda se a raiva é obrigatória: Sim, Não ou Não sei.' });
+        const meses = (value) => {
+            const lista = Array.isArray(value) ? value.map(Number) : [];
+            if (lista.some((mes) => !Number.isInteger(mes) || mes < 1 || mes > 12)) return null;
+            return [...new Set(lista)].sort((a, b) => a - b);
+        };
+        const dewormMonths = meses(body.dewormMonths);
+        const tickMonths = meses(body.tickMonths);
+        if (!dewormMonths || !tickMonths) return res.status(400).json({ message: 'Meses inválidos.' });
+        const data = {
+            rabiesRequired,
+            clostridialEnabled: body.clostridialEnabled !== false,
+            reproductiveEnabled: body.reproductiveEnabled !== false,
+            dewormEnabled: body.dewormEnabled !== false,
+            dewormMonths,
+            tickEnabled: body.tickEnabled === true,
+            tickMonths,
+        };
+        try {
+            await prisma.sanitarySettings.upsert({
+                where: { farmId: req.sanityFarm.id },
+                update: data,
+                create: { farmId: req.sanityFarm.id, ...data },
+            });
+            limparCacheLembretes(req.sanityFarm.id);
+            void logActivity(prisma, req, {
+                action: 'SANIDADE_CONFIGURACAO',
+                entity: 'SanitarySettings',
+                entityId: req.sanityFarm.id,
+                description: `Atualizou o calendário sanitário (raiva: ${rabiesRequired})`,
+                farmId: req.sanityFarm.id,
+            });
+            const config = await carregarConfiguracao(req.sanityFarm.id);
+            return res.json({ ...config.settings, estado: config.estado, configurada: true });
+        } catch (error) {
+            console.error(error);
+            return res.status(500).json({ message: 'Erro ao salvar a configuração.' });
         }
     });
 }

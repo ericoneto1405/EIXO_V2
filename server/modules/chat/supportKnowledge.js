@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.15';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.16';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-16';
 
 export const SUPPORT_TONE_RULES = [
@@ -191,6 +191,19 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'A dose pode ser igual para todos ou calculada pelo último peso de cada animal.',
             'O EIXO bloqueia vacina de brucelose em macho ou fora da idade, lote vencido e estoque insuficiente. Animais bloqueados aparecem com o motivo; é possível aplicar só nos liberados.',
             'Ao salvar, o estoque do lote baixa sozinho. O custo do produto usado aparece em Custo sanitário por lote e por animal, sem lançar de novo no resultado (já entrou na compra). A tela mostra quais animais ainda estão em carência para abate.',
+        ],
+    },
+    {
+        id: 'sanidade-calendario',
+        title: 'Calendário e lembretes de vacinação (Sanidade)',
+        keywords: ['calendario', 'lembrete', 'alerta', 'reforco', 'revacinacao', 'raiva', 'brucelose', 'comprovacao', 'vermifugo', 'carrapato', 'estacao de monta'],
+        href: 'eixo:view:Sanidade',
+        guidance: [
+            'Na Sanidade, a aba Calendário mostra os lembretes dos próximos 90 dias: vermelho (hoje ou vencido), laranja (até 7 dias), amarelo (até 30 dias).',
+            'Obrigatórios: bezerras na idade da B19 (3 a 8 meses), prazo de comprovação da brucelose (referência 10/07 e 10/01; confira o órgão do estado) e raiva (reforço e revacinação anual), se a fazenda marcar que a raiva é obrigatória na região.',
+            'Em Configurar calendário: responda se a raiva é obrigatória (Sim, Não ou Não sei), ligue ou desligue clostridioses e vacinas reprodutivas, e ajuste os meses de vermífugo e carrapaticida. Os meses sugeridos seguem o estado da fazenda.',
+            'Vacinas reprodutivas usam a estação de monta cadastrada na Reprodução. O botão Aplicar agora abre a aplicação com os animais e o produto sugerido.',
+            'Os vencidos e os que vencem em até 7 dias também aparecem na barra de alertas do topo; clicar leva ao Calendário. O lembrete some quando a aplicação é registrada.',
         ],
     },
     {

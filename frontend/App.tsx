@@ -28,6 +28,7 @@ const GeneticsReproducao = React.lazy(() => import('./components/ReproModule'));
 const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'));
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
 const SanidadeModule = React.lazy(() => import('./components/SanidadeModule'));
+import type { SanidadeTab } from './components/SanidadeModule';
 const HQPage = React.lazy(() => import('./components/HQPage'));
 const CommercialManagement = React.lazy(() => import('./components/CommercialManagement'));
 const MeusLeiloes = React.lazy(() => import('./components/MeusLeiloes'));
@@ -309,6 +310,7 @@ const AppContent: React.FC = () => {
         contentScrollRef.current?.scrollTo(0, 0);
     }, [activeView]);
     const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number; openAnimalForm?: boolean; openImportModal?: boolean } | null>(null);
+    const [sanidadeTabRequest, setSanidadeTabRequest] = useState<{ tab: SanidadeTab; nonce: number } | null>(null);
     const [financeOnboardingAction, setFinanceOnboardingAction] = useState<{ action: 'SAIDA' | 'ENTRADA' | 'RESULTADO'; nonce: number } | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -882,6 +884,12 @@ const AppContent: React.FC = () => {
             return true;
         }
 
+        if (alert.sourceType === 'SANIDADE') {
+            setSanidadeTabRequest({ tab: 'CALENDARIO', nonce: Date.now() });
+            setActiveView('Sanidade');
+            return true;
+        }
+
         return false;
     }, []);
 
@@ -1160,7 +1168,7 @@ const AppContent: React.FC = () => {
                         />
                     );
                 }
-                return <SanidadeModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
+                return <SanidadeModule farmId={selectedFarmId} farmName={selectedFarm?.name} tabRequest={sanidadeTabRequest} />;
             case 'Fazendas':
                 return (
                     <Farms

@@ -67,6 +67,18 @@ export const requireEntitlement = (...codes) => async (req, res, next) => {
     });
 };
 
+// Mesmo critério das rotas da Sanidade (plano + módulo liberado), sem responder erro.
+export const hasSanidadeAccess = async (req) => {
+    if (req.user?.roles?.includes('SUPER_ADMIN')) return true;
+    if (isFieldWorkerRequest(req)) return false;
+    const accessState = req.saas?.billingAccessState || null;
+    if (accessState && BILLING_BLOCKED_STATES.has(accessState)) return false;
+    const entitlements = PLAN_ENTITLEMENTS[getPlanLimits(req.saas?.planCode).code] || [];
+    if (!entitlements.includes('EIXO_GESTAO') && !entitlements.includes('EIXO_DECISAO')) return false;
+    const allowedModules = buildAllowedModulesFromPlan(req.user?.modules, req.saas?.entitlements, req.user?.roles, req.user?.accessType, req.saas);
+    return allowedModules.includes('Sanidade');
+};
+
 export const requireAuth = async (req, res, next) => {
     try {
         const presentedSessionToken = extractSessionTokenFromRequest(req);

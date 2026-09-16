@@ -151,7 +151,7 @@ export const PHARMACY_CATALOG = [
     // ── Carrapaticidas e mosquicidas ──
     {
         key: 'colosso-pulverizacao-ourofino', brand: 'Colosso Pulverização', laboratory: 'Ourofino',
-        activeIngredient: 'Cipermetrina 15% + clorpirifós 25% + citronelal 1%', category: 'ANTIPARASITARIO',
+        activeIngredient: 'Cipermetrina 15% + clorpirifós 25% + citronelal 1%', category: 'ANTIPARASITARIO', tags: ['CARRAPATICIDA'],
         presentation: 'Concentrado para diluir', route: 'Pulverização ou banho de imersão', dose: 'Pulverização: 1 L para 800 L de água',
         slaughterWithdrawalDays: 10, milkWithdrawalDays: 3, refrigerated: false,
         notes: 'Não descartar sobras em rios, açudes ou nascentes.',
@@ -159,7 +159,7 @@ export const PHARMACY_CATALOG = [
     },
     {
         key: 'colosso-pour-on-ourofino', brand: 'Colosso Pour On', laboratory: 'Ourofino',
-        activeIngredient: 'Cipermetrina 5% + clorpirifós 7% + citronelal 0,5%', category: 'ANTIPARASITARIO',
+        activeIngredient: 'Cipermetrina 5% + clorpirifós 7% + citronelal 0,5%', category: 'ANTIPARASITARIO', tags: ['CARRAPATICIDA'],
         presentation: 'Solução pour-on', route: 'Dorso, da cauda até o meio do pescoço', dose: '10 mL / 100 kg (máx. 50 mL)',
         slaughterWithdrawalDays: 10, milkWithdrawalDays: 3, refrigerated: false,
         notes: null,
@@ -167,7 +167,7 @@ export const PHARMACY_CATALOG = [
     },
     {
         key: 'butox-p-ce25-msd', brand: 'Butox P CE25', laboratory: 'MSD Saúde Animal',
-        activeIngredient: 'Deltametrina 2,5%', category: 'ANTIPARASITARIO',
+        activeIngredient: 'Deltametrina 2,5%', category: 'ANTIPARASITARIO', tags: ['CARRAPATICIDA'],
         presentation: 'Concentrado para diluir', route: 'Pulverização ou aspersão', dose: '10 mL para 10 L de água (mín. 5 L por animal adulto)',
         slaughterWithdrawalDays: null, milkWithdrawalDays: null, refrigerated: false,
         notes: 'Não aplicar no calor forte nem em dia de chuva. Não descartar sobras em rios ou açudes. Carência não consta na bula: confirme com o veterinário.',
@@ -175,7 +175,7 @@ export const PHARMACY_CATALOG = [
     },
     {
         key: 'acatak-pour-on-elanco', brand: 'Acatak Pour-On', laboratory: 'Elanco (antiga Novartis)',
-        activeIngredient: 'Fluazuron 2,5%', category: 'ANTIPARASITARIO',
+        activeIngredient: 'Fluazuron 2,5%', category: 'ANTIPARASITARIO', tags: ['CARRAPATICIDA'],
         presentation: 'Solução pour-on', route: 'Duas faixas no dorso', dose: '5 mL / 50 kg',
         slaughterWithdrawalDays: 42, milkWithdrawalDays: null, refrigerated: false,
         notes: 'Não usar em vacas leiteiras em idade de reprodução. Bezerros mamando em vacas tratadas também cumprem a carência.',

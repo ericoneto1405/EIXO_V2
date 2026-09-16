@@ -5,6 +5,7 @@ import {
     AplicacaoResumo,
     CustoSanitario,
     DoseModo,
+    Lembrete,
     Previa,
     SanityApiError,
     SanityOptions,
@@ -16,15 +17,19 @@ import {
     salvarAplicacao,
 } from '../adapters/sanityApi';
 import PharmacyModule from './PharmacyModule';
+import SanidadeCalendar from './SanidadeCalendar';
+
+export type SanidadeTab = 'APLICACOES' | 'CALENDARIO' | 'FARMACIA';
 
 interface SanidadeModuleProps {
     farmId?: string | null;
     farmName?: string | null;
+    tabRequest?: { tab: SanidadeTab; nonce: number } | null;
 }
 
 type Passo = 1 | 2 | 3 | 4;
 type ModoSelecao = 'IDENTIFICACAO' | 'LOTE';
-type Aba = 'APLICACOES' | 'FARMACIA';
+type Aba = SanidadeTab;
 
 const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] disabled:opacity-60';
 const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
@@ -83,8 +88,13 @@ const Aviso: React.FC<{ tone: 'danger' | 'warning' | 'success'; children: React.
     return <div role={tone === 'danger' ? 'alert' : 'status'} className={`rounded-xl border px-4 py-3 text-sm font-semibold ${styles}`}>{children}</div>;
 };
 
-const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName }) => {
-    const [aba, setAba] = useState<Aba>('APLICACOES');
+const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRequest }) => {
+    const [aba, setAba] = useState<Aba>(tabRequest?.tab || 'APLICACOES');
+    const [avisoPreenchido, setAvisoPreenchido] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (tabRequest) setAba(tabRequest.tab);
+    }, [tabRequest]);
     const [options, setOptions] = useState<SanityOptions | null>(null);
     const [historico, setHistorico] = useState<AplicacaoResumo[]>([]);
     const [carencia, setCarencia] = useState<AnimalEmCarencia[]>([]);
@@ -164,6 +174,35 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName }) => 
         setRoute(sugerirVia(escolhido?.suggestedRoute || null));
     };
 
+    // "Aplicar agora" no Calendário: abre a aplicação com os animais e o produto certos.
+    const aplicarLembrete = (lembrete: Lembrete) => {
+        setAba('APLICACOES');
+        setPrevia(null);
+        setErro(null);
+        setSucesso(null);
+        setPasso(1);
+        if (lembrete.brincos.length) {
+            setModoSelecao('IDENTIFICACAO');
+            setIdentificacoesTexto(lembrete.brincos.join(' '));
+        } else {
+            setModoSelecao('LOTE');
+            setIdentificacoesTexto('');
+        }
+        const candidato = options?.products.find((item) => {
+            if (!item.batches.length) return false;
+            if (lembrete.tag === 'VERMIFUGO') return item.category === 'VERMIFUGO' || (item.category === 'ANTIPARASITARIO' && !item.tags.includes('CARRAPATICIDA'));
+            if (lembrete.tag === 'REPRODUTIVA') return item.tags.includes('REPRODUTIVA') || item.tags.includes('IBR_BVD');
+            return lembrete.tag ? item.tags.includes(lembrete.tag) : false;
+        });
+        if (candidato) escolherProduto(candidato.id);
+        const partes = [
+            lembrete.brincos.length ? `${lembrete.brincos.length} animais já selecionados` : 'escolha os lotes',
+            candidato ? `produto sugerido: ${candidato.name}` : 'nenhum produto com estoque para este lembrete na Farmácia',
+        ];
+        if (lembrete.totalAnimais > lembrete.brincos.length) partes.push(`a lista mostra só os primeiros ${lembrete.brincos.length} de ${lembrete.totalAnimais}`);
+        setAvisoPreenchido(`${lembrete.titulo}: ${partes.join('; ')}. Confira antes de continuar.`);
+    };
+
     const payload = (extra?: Partial<AplicacaoPayload>): AplicacaoPayload => ({
         selecao: modoSelecao === 'LOTE' ? { lotId } : { brincos: identificacoes },
         productId,
@@ -201,6 +240,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName }) => 
     };
 
     const recomecar = () => {
+        setAvisoPreenchido(null);
         setPasso(1);
         setIdentificacoesTexto('');
         setLotId('');
@@ -254,8 +294,13 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName }) => 
 
             <div className="flex gap-2" role="tablist">
                 <button type="button" role="tab" aria-selected={aba === 'APLICACOES'} className={aba === 'APLICACOES' ? primaryButton : secondaryButton} onClick={() => setAba('APLICACOES')}>Aplicações</button>
+                <button type="button" role="tab" aria-selected={aba === 'CALENDARIO'} className={aba === 'CALENDARIO' ? primaryButton : secondaryButton} onClick={() => setAba('CALENDARIO')}>Calendário</button>
                 <button type="button" role="tab" aria-selected={aba === 'FARMACIA'} className={aba === 'FARMACIA' ? primaryButton : secondaryButton} onClick={() => setAba('FARMACIA')}>Farmácia</button>
             </div>
+
+            {aba === 'CALENDARIO' && (
+                <SanidadeCalendar key={farmId} farmId={farmId} onAplicar={aplicarLembrete} onAbrirFarmacia={() => setAba('FARMACIA')} />
+            )}
 
             {aba === 'FARMACIA' && <PharmacyModule key={farmId} farmId={farmId} onStockChanged={() => void carregar()} />}
 
@@ -280,6 +325,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName }) => 
             </div>
 
             {sucesso && <Aviso tone="success">{sucesso}</Aviso>}
+            {avisoPreenchido && passo < 4 && <Aviso tone="warning">{avisoPreenchido}</Aviso>}
 
             <section className={cardClass}>
                 <ol className="mb-5 grid grid-cols-4 gap-2">

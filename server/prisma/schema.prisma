@@ -268,6 +268,7 @@ model Farm {
   pharmacyBatches         PharmacyBatch[]
   pharmacyMovements       PharmacyMovement[]
   sanitaryApplications    SanitaryApplication[]
+  sanitarySettings        SanitarySettings?
   reproEvents             ReproEvent[]
   sanitaryRecords         SanitaryRecord[]
   selectionDecisions      SelectionDecision[]
@@ -2255,6 +2256,24 @@ model PharmacyMovement {
 }
 // Aplicação sanitária no curral (módulo Sanidade). Uma linha por animal;
 // groupId junta os animais aplicados na mesma lida.
+// Escolhas de cada fazenda para os lembretes da Sanidade.
+model SanitarySettings {
+  id                  String   @id @default(uuid())
+  farmId              String   @unique
+  rabiesRequired      String   @default("NAO_SEI") @map("rabies_required")
+  clostridialEnabled  Boolean  @default(true) @map("clostridial_enabled")
+  reproductiveEnabled Boolean  @default(true) @map("reproductive_enabled")
+  dewormEnabled       Boolean  @default(true) @map("deworm_enabled")
+  dewormMonths        Int[]    @map("deworm_months")
+  tickEnabled         Boolean  @default(false) @map("tick_enabled")
+  tickMonths          Int[]    @map("tick_months")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+  farm                Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@map("sanitary_settings")
+}
+
 model SanitaryApplication {
   id                       String          @id @default(uuid())
   farmId                   String

@@ -121,6 +121,44 @@ export interface CustoSanitario {
   porAnimal: { animalId: string; brinco: string; lote: string | null; custo: number; aplicacoes: number }[];
 }
 
+export type Severidade = 'VERMELHO' | 'LARANJA' | 'AMARELO' | 'AZUL';
+
+export interface Lembrete {
+  id: string;
+  grupo: 'OBRIGATORIO' | 'BOAS_PRATICAS' | 'GESTAO';
+  titulo: string;
+  descricao: string;
+  data: string;
+  dias: number;
+  severidade: Severidade;
+  tag: string | null;
+  acao: 'APLICAR' | 'VER' | 'FARMACIA' | 'CONFIGURAR';
+  totalAnimais: number;
+  brincos: string[];
+  link?: string | null;
+}
+
+export interface EstadoSanitario {
+  uf: string | null;
+  orgao: string;
+  linkBusca: string | null;
+  vermifugo: number[];
+  carrapato: number[];
+  regiaoConhecida: boolean;
+}
+
+export interface ConfiguracaoSanitaria {
+  rabiesRequired: 'SIM' | 'NAO' | 'NAO_SEI';
+  clostridialEnabled: boolean;
+  reproductiveEnabled: boolean;
+  dewormEnabled: boolean;
+  dewormMonths: number[];
+  tickEnabled: boolean;
+  tickMonths: number[];
+  estado?: EstadoSanitario;
+  configurada?: boolean;
+}
+
 export class SanityApiError extends Error {
   status: number;
   previa: Previa | null;
@@ -168,6 +206,15 @@ export const listarCustos = (farmId: string, de?: string, ate?: string) => {
   const query = params.toString();
   return request<CustoSanitario>(`${base(farmId)}/custos${query ? `?${query}` : ''}`);
 };
+
+export const listarLembretes = (farmId: string) =>
+  request<{ lembretes: Lembrete[]; estado: EstadoSanitario; configurada: boolean }>(`${base(farmId)}/lembretes`);
+
+export const buscarConfiguracao = (farmId: string) =>
+  request<ConfiguracaoSanitaria>(`${base(farmId)}/configuracao`);
+
+export const salvarConfiguracao = (farmId: string, config: ConfiguracaoSanitaria) =>
+  request<ConfiguracaoSanitaria>(`${base(farmId)}/configuracao`, { method: 'PUT', body: JSON.stringify(config) });
 
 export const listarCarencia = (farmId: string) =>
   request<{ animais: AnimalEmCarencia[] }>(`${base(farmId)}/carencia`);

@@ -10,6 +10,8 @@ import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/fa
 import { requireAuth } from '../middlewares/requireAuth.js';
 import { canAccessEixoCampo } from '../utils/saasContext.js';
 import { requireEixoCampoPlan } from '../middlewares/requireEixoCampoPlan.js';
+import { hasSanidadeAccess } from '../middlewares/requireAuth.js';
+import { carregarLembretesComCache } from '../sanity/sanityCalendar.js';
 const prisma = new PrismaClient();
 
 const sanitizeUploadFileName = (value) =>
@@ -223,6 +225,29 @@ export function registerFieldRoutes(app) {
                 });
             } catch (finErr) {
                 console.error('[alerts] erro ao gerar alertas financeiros:', finErr);
+            }
+
+            // ── Lembretes da Sanidade: só vencidos e os que vencem em até 7 dias ──
+            try {
+                if (await hasSanidadeAccess(req)) {
+                    for (const farm of farms.slice(0, 10)) {
+                        const { lembretes } = await carregarLembretesComCache(farm.id);
+                        lembretes
+                            .filter((item) => item.severidade === 'VERMELHO' || item.severidade === 'LARANJA')
+                            .forEach((item) => alerts.push({
+                                id: `sanidade-${farm.id}-${item.id}`,
+                                type: item.severidade === 'VERMELHO' ? 'critical' : 'warning',
+                                message: farms.length > 1 ? `${item.titulo} (${farm.name})` : item.titulo,
+                                source: 'SANIDADE',
+                                sourceType: 'SANIDADE',
+                                sourceId: item.id,
+                                farmId: farm.id,
+                                createdAt: item.data,
+                            }));
+                    }
+                }
+            } catch (sanErr) {
+                console.error('[alerts] erro ao gerar lembretes da Sanidade:', sanErr);
             }
 
             const severityOrder = { critical: 0, warning: 1, info: 2 };
