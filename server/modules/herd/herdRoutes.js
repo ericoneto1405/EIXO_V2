@@ -431,7 +431,7 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
     [
       ['Brinco, Nº, Número, ID, SISBOV, Tatuagem', 'Identificação'],
       ['M/F, Macho/Fêmea, Gênero', 'Sexo'],
-      ['Data nasc., DN, Nascido em, Safra', 'Nascimento'],
+      ['Data nasc., DN, Nascido em', 'Nascimento'],
       ['Peso atual, PV, Peso vivo', 'Último Peso (kg)'],
       ['Data do peso, Última pesagem', 'Data da Pesagem'],
       ['Raça, Grau de sangue, Cruzamento', 'Raça ou composição'],
