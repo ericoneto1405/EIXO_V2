@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import { requireAuth, requireNonFieldWorker } from '../middlewares/requireAuth.js';
 import { requireBillingAccess } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
-import { parseCoordinate, validateCoordinatePair } from '../utils/validators.js';
+import { parseCoordinate, validateCoordinatePair, parseFarmLocation } from '../utils/validators.js';
 import { parseNumber, parseDateValue } from '../utils/formatters.js';
 import { logActivity, recordActivityLog } from '../utils/activityLog.js';
 import { serializePaddock, serializeSeason } from '../utils/serializers.js';
@@ -95,8 +95,12 @@ app.get('/farms', async (req, res) => {
 });
 
 app.post('/farms', requireNonFieldWorker, async (req, res) => {
-    const { name, city, lat, lng, size, notes, responsibleName, paddocks } = req.body || {};
+    const { name, city, uf, ibgeCode, lat, lng, size, notes, responsibleName, paddocks } = req.body || {};
 
+    const location = parseFarmLocation(uf, ibgeCode);
+    if (location.error) {
+        return res.status(400).json({ message: location.error });
+    }
     const parsedSize = Number(size);
     const parsedLat = parseCoordinate(lat);
     const parsedLng = parseCoordinate(lng);
@@ -206,6 +210,8 @@ app.post('/farms', requireNonFieldWorker, async (req, res) => {
             data: {
                 name,
                 city,
+                uf: location.uf,
+                ibgeCode: location.ibgeCode,
                 lat: parsedLat,
                 lng: parsedLng,
                 size: parsedSize,
@@ -235,8 +241,12 @@ app.post('/farms', requireNonFieldWorker, async (req, res) => {
 
 app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
     const { id } = req.params;
-    const { name, city, lat, lng, size, notes, responsibleName, paddocks } = req.body || {};
+    const { name, city, uf, ibgeCode, lat, lng, size, notes, responsibleName, paddocks } = req.body || {};
 
+    const location = parseFarmLocation(uf, ibgeCode);
+    if (location.error) {
+        return res.status(400).json({ message: location.error });
+    }
     const parsedSize = Number(size);
     const parsedLat = parseCoordinate(lat);
     const parsedLng = parseCoordinate(lng);
@@ -414,6 +424,9 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                 data: {
                     name,
                     city,
+                    ...(uf !== undefined || ibgeCode !== undefined
+                        ? { uf: location.uf, ibgeCode: location.ibgeCode }
+                        : {}),
                     lat: parsedLat,
                     lng: parsedLng,
                     size: parsedSize,

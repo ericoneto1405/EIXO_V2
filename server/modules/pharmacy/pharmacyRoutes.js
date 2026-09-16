@@ -3,6 +3,7 @@ import { requireNonFieldWorker } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
 import { logActivity } from '../utils/activityLog.js';
 import { calculatePharmacyMovement } from './pharmacyRules.js';
+import { PHARMACY_CATALOG, PHARMACY_CATALOG_REVISION, findCatalogItem } from './pharmacyCatalog.js';
 
 const prisma = new PrismaClient();
 const MOVEMENT_TYPES = new Set(['ENTRY', 'EXIT', 'ADJUSTMENT']);
@@ -54,6 +55,10 @@ const attachScopedFarm = async (req, res, next) => {
 };
 
 export function registerPharmacyRoutes(app) {
+    app.get('/farms/:farmId/pharmacy/catalog', attachScopedFarm, (req, res) => {
+        return res.json({ revision: PHARMACY_CATALOG_REVISION, items: PHARMACY_CATALOG });
+    });
+
     app.get('/farms/:farmId/pharmacy', attachScopedFarm, async (req, res) => {
         const farm = req.pharmacyFarm;
 
@@ -98,6 +103,9 @@ export function registerPharmacyRoutes(app) {
         const milkWithdrawalDays = req.body?.milkWithdrawalDays === '' || req.body?.milkWithdrawalDays == null ? null : Number(req.body.milkWithdrawalDays);
         const notes = String(req.body?.notes || '').trim() || null;
         const minStock = Number(req.body?.minStock ?? 0);
+        const catalogKey = String(req.body?.catalogKey || '').trim() || null;
+        const catalogItem = findCatalogItem(catalogKey);
+        if (catalogKey && !catalogItem) return res.status(400).json({ message: 'Produto não encontrado na lista EIXO.' });
         if (!name || !category || !unit) return res.status(400).json({ message: 'Informe nome, categoria e unidade.' });
         if (!PRODUCT_CATEGORIES.has(category)) return res.status(400).json({ message: 'Categoria sanitária inválida.' });
         if (!Number.isFinite(minStock) || minStock < 0) return res.status(400).json({ message: 'Estoque mínimo inválido.' });
@@ -126,10 +134,21 @@ export function registerPharmacyRoutes(app) {
                     slaughterWithdrawalDays,
                     milkWithdrawalDays,
                     notes,
+                    catalogKey: catalogItem?.key || null,
+                    catalogSlaughterWithdrawalDays: catalogItem ? catalogItem.slaughterWithdrawalDays : null,
                 },
                 include: { batches: true },
             });
-            void logActivity(prisma, req, { action: 'FARMACIA_PRODUTO_CRIADO', entity: 'PharmacyProduct', entityId: product.id, description: `Cadastrou ${name} na farmácia`, farmId: farm.id });
+            void logActivity(prisma, req, { action: 'FARMACIA_PRODUTO_CRIADO', entity: 'PharmacyProduct', entityId: product.id, description: `Cadastrou ${name} na farmácia${catalogItem ? ' (lista EIXO)' : ''}`, farmId: farm.id });
+            if (catalogItem && catalogItem.slaughterWithdrawalDays !== slaughterWithdrawalDays) {
+                void logActivity(prisma, req, {
+                    action: 'FARMACIA_CARENCIA_ALTERADA',
+                    entity: 'PharmacyProduct',
+                    entityId: product.id,
+                    description: `Carência para abate de ${name} alterada: lista EIXO ${catalogItem.slaughterWithdrawalDays ?? 'sem informação'} dias, cadastrada ${slaughterWithdrawalDays ?? 'em branco'}`,
+                    farmId: farm.id,
+                });
+            }
             return res.status(201).json({ product: serializeProduct(product) });
         } catch (error) {
             console.error(error);

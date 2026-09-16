@@ -215,6 +215,8 @@ export interface Farm {
     id: string;
     name: string;
     city: string;
+    uf?: string | null;
+    ibgeCode?: string | null;
     lat?: number | null;
     lng?: number | null;
     size: number;

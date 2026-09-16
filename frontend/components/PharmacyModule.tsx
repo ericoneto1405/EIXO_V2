@@ -39,6 +39,23 @@ interface PharmacyMovement {
     batch: { lotNumber: string };
 }
 
+interface CatalogItem {
+    key: string;
+    brand: string;
+    laboratory: string;
+    activeIngredient: string | null;
+    category: string;
+    presentation: string | null;
+    route: string | null;
+    dose: string | null;
+    slaughterWithdrawalDays: number | null;
+    milkWithdrawalDays: number | null;
+    refrigerated: boolean;
+    notes: string | null;
+    source: string;
+    reviewedAt: string;
+}
+
 interface PharmacyModuleProps {
     farm: Farm;
 }
@@ -73,7 +90,18 @@ const emptyProductForm = {
     slaughterWithdrawalDays: '',
     milkWithdrawalDays: '',
     notes: '',
+    catalogKey: '',
 };
+
+const normalizeSearch = (value: string | null | undefined) =>
+    (value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+const buildCatalogNotes = (item: CatalogItem) =>
+    [
+        item.route && `Via: ${item.route}`,
+        item.dose && `Dose: ${item.dose}`,
+        item.notes,
+    ].filter(Boolean).join('\n');
 
 const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
     const [products, setProducts] = useState<PharmacyProduct[]>([]);
@@ -87,6 +115,8 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
     const [productForm, setProductForm] = useState(emptyProductForm);
+    const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+    const [catalogSearch, setCatalogSearch] = useState('');
     const [batchForm, setBatchForm] = useState({ productId: '', lotNumber: '', expiresAt: '', quantity: '', unitCost: '' });
     const [movementForm, setMovementForm] = useState({ batchId: '', type: 'EXIT', quantity: '', notes: '' });
 
@@ -112,6 +142,43 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
     }, [farm.id]);
 
     useEffect(() => { void loadInventory(); }, [loadInventory]);
+
+    useEffect(() => {
+        let cancelled = false;
+        request(`/farms/${farm.id}/pharmacy/catalog`)
+            .then((payload) => { if (!cancelled) setCatalog(payload.items || []); })
+            .catch(() => { if (!cancelled) setCatalog([]); });
+        return () => { cancelled = true; };
+    }, [farm.id]);
+
+    const catalogMatches = useMemo(() => {
+        const term = normalizeSearch(catalogSearch.trim());
+        if (term.length < 2) return [];
+        return catalog
+            .filter((item) => [item.brand, item.laboratory, item.activeIngredient].some((value) => normalizeSearch(value).includes(term)))
+            .slice(0, 8);
+    }, [catalog, catalogSearch]);
+
+    const selectedCatalogItem = productForm.catalogKey ? catalog.find((item) => item.key === productForm.catalogKey) || null : null;
+    const withdrawalChanged = Boolean(selectedCatalogItem)
+        && String(selectedCatalogItem?.slaughterWithdrawalDays ?? '') !== String(productForm.slaughterWithdrawalDays);
+
+    const pickCatalogItem = (item: CatalogItem) => {
+        setProductForm({
+            ...emptyProductForm,
+            name: item.brand,
+            activeIngredient: item.activeIngredient || '',
+            category: item.category,
+            manufacturer: item.laboratory,
+            presentation: item.presentation || '',
+            refrigerated: item.refrigerated,
+            slaughterWithdrawalDays: item.slaughterWithdrawalDays === null ? '' : String(item.slaughterWithdrawalDays),
+            milkWithdrawalDays: item.milkWithdrawalDays === null ? '' : String(item.milkWithdrawalDays),
+            notes: buildCatalogNotes(item),
+            catalogKey: item.key,
+        });
+        setCatalogSearch('');
+    };
 
     useEffect(() => {
         if (!batchForm.productId && products[0]) setBatchForm((current) => ({ ...current, productId: products[0].id }));
@@ -217,11 +284,40 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
             <div className="grid gap-5 xl:grid-cols-3">
                 <FormCard title="1. Cadastrar produto" description="Crie o item antes de registrar seus lotes.">
                     <form onSubmit={handleCreateProduct} className="space-y-3">
-                        <Field label="Nome comercial"><input required className={inputClass} value={productForm.name} onChange={(event) => setProductForm({ ...productForm, name: event.target.value })} placeholder="Ex.: Ivomec 1%" /></Field>
+                        {catalog.length > 0 && (
+                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
+                                <Field label="Buscar na lista EIXO">
+                                    <input className={inputClass} value={catalogSearch} onChange={(event) => setCatalogSearch(event.target.value)} placeholder="Marca, laboratório ou princípio ativo" />
+                                </Field>
+                                {catalogMatches.length > 0 && (
+                                    <ul className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+                                        {catalogMatches.map((item) => (
+                                            <li key={item.key}>
+                                                <button type="button" onClick={() => pickCatalogItem(item)} className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--eixo-surface-soft)]">
+                                                    <span className="font-semibold text-[var(--eixo-text)]">{item.brand}</span>
+                                                    <span className="text-[var(--eixo-text-muted)]"> · {item.laboratory}</span>
+                                                    {item.activeIngredient && <span className="block text-xs text-[var(--eixo-text-muted)]">{item.activeIngredient}</span>}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                                {catalogSearch.trim().length >= 2 && catalogMatches.length === 0 && (
+                                    <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">Não está na lista. Preencha os campos abaixo.</p>
+                                )}
+                                {selectedCatalogItem && (
+                                    <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">
+                                        Preenchido pela lista EIXO. Carência conferida em {selectedCatalogItem.reviewedAt.split('-').reverse().join('/')} ({selectedCatalogItem.source}). Confira sempre a bula do frasco.
+                                        {' '}<button type="button" className="font-semibold underline" onClick={() => setProductForm(emptyProductForm)}>Limpar</button>
+                                    </p>
+                                )}
+                            </div>
+                        )}
+                        <Field label="Marca (nome comercial)"><input required className={inputClass} value={productForm.name} onChange={(event) => setProductForm({ ...productForm, name: event.target.value })} placeholder="Ex.: Ivomec 1%" /></Field>
                         <Field label="Princípio ativo"><input className={inputClass} value={productForm.activeIngredient} onChange={(event) => setProductForm({ ...productForm, activeIngredient: event.target.value })} placeholder="Ex.: Ivermectina" /></Field>
                         <div className="grid grid-cols-2 gap-3">
                             <Field label="Categoria"><select className={inputClass} value={productForm.category} onChange={(event) => setProductForm({ ...productForm, category: event.target.value })}>{PRODUCT_CATEGORIES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
-                            <Field label="Fabricante"><input className={inputClass} value={productForm.manufacturer} onChange={(event) => setProductForm({ ...productForm, manufacturer: event.target.value })} /></Field>
+                            <Field label="Laboratório"><input className={inputClass} value={productForm.manufacturer} onChange={(event) => setProductForm({ ...productForm, manufacturer: event.target.value })} /></Field>
                         </div>
                         <Field label="Apresentação"><input className={inputClass} value={productForm.presentation} onChange={(event) => setProductForm({ ...productForm, presentation: event.target.value })} placeholder="Ex.: frasco com 500 ml" /></Field>
                         <div className="grid grid-cols-2 gap-3">
@@ -237,6 +333,11 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farm }) => {
                             <Field label="Carência para abate (dias)"><input type="number" min="0" step="1" className={inputClass} value={productForm.slaughterWithdrawalDays} onChange={(event) => setProductForm({ ...productForm, slaughterWithdrawalDays: event.target.value })} /></Field>
                             <Field label="Carência para leite (dias)"><input type="number" min="0" step="1" className={inputClass} value={productForm.milkWithdrawalDays} onChange={(event) => setProductForm({ ...productForm, milkWithdrawalDays: event.target.value })} /></Field>
                         </div>
+                        {withdrawalChanged && (
+                            <p className="text-xs font-semibold text-amber-600">
+                                A lista EIXO indica {selectedCatalogItem?.slaughterWithdrawalDays ?? 'sem informação'} dias de carência para abate. A alteração fica registrada.
+                            </p>
+                        )}
                         <Field label="Observações"><textarea rows={2} className={inputClass} value={productForm.notes} onChange={(event) => setProductForm({ ...productForm, notes: event.target.value })} placeholder="Cuidados ou instruções internas" /></Field>
                         <SaveButton disabled={saving}>Cadastrar produto</SaveButton>
                     </form>

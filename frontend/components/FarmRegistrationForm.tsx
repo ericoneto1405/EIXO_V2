@@ -2,6 +2,25 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Farm, Paddock } from '../types';
 import { buildApiUrl, detectApiBaseUrl } from '../api';
 
+type MunicipiosPorUf = Record<string, [string, string][]>;
+let municipiosCache: Promise<MunicipiosPorUf> | null = null;
+const loadMunicipios = () => {
+    if (!municipiosCache) {
+        municipiosCache = fetch(`${import.meta.env.BASE_URL}ibge-municipios.json`)
+            .then((res) => {
+                if (!res.ok) throw new Error('Falha ao carregar municípios');
+                return res.json() as Promise<MunicipiosPorUf>;
+            })
+            .catch((error) => {
+                municipiosCache = null;
+                throw error;
+            });
+    }
+    return municipiosCache;
+};
+const normalizeCityName = (value: string) =>
+    value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+
 // A simple unique ID generator for divisions
 let divisionIdCounter = 0;
 
@@ -114,6 +133,9 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
     const [farmName, setFarmName] = useState('');
     const [farmCity, setFarmCity] = useState('');
     const [farmState, setFarmState] = useState('');
+    const [farmIbgeCode, setFarmIbgeCode] = useState('');
+    const [municipios, setMunicipios] = useState<MunicipiosPorUf | null>(null);
+    const [municipiosError, setMunicipiosError] = useState(false);
     const [farmLat, setFarmLat] = useState('');
     const [farmLng, setFarmLng] = useState('');
     const [farmSize, setFarmSize] = useState(''); // Total size in hectares
@@ -171,7 +193,8 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         setActiveFarm(initialFarm);
         setFarmName(initialFarm.name || '');
         setFarmCity(cityPart);
-        setFarmState(statePart.toUpperCase());
+        setFarmState((initialFarm.uf || statePart).toUpperCase());
+        setFarmIbgeCode(initialFarm.ibgeCode || '');
         setFarmLat(initialFarm.lat?.toString?.() || '');
         setFarmLng(initialFarm.lng?.toString?.() || '');
         setFarmSize(initialFarm.size?.toString?.() || '');
@@ -337,7 +360,8 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         setFarmName(savedFarm.name || '');
         const [cityPart = '', statePart = ''] = (savedFarm.city || '').split('/').map((value) => value.trim());
         setFarmCity(cityPart);
-        setFarmState(statePart.toUpperCase());
+        setFarmState((savedFarm.uf || statePart).toUpperCase());
+        setFarmIbgeCode(savedFarm.ibgeCode || '');
         setFarmLat(savedFarm.lat?.toString?.() || '');
         setFarmLng(savedFarm.lng?.toString?.() || '');
         setFarmSize(savedFarm.size?.toString?.() || '');
@@ -357,12 +381,40 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         );
     };
 
+    useEffect(() => {
+        let cancelled = false;
+        loadMunicipios()
+            .then((data) => { if (!cancelled) setMunicipios(data); })
+            .catch(() => { if (!cancelled) setMunicipiosError(true); });
+        return () => { cancelled = true; };
+    }, []);
+
+    const cityOptions = useMemo(
+        () => (municipios && farmState ? municipios[farmState] || [] : []),
+        [municipios, farmState],
+    );
+
+    // Fazenda antiga (cidade em texto livre): tenta achar o município pelo nome.
+    useEffect(() => {
+        if (farmIbgeCode || !farmCity || cityOptions.length === 0) return;
+        const target = normalizeCityName(farmCity);
+        const match = cityOptions.find(([, name]) => normalizeCityName(name) === target);
+        if (match) {
+            setFarmIbgeCode(match[0]);
+            setFarmCity(match[1]);
+        }
+    }, [cityOptions, farmCity, farmIbgeCode]);
+
     const saveFarmDetails = async () => {
         setSubmitError(null);
         setSubmitSuccess(null);
         setFarmLimitReached(false);
         if (!farmName.trim() || !farmCity.trim() || !farmState.trim()) {
             setSubmitError('Informe nome, cidade e estado da fazenda.');
+            return;
+        }
+        if (!farmIbgeCode && !municipiosError) {
+            setSubmitError('Escolha a cidade na lista. Ela é usada para saber quais vacinas são obrigatórias na sua região.');
             return;
         }
         if (farmSizeFloat <= 0) {
@@ -374,6 +426,8 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         const requestBody = JSON.stringify({
             name: farmName.trim(),
             city: `${farmCity.trim()}/${farmState.trim().toUpperCase()}`,
+            uf: farmState.trim().toUpperCase(),
+            ibgeCode: farmIbgeCode || null,
             lat: farmLat.trim(),
             lng: farmLng.trim(),
             size: farmSizeFloat,
@@ -593,6 +647,8 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
         const requestBody = JSON.stringify({
             name: farmName.trim(),
             city: `${farmCity.trim()}/${farmState.trim().toUpperCase()}`,
+            uf: farmState.trim().toUpperCase(),
+            ibgeCode: farmIbgeCode || null,
             lat: latToSend,
             lng: lngToSend,
             size: farmSizeFloat,
@@ -751,17 +807,47 @@ const FarmRegistrationForm: React.FC<FarmRegistrationFormProps> = ({
                         />
                     </div>
                     <div>
-                        <label htmlFor="farmCity" className="block text-sm font-medium text-[var(--eixo-text)]">Cidade</label>
-                        <input type="text" id="farmCity" value={farmCity} onChange={e => { setFarmCity(e.target.value); setIsDirty(true); }} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required />
-                    </div>
-                    <div>
                         <label htmlFor="farmState" className="block text-sm font-medium text-[var(--eixo-text)]">Estado</label>
-                        <select id="farmState" value={farmState} onChange={e => { setFarmState(e.target.value); setIsDirty(true); }} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required>
+                        <select id="farmState" value={farmState} onChange={e => { setFarmState(e.target.value); setFarmCity(''); setFarmIbgeCode(''); setIsDirty(true); }} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required>
                             <option value="">Selecione</option>
                             {BRAZILIAN_STATES.map((state) => (
                                 <option key={state} value={state}>{state}</option>
                             ))}
                         </select>
+                    </div>
+                    <div>
+                        <label htmlFor="farmCity" className="block text-sm font-medium text-[var(--eixo-text)]">Cidade</label>
+                        {municipiosError ? (
+                            <input type="text" id="farmCity" value={farmCity} onChange={e => { setFarmCity(e.target.value); setIsDirty(true); }} className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" required />
+                        ) : (
+                            <select
+                                id="farmCity"
+                                value={farmIbgeCode}
+                                disabled={!farmState || !municipios}
+                                onChange={e => {
+                                    const code = e.target.value;
+                                    const found = cityOptions.find(([c]) => c === code);
+                                    setFarmIbgeCode(code);
+                                    setFarmCity(found ? found[1] : '');
+                                    setIsDirty(true);
+                                }}
+                                className="mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none disabled:opacity-60"
+                                required
+                            >
+                                <option value="">
+                                    {!farmState ? 'Escolha o estado primeiro' : !municipios ? 'Carregando cidades...' : 'Selecione'}
+                                </option>
+                                {cityOptions.map(([code, name]) => (
+                                    <option key={code} value={code}>{name}</option>
+                                ))}
+                            </select>
+                        )}
+                        {!municipiosError && farmCity && !farmIbgeCode && (
+                            <p className="mt-1 text-xs text-amber-600">Cidade atual: "{farmCity}". Confirme na lista.</p>
+                        )}
+                        {municipiosError && (
+                            <p className="mt-1 text-xs text-amber-600">Não foi possível carregar a lista de cidades. Digite o nome.</p>
+                        )}
                     </div>
                     <div>
                         <label htmlFor="farmSize" className="block text-sm font-medium text-[var(--eixo-text)]">Tamanho Total (ha)</label>

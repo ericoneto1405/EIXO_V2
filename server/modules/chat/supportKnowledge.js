@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.9';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.11';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-16';
 
 export const SUPPORT_TONE_RULES = [
@@ -37,12 +37,26 @@ const SUPPORT_TOPIC_DEFINITIONS = [
     {
         id: 'fazendas-pastos',
         title: 'Cadastrar fazenda e pastos',
-        keywords: ['fazenda', 'fazendas', 'pasto', 'pastos', 'estrutura', 'cadastro fazenda'],
+        keywords: ['fazenda', 'fazendas', 'pasto', 'pastos', 'estrutura', 'cadastro fazenda', 'cidade', 'municipio', 'estado'],
         href: 'eixo:view:Fazendas',
         guidance: [
             'Acesse Estrutura da Fazenda.',
             'Use Adicionar fazenda para os dados básicos.',
+            'Escolha primeiro o estado e depois a cidade na lista oficial; ela define quais vacinas são obrigatórias na região.',
             'Depois abra a fazenda e cadastre os pastos.',
+        ],
+    },
+    {
+        id: 'farmacia-lista-eixo',
+        title: 'Cadastrar remédios e vacinas na Farmácia',
+        keywords: ['farmacia', 'remedio', 'remedios', 'vacina', 'vacinas', 'carencia', 'lista eixo', 'medicamento'],
+        href: 'eixo:view:Fazendas',
+        guidance: [
+            'Abra a fazenda em Estrutura da Fazenda e vá até a Farmácia.',
+            'Em Cadastrar produto, use Buscar na lista EIXO e digite a marca, o laboratório ou o princípio ativo.',
+            'Ao escolher, os campos são preenchidos com os dados da bula; confira a bula do frasco antes de salvar.',
+            'Se o produto não estiver na lista, preencha os campos à mão.',
+            'Mudar a carência sugerida pela lista fica registrado no histórico.',
         ],
     },
     {

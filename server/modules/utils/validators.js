@@ -152,3 +152,25 @@ export function validateCoordinatePair(lat, lng) {
     }
     return null;
 }
+
+const UF_IBGE_PREFIX = {
+    RO: '11', AC: '12', AM: '13', RR: '14', PA: '15', AP: '16', TO: '17',
+    MA: '21', PI: '22', CE: '23', RN: '24', PB: '25', PE: '26', AL: '27', SE: '28', BA: '29',
+    MG: '31', ES: '32', RJ: '33', SP: '35',
+    PR: '41', SC: '42', RS: '43',
+    MS: '50', MT: '51', GO: '52', DF: '53',
+};
+
+// Estado e código IBGE são opcionais (fazendas antigas não têm), mas se vierem precisam bater entre si:
+// é o código IBGE que decide regra sanitária por município.
+export function parseFarmLocation(uf, ibgeCode) {
+    const cleanUf = typeof uf === 'string' ? uf.trim().toUpperCase() : '';
+    const cleanCode = ibgeCode === undefined || ibgeCode === null ? '' : String(ibgeCode).trim();
+    if (!cleanUf && !cleanCode) return { uf: null, ibgeCode: null };
+    if (!UF_IBGE_PREFIX[cleanUf]) return { error: 'Estado inválido.' };
+    if (!cleanCode) return { uf: cleanUf, ibgeCode: null };
+    if (!/^\d{7}$/.test(cleanCode) || !cleanCode.startsWith(UF_IBGE_PREFIX[cleanUf])) {
+        return { error: 'Município não pertence ao estado escolhido.' };
+    }
+    return { uf: cleanUf, ibgeCode: cleanCode };
+}
