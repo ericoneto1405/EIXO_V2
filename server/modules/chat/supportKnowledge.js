@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-16.17';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-16';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-17.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-17';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -16,12 +16,10 @@ export const SUPPORT_MODULE_CATALOG = [
     { name: 'Manejo do Rebanho', href: 'eixo:view:Rebanho%20Comercial', entitlementCodes: ['CORE'], benefit: 'centraliza animais, lotes, importação, pesagens e eventos.', salesTrigger: 'controle de animais, planilhas, peso, compra, venda ou lotes.' },
     { name: 'Financeiro', href: 'eixo:view:Financeiro', entitlementCodes: ['CORE', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'liga lançamentos, despesas e receitas; DRE, fluxo de caixa, analytics e qualidade do dado exigem EIXO Gestão em diante.', salesTrigger: 'despesas, receitas, lucro, fluxo de caixa, compra ou venda.' },
     { name: 'Nutrição', href: 'eixo:view:Nutri%C3%A7%C3%A3o', entitlementCodes: ['NUTRITION', 'EIXO_NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'controla dieta, consumo, custo por lote e ingredientes em risco.', salesTrigger: 'cocho, dieta, trato, consumo, suplemento, ração ou custo alimentar.' },
-    { name: 'Reprodução', href: '/genetics/reproducao', entitlementCodes: ['GENETICS', 'PO', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'organiza coberturas, diagnósticos, partos e indicadores reprodutivos.', salesTrigger: 'prenhez, parto, matriz, cobertura, IATF ou estação de monta.' },
     { name: 'EIXO Acasalamento', href: '/genetics/acasalamento', entitlementCodes: ['GENETICS', 'EIXO_DECISAO'], benefit: 'apoia decisões de acasalamento com histórico e objetivo produtivo.', salesTrigger: 'acasalamento, touro, sêmen, botijão, matriz ou genética.' },
     { name: 'Sanidade', href: 'eixo:view:Sanidade', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'farmácia com compra ligada ao Financeiro e registro de vacinas e remédios no curral, com trava de brucelose, lote vencido e carência para abate.', salesTrigger: 'vacina, brucelose, raiva, vermífugo, carrapato, remédio, carência ou calendário sanitário.' },
     { name: 'Gestão Comercial', href: 'eixo:view:Gest%C3%A3o%20Comercial', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'CRM da fazenda: clientes, pipeline de negociação por etapas, contrato e lembretes de aniversário/recompra.', salesTrigger: 'venda, cliente, comprador, negociação, pipeline, contrato ou aniversário de cliente.' },
     { name: 'Meus Leilões', href: 'eixo:view:Meus%20Leil%C3%B5es', entitlementCodes: ['EIXO_DECISAO'], benefit: 'patrimônio do plantel de leilão: sócios e cotas, documentos (ABCZ, contrato, nota), vídeo, avaliações e resultado por animal, sem taxa por animal e de qualquer leiloeira.', salesTrigger: 'leilão, condomínio, sócio, cota, animal P.O., registro ABCZ, contrato de compra, valorização ou patrimônio do plantel.' },
-    { name: 'Botijão de Sêmen', href: '/genetics/reproducao', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'organiza o estoque de sêmen usado no EIXO Acasalamento.', salesTrigger: 'sêmen, botijão, doses, estoque de touro ou acasalamento.' },
 ];
 
 const SUPPORT_TOPIC_DEFINITIONS = [
@@ -91,7 +89,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Na compra, informe fornecedor, GTA, data, valor total, finalidade e pagamento; o valor vai para o Financeiro e todas as linhas precisam estar certas para gravar.',
             'Animal P.O. entra pela mesma planilha: basta preencher Registro (P.O.), Pai e Mãe.',
             'Envie a planilha preenchida, revise a prévia e confirme a importação.',
-            'Bezerro nascido na fazenda não entra por planilha: lance no parto da mãe, em Reprodução.',
+            'Bezerro nascido na fazenda não entra por planilha: registre o nascimento vinculado à mãe, no Rebanho.',
         ],
     },
     {
@@ -151,33 +149,12 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         ],
     },
     {
-        id: 'reproducao',
-        title: 'Reprodução',
-        keywords: ['reprodução', 'prenhez', 'parto', 'matriz', 'cobertura', 'iatf'],
-        href: '/genetics/reproducao',
-        guidance: [
-            'Acesse Reprodução para organizar coberturas, diagnósticos e partos.',
-            'A disponibilidade depende do plano e das permissões do usuário.',
-        ],
-    },
-    {
         id: 'acasalamento',
         title: 'EIXO Acasalamento',
         keywords: ['acasalamento', 'touro', 'sêmen', 'botijão', 'genética'],
         href: '/genetics/acasalamento',
         guidance: [
             'Acesse EIXO Acasalamento para trabalhar objetivos produtivos e combinações entre matrizes e touros.',
-            'O estoque de sêmen usado no processo fica em Reprodução, na aba Botijão de Sêmen.',
-        ],
-    },
-    {
-        id: 'estoque-semen',
-        title: 'Estoque de sêmen e equipamentos',
-        keywords: ['estoque', 'sêmen', 'botijão', 'dose', 'equipamento'],
-        href: '/genetics/reproducao',
-        guidance: [
-            'Acesse Reprodução, aba Botijão de Sêmen, para consultar botijões e doses de sêmen.',
-            'Esse estoque é usado pelo EIXO Acasalamento conforme o acesso do usuário.',
         ],
     },
     {
@@ -202,7 +179,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Na Sanidade, a aba Calendário mostra os lembretes dos próximos 90 dias: vermelho (hoje ou vencido), laranja (até 7 dias), amarelo (até 30 dias).',
             'Obrigatórios: bezerras na idade da B19 (3 a 8 meses), prazo de comprovação da brucelose (referência 10/07 e 10/01; confira o órgão do estado) e raiva (reforço e revacinação anual), se a fazenda marcar que a raiva é obrigatória na região.',
             'Em Configurar calendário: responda se a raiva é obrigatória (Sim, Não ou Não sei), ligue ou desligue clostridioses e vacinas reprodutivas, e ajuste os meses de vermífugo e carrapaticida. Os meses sugeridos seguem o estado da fazenda.',
-            'Vacinas reprodutivas usam a estação de monta cadastrada na Reprodução. O botão Aplicar agora abre a aplicação com os animais e o produto sugerido.',
+            'Vacinas reprodutivas usam a estação de monta da fazenda. O botão Aplicar agora abre a aplicação com os animais e o produto sugerido.',
             'Os vencidos e os que vencem em até 7 dias também aparecem na barra de alertas do topo; clicar leva ao Calendário. O lembrete some quando a aplicação é registrada.',
         ],
     },
