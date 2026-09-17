@@ -12,6 +12,7 @@ import {
     DECISOES_VAZIA, METODOS_DIAGNOSTICO, MOTIVOS_DESCARTE, TIPOS_MANUAIS, aguardaDecisao, avaliarCandidata,
     bloqueiosLiberacao, calcularSituacao, normalizarIdent, numerosDaVaca, processarToque, temBrucelose, validarEvento,
     DESMAMA_PRECOCE_DIAS, pesoAjustado205, prontoParaDesmama, statusPrevisao, validarParto,
+    calcularIndicadores, farolVaca, mantidaAteProximoToque,
 } from './reproRules.js';
 
 const prisma = new PrismaClient();
@@ -20,6 +21,7 @@ const CONFIG_CAMPOS = {
     idadeMinMeses: 'int', pesoMinKg: 'float', eccMin: 'float', gestacaoDias: 'int',
     desmamaIdadeMeses: 'int', desmamaPesoKg: 'float', pesoNascerKg: 'float', minVacasIndicador: 'int',
     vaziasSeguidasLimite: 'int', iepMaxMeses: 'int', pesoMinDesmamaFarol: 'float',
+    metaPrenhez: 'float', metaNatalidade: 'float', metaDesmama: 'float', metaIepMeses: 'float', metaIdadePrimeiroParto: 'float',
 };
 
 // Farol e indicadores são do EIXO Performance.
@@ -99,6 +101,42 @@ async function recalcularVaca(tx, animalId, config) {
     return s;
 }
 
+async function montarCandidatas(req, farmId, lotId) {
+    const where = { farmId, sexo: 'FEMEA', status: 'VIVO', reproEvents: { none: { type: { in: ['LIBERACAO', 'DESCARTE'] } } } };
+    if (lotId) where.lotId = String(lotId);
+    const animais = await prisma.animal.findMany({
+        where,
+        select: { id: true, brinco: true, sexo: true, status: true, raca: true, dataNascimento: true, dataNascimentoEstimada: true, pesoAtual: true, lotId: true, lot: { select: { name: true } } },
+        orderBy: { brinco: 'asc' },
+        take: MAX_LOTE,
+    });
+    const ids = animais.map((a) => a.id);
+    const [config, brucelose, extras] = await Promise.all([carregarConfig(farmId), animaisComBrucelose(farmId, ids), ultimosPesosEEcc(ids)]);
+    const informadas = new Map((await prisma.animal.findMany({
+        where: { id: { in: ids }, bruceloseInformadaEm: { not: null } },
+        select: { id: true, bruceloseInformadaEm: true },
+    })).map((a) => [a.id, a.bruceloseInformadaEm]));
+    const performance = temPerformance(req);
+    const lista = animais.map((a) => {
+        const pesagem = extras.pesos.get(a.id);
+        const ecc = extras.eccs.get(a.id) ?? null;
+        const temB = temBrucelose({ aplicacoesBrucelose: brucelose.has(a.id) ? 1 : 0, bruceloseInformadaEm: informadas.get(a.id) });
+        const base = {
+            id: a.id, brinco: a.brinco, raca: a.raca, dataNascimento: a.dataNascimento,
+            dataNascimentoEstimada: a.dataNascimentoEstimada, lote: a.lot?.name || null, lotId: a.lotId,
+            peso: pesagem?.peso ?? a.pesoAtual ?? null, pesadoEm: pesagem?.data ?? null, ecc,
+            brucelose: temB,
+            bloqueios: bloqueiosLiberacao(a, { brucelose: temB }),
+        };
+        if (performance) {
+            base.farol = avaliarCandidata({ dataNascimento: a.dataNascimento, pesoAtual: base.peso, pesadoEm: base.pesadoEm, ecc }, config);
+            if (config?.pesoMinKg != null && base.peso != null) base.faltaKg = Math.max(0, Math.ceil(config.pesoMinKg - base.peso));
+        }
+        return base;
+    });
+    return { lista, performance, config };
+}
+
 const serializarEvento = (e) => ({
     id: e.id, type: e.type, date: e.date, payload: e.payload || {}, notes: e.notes,
     lotId: e.lotId, createdById: e.createdById, createdAt: e.createdAt, updatedAt: e.updatedAt,
@@ -151,39 +189,7 @@ export function registerReproRoutes(app) {
     // Parte 0 — fêmeas que ainda não entraram na reprodução.
     app.get('/farms/:farmId/reproducao/candidatas', async (req, res) => {
         try {
-            const farmId = req.reproFarm.id;
-            const where = { farmId, sexo: 'FEMEA', status: 'VIVO', reproEvents: { none: { type: { in: ['LIBERACAO', 'DESCARTE'] } } } };
-            if (req.query.lotId) where.lotId = String(req.query.lotId);
-            const animais = await prisma.animal.findMany({
-                where,
-                select: { id: true, brinco: true, sexo: true, status: true, raca: true, dataNascimento: true, dataNascimentoEstimada: true, pesoAtual: true, lotId: true, lot: { select: { name: true } } },
-                orderBy: { brinco: 'asc' },
-                take: MAX_LOTE,
-            });
-            const ids = animais.map((a) => a.id);
-            const [config, brucelose, extras] = await Promise.all([carregarConfig(farmId), animaisComBrucelose(farmId, ids), ultimosPesosEEcc(ids)]);
-            const informadas = new Map((await prisma.animal.findMany({
-                where: { id: { in: ids }, bruceloseInformadaEm: { not: null } },
-                select: { id: true, bruceloseInformadaEm: true },
-            })).map((a) => [a.id, a.bruceloseInformadaEm]));
-            const performance = temPerformance(req);
-            const lista = animais.map((a) => {
-                const pesagem = extras.pesos.get(a.id);
-                const ecc = extras.eccs.get(a.id) ?? null;
-                const temB = temBrucelose({ aplicacoesBrucelose: brucelose.has(a.id) ? 1 : 0, bruceloseInformadaEm: informadas.get(a.id) });
-                const base = {
-                    id: a.id, brinco: a.brinco, raca: a.raca, dataNascimento: a.dataNascimento,
-                    dataNascimentoEstimada: a.dataNascimentoEstimada, lote: a.lot?.name || null, lotId: a.lotId,
-                    peso: pesagem?.peso ?? a.pesoAtual ?? null, pesadoEm: pesagem?.data ?? null, ecc,
-                    brucelose: temB,
-                    bloqueios: bloqueiosLiberacao(a, { brucelose: temB }),
-                };
-                if (performance) {
-                    base.farol = avaliarCandidata({ dataNascimento: a.dataNascimento, pesoAtual: base.peso, pesadoEm: base.pesadoEm, ecc }, config);
-                    if (config?.pesoMinKg != null && base.peso != null) base.faltaKg = Math.max(0, Math.ceil(config.pesoMinKg - base.peso));
-                }
-                return base;
-            });
+            const { lista, performance, config } = await montarCandidatas(req, req.reproFarm.id, req.query.lotId);
             res.json({ candidatas: lista, performance, criteriosDefinidos: Boolean(config && (config.idadeMinMeses != null || config.pesoMinKg != null || config.eccMin != null)) });
         } catch (error) {
             console.error(error);
@@ -303,6 +309,7 @@ export function registerReproRoutes(app) {
                 vaca: { ...animal, lote: animal.lot?.name || null, situacao: s.situacao, previsaoParto: s.previsaoParto, categoria: s.categoria, historicoDesconhecido: s.historicoDesconhecido },
                 eventos: eventos.map(serializarEvento).reverse(),
                 numeros: performance ? numerosDaVaca(eventos, animal) : null,
+                farol: performance ? farolVaca(eventos, config || {}, new Date(), { animal }) : null,
                 performance,
             });
         } catch (error) {
@@ -970,6 +977,135 @@ export function registerReproRoutes(app) {
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: 'Erro ao desfazer a desmama.' });
+        }
+    });
+
+    // ---------- Fase 4: indicadores, farol e painel (EIXO Performance) ----------
+
+    const exigirPerformance = (req, res, next) => {
+        if (temPerformance(req)) return next();
+        return res.status(403).json({ code: 'entitlement_required', message: 'Indicadores e farol fazem parte do EIXO Performance.' });
+    };
+
+    const CATEGORIAS = ['Novilha', 'Primípara', 'Multípara'];
+
+    async function carregarVacasComEventos(farmId, { lotId, categoria, incluirDescartadas = true } = {}) {
+        const where = { farmId, sexo: 'FEMEA', reproEvents: { some: { type: 'LIBERACAO' } } };
+        if (lotId) where.lotId = String(lotId);
+        const vacas = await prisma.animal.findMany({
+            where,
+            select: { id: true, brinco: true, status: true, dataNascimento: true, lotId: true, lot: { select: { name: true } }, reproEvents: { orderBy: [{ date: 'asc' }, { createdAt: 'asc' }] } },
+        });
+        return vacas
+            .map((v) => ({ ...v, eventos: v.reproEvents, categoria: calcularSituacao(v.reproEvents).categoria }))
+            .filter((v) => (!categoria || v.categoria === categoria))
+            .filter((v) => incluirDescartadas || (v.status === 'VIVO' && !v.eventos.some((e) => e.type === 'DESCARTE')));
+    }
+
+    app.get('/farms/:farmId/reproducao/indicadores', exigirPerformance, async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const categoria = CATEGORIAS.includes(req.query.categoria) ? req.query.categoria : null;
+            const [config, vacas, lotes] = await Promise.all([
+                carregarConfig(farmId),
+                carregarVacasComEventos(farmId, { lotId: req.query.lotId, categoria }),
+                prisma.lot.findMany({ where: { farmId }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+            ]);
+            res.json({
+                indicadores: calcularIndicadores(vacas, config || {}),
+                janela: 'Últimos 12 meses',
+                minimo: config?.minVacasIndicador || 10,
+                totalVacas: vacas.length,
+                lotes,
+                categorias: CATEGORIAS,
+            });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao calcular os indicadores.' });
+        }
+    });
+
+    app.get('/farms/:farmId/reproducao/farol', exigirPerformance, async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const config = await carregarConfig(farmId);
+            const vacas = await carregarVacasComEventos(farmId, { incluirDescartadas: false });
+            const agora = new Date();
+            const lista = vacas.map((v) => {
+                const f = farolVaca(v.eventos, config || {}, agora, { animal: v });
+                return { id: v.id, brinco: v.brinco, lote: v.lot?.name || null, categoria: v.categoria, cor: f?.cor || null, motivos: f?.motivos || [], mantida: mantidaAteProximoToque(v.eventos) };
+            });
+            const resumo = { VERDE: 0, AMARELO: 0, VERMELHO: 0 };
+            for (const v of lista) if (v.cor) resumo[v.cor] += 1;
+            res.json({
+                vacas: lista.filter((v) => v.cor !== 'VERDE').sort((a, b) => (a.cor === b.cor ? a.brinco.localeCompare(b.brinco) : a.cor === 'VERMELHO' ? -1 : 1)),
+                descarte: lista.filter((v) => v.cor === 'VERMELHO' && !v.mantida),
+                resumo,
+                limitesDefinidos: Boolean(config && (config.vaziasSeguidasLimite || config.iepMaxMeses || config.pesoMinDesmamaFarol)),
+                motivosDescarte: MOTIVOS_DESCARTE,
+            });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao montar o farol.' });
+        }
+    });
+
+    // Manter: o produtor explica por que fica; some da lista até o próximo toque.
+    app.post('/farms/:farmId/reproducao/farol/manter', exigirPerformance, async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const justificativa = String(req.body?.justificativa || '').trim().slice(0, 500);
+            if (justificativa.length < 3) return res.status(400).json({ message: 'Escreva por que a vaca vai ficar.' });
+            const vaca = await prisma.animal.findFirst({ where: { id: String(req.body?.animalId || ''), farmId, sexo: 'FEMEA' }, select: { id: true, brinco: true, lotId: true } });
+            if (!vaca) return res.status(404).json({ message: 'Vaca não encontrada.' });
+            await prisma.reproEvent.create({
+                data: { farmId, animalId: vaca.id, type: 'OBSERVACAO', date: new Date(), lotId: vaca.lotId, createdById: req.user?.id || null, payload: { manter: true, justificativa }, notes: `Mantida no rebanho: ${justificativa}` },
+            });
+            void logActivity(prisma, req, { action: 'REPRO_MANTER', entity: 'Animal', entityId: vaca.id, description: `Manteve a ${vaca.brinco} apesar do farol vermelho`, farmId });
+            res.json({ ok: true });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao salvar.' });
+        }
+    });
+
+    app.get('/farms/:farmId/reproducao/painel', exigirPerformance, async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const agora = new Date();
+            const [config, vacas, candidatas, bezerros] = await Promise.all([
+                carregarConfig(farmId),
+                carregarVacasComEventos(farmId, { incluirDescartadas: false }),
+                montarCandidatas(req, farmId, null),
+                prisma.animal.findMany({
+                    where: { farmId, status: 'VIVO', desmamadoEm: null, OR: [{ maeId: { not: null } }, { matrizResponsavelId: { not: null } }], dataNascimento: { gte: new Date(agora.getTime() - 540 * 86400000) } },
+                    select: { dataNascimento: true, pesoAtual: true },
+                }),
+            ]);
+            let vazias = 0;
+            let atrasados = 0;
+            let vermelhas = 0;
+            for (const v of vacas) {
+                if (aguardaDecisao(v.eventos)) vazias += 1;
+                const s = calcularSituacao(v.eventos, config || {});
+                if (s.situacao === 'PRENHE' && statusPrevisao(s.previsaoParto, agora) === 'ATRASADO') atrasados += 1;
+                const f = farolVaca(v.eventos, config || {}, agora, { animal: v });
+                if (f?.cor === 'VERMELHO' && !mantidaAteProximoToque(v.eventos)) vermelhas += 1;
+            }
+            const aptas = candidatas.lista.filter((c) => !c.bloqueios.length && c.farol?.cor === 'VERDE').length;
+            const prontos = bezerros.filter((b) => prontoParaDesmama({ idadeDias: Math.floor((agora - b.dataNascimento) / 86400000), peso: b.pesoAtual }, config || {})).length;
+            res.json({
+                itens: [
+                    { chave: 'vermelhas', titulo: 'Vacas no vermelho', total: vermelhas, aba: 'PAINEL' },
+                    { chave: 'atrasados', titulo: 'Partos atrasados', total: atrasados, aba: 'PARTOS' },
+                    { chave: 'vazias', titulo: 'Vazias para decidir', total: vazias, aba: 'DECIDIR' },
+                    { chave: 'aptas', titulo: 'Fêmeas aptas para liberar', total: aptas, aba: 'CANDIDATAS' },
+                    { chave: 'desmama', titulo: 'Bezerros prontos para desmama', total: prontos, aba: 'DESMAMA' },
+                ],
+            });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao montar o painel.' });
         }
     });
 }

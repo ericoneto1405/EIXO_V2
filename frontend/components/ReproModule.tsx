@@ -23,13 +23,14 @@ import {
 } from '../adapters/reproApi';
 import { DecidirVazias, ToqueCurral } from './ReproToque';
 import { DesmamaAba, PartosAba } from './ReproParto';
+import { PainelAba } from './ReproPainel';
 
 interface ReproModuleProps {
     farmId?: string | null;
     farmName?: string | null;
 }
 
-type Aba = 'CANDIDATAS' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'FICHA' | 'CRITERIOS';
+type Aba = 'PAINEL' | 'CANDIDATAS' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'FICHA' | 'CRITERIOS';
 
 const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] disabled:opacity-60';
 const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
@@ -103,7 +104,7 @@ function resumoEvento(e: EventoRepro) {
 }
 
 const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
-    const [aba, setAba] = useState<Aba>('CANDIDATAS');
+    const [aba, setAba] = useState<Aba>('PAINEL');
     const [meta, setMeta] = useState<ConfigResposta | null>(null);
     const [erro, setErro] = useState<string | null>(null);
     const [aviso, setAviso] = useState<string | null>(null);
@@ -122,6 +123,11 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
         void carregarMeta();
     }, [carregarMeta]);
 
+    // Sem Performance o painel é só o aviso do plano: abre direto nas Candidatas.
+    useEffect(() => {
+        if (meta && !meta.performance) setAba((atual) => (atual === 'PAINEL' ? 'CANDIDATAS' : atual));
+    }, [meta]);
+
     if (!farmId) return null;
 
     return (
@@ -133,6 +139,7 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
 
             <div className="flex flex-wrap gap-2">
                 {([
+                    ['PAINEL', 'Painel'],
                     ['CANDIDATAS', 'Candidatas'],
                     ['TOQUE', 'Toque / ultrassom'],
                     ['DECIDIR', 'Vazias para decidir'],
@@ -150,6 +157,14 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
             {erro && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</div>}
             {aviso && <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{aviso}</div>}
 
+            {aba === 'PAINEL' && (meta?.performance
+                ? <PainelAba farmId={farmId} onErro={setErro} onAviso={setAviso} onIr={(destino) => setAba(destino as Aba)} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />
+                : (
+                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 text-sm">
+                        <p className="font-bold">Painel, indicadores e farol fazem parte do EIXO Performance.</p>
+                        <p className="mt-1 text-[var(--eixo-text-muted)]">No EIXO Gestão você anota tudo: candidatas, toque, partos, desmama e a ficha de cada vaca. O Performance transforma essas anotações em números e no farol com o motivo.</p>
+                    </div>
+                ))}
             {aba === 'CANDIDATAS' && <Candidatas farmId={farmId} onErro={setErro} onAviso={setAviso} irParaCriterios={() => setAba('CRITERIOS')} />}
             {aba === 'TOQUE' && <ToqueCurral farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'DECIDIR' && <DecidirVazias farmId={farmId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}
@@ -513,6 +528,11 @@ const FichaVaca: React.FC<{
                             <div className="text-right">
                                 <p className="text-lg font-bold">{situacaoTexto(ficha.vaca.situacao)}</p>
                                 {ficha.vaca.previsaoParto && <p className="text-sm">Previsão de parto: {fmtData(ficha.vaca.previsaoParto)}</p>}
+                                {ficha.farol?.cor && (
+                                    <p className={`mt-1 inline-block rounded-full px-2 py-1 text-xs font-bold ${COR_CLASS[ficha.farol.cor]}`}>
+                                        {ficha.farol.motivos.join(' · ')}
+                                    </p>
+                                )}
                             </div>
                         </div>
                         {ficha.numeros ? (
@@ -731,6 +751,18 @@ const CAMPOS: { campo: keyof ReproConfig; label: string; ref: string; step?: num
     { campo: 'pesoNascerKg', label: 'Peso ao nascer padrão (kg)', ref: 'Usado quando o bezerro não foi pesado. Referência: ~30 kg em Nelore.' },
 ];
 
+// Metas e limites do farol (EIXO Performance).
+const CAMPOS_PERFORMANCE: { campo: keyof ReproConfig; label: string; ref: string; step?: number }[] = [
+    { campo: 'metaPrenhez', label: 'Meta de prenhez (%)', ref: 'Referência de mercado: 80% a 90% em rebanho bem manejado.' },
+    { campo: 'metaNatalidade', label: 'Meta de natalidade (%)', ref: 'Bezerros nascidos vivos por fêmea exposta.' },
+    { campo: 'metaDesmama', label: 'Meta de desmama (%)', ref: 'Bezerros desmamados por fêmea exposta.' },
+    { campo: 'metaIepMeses', label: 'Meta de intervalo entre partos (meses)', ref: 'Referência: 12 a 13 meses (quanto menor, melhor).' },
+    { campo: 'metaIdadePrimeiroParto', label: 'Meta de idade ao 1º parto (meses)', ref: 'Referência: 24 a 36 meses (quanto menor, melhor).' },
+    { campo: 'vaziasSeguidasLimite', label: 'Vermelho com quantas vazias seguidas', ref: 'Referência: 2 vazias seguidas.' },
+    { campo: 'iepMaxMeses', label: 'Vermelho com intervalo entre partos acima de (meses)', ref: 'Referência: acima de 15 meses.' },
+    { campo: 'pesoMinDesmamaFarol', label: 'Peso mínimo à desmama, 205 dias (kg)', ref: 'Dois bezerros abaixo disso deixam a vaca vermelha.' },
+];
+
 const Criterios: React.FC<{
     farmId: string;
     meta: ConfigResposta;
@@ -739,7 +771,7 @@ const Criterios: React.FC<{
 }> = ({ farmId, meta, onSalvo, onErro }) => {
     const inicial = useMemo(() => {
         const v: Record<string, string> = {};
-        for (const c of CAMPOS) {
+        for (const c of [...CAMPOS, ...CAMPOS_PERFORMANCE]) {
             const atual = meta.config?.[c.campo];
             v[c.campo] = atual == null ? '' : String(atual);
         }
@@ -756,7 +788,7 @@ const Criterios: React.FC<{
         setOk(false);
         try {
             const corpo: Record<string, number | null> = {};
-            for (const c of CAMPOS) corpo[c.campo] = valores[c.campo] === '' ? null : Number(valores[c.campo]);
+            for (const c of [...CAMPOS, ...(meta.performance ? CAMPOS_PERFORMANCE : [])]) corpo[c.campo] = valores[c.campo] === '' ? null : Number(valores[c.campo]);
             await salvarReproConfig(farmId, corpo);
             onErro(null);
             setOk(true);
@@ -783,6 +815,21 @@ const Criterios: React.FC<{
                     </label>
                 ))}
             </div>
+            {meta.performance && (
+                <>
+                    <h3 className="pt-2 font-bold">Metas e limites do farol</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {CAMPOS_PERFORMANCE.map((c) => (
+                            <label key={c.campo} className="block">
+                                <span className={labelClass}>{c.label}</span>
+                                <input type="number" min={0} step={c.step || 1} className={inputClass} value={valores[c.campo]}
+                                    onChange={(e) => setValores((v) => ({ ...v, [c.campo]: e.target.value }))} />
+                                <span className="mt-1 block text-xs text-[var(--eixo-text-muted)]">{c.ref}</span>
+                            </label>
+                        ))}
+                    </div>
+                </>
+            )}
             <div className="flex items-center gap-3">
                 <button type="button" className={primaryButton} disabled={salvando} onClick={salvar}>{salvando ? 'Salvando…' : 'Salvar critérios'}</button>
                 {ok && <span className="text-sm text-emerald-700">Critérios salvos.</span>}

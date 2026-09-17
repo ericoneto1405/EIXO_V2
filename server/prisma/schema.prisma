@@ -711,6 +711,11 @@ model ReproSettings {
   vaziasSeguidasLimite Int?
   iepMaxMeses          Int?
   pesoMinDesmamaFarol  Float?
+  metaPrenhez            Float?
+  metaNatalidade         Float?
+  metaDesmama            Float?
+  metaIepMeses           Float?
+  metaIdadePrimeiroParto Float?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   farm                 Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)

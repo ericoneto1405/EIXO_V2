@@ -330,3 +330,167 @@ export function prontoParaDesmama({ idadeDias, peso }, config = {}) {
     const porPeso = temPeso && peso != null && peso >= config.desmamaPesoKg;
     return Boolean(porIdade || porPeso);
 }
+
+// ---------- Fase 4: indicadores e farol (EIXO Performance) ----------
+
+const JANELA_DIAS = 365;
+
+const dentro = (data, inicio, fim) => {
+    const t = new Date(data).getTime();
+    return t >= inicio.getTime() && t <= fim.getTime();
+};
+
+const media = (lista) => (lista.length ? lista.reduce((s, v) => s + v, 0) / lista.length : null);
+const arred = (v, casas = 1) => (v == null ? null : Math.round(v * 10 ** casas) / 10 ** casas);
+
+// Maior é melhor, salvo nos indicadores marcados com menorMelhor.
+export const INDICADORES = [
+    { chave: 'prenhez', nome: 'Taxa de prenhez', unidade: '%', meta: 'metaPrenhez' },
+    { chave: 'perdaGestacional', nome: 'Perda de gestação', unidade: '%', menorMelhor: true },
+    { chave: 'natalidade', nome: 'Taxa de natalidade', unidade: '%', meta: 'metaNatalidade' },
+    { chave: 'desmama', nome: 'Taxa de desmama', unidade: '%', meta: 'metaDesmama' },
+    { chave: 'idadePrimeiroParto', nome: 'Idade ao 1º parto', unidade: 'meses', meta: 'metaIdadePrimeiroParto', menorMelhor: true },
+    { chave: 'iep', nome: 'Intervalo entre partos', unidade: 'meses', meta: 'metaIepMeses', menorMelhor: true },
+    { chave: 'pesoDesmama205', nome: 'Peso à desmama (205 dias)', unidade: 'kg' },
+    { chave: 'kgPorVaca', nome: 'Kg de bezerro desmamado por vaca', unidade: 'kg' },
+    { chave: 'partosAssistidos', nome: 'Partos assistidos', unidade: '%', menorMelhor: true },
+    { chave: 'natimortos', nome: 'Natimortos', unidade: '%', menorMelhor: true },
+    { chave: 'descarte', nome: 'Taxa de descarte', unidade: '%' },
+];
+
+/**
+ * vacas: [{ id, eventos, dataNascimento }] — só fêmeas liberadas.
+ * Janela: últimos 12 meses. Base abaixo do mínimo = valor null ("dados insuficientes").
+ */
+export function calcularIndicadores(vacas = [], config = {}, ref = new Date()) {
+    const fim = new Date(ref);
+    const inicio = new Date(fim.getTime() - JANELA_DIAS * DAY_MS);
+    const minimo = Number(config?.minVacasIndicador) || 10;
+
+    let expostas = 0;
+    let diagnosticadas = 0;
+    let prenhes = 0;
+    let prenhesAlgumaVez = 0;
+    let perdas = 0;
+    let partos = 0;
+    let assistidos = 0;
+    let criasTotal = 0;
+    let criasVivas = 0;
+    let criasMortas = 0;
+    let desmamas = 0;
+    let kgDesmamados = 0;
+    let descartes = 0;
+    const pesos205 = [];
+    const idades1Parto = [];
+    const ieps = [];
+
+    for (const v of vacas) {
+        const lista = ordenar(v.eventos || []);
+        const lib = lista.find((e) => e.type === 'LIBERACAO');
+        if (!lib || new Date(lib.date) > fim) continue;
+        const descarte = lista.find((e) => e.type === 'DESCARTE');
+        if (descarte && new Date(descarte.date) < inicio) continue;
+        expostas += 1;
+        const desconhecido = Boolean(lib.payload?.historicoDesconhecido);
+
+        const diags = lista.filter((e) => e.type === 'DIAGNOSTICO_PRENHEZ' && dentro(e.date, inicio, fim));
+        if (diags.length) {
+            diagnosticadas += 1;
+            if (diags[diags.length - 1].payload?.resultado === 'PRENHE') prenhes += 1;
+            if (diags.some((d) => d.payload?.resultado === 'PRENHE')) prenhesAlgumaVez += 1;
+        }
+        perdas += lista.filter((e) => e.type === 'PERDA' && dentro(e.date, inicio, fim)).length;
+
+        const todosPartos = lista.filter((e) => e.type === 'PARTO');
+        todosPartos.forEach((p, i) => {
+            if (!dentro(p.date, inicio, fim)) return;
+            partos += 1;
+            if (['ASSISTIDO', 'CESAREA'].includes(p.payload?.tipoParto)) assistidos += 1;
+            const crias = Array.isArray(p.payload?.crias) ? p.payload.crias : [{ vivo: true }];
+            criasTotal += crias.length;
+            criasVivas += crias.filter((c) => c.vivo !== false).length;
+            criasMortas += crias.filter((c) => c.vivo === false).length;
+            if (!desconhecido && i === 0 && v.dataNascimento) idades1Parto.push(idadeEmMeses(v.dataNascimento, p.date));
+            if (!desconhecido && i > 0) ieps.push(diasEntre(todosPartos[i - 1].date, p.date) / 30.4375);
+        });
+
+        for (const d of lista.filter((e) => e.type === 'DESMAME' && dentro(e.date, inicio, fim))) {
+            desmamas += 1;
+            kgDesmamados += Number(d.payload?.peso) || 0;
+            if (Number(d.payload?.pesoAjustado205) > 0) pesos205.push(Number(d.payload.pesoAjustado205));
+        }
+        if (descarte && dentro(descarte.date, inicio, fim)) descartes += 1;
+    }
+
+    const taxa = (parte, base) => (base >= minimo ? arred((parte / base) * 100) : null);
+    const valores = {
+        prenhez: { valor: taxa(prenhes, diagnosticadas), base: diagnosticadas },
+        perdaGestacional: { valor: taxa(perdas, prenhesAlgumaVez), base: prenhesAlgumaVez },
+        natalidade: { valor: taxa(criasVivas, expostas), base: expostas },
+        desmama: { valor: taxa(desmamas, expostas), base: expostas },
+        idadePrimeiroParto: { valor: idades1Parto.length >= minimo ? arred(media(idades1Parto)) : null, base: idades1Parto.length },
+        iep: { valor: ieps.length >= minimo ? arred(media(ieps)) : null, base: ieps.length },
+        pesoDesmama205: { valor: pesos205.length >= minimo ? Math.round(media(pesos205)) : null, base: pesos205.length },
+        kgPorVaca: { valor: expostas >= minimo ? Math.round(kgDesmamados / expostas) : null, base: expostas },
+        partosAssistidos: { valor: taxa(assistidos, partos), base: partos },
+        natimortos: { valor: taxa(criasMortas, criasTotal), base: criasTotal },
+        descarte: { valor: taxa(descartes, expostas), base: expostas },
+    };
+
+    return INDICADORES.map((ind) => {
+        const { valor, base } = valores[ind.chave];
+        const meta = ind.meta ? config?.[ind.meta] ?? null : null;
+        let cor = null;
+        if (valor != null && meta != null) cor = (ind.menorMelhor ? valor <= meta : valor >= meta) ? 'VERDE' : 'VERMELHO';
+        return { ...ind, valor, base, meta, cor, insuficiente: valor == null };
+    });
+}
+
+// Farol da vaca: sempre com o motivo. Limites que o produtor não definiu não entram.
+export function farolVaca(eventos = [], config = {}, ref = new Date(), extras = {}) {
+    const lista = ordenar(eventos);
+    if (!lista.some((e) => e.type === 'LIBERACAO')) return null;
+    if (lista.some((e) => e.type === 'DESCARTE')) return { cor: null, motivos: ['Descartada'] };
+    const s = calcularSituacao(lista, config);
+    const n = numerosDaVaca(lista, extras.animal || {});
+    const vermelho = [];
+    const amarelo = [];
+
+    const limiteVazias = config?.vaziasSeguidasLimite;
+    if (limiteVazias && n.vaziasSeguidas >= limiteVazias) vermelho.push(`Vazia ${n.vaziasSeguidas} vezes seguidas`);
+    const perdas = lista.filter((e) => e.type === 'PERDA').length;
+    if (perdas >= 2) vermelho.push(`${perdas} perdas de gestação`);
+    if (config?.iepMaxMeses && n.iepMeses != null && n.iepMeses > config.iepMaxMeses) vermelho.push(`Intervalo entre partos de ${n.iepMeses} meses`);
+    if (config?.pesoMinDesmamaFarol) {
+        const leves = lista.filter((e) => e.type === 'DESMAME' && Number(e.payload?.pesoAjustado205) > 0 && e.payload.pesoAjustado205 < config.pesoMinDesmamaFarol).length;
+        if (leves >= 2) vermelho.push(`${leves} bezerros leves na desmama`);
+    }
+    if (lista.some((e) => e.payload?.sugereDescarte)) vermelho.push('Veterinário sugeriu descarte');
+
+    const ultimoDiag = lista.filter((e) => e.type === 'DIAGNOSTICO_PRENHEZ').pop();
+    const ultimo = lista[lista.length - 1];
+    if (ultimoDiag?.payload?.resultado === 'VAZIA' && ['VAZIA', 'LIBERADA'].includes(s.situacao) && !vermelho.length) {
+        amarelo.push(s.categoria === 'Primípara' ? 'Primípara vazia' : 'Vazia no último diagnóstico');
+    }
+    if (perdas === 1 && ultimo?.type === 'PERDA') amarelo.push('Perdeu a gestação');
+    if (s.situacao === 'PRENHE' && statusPrevisao(s.previsaoParto, ref) === 'ATRASADO') amarelo.push('Parto atrasado');
+    const ultimoEcc = lista.filter((e) => e.type === 'ECC').pop();
+    if (config?.eccMin != null && ultimoEcc && Number(ultimoEcc.payload?.ecc) < config.eccMin) amarelo.push(`ECC ${ultimoEcc.payload.ecc}, abaixo do mínimo`);
+    const referencia = ultimoDiag || lista.find((e) => e.type === 'LIBERACAO');
+    const ultimoParto = lista.filter((e) => e.type === 'PARTO').pop();
+    const recente = [ultimoDiag, ultimoParto].filter(Boolean).map((e) => new Date(e.date).getTime());
+    const maisRecente = recente.length ? Math.max(...recente) : new Date(referencia.date).getTime();
+    if (s.situacao !== 'PRENHE' && (new Date(ref).getTime() - maisRecente) / DAY_MS > JANELA_DIAS) amarelo.push('Sem diagnóstico há mais de 12 meses');
+
+    if (vermelho.length) return { cor: 'VERMELHO', motivos: [...vermelho, ...amarelo] };
+    if (amarelo.length) return { cor: 'AMARELO', motivos: amarelo };
+    return { cor: 'VERDE', motivos: [s.situacao === 'PRENHE' ? 'Prenhe' : s.situacao === 'PARIDA' ? 'Parida' : 'Em dia'] };
+}
+
+// "Manter" tira a vaca da lista de descarte até o próximo diagnóstico.
+export function mantidaAteProximoToque(eventos = []) {
+    const lista = ordenar(eventos);
+    const idx = lista.map((e) => (e.type === 'OBSERVACAO' && e.payload?.manter ? 1 : 0)).lastIndexOf(1);
+    if (idx < 0) return false;
+    return !lista.slice(idx + 1).some((e) => e.type === 'DIAGNOSTICO_PRENHEZ');
+}

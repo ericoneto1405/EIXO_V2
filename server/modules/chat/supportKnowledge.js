@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-17.4';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-17.5';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-17';
 
 export const SUPPORT_TONE_RULES = [
@@ -198,6 +198,20 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'A lista de partos previstos mostra os próximos 30 dias; passou 15 dias da previsão aparece como parto atrasado. Apagar um parto apaga também o bezerro, se ele ainda não tiver outros registros.',
             'Em Desmama, o EIXO separa os bezerros prontos pela idade e/ou peso definidos em Critérios. Preencha o peso de cada um e salve; funciona sem internet.',
             'O peso vai para o bezerro e para a ficha da mãe, ajustado para 205 dias (usa o peso ao nascer ou o padrão definido pelo produtor). Desmama com menos de 90 dias é aceita e marcada como precoce.',
+        ],
+    },
+    {
+        id: 'reproducao-indicadores-farol',
+        title: 'Painel, indicadores e farol da Reprodução',
+        keywords: ['indicador', 'taxa de prenhez', 'natalidade', 'desmama', 'iep', 'intervalo entre partos', 'farol', 'descarte', 'meta', 'painel', 'performance'],
+        href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
+        guidance: [
+            'Painel, indicadores e farol exigem o EIXO Performance. No EIXO Gestão o cliente anota tudo (candidatas, toque, partos, desmama e ficha), mas não vê os números.',
+            'A aba Painel abre com "O que fazer agora": vacas no vermelho, partos atrasados, vazias para decidir, fêmeas aptas e bezerros prontos para desmama. Cada quadro leva à aba correspondente.',
+            'Os indicadores usam os últimos 12 meses e podem ser filtrados por lote e categoria (novilha, primípara, multípara). Com menos de 10 vacas na base, o EIXO mostra "dados insuficientes" em vez de número enganoso.',
+            'As metas (prenhez, natalidade, desmama, intervalo entre partos e idade ao 1º parto) são definidas pelo produtor em Critérios; sem meta, o número aparece sem cor.',
+            'O farol da vaca sempre mostra o motivo escrito. Vermelho vem de vazias seguidas, duas perdas de gestação, intervalo entre partos alto ou bezerros leves — os limites também são do produtor.',
+            'Na sugestão de descarte, o produtor escolhe Descartar (grava o motivo na ficha) ou Manter (escreve o porquê; a vaca volta a aparecer depois do próximo toque).',
         ],
     },
     {

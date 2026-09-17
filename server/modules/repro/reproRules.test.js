@@ -142,3 +142,53 @@ test('pronto para desmama: idade ou peso do produtor', () => {
     assert.equal(prontoParaDesmama({ idadeDias: 150, peso: 190 }, { desmamaIdadeMeses: 7, desmamaPesoKg: 180 }), true);
     assert.equal(prontoParaDesmama({ idadeDias: 150, peso: 150 }, { desmamaIdadeMeses: 7, desmamaPesoKg: 180 }), false);
 });
+
+import { calcularIndicadores, farolVaca, mantidaAteProximoToque } from './reproRules.js';
+
+const vacaTeste = (i, { prenhe = true, parto = false, desmama = false } = {}) => ({
+    id: `v${i}`,
+    dataNascimento: '2022-01-01',
+    eventos: [
+        { type: 'LIBERACAO', date: '2024-01-01' },
+        { type: 'DIAGNOSTICO_PRENHEZ', date: '2026-01-10', payload: { resultado: prenhe ? 'PRENHE' : 'VAZIA' } },
+        ...(parto ? [{ type: 'PARTO', date: '2026-06-01', payload: { tipoParto: 'NORMAL', crias: [{ vivo: true }] } }] : []),
+        ...(desmama ? [{ type: 'DESMAME', date: '2026-08-01', payload: { peso: 200, pesoAjustado205: 190 } }] : []),
+    ],
+});
+
+test('indicadores: menos de 10 vacas = dados insuficientes', () => {
+    const r = calcularIndicadores([vacaTeste(1)], {}, ref);
+    assert.equal(r.find((i) => i.chave === 'prenhez').valor, null);
+});
+
+test('indicadores: prenhez, natalidade e meta', () => {
+    const vacas = Array.from({ length: 10 }, (_, i) => vacaTeste(i, { prenhe: i < 8, parto: i < 5, desmama: i < 5 }));
+    const r = calcularIndicadores(vacas, { metaPrenhez: 85 }, ref);
+    const prenhez = r.find((i) => i.chave === 'prenhez');
+    assert.equal(prenhez.valor, 80);
+    assert.equal(prenhez.cor, 'VERMELHO');
+    assert.equal(r.find((i) => i.chave === 'natalidade').valor, 50);
+    assert.equal(r.find((i) => i.chave === 'kgPorVaca').valor, 100);
+    assert.equal(r.find((i) => i.chave === 'idadePrimeiroParto').valor, null);
+});
+
+test('farol: primípara vazia amarela; vazias seguidas só com limite do produtor', () => {
+    const base = [{ type: 'LIBERACAO', date: '2023-01-01' }, { type: 'PARTO', date: '2025-01-01' }];
+    const v = (d) => ({ type: 'DIAGNOSTICO_PRENHEZ', date: d, payload: { resultado: 'VAZIA' } });
+    const f1 = farolVaca([...base, v('2026-06-01')], {}, ref);
+    assert.equal(f1.cor, 'AMARELO');
+    assert.deepEqual(f1.motivos, ['Primípara vazia']);
+    const duas = [...base, v('2025-06-01'), v('2026-06-01')];
+    assert.equal(farolVaca(duas, {}, ref).cor, 'AMARELO');
+    const f2 = farolVaca(duas, { vaziasSeguidasLimite: 2 }, ref);
+    assert.equal(f2.cor, 'VERMELHO');
+    assert.ok(f2.motivos[0].includes('2 vezes'));
+});
+
+test('farol: prenhe em dia é verde; manter some até o próximo toque', () => {
+    const ev = [{ type: 'LIBERACAO', date: '2026-01-01' }, { type: 'DIAGNOSTICO_PRENHEZ', date: '2026-06-01', payload: { resultado: 'PRENHE' } }];
+    assert.equal(farolVaca(ev, {}, ref).cor, 'VERDE');
+    const manter = [...ev, { type: 'OBSERVACAO', date: '2026-07-01', payload: { manter: true } }];
+    assert.equal(mantidaAteProximoToque(manter), true);
+    assert.equal(mantidaAteProximoToque([...manter, { type: 'DIAGNOSTICO_PRENHEZ', date: '2026-08-01', payload: { resultado: 'VAZIA' } }]), false);
+});

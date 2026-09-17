@@ -18,6 +18,11 @@ export interface ReproConfig {
   vaziasSeguidasLimite: number | null;
   iepMaxMeses: number | null;
   pesoMinDesmamaFarol: number | null;
+  metaPrenhez: number | null;
+  metaNatalidade: number | null;
+  metaDesmama: number | null;
+  metaIepMeses: number | null;
+  metaIdadePrimeiroParto: number | null;
 }
 
 export interface ConfigResposta {
@@ -76,6 +81,7 @@ export interface Ficha {
   };
   eventos: EventoRepro[];
   numeros: { partos: number; idadePrimeiroParto: number | null; iepMeses: number | null; pesoMedioDesmama: number | null; vaziasSeguidas: number } | null;
+  farol?: { cor: Cor; motivos: string[] } | null;
   performance: boolean;
 }
 
@@ -314,3 +320,52 @@ export const lancarDesmama = (farmId: string, body: DesmamaPayload) =>
 
 export const desfazerDesmama = (farmId: string, eventId: string) =>
   request<{ ok: true; aviso: string }>(`${base(farmId)}/desmama/${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+
+// ---------- Fase 4: indicadores e farol (Performance) ----------
+
+export interface Indicador {
+  chave: string;
+  nome: string;
+  unidade: string;
+  valor: number | null;
+  base: number;
+  meta: number | null;
+  cor: Cor;
+  menorMelhor?: boolean;
+  insuficiente: boolean;
+}
+
+export interface VacaFarol {
+  id: string;
+  brinco: string;
+  lote: string | null;
+  categoria: string;
+  cor: Cor;
+  motivos: string[];
+  mantida: boolean;
+}
+
+export interface ItemPainel {
+  chave: string;
+  titulo: string;
+  total: number;
+  aba: string;
+}
+
+export const fetchIndicadores = (farmId: string, filtros: { lotId?: string; categoria?: string } = {}) => {
+  const q = new URLSearchParams();
+  if (filtros.lotId) q.set('lotId', filtros.lotId);
+  if (filtros.categoria) q.set('categoria', filtros.categoria);
+  const qs = q.toString();
+  return request<{ indicadores: Indicador[]; janela: string; minimo: number; totalVacas: number; lotes: { id: string; name: string }[]; categorias: string[] }>(
+    `${base(farmId)}/indicadores${qs ? `?${qs}` : ''}`,
+  );
+};
+
+export const fetchFarol = (farmId: string) =>
+  request<{ vacas: VacaFarol[]; descarte: VacaFarol[]; resumo: Record<'VERDE' | 'AMARELO' | 'VERMELHO', number>; limitesDefinidos: boolean; motivosDescarte: string[] }>(`${base(farmId)}/farol`);
+
+export const manterVaca = (farmId: string, animalId: string, justificativa: string) =>
+  request<{ ok: true }>(`${base(farmId)}/farol/manter`, { method: 'POST', body: JSON.stringify({ animalId, justificativa }) });
+
+export const fetchPainel = (farmId: string) => request<{ itens: ItemPainel[] }>(`${base(farmId)}/painel`);
