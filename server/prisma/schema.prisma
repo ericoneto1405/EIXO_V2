@@ -52,7 +52,6 @@ model User {
   sessions                       Session[]
   activeOrganization             Organization?                  @relation("ActiveOrganization", fields: [activeOrganizationId], references: [id])
   farmAccesses                   UserFarmAccess[]
-  reproCheckupSessions           ReproCheckupSession[]          @relation("ReproCheckupCreatedBy")
   marketPricesCreated            MarketPrice[]                  @relation("MarketPriceCreatedBy")
   animalEditLogs                 AnimalEditLog[]
 
@@ -278,8 +277,6 @@ model Farm {
   semenBatches            SemenBatch[]
   userAccesses            UserFarmAccess[]
   weighingSessions        WeighingSession[]
-  reproCheckupRecords     ReproCheckupRecord[]
-  reproCheckupSessions    ReproCheckupSession[]
   animalPartners          AnimalPartner[]
   animalDocuments         AnimalDocument[]
   animalValuations        AnimalValuation[]
@@ -427,7 +424,6 @@ model Animal {
   sanitaryCases        SanitaryCase[]
   selectionDecisions   SelectionDecision[]
   pesagens             Weighing[]
-  reproCheckupRecords  ReproCheckupRecord[]
   semenBatches         SemenBatch[]          @relation("SemenBullAnimal")
   embryoDonorBatches   EmbryoBatch[]         @relation("EmbryoDonorAnimal")
   embryoSireBatches    EmbryoBatch[]         @relation("EmbryoSireAnimal")
@@ -628,7 +624,6 @@ model BreedingSeason {
   farm            Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
   exposures       Exposure[]
   events          ReproEvent[]
-  checkupSessions ReproCheckupSession[]
 
   @@index([farmId, startAt])
 }
@@ -1365,51 +1360,6 @@ model BillingEvent {
 
   @@unique([provider, eventId])
   @@index([organizationId, createdAt])
-}
-
-model ReproCheckupSession {
-  id              String               @id
-  farmId          String               @map("farm_id")
-  createdById     String               @map("created_by_id")
-  occurredAt      DateTime             @map("occurred_at") @db.Timestamptz(6)
-  responsibleName String?              @map("responsible_name")
-  seasonId        String?              @map("season_id")
-  notes           String?
-  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  records         ReproCheckupRecord[]
-  createdBy       User                 @relation("ReproCheckupCreatedBy", fields: [createdById], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  farm            Farm                 @relation(fields: [farmId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  season          BreedingSeason?      @relation(fields: [seasonId], references: [id], onDelete: SetNull)
-
-  @@index([farmId, occurredAt(sort: Desc)], map: "idx_repro_checkup_sessions_farm")
-  @@index([seasonId], map: "idx_repro_checkup_sessions_season")
-  @@map("repro_checkup_sessions")
-}
-
-model ReproCheckupRecord {
-  id                   String              @id
-  sessionId            String              @map("session_id")
-  farmId               String              @map("farm_id")
-  animalId             String              @map("animal_id")
-  aptitude             String
-  diagnosis            String?
-  notes                String?
-  discardLight         String?             @map("discard_light")
-  discardReason        String?             @map("discard_reason")
-  calfQuality          String?             @map("calf_quality")
-  veterinarianDecision String?             @map("veterinarian_decision")
-  iatfCount            Int                 @default(0) @map("iatf_count")
-  pregnant             Boolean?
-  previsaoParto        DateTime?           @map("previsao_parto")
-  bullId               String?             @map("bull_id")
-  protocol             String?
-  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  animal               Animal              @relation(fields: [animalId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  farm                 Farm                @relation(fields: [farmId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  session              ReproCheckupSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@index([farmId, animalId, createdAt(sort: Desc)], map: "idx_repro_checkup_records_farm_animal")
-  @@map("repro_checkup_records")
 }
 
 model FinancialPayable {

@@ -24,7 +24,6 @@ import { createWebUser } from './adapters/usersApi';
 
 const HerdModule = React.lazy(() => import('./components/HerdModule'));
 const FinanceModule = React.lazy(() => import('./components/FinanceModule'));
-const GeneticsReproducao = React.lazy(() => import('./components/ReproModule'));
 const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'));
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
 const SanidadeModule = React.lazy(() => import('./components/SanidadeModule'));
@@ -89,7 +88,7 @@ interface User {
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics', 'Reprodução', 'Sanidade', 'Gestão Comercial', 'Meus Leilões', 'Plantel P.O.', 'Estoque e Equipamentos'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics', 'Sanidade', 'Gestão Comercial', 'Meus Leilões', 'Plantel P.O.', 'Estoque e Equipamentos'],
     },
     {
         title: 'Cadastros',
@@ -206,19 +205,6 @@ const UPGRADE_CONTENT: Record<string, {
         ],
         previewItems: ['Aplicação em 4 passos', 'Farmácia com baixa automática do estoque', 'Compra em Contas a Pagar e custo sanitário por lote e animal'],
         icon: <UpgradeReportIcon />,
-    },
-    'Reprodução': {
-        accessLabels: ['Reprodução'],
-        requiredPlan: 'PRO',
-        moduleName: 'Reprodução',
-        tagline: 'Acompanhe a reprodução com mais controle e menos papel solto',
-        benefits: [
-            'Registre coberturas, ciclos e decisões reprodutivas no mesmo sistema.',
-            'Ganhe histórico por matriz e mais segurança na tomada de decisão.',
-            'Diminua retrabalho entre curral, escritório e genética.',
-        ],
-        previewItems: ['Agenda reprodutiva por matriz', 'Histórico de eventos e confirmações', 'Acompanhamento de resultados por estação'],
-        icon: <UpgradeGeneticsIcon />,
     },
     'Eixo Acasalamento': {
         accessLabels: ['Eixo Genetics'],
@@ -902,9 +888,9 @@ const AppContent: React.FC = () => {
 
     // Atalhos fixos do header — cada chave leva direto pro módulo/aba certa.
     // Nutrição e Financeiro já abrem na aba certa por padrão; Rebanho reaproveita
-    // o herdTabRequest que já existe; Reprodução usa query param porque é rota própria.
+    // o herdTabRequest que já existe.
     const handleHeaderShortcut = React.useCallback((key: string) => {
-        if (isGeneticsRoute && key !== 'nascimento') {
+        if (isGeneticsRoute) {
             navigate('/');
         }
         switch (key) {
@@ -915,10 +901,6 @@ const AppContent: React.FC = () => {
             case 'animais':
                 setHerdTabRequest({ tab: 'animals', nonce: Date.now() });
                 setActiveView('Rebanho Comercial');
-                break;
-            case 'nascimento':
-                setActiveView('Reprodução');
-                navigate('/genetics/reproducao?tab=partos');
                 break;
             case 'trato':
                 setActiveView('Nutrição');
@@ -1097,26 +1079,6 @@ const AppContent: React.FC = () => {
         }
 
         if (isGeneticsRoute) {
-            // Reprodução tem rota própria (fora do switch(activeView) abaixo), então
-            // a trava de plano precisa ser checada aqui também — senão quem digita a
-            // URL direto no plano grátis entra na tela e ela quebra (API barra por trás).
-            if (location.pathname.startsWith('/genetics/reproducao')) {
-                const reproducaoUpgrade = getUpgradeModuleForView('Reprodução');
-                if (reproducaoUpgrade) {
-                    return (
-                        <UpgradeScreen
-                            moduleName={reproducaoUpgrade.moduleName}
-                            icon={reproducaoUpgrade.icon}
-                            tagline={reproducaoUpgrade.tagline}
-                            benefits={reproducaoUpgrade.benefits}
-                            requiredPlan={reproducaoUpgrade.requiredPlan}
-                            previewItems={reproducaoUpgrade.previewItems}
-                            onUpgrade={() => setUpgradeModal(reproducaoUpgrade.moduleName)}
-                        />
-                    );
-                }
-            }
-
             const withFarmGuard = (content: React.ReactNode) =>
                 hasSelectedFarm ? content : (
                     <FarmRequiredPanel title="Selecione uma fazenda para continuar" />
@@ -1126,10 +1088,6 @@ const AppContent: React.FC = () => {
                 <Routes>
                     <Route path="/genetics" element={<Navigate to="/genetics/acasalamento" replace />} />
                     <Route path="/genetics/plantel" element={<Navigate to="/genetics/acasalamento" replace />} />
-                    <Route
-                        path="/genetics/reproducao"
-                        element={withFarmGuard(<GeneticsReproducao farmId={selectedFarmId} />)}
-                    />
                     <Route path="/genetics/selecao" element={<Navigate to="/genetics/acasalamento" replace />} />
                     <Route path="/genetics/relatorios" element={<Navigate to="/genetics/acasalamento" replace />} />
                     <Route

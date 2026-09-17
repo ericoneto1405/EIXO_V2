@@ -28,7 +28,6 @@ import { registerAnimalRoutes } from "./modules/animals/animalRoutes.js";
 import { registerHerdWeighingRoutes } from "./modules/animals/herdWeighingRoutes.js";
 import { registerGeneticInventoryRoutes } from "./modules/animals/geneticInventoryRoutes.js";
 import { registerHerdRoutes } from "./modules/herd/herdRoutes.js";
-import { registerReproRoutes } from "./modules/repro/reproRoutes.js";
 import { registerPharmacyRoutes } from "./modules/pharmacy/pharmacyRoutes.js";
 import { registerSanityRoutes } from "./modules/sanity/sanityRoutes.js";
 import { registerCommercialRoutes } from "./modules/commercial/commercialRoutes.js";
@@ -130,7 +129,6 @@ const ACTIVITY_MODULE_FILTERS = {
     'Rebanho Comercial': ['Animal', 'Weighing', 'Lot'],
     'Sanidade': ['SanitaryRecord'],
     'Farmácia': ['PharmacyBatch', 'PharmacyMovement', 'PharmacyProduct'],
-    'Reprodução': ['ReproEvent', 'ReproCheckupSession', 'EmbryoTransfer'],
     'Nutrição': ['NutritionPlan', 'NutritionAssignment'],
     'Financeiro': ['FinancialTransaction', 'AccountCategory'],
     'Fazendas': ['Farm'],
@@ -245,13 +243,12 @@ app.get('/activity-logs/meta', requireAuth, requireModule('Registro de Atividade
 // ─── Registro de Módulos Extraídos (Fase 4) ──────────────────────────────────
 registerAuthRoutes(app);
 registerUserRoutes(app);
-app.use(['/animals', '/lots', '/farms', '/po', '/nutrition', '/repro'], rejectLegacyPoReference);
+app.use(['/animals', '/lots', '/farms', '/po', '/nutrition'], rejectLegacyPoReference);
 registerFarmRoutes(app);
 registerAnimalRoutes(app);
 registerHerdWeighingRoutes(app);
 registerGeneticInventoryRoutes(app);
 registerHerdRoutes(app);
-registerReproRoutes(app);
 registerPharmacyRoutes(app);
 registerSanityRoutes(app);
 registerCommercialRoutes(app);
