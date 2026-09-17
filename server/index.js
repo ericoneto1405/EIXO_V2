@@ -30,6 +30,7 @@ import { registerGeneticInventoryRoutes } from "./modules/animals/geneticInvento
 import { registerHerdRoutes } from "./modules/herd/herdRoutes.js";
 import { registerPharmacyRoutes } from "./modules/pharmacy/pharmacyRoutes.js";
 import { registerSanityRoutes } from "./modules/sanity/sanityRoutes.js";
+import { registerReproRoutes } from "./modules/repro/reproRoutes.js";
 import { registerCommercialRoutes } from "./modules/commercial/commercialRoutes.js";
 import { registerAuctionRoutes } from "./modules/auctions/auctionRoutes.js";
 
@@ -251,6 +252,7 @@ registerGeneticInventoryRoutes(app);
 registerHerdRoutes(app);
 registerPharmacyRoutes(app);
 registerSanityRoutes(app);
+registerReproRoutes(app);
 registerCommercialRoutes(app);
 registerAuctionRoutes(app);
 

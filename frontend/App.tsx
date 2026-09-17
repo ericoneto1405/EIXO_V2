@@ -27,6 +27,7 @@ const FinanceModule = React.lazy(() => import('./components/FinanceModule'));
 const EixoAcasalamento = React.lazy(() => import('./components/EixoAcasalamento'));
 const NutritionModule = React.lazy(() => import('./components/NutritionModule'));
 const SanidadeModule = React.lazy(() => import('./components/SanidadeModule'));
+const ReproModule = React.lazy(() => import('./components/ReproModule'));
 import type { SanidadeTab } from './components/SanidadeModule';
 const HQPage = React.lazy(() => import('./components/HQPage'));
 const CommercialManagement = React.lazy(() => import('./components/CommercialManagement'));
@@ -88,7 +89,7 @@ interface User {
 const MODULE_CATEGORIES = [
     {
         title: 'Principal',
-        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics', 'Sanidade', 'Gestão Comercial', 'Meus Leilões', 'Plantel P.O.', 'Estoque e Equipamentos'],
+        modules: ['Mapa do Sistema', 'Visão Geral', 'Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Eixo Genetics', 'Reprodução', 'Sanidade', 'Gestão Comercial', 'Meus Leilões', 'Plantel P.O.', 'Estoque e Equipamentos'],
     },
     {
         title: 'Cadastros',
@@ -205,6 +206,19 @@ const UPGRADE_CONTENT: Record<string, {
         ],
         previewItems: ['Aplicação em 4 passos', 'Farmácia com baixa automática do estoque', 'Compra em Contas a Pagar e custo sanitário por lote e animal'],
         icon: <UpgradeReportIcon />,
+    },
+    'Reprodução': {
+        accessLabels: ['Reprodução'],
+        requiredPlan: 'PRO',
+        moduleName: 'Reprodução',
+        tagline: 'Saiba quais novilhas já podem entrar na reprodução e a história de cada vaca',
+        benefits: [
+            'Libere fêmeas para a reprodução com trava de brucelose.',
+            'Guarde cobertura, diagnóstico, perda, ECC e descarte na ficha de cada vaca.',
+            'Defina os critérios da sua fazenda: idade, peso e ECC mínimos.',
+        ],
+        previewItems: ['Lista de fêmeas candidatas', 'Ficha reprodutiva da vaca', 'Farol e números da vaca no EIXO Performance'],
+        icon: <UpgradeGeneticsIcon />,
     },
     'Eixo Acasalamento': {
         accessLabels: ['Eixo Genetics'],
@@ -1116,6 +1130,17 @@ const AppContent: React.FC = () => {
                     );
                 }
                 return <NutritionModule farmId={selectedFarmId} farmName={selectedFarm?.name} currentUser={currentUser} />;
+            case 'Reprodução':
+                if (!hasSelectedFarm) {
+                    return (
+                        <FarmRequiredPanel
+                            title="Selecione uma fazenda para acessar a reprodução"
+                            actionLabel="Selecionar fazenda"
+                            onAction={() => setActiveView('Fazendas')}
+                        />
+                    );
+                }
+                return <ReproModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
             case 'Sanidade':
                 if (!hasSelectedFarm) {
                     return (

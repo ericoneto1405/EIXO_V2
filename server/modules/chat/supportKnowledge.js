@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-17.1';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-17.4';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-17';
 
 export const SUPPORT_TONE_RULES = [
@@ -17,6 +17,7 @@ export const SUPPORT_MODULE_CATALOG = [
     { name: 'Financeiro', href: 'eixo:view:Financeiro', entitlementCodes: ['CORE', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'liga lançamentos, despesas e receitas; DRE, fluxo de caixa, analytics e qualidade do dado exigem EIXO Gestão em diante.', salesTrigger: 'despesas, receitas, lucro, fluxo de caixa, compra ou venda.' },
     { name: 'Nutrição', href: 'eixo:view:Nutri%C3%A7%C3%A3o', entitlementCodes: ['NUTRITION', 'EIXO_NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'controla dieta, consumo, custo por lote e ingredientes em risco.', salesTrigger: 'cocho, dieta, trato, consumo, suplemento, ração ou custo alimentar.' },
     { name: 'EIXO Acasalamento', href: '/genetics/acasalamento', entitlementCodes: ['GENETICS', 'EIXO_DECISAO'], benefit: 'apoia decisões de acasalamento com histórico e objetivo produtivo.', salesTrigger: 'acasalamento, touro, sêmen, botijão, matriz ou genética.' },
+    { name: 'Reprodução', href: 'eixo:view:Reprodu%C3%A7%C3%A3o', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'lista as fêmeas que podem entrar na reprodução (com trava de brucelose) e guarda a ficha reprodutiva de cada vaca; farol e números da vaca exigem EIXO Performance.', salesTrigger: 'novilha, vaca, prenhez, toque, cobertura, reprodução, descarte de vaca ou estação de monta.' },
     { name: 'Sanidade', href: 'eixo:view:Sanidade', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'farmácia com compra ligada ao Financeiro e registro de vacinas e remédios no curral, com trava de brucelose, lote vencido e carência para abate.', salesTrigger: 'vacina, brucelose, raiva, vermífugo, carrapato, remédio, carência ou calendário sanitário.' },
     { name: 'Gestão Comercial', href: 'eixo:view:Gest%C3%A3o%20Comercial', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'CRM da fazenda: clientes, pipeline de negociação por etapas, contrato e lembretes de aniversário/recompra.', salesTrigger: 'venda, cliente, comprador, negociação, pipeline, contrato ou aniversário de cliente.' },
     { name: 'Meus Leilões', href: 'eixo:view:Meus%20Leil%C3%B5es', entitlementCodes: ['EIXO_DECISAO'], benefit: 'patrimônio do plantel de leilão: sócios e cotas, documentos (ABCZ, contrato, nota), vídeo, avaliações e resultado por animal, sem taxa por animal e de qualquer leiloeira.', salesTrigger: 'leilão, condomínio, sócio, cota, animal P.O., registro ABCZ, contrato de compra, valorização ou patrimônio do plantel.' },
@@ -155,6 +156,48 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         href: '/genetics/acasalamento',
         guidance: [
             'Acesse EIXO Acasalamento para trabalhar objetivos produtivos e combinações entre matrizes e touros.',
+        ],
+    },
+    {
+        id: 'reproducao-candidatas-ficha',
+        title: 'Liberar fêmeas e ficha da vaca (Reprodução)',
+        keywords: ['reproducao', 'novilha', 'liberar', 'apta', 'candidata', 'ficha da vaca', 'prenhe', 'vazia', 'cobertura', 'ecc', 'descarte', 'brucelose'],
+        href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
+        guidance: [
+            'Em Reprodução, a aba Candidatas lista as fêmeas que ainda não entraram na reprodução, com idade, último peso, ECC e brucelose.',
+            'Só libera fêmea com vacina de brucelose registrada. Se ela foi vacinada antes do EIXO, use Informar vacina anterior (data e B19 ou RB51).',
+            'Selecione as fêmeas e clique em Liberar. Fêmea comprada pode ser liberada como histórico desconhecido, informando partos anteriores e situação atual.',
+            'A aba Ficha mostra a linha do tempo da vaca: liberação, cobertura, diagnóstico, perda, ECC, observação e descarte. Editar ou apagar um evento refaz a situação da vaca.',
+            'Os critérios (idade, peso e ECC mínimos, tempo de gestação) são definidos pelo produtor em Critérios; o EIXO não preenche valor padrão.',
+            'O farol das candidatas (apta, falta X kg) e os números da vaca (partos, idade ao 1º parto, intervalo entre partos) são do EIXO Performance.',
+        ],
+    },
+    {
+        id: 'reproducao-toque',
+        title: 'Toque ou ultrassom em lote e vazias para decidir (Reprodução)',
+        keywords: ['toque', 'ultrassom', 'diagnostico', 'prenhez', 'prenhe', 'vazia', 'tronco', 'curral', 'sem internet', 'pendencia', 'perda', 'aborto', 'repasse', 'descarte'],
+        href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
+        guidance: [
+            'Antes de ir ao curral, abra Reprodução > Toque / ultrassom e toque em Baixar vacas: a lista fica no celular e o lançamento funciona sem internet.',
+            'Informe data, método, veterinário e, se quiser, o lote. Digite a identificação, confira a vaca que aparece e toque em PRENHE ou VAZIA (dias de gestação, ECC e observação são opcionais).',
+            'Em Fechar toque, o EIXO mostra o resumo e quem do lote não passou no tronco. Sem sinal, o toque fica guardado no celular e é enviado sozinho quando a internet voltar.',
+            'Identificação que não bate vira pendência em Toques anteriores: escolha de qual vaca era ou ignore. Vaca que estava prenhe e aparece vazia ganha uma perda automática na ficha.',
+            'Apagar um toque apaga todos os diagnósticos dele e refaz a situação das vacas.',
+            'Em Vazias para decidir, selecione as vacas e escolha nova cobertura, repasse com touro ou descarte (com motivo). A decisão é sempre do produtor.',
+        ],
+    },
+    {
+        id: 'reproducao-parto-desmama',
+        title: 'Parto e desmama (Reprodução)',
+        keywords: ['parto', 'pariu', 'nascimento', 'bezerro', 'bezerra', 'gemeos', 'natimorto', 'desmama', 'desmame', 'peso ajustado', '205 dias', 'parto atrasado'],
+        href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
+        guidance: [
+            'Em Reprodução > Partos, digite a vaca, a data, o tipo de parto e os dados da cria (sexo, vivo ou morto, peso e identificação opcionais). Marque Gêmeos se forem duas crias.',
+            'Cria viva entra sozinha no Rebanho com mãe, raça, pasto e lote da mãe; sem identificação, fica com a provisória "Mãe X-n". O pai vem da cobertura registrada, se houver.',
+            'O EIXO bloqueia novo parto com menos de 280 dias do anterior e avisa quando a vaca estava vazia no toque ou o parto veio cedo demais depois da cobertura.',
+            'A lista de partos previstos mostra os próximos 30 dias; passou 15 dias da previsão aparece como parto atrasado. Apagar um parto apaga também o bezerro, se ele ainda não tiver outros registros.',
+            'Em Desmama, o EIXO separa os bezerros prontos pela idade e/ou peso definidos em Critérios. Preencha o peso de cada um e salve; funciona sem internet.',
+            'O peso vai para o bezerro e para a ficha da mãe, ajustado para 205 dias (usa o peso ao nascer ou o padrão definido pelo produtor). Desmama com menos de 90 dias é aceita e marcada como precoce.',
         ],
     },
     {

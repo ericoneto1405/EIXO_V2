@@ -284,6 +284,8 @@ model Farm {
   @@index([userId])
   @@index([organizationId])
   @@index([ibgeCode])
+  reproSettings           ReproSettings?
+  reproDiagnosisSessions  ReproDiagnosisSession[]
 }
 
 model Paddock {
@@ -381,6 +383,9 @@ model Animal {
   funcaoReprodutiva    String?
   statusReprodutivo    String?
   previsaoParto        DateTime?
+  // Vacina de brucelose aplicada antes do EIXO, informada pelo produtor.
+  bruceloseInformadaEm     DateTime?
+  bruceloseInformadaVacina String?
   observacoes          String?
   identificacaoProvisoria Boolean              @default(false)
   identificacaoAnterior   String?
@@ -651,7 +656,12 @@ model ReproEvent {
   notes     String?
   bullId    String?
   protocol  String?
+  lotId       String?
+  createdById String?
+  diagnosisSessionId String?
   createdAt DateTime        @default(now())
+  updatedAt DateTime        @default(now()) @updatedAt
+  diagnosisSession ReproDiagnosisSession? @relation(fields: [diagnosisSessionId], references: [id], onDelete: SetNull)
   animal    Animal          @relation(fields: [animalId], references: [id], onDelete: Cascade)
   farm      Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
   season    BreedingSeason? @relation(fields: [seasonId], references: [id])
@@ -659,6 +669,51 @@ model ReproEvent {
   @@index([animalId, date])
   @@index([farmId, date])
   @@index([seasonId])
+  @@index([diagnosisSessionId])
+}
+
+// Dia de toque/ultrassom. clientId evita gravar duas vezes o mesmo envio feito sem internet.
+model ReproDiagnosisSession {
+  id          String       @id @default(uuid())
+  farmId      String
+  clientId    String?
+  date        DateTime
+  metodo      String
+  vetName     String?
+  vetCrmv     String?
+  lotId       String?
+  seasonId    String?
+  notes       String?
+  pendencias  Json?
+  resumo      Json?
+  createdById String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  farm        Farm         @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  events      ReproEvent[]
+
+  @@unique([farmId, clientId])
+  @@index([farmId, date])
+}
+
+// Critérios da fazenda para a Reprodução. Decisão do produtor: nada vem preenchido.
+model ReproSettings {
+  id                   String   @id @default(uuid())
+  farmId               String   @unique
+  idadeMinMeses        Int?
+  pesoMinKg            Float?
+  eccMin               Float?
+  gestacaoDias         Int?
+  desmamaIdadeMeses    Int?
+  desmamaPesoKg        Float?
+  pesoNascerKg         Float?
+  minVacasIndicador    Int      @default(10)
+  vaziasSeguidasLimite Int?
+  iepMaxMeses          Int?
+  pesoMinDesmamaFarol  Float?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  farm                 Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
 }
 
 model SelectionDecision {
@@ -2634,6 +2689,11 @@ enum ReproEventType {
   DIAGNOSTICO_PRENHEZ
   PARTO
   DESMAME
+  LIBERACAO
+  PERDA
+  ECC
+  OBSERVACAO
+  DESCARTE
 }
 
 enum SelectionDecisionType {
