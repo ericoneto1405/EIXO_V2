@@ -29,7 +29,7 @@ const fmtData = (v?: string | null) => (v ? new Date(v).toLocaleDateString('pt-B
 const norm = (v: string) => v.trim().toUpperCase();
 
 const SITUACAO: Record<string, string> = {
-    LIBERADA: 'nunca pariu', VAZIA: 'vazia', COBERTA: 'coberta', PRENHE: 'prenhe', PARIDA: 'parida', DESCARTE: 'descarte',
+    LIBERADA: 'nunca pariu', VAZIA: 'falhada', COBERTA: 'coberta', PRENHE: 'cheia', PARIDA: 'parida', DESCARTE: 'descarte',
 };
 
 const lerLocal = <T,>(chave: string, padrao: T): T => {
@@ -246,7 +246,7 @@ export const ToqueCurral: React.FC<{
                         <p className="text-sm font-semibold">
                             Lançadas: {rascunho.linhas.length}{rascunho.lotId ? ` / ${esperadas.length} do lote` : ''}
                         </p>
-                        <p className="text-xs text-[var(--eixo-text-muted)]">{prenhes} prenhes · {rascunho.linhas.length - prenhes} vazias</p>
+                        <p className="text-xs text-[var(--eixo-text-muted)]">{prenhes} cheias · {rascunho.linhas.length - prenhes} falhadas</p>
                     </div>
                     <label className="mt-3 block">
                         <span className={labelClass}>Identificação</span>
@@ -288,9 +288,9 @@ export const ToqueCurral: React.FC<{
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-3">
                         <button type="button" disabled={!ident.trim() || jaLancada} onClick={() => lancar('PRENHE')}
-                            className="rounded-2xl bg-emerald-600 py-5 text-lg font-bold text-white disabled:opacity-40">PRENHE</button>
+                            className="rounded-2xl bg-emerald-600 py-5 text-lg font-bold text-white disabled:opacity-40">CHEIA</button>
                         <button type="button" disabled={!ident.trim() || jaLancada} onClick={() => lancar('VAZIA')}
-                            className="rounded-2xl bg-red-600 py-5 text-lg font-bold text-white disabled:opacity-40">VAZIA</button>
+                            className="rounded-2xl bg-red-600 py-5 text-lg font-bold text-white disabled:opacity-40">FALHADA</button>
                     </div>
                 </div>
 
@@ -300,7 +300,7 @@ export const ToqueCurral: React.FC<{
                             {rascunho.linhas.map((l) => (
                                 <li key={l.brinco} className="flex items-center justify-between py-2">
                                     <span>
-                                        <b>{l.brinco}</b> · {l.resultado === 'PRENHE' ? 'Prenhe' : 'Vazia'}
+                                        <b>{l.brinco}</b> · {l.resultado === 'PRENHE' ? 'Cheia' : 'Falhada'}
                                         {l.diasGestacao ? ` · ${l.diasGestacao} dias` : ''}{l.faixa ? ` · ${l.faixa.toLowerCase()}` : ''}
                                         {l.ecc ? ` · ECC ${l.ecc}` : ''}
                                         {!porIdent.has(norm(l.brinco)) && <span className="text-amber-700"> · conferir</span>}
@@ -317,7 +317,7 @@ export const ToqueCurral: React.FC<{
                         ) : (
                             <div className="space-y-2 rounded-xl border border-[var(--eixo-border)] p-4 text-sm">
                                 <p className="font-bold">Conferir antes de salvar</p>
-                                <p>{prenhes} prenhes · {rascunho.linhas.length - prenhes} vazias · {rascunho.linhas.filter((l) => !porIdent.has(norm(l.brinco))).length} para conferir</p>
+                                <p>{prenhes} cheias · {rascunho.linhas.length - prenhes} falhadas · {rascunho.linhas.filter((l) => !porIdent.has(norm(l.brinco))).length} para conferir</p>
                                 {rascunho.lotId && naoPassaram.length > 0 && (
                                     <p className="text-amber-700">Do lote, não passaram no tronco ({naoPassaram.length}): {naoPassaram.slice(0, 30).map((v) => v.brinco).join(', ')}{naoPassaram.length > 30 ? '…' : ''}</p>
                                 )}
@@ -387,7 +387,7 @@ const ToquesAnteriores: React.FC<{
                             <p className="font-semibold">{fmtData(s.date)} · {s.metodo === 'TOQUE' ? 'Toque' : 'Ultrassom'}{s.vetName ? ` · ${s.vetName}` : ''}{s.lote ? ` · ${s.lote}` : ''}</p>
                             {s.resumo && (
                                 <p className="text-xs text-[var(--eixo-text-muted)]">
-                                    {s.resumo.prenhes} prenhes · {s.resumo.vazias} vazias · {s.resumo.perdas} perdas
+                                    {s.resumo.prenhes} cheias · {s.resumo.vazias} falhadas · {s.resumo.perdas} perdas
                                     {s.resumo.naoPassaram?.length ? ` · ${s.resumo.naoPassaram.length} do lote não passaram` : ''}
                                 </p>
                             )}
@@ -408,7 +408,7 @@ const ToquesAnteriores: React.FC<{
                                 const chave = `${s.id}:${i}`;
                                 return (
                                     <div key={chave} className="flex flex-wrap items-end gap-2 rounded-lg bg-amber-50 p-2 text-xs">
-                                        <span className="min-w-[160px]"><b>{p.brinco}</b> · {p.resultado === 'PRENHE' ? 'prenhe' : 'vazia'} — {p.motivo}</span>
+                                        <span className="min-w-[160px]"><b>{p.brinco}</b> · {p.resultado === 'PRENHE' ? 'cheia' : 'falhada'} — {p.motivo}</span>
                                         <input className="rounded-lg border border-[var(--eixo-border)] px-2 py-1" placeholder="Era a vaca…" list={`vacas-${chave}`}
                                             value={escolha[chave] || ''} onChange={(e) => setEscolha((x) => ({ ...x, [chave]: e.target.value }))} />
                                         <datalist id={`vacas-${chave}`}>
@@ -475,8 +475,8 @@ export const DecidirVazias: React.FC<{
 
     return (
         <div className={`${cardClass} space-y-3`}>
-            <p className="text-sm text-[var(--eixo-text-muted)]">Vazias no último diagnóstico, esperando sua decisão. O sistema não decide por você.</p>
-            {!vacas.length && <p className="text-sm">Nenhuma vaca vazia esperando decisão.</p>}
+            <p className="text-sm text-[var(--eixo-text-muted)]">Vacas que falharam no último toque, esperando sua decisão. O sistema não decide por você.</p>
+            {!vacas.length && <p className="text-sm">Nenhuma vaca falhada esperando decisão.</p>}
             {vacas.length > 0 && (
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[560px] text-sm">
@@ -488,7 +488,7 @@ export const DecidirVazias: React.FC<{
                                 </th>
                                 <th>Identificação</th>
                                 <th>Categoria</th>
-                                <th>Vazia em</th>
+                                <th>Falhou em</th>
                                 <th>Atenção</th>
                             </tr>
                         </thead>
@@ -506,7 +506,7 @@ export const DecidirVazias: React.FC<{
                                     <td>{v.categoria}</td>
                                     <td>{fmtData(v.vaziaEm)}</td>
                                     <td className="text-xs">
-                                        {[v.vaziasSeguidas >= 2 ? `vazia ${v.vaziasSeguidas} vezes seguidas` : null, v.perdaRecente ? 'perdeu a cria' : null].filter(Boolean).join(' · ') || '—'}
+                                        {[v.vaziasSeguidas >= 2 ? `falhou ${v.vaziasSeguidas} vezes seguidas` : null, v.perdaRecente ? 'perdeu a cria' : null].filter(Boolean).join(' · ') || '—'}
                                     </td>
                                 </tr>
                             ))}

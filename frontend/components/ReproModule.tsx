@@ -33,7 +33,18 @@ interface ReproModuleProps {
     farmName?: string | null;
 }
 
-type Aba = 'PAINEL' | 'CANDIDATAS' | 'COBERTURA' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'BOTIJAO' | 'ESTACAO' | 'TOUROS' | 'FICHA' | 'CRITERIOS';
+type Aba = 'HOJE' | 'NUMEROS' | 'CANDIDATAS' | 'COBERTURA' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'BOTIJAO' | 'ESTACAO' | 'TOUROS' | 'FICHA' | 'CRITERIOS';
+type Grupo = 'HOJE' | 'CURRAL' | 'REBANHO' | 'NUMEROS' | 'AJUSTES';
+
+// Quatro lugares pelo momento do produtor; o resto vira Ajustes, escondido de quem não usa.
+const GRUPOS: { grupo: Grupo; label: string; abas: [Aba, string][] }[] = [
+    { grupo: 'HOJE', label: 'Hoje', abas: [['HOJE', 'Hoje']] },
+    { grupo: 'CURRAL', label: 'Curral', abas: [['TOQUE', 'Conferir prenhez'], ['PARTOS', 'Partos'], ['DESMAMA', 'Desmama']] },
+    { grupo: 'REBANHO', label: 'Rebanho', abas: [['FICHA', 'Vacas'], ['CANDIDATAS', 'Prontas para o touro'], ['DECIDIR', 'Falhadas para decidir']] },
+    { grupo: 'NUMEROS', label: 'Números', abas: [['NUMEROS', 'Números']] },
+    { grupo: 'AJUSTES', label: 'Ajustes da reprodução', abas: [['COBERTURA', 'Cobertura / IATF'], ['BOTIJAO', 'Botijão'], ['ESTACAO', 'Estação de monta'], ['TOUROS', 'Touros'], ['CRITERIOS', 'Critérios']] },
+];
+const grupoDaAba = (aba: Aba): Grupo => GRUPOS.find((g) => g.abas.some(([v]) => v === aba))?.grupo || 'HOJE';
 
 const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] disabled:opacity-60';
 const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
@@ -107,7 +118,7 @@ function resumoEvento(e: EventoRepro) {
 }
 
 const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
-    const [aba, setAba] = useState<Aba>('PAINEL');
+    const [aba, setAba] = useState<Aba>('HOJE');
     const [meta, setMeta] = useState<ConfigResposta | null>(null);
     const [erro, setErro] = useState<string | null>(null);
     const [aviso, setAviso] = useState<string | null>(null);
@@ -132,11 +143,6 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
         listarToques(farmId).then((r) => setLotes(r.lotes)).catch(() => setLotes([]));
     }, [farmId]);
 
-    // Sem Performance o painel é só o aviso do plano: abre direto nas Candidatas.
-    useEffect(() => {
-        if (meta && !meta.performance) setAba((atual) => (atual === 'PAINEL' ? 'CANDIDATAS' : atual));
-    }, [meta]);
-
     if (!farmId) return null;
 
     return (
@@ -147,37 +153,40 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-                {([
-                    ['PAINEL', 'Painel'],
-                    ['CANDIDATAS', 'Candidatas'],
-                    ['COBERTURA', 'Cobertura / IATF'],
-                    ['TOQUE', 'Toque / ultrassom'],
-                    ['DECIDIR', 'Vazias para decidir'],
-                    ['PARTOS', 'Partos'],
-                    ['DESMAMA', 'Desmama'],
-                    ['BOTIJAO', 'Botijão'],
-                    ['ESTACAO', 'Estação de monta'],
-                    ['TOUROS', 'Touros'],
-                    ['FICHA', 'Ficha da vaca'],
-                    ['CRITERIOS', 'Critérios'],
-                ] as [Aba, string][]).map(([valor, label]) => (
-                    <button key={valor} type="button" onClick={() => setAba(valor)} className={aba === valor ? primaryButton : secondaryButton}>
-                        {label}
+                {GRUPOS.filter((g) => g.grupo !== 'AJUSTES').map((g) => (
+                    <button key={g.grupo} type="button" onClick={() => setAba(g.abas[0][0])}
+                        className={grupoDaAba(aba) === g.grupo ? primaryButton : secondaryButton}>
+                        {g.label}
                     </button>
                 ))}
+                <button type="button" onClick={() => setAba('COBERTURA')}
+                    className={`${grupoDaAba(aba) === 'AJUSTES' ? primaryButton : secondaryButton} ml-auto`}>
+                    Ajustes da reprodução
+                </button>
             </div>
+
+            {GRUPOS.filter((g) => g.grupo === grupoDaAba(aba) && g.abas.length > 1).map((g) => (
+                <div key={g.grupo} className="flex flex-wrap gap-2">
+                    {g.abas.map(([valor, label]) => (
+                        <button key={valor} type="button" onClick={() => setAba(valor)}
+                            className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${aba === valor
+                                ? 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)]'
+                                : 'text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'}`}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            ))}
 
             {erro && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</div>}
             {aviso && <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{aviso}</div>}
 
-            {aba === 'PAINEL' && (meta?.performance
-                ? <PainelAba farmId={farmId} onErro={setErro} onAviso={setAviso} onIr={(destino) => setAba(destino as Aba)} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />
-                : (
-                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 text-sm">
-                        <p className="font-bold">Painel, indicadores e farol fazem parte do EIXO Performance.</p>
-                        <p className="mt-1 text-[var(--eixo-text-muted)]">No EIXO Gestão você anota tudo: candidatas, toque, partos, desmama e a ficha de cada vaca. O Performance transforma essas anotações em números e no farol com o motivo.</p>
-                    </div>
-                ))}
+            {(aba === 'HOJE' || aba === 'NUMEROS') && (
+                <PainelAba farmId={farmId} modo={aba} performance={Boolean(meta?.performance)}
+                    onErro={setErro} onAviso={setAviso}
+                    onIr={(destino) => setAba(destino as Aba)}
+                    onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />
+            )}
             {aba === 'CANDIDATAS' && <Candidatas farmId={farmId} onErro={setErro} onAviso={setAviso} irParaCriterios={() => setAba('CRITERIOS')} />}
             {aba === 'COBERTURA' && <CoberturaAba farmId={farmId} lotes={lotes} onErro={setErro} onAviso={setAviso} />}
             {aba === 'BOTIJAO' && <BotijaoAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}

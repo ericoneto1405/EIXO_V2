@@ -1071,7 +1071,8 @@ export function registerReproRoutes(app) {
         }
     });
 
-    app.get('/farms/:farmId/reproducao/painel', exigirPerformance, async (req, res) => {
+    // Painel do dia: liberado no Gestão. Só o item do farol (vacas no vermelho) exige Performance.
+    app.get('/farms/:farmId/reproducao/painel', async (req, res) => {
         try {
             const farmId = req.reproFarm.id;
             const agora = new Date();
@@ -1084,6 +1085,7 @@ export function registerReproRoutes(app) {
                     select: { dataNascimento: true, pesoAtual: true },
                 }),
             ]);
+            const performance = temPerformance(req);
             let vazias = 0;
             let atrasados = 0;
             let vermelhas = 0;
@@ -1091,14 +1093,17 @@ export function registerReproRoutes(app) {
                 if (aguardaDecisao(v.eventos)) vazias += 1;
                 const s = calcularSituacao(v.eventos, config || {});
                 if (s.situacao === 'PRENHE' && statusPrevisao(s.previsaoParto, agora) === 'ATRASADO') atrasados += 1;
-                const f = farolVaca(v.eventos, config || {}, agora, { animal: v });
-                if (f?.cor === 'VERMELHO' && !mantidaAteProximoToque(v.eventos)) vermelhas += 1;
+                if (performance) {
+                    const f = farolVaca(v.eventos, config || {}, agora, { animal: v });
+                    if (f?.cor === 'VERMELHO' && !mantidaAteProximoToque(v.eventos)) vermelhas += 1;
+                }
             }
-            const aptas = candidatas.lista.filter((c) => !c.bloqueios.length && c.farol?.cor === 'VERDE').length;
+            const aptas = candidatas.lista.filter((c) => !c.bloqueios.length && (!performance || c.farol?.cor === 'VERDE')).length;
             const prontos = bezerros.filter((b) => prontoParaDesmama({ idadeDias: Math.floor((agora - b.dataNascimento) / 86400000), peso: b.pesoAtual }, config || {})).length;
             res.json({
+                performance,
                 itens: [
-                    { chave: 'vermelhas', titulo: 'Vacas no vermelho', total: vermelhas, aba: 'PAINEL' },
+                    ...(performance ? [{ chave: 'vermelhas', titulo: 'Vacas no vermelho', total: vermelhas, aba: 'NUMEROS' }] : []),
                     { chave: 'atrasados', titulo: 'Partos atrasados', total: atrasados, aba: 'PARTOS' },
                     { chave: 'vazias', titulo: 'Vazias para decidir', total: vazias, aba: 'DECIDIR' },
                     { chave: 'aptas', titulo: 'Fêmeas aptas para liberar', total: aptas, aba: 'CANDIDATAS' },

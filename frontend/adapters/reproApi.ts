@@ -368,7 +368,7 @@ export const fetchFarol = (farmId: string) =>
 export const manterVaca = (farmId: string, animalId: string, justificativa: string) =>
   request<{ ok: true }>(`${base(farmId)}/farol/manter`, { method: 'POST', body: JSON.stringify({ animalId, justificativa }) });
 
-export const fetchPainel = (farmId: string) => request<{ itens: ItemPainel[] }>(`${base(farmId)}/painel`);
+export const fetchPainel = (farmId: string) => request<{ itens: ItemPainel[]; performance: boolean }>(`${base(farmId)}/painel`);
 
 // ---------- Fase 5: cobertura (monta natural e IATF) e botijão ----------
 

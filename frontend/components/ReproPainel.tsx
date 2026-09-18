@@ -26,11 +26,13 @@ const fmt = (i: Indicador) => (i.valor == null ? null : `${i.valor.toLocaleStrin
 
 export const PainelAba: React.FC<{
     farmId: string;
+    modo: 'HOJE' | 'NUMEROS';
+    performance: boolean;
     onErro: (m: string | null) => void;
     onAviso: (m: string | null) => void;
     onIr: (aba: string) => void;
     onAbrirFicha: (id: string) => void;
-}> = ({ farmId, onErro, onAviso, onIr, onAbrirFicha }) => {
+}> = ({ farmId, modo, performance, onErro, onAviso, onIr, onAbrirFicha }) => {
     const [itens, setItens] = useState<ItemPainel[]>([]);
     const [indicadores, setIndicadores] = useState<Indicador[]>([]);
     const [info, setInfo] = useState<{ janela: string; minimo: number; totalVacas: number; lotes: { id: string; name: string }[]; categorias: string[] } | null>(null);
@@ -42,26 +44,29 @@ export const PainelAba: React.FC<{
 
     const carregarFarol = useCallback(async () => {
         try {
-            const [p, f] = await Promise.all([fetchPainel(farmId), fetchFarol(farmId)]);
-            setItens(p.itens);
-            setFarol(f);
+            if (modo === 'HOJE') {
+                setItens((await fetchPainel(farmId)).itens);
+                return;
+            }
+            if (performance) setFarol(await fetchFarol(farmId));
         } catch (e: any) {
             onErro(e.message);
         }
-    }, [farmId, onErro]);
+    }, [farmId, modo, performance, onErro]);
 
     useEffect(() => {
         void carregarFarol();
     }, [carregarFarol]);
 
     useEffect(() => {
+        if (modo !== 'NUMEROS' || !performance) return;
         fetchIndicadores(farmId, { lotId, categoria })
             .then((r) => {
                 setIndicadores(r.indicadores);
                 setInfo(r);
             })
             .catch((e) => onErro(e.message));
-    }, [farmId, lotId, categoria, onErro]);
+    }, [farmId, modo, performance, lotId, categoria, onErro]);
 
     const confirmar = async () => {
         if (!acao) return;
@@ -79,8 +84,18 @@ export const PainelAba: React.FC<{
 
     const atencao = farol ? farol.vacas.filter((v) => v.cor === 'AMARELO' || (v.cor === 'VERMELHO' && v.mantida)) : [];
 
+    if (modo === 'NUMEROS' && !performance) {
+        return (
+            <div className={`${cardClass} text-sm`}>
+                <p className="font-bold">Os números e o farol fazem parte do EIXO Performance.</p>
+                <p className="mt-1 text-[var(--eixo-text-muted)]">No EIXO Gestão você anota tudo e vê o que fazer hoje. O Performance transforma essas anotações em números e no farol com o motivo.</p>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-5">
+            {modo === 'HOJE' && (
             <div>
                 <h2 className="mb-2 text-lg font-bold">O que fazer agora</h2>
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
@@ -92,8 +107,11 @@ export const PainelAba: React.FC<{
                         </button>
                     ))}
                 </div>
+                {!itens.length && <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Nada pendente por aqui hoje.</p>}
             </div>
+            )}
 
+            {modo === 'NUMEROS' && (
             <div className={`${cardClass} space-y-3`}>
                 <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
@@ -133,8 +151,9 @@ export const PainelAba: React.FC<{
                     ))}
                 </div>
             </div>
+            )}
 
-            {farol && (
+            {modo === 'NUMEROS' && farol && (
                 <div className={`${cardClass} space-y-3`}>
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                         <h2 className="text-lg font-bold">Farol das vacas</h2>
