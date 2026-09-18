@@ -700,3 +700,58 @@ export function alertasEstacao({ estacao, coberturasFora = 0, tourosNoLote = [] 
     }
     return alertas;
 }
+
+// ---------- Curral: uma tela só ----------
+// O produtor digita a identificação; o EIXO oferece só o que cabe naquela vaca hoje.
+
+export function acoesDaVaca({ eventos = [], config = {}, temBezerroPronto = false, animal = {} }, ref = new Date()) {
+    const lista = ordenar(eventos);
+    if (!lista.some((e) => e.type === 'LIBERACAO')) {
+        return { situacao: null, acoes: [], bloqueio: 'Ainda não entrou na reprodução' };
+    }
+    if (lista.some((e) => e.type === 'DESCARTE')) {
+        return { situacao: 'DESCARTE', acoes: [], bloqueio: 'Vaca em descarte' };
+    }
+    const s = calcularSituacao(lista, config);
+    const n = numerosDaVaca(lista, animal);
+    const ultimoParto = lista.filter((e) => e.type === 'PARTO').pop();
+    const diasDoParto = ultimoParto ? diasEntre(ultimoParto.date, ref) : null;
+    const acoes = [];
+
+    if (s.situacao === 'PRENHE') {
+        acoes.push({ tipo: 'PARTO', titulo: 'Pariu', ajuda: 'o bezerro entra no rebanho sozinho' });
+        acoes.push({ tipo: 'PERDA', titulo: 'Perdeu a cria', ajuda: 'entra na história dela' });
+        acoes.push({ tipo: 'DIAGNOSTICO', titulo: 'Conferir de novo', ajuda: 'toque ou ultrassom' });
+    } else {
+        acoes.push({ tipo: 'DIAGNOSTICO', titulo: 'Conferir prenhez', ajuda: 'toque ou ultrassom' });
+        if (temBezerroPronto) acoes.push({ tipo: 'DESMAMA', titulo: 'Desmamar o bezerro', ajuda: 'está no ponto que você usa' });
+        acoes.push({ tipo: 'COBERTURA', titulo: 'Soltar com o touro', ajuda: 'monta natural' });
+        const limite = config?.vaziasSeguidasLimite;
+        if (limite && n.vaziasSeguidas >= limite) {
+            acoes.push({ tipo: 'DESCARTE', titulo: 'Mandar para descarte', ajuda: `falhou ${n.vaziasSeguidas} vezes seguidas` });
+        }
+    }
+    if (s.situacao === 'PARIDA' && diasDoParto != null && diasDoParto < POS_PARTO_MIN_DIAS) {
+        const i = acoes.findIndex((a) => a.tipo === 'DIAGNOSTICO');
+        if (i >= 0) acoes[i].ajuda = `pariu há ${diasDoParto} dias — cedo para conferir`;
+    }
+    return { situacao: s.situacao, categoria: s.categoria, previsaoParto: s.previsaoParto, vaziasSeguidas: n.vaziasSeguidas, acoes, bloqueio: null };
+}
+
+// Frase curta que a tela mostra embaixo da identificação.
+export function resumoDaVaca({ eventos = [], config = {} }, ref = new Date()) {
+    const lista = ordenar(eventos);
+    const s = calcularSituacao(lista, config);
+    const ultimoDiag = lista.filter((e) => e.type === 'DIAGNOSTICO_PRENHEZ').pop();
+    const ultimoParto = lista.filter((e) => e.type === 'PARTO').pop();
+    const dia = (d) => new Date(d).toISOString().slice(0, 10).split('-').reverse().slice(0, 2).join('/');
+    const partes = [];
+    if (s.situacao === 'PRENHE') partes.push(s.previsaoParto ? `Cheia, deve parir em ${dia(s.previsaoParto)}` : 'Cheia');
+    else if (s.situacao === 'PARIDA') partes.push(ultimoParto ? `Pariu em ${dia(ultimoParto.date)}` : 'Parida');
+    else if (ultimoDiag?.payload?.resultado === 'VAZIA') partes.push(`Falhou no toque de ${dia(ultimoDiag.date)}`);
+    else if (s.situacao === 'COBERTA') partes.push('Coberta, ainda sem toque');
+    else partes.push('Sem cobertura registrada');
+    const n = numerosDaVaca(lista, {});
+    if (n.vaziasSeguidas >= 2) partes.push(`falhou ${n.vaziasSeguidas} vezes seguidas`);
+    return `${s.categoria} · ${partes.join(' · ')}`;
+}

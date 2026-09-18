@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-18.3';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-18.4';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-18';
 
 export const SUPPORT_TONE_RULES = [
@@ -164,12 +164,26 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['reproducao', 'novilha', 'liberar', 'apta', 'candidata', 'ficha da vaca', 'prenhe', 'vazia', 'cobertura', 'ecc', 'descarte', 'brucelose'],
         href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
         guidance: [
-            'A Reprodução tem quatro lugares: Hoje (o que fazer agora), Curral (conferir prenhez, partos e desmama), Rebanho (vacas, prontas para o touro e falhadas para decidir) e Números. Botijão, cobertura/IATF, estação de monta, touros e critérios ficam em Ajustes da reprodução.',
+            'A Reprodução tem quatro lugares: Hoje (o que fazer agora), Curral (Lançar, toque em lote, partos e desmama), Rebanho (vacas, prontas para o touro e falhadas para decidir) e Números. Botijão, cobertura/IATF, estação de monta, touros e critérios ficam em Ajustes da reprodução.',
             'Só libera fêmea com vacina de brucelose registrada. Se ela foi vacinada antes do EIXO, use Informar vacina anterior (data e B19 ou RB51).',
             'Selecione as fêmeas e clique em Liberar. Fêmea comprada pode ser liberada como histórico desconhecido, informando partos anteriores e situação atual.',
             'Em Rebanho > Vacas, a ficha mostra a linha do tempo da vaca: liberação, cobertura, diagnóstico, perda, ECC, observação e descarte. Editar ou apagar um evento refaz a situação da vaca.',
             'Os critérios (idade, peso e ECC mínimos, tempo de gestação) são definidos pelo produtor em Critérios; o EIXO não preenche valor padrão.',
             'O farol das candidatas (apta, falta X kg) e os números da vaca (partos, idade ao 1º parto, intervalo entre partos) são do EIXO Performance.',
+        ],
+    },
+    {
+        id: 'reproducao-curral-lancar',
+        title: 'Lançar no curral com uma tela só (Reprodução)',
+        keywords: ['curral', 'lancar', 'tronco', 'identificacao', 'brinco', 'cheia', 'falhada', 'pariu', 'desmamar', 'sem internet'],
+        href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
+        guidance: [
+            'Em Reprodução > Curral > Lançar, o produtor digita a identificação e o EIXO mostra a vaca com uma frase curta (categoria, situação e o que aconteceu por último).',
+            'O EIXO oferece só o que cabe naquela vaca: vaca cheia mostra Pariu, Perdeu a cria e Conferir de novo; vaca falhada mostra Conferir prenhez, Soltar com o touro e, quando passou do limite de falhas, Mandar para descarte. Vaca com bezerro no ponto mostra Desmamar.',
+            'Conferir prenhez tem dois botões grandes: CHEIA e FALHADA. Dias de gestação, ECC e veterinário ficam escondidos em "Anotar mais".',
+            'Tudo o que for conferido no mesmo dia entra na mesma sessão de toque, sem o produtor abrir sessão nenhuma.',
+            'Funciona sem internet: baixe as vacas antes de sair, e cada lançamento fica guardado no celular até o sinal voltar. Lançamento repetido não grava duas vezes.',
+            'As telas antigas continuam para quem prefere lote inteiro: Toque em lote, Partos e Desmama.',
         ],
     },
     {

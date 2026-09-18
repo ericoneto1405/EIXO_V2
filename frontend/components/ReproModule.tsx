@@ -27,19 +27,20 @@ import { DesmamaAba, PartosAba } from './ReproParto';
 import { PainelAba } from './ReproPainel';
 import { BotijaoAba, CoberturaAba } from './ReproCobertura';
 import { EstacaoAba, TourosAba } from './ReproTouros';
+import { CurralUnico } from './ReproCurral';
 
 interface ReproModuleProps {
     farmId?: string | null;
     farmName?: string | null;
 }
 
-type Aba = 'HOJE' | 'NUMEROS' | 'CANDIDATAS' | 'COBERTURA' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'BOTIJAO' | 'ESTACAO' | 'TOUROS' | 'FICHA' | 'CRITERIOS';
+type Aba = 'HOJE' | 'NUMEROS' | 'CURRAL' | 'CANDIDATAS' | 'COBERTURA' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'BOTIJAO' | 'ESTACAO' | 'TOUROS' | 'FICHA' | 'CRITERIOS';
 type Grupo = 'HOJE' | 'CURRAL' | 'REBANHO' | 'NUMEROS' | 'AJUSTES';
 
 // Quatro lugares pelo momento do produtor; o resto vira Ajustes, escondido de quem não usa.
 const GRUPOS: { grupo: Grupo; label: string; abas: [Aba, string][] }[] = [
     { grupo: 'HOJE', label: 'Hoje', abas: [['HOJE', 'Hoje']] },
-    { grupo: 'CURRAL', label: 'Curral', abas: [['TOQUE', 'Conferir prenhez'], ['PARTOS', 'Partos'], ['DESMAMA', 'Desmama']] },
+    { grupo: 'CURRAL', label: 'Curral', abas: [['CURRAL', 'Lançar'], ['TOQUE', 'Toque em lote'], ['PARTOS', 'Partos'], ['DESMAMA', 'Desmama']] },
     { grupo: 'REBANHO', label: 'Rebanho', abas: [['FICHA', 'Vacas'], ['CANDIDATAS', 'Prontas para o touro'], ['DECIDIR', 'Falhadas para decidir']] },
     { grupo: 'NUMEROS', label: 'Números', abas: [['NUMEROS', 'Números']] },
     { grupo: 'AJUSTES', label: 'Ajustes da reprodução', abas: [['COBERTURA', 'Cobertura / IATF'], ['BOTIJAO', 'Botijão'], ['ESTACAO', 'Estação de monta'], ['TOUROS', 'Touros'], ['CRITERIOS', 'Critérios']] },
@@ -192,6 +193,7 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
             {aba === 'BOTIJAO' && <BotijaoAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'ESTACAO' && <EstacaoAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'TOUROS' && <TourosAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
+            {aba === 'CURRAL' && <CurralUnico farmId={farmId} lotes={lotes} onErro={setErro} onAviso={setAviso} />}
             {aba === 'TOQUE' && <ToqueCurral farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'DECIDIR' && <DecidirVazias farmId={farmId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}
             {aba === 'PARTOS' && <PartosAba farmId={farmId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}

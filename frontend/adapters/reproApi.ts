@@ -555,3 +555,42 @@ export const tirarTouroDoLote = (farmId: string, alocacaoId: string, endAt?: str
 
 export const fetchLotacao = (farmId: string) =>
   request<{ lotes: LotacaoLote[]; estacao: { id: string; name: string } | null }>(`${base(farmId)}/lotacao`);
+
+// ---------- Curral: uma tela só ----------
+
+export interface AcaoVaca {
+  tipo: 'DIAGNOSTICO' | 'PARTO' | 'PERDA' | 'DESMAMA' | 'COBERTURA' | 'DESCARTE';
+  titulo: string;
+  ajuda: string;
+}
+
+export interface VacaCurralUnico {
+  id: string;
+  brinco: string;
+  lote: string | null;
+  lotId: string | null;
+  resumo: string;
+  situacao: Situacao;
+  acoes: AcaoVaca[];
+  bezerroPronto: { id: string; brinco: string; idadeDias: number | null } | null;
+}
+
+export interface LancamentoCurral {
+  clientId: string;
+  animalId: string;
+  brinco: string;
+  tipo: AcaoVaca['tipo'];
+  data: string;
+  dados: Record<string, any>;
+}
+
+export const baixarCurral = (farmId: string) =>
+  request<{ baixadoEm: string; vacas: VacaCurralUnico[]; bezerros: { id: string; brinco: string; maeId: string | null; pronto: boolean | null }[]; gestacaoDefinida: boolean }>(
+    `${base(farmId)}/curral`,
+  );
+
+export const enviarLancamento = (farmId: string, body: LancamentoCurral) =>
+  request<{ ok?: true; repetido?: boolean; perda?: boolean; avisos?: string[]; crias?: { brinco?: string }[]; pesoAjustado205?: number | null; bezerro?: string }>(
+    `${base(farmId)}/curral/lancamentos`,
+    { method: 'POST', body: JSON.stringify(body) },
+  );

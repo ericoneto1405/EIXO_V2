@@ -276,3 +276,31 @@ test('lotação: frase pronta, sem número de fórmula', () => {
     const semTouro = avaliarLotacao({ lote: '3', vacas, touros: [] }, ref);
     assert.equal(semTouro.cor, 'AMARELO');
 });
+
+import { acoesDaVaca, resumoDaVaca } from './reproRules.js';
+
+const libEv = { type: 'LIBERACAO', date: '2024-01-01' };
+
+test('curral: vaca cheia oferece parto, perda e conferir', () => {
+    const eventos = [libEv, { type: 'DIAGNOSTICO_PRENHEZ', date: '2026-08-01', payload: { resultado: 'PRENHE', diasGestacao: 90 } }];
+    const r = acoesDaVaca({ eventos, config: { gestacaoDias: 293 } }, ref);
+    assert.deepEqual(r.acoes.map((a) => a.tipo), ['PARTO', 'PERDA', 'DIAGNOSTICO']);
+    assert.ok(resumoDaVaca({ eventos, config: { gestacaoDias: 293 } }, ref).includes('Cheia'));
+});
+
+test('curral: vaca falhada oferece conferir, touro e descarte quando passa do limite', () => {
+    const v = (d) => ({ type: 'DIAGNOSTICO_PRENHEZ', date: d, payload: { resultado: 'VAZIA' } });
+    const eventos = [libEv, { type: 'PARTO', date: '2025-01-01' }, v('2025-08-01'), v('2026-08-01')];
+    const semLimite = acoesDaVaca({ eventos, config: {} }, ref);
+    assert.deepEqual(semLimite.acoes.map((a) => a.tipo), ['DIAGNOSTICO', 'COBERTURA']);
+    const comLimite = acoesDaVaca({ eventos, config: { vaziasSeguidasLimite: 2 } }, ref);
+    assert.ok(comLimite.acoes.some((a) => a.tipo === 'DESCARTE'));
+    assert.ok(resumoDaVaca({ eventos }, ref).includes('falhou 2 vezes seguidas'));
+});
+
+test('curral: parida com bezerro pronto oferece desmama; não liberada é bloqueada', () => {
+    const eventos = [libEv, { type: 'PARTO', date: '2026-03-01' }];
+    const r = acoesDaVaca({ eventos, temBezerroPronto: true }, ref);
+    assert.ok(r.acoes.some((a) => a.tipo === 'DESMAMA'));
+    assert.equal(acoesDaVaca({ eventos: [] }, ref).bloqueio, 'Ainda não entrou na reprodução');
+});

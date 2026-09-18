@@ -15,6 +15,7 @@ import {
     calcularIndicadores, farolVaca, mantidaAteProximoToque,
     agendaDoProtocolo, alertasBotijao, faltaDose, podeEntrarNoProtocolo, validarProtocolo,
     RESULTADOS_EXAME, alertasEstacao, avaliarLotacao, capacidadeDoTouro, duracaoEstacaoDias, exameValido,
+    acoesDaVaca, resumoDaVaca,
 } from './reproRules.js';
 
 const prisma = new PrismaClient();
@@ -137,6 +138,50 @@ async function montarCandidatas(req, farmId, lotId) {
         return base;
     });
     return { lista, performance, config };
+}
+
+
+// Grava o parto e faz o bezerro vivo nascer no Rebanho. Usado pela tela de partos e pelo curral.
+async function gravarPartoTx(tx, { farmId, mae, data, tipoParto, crias, ecc, obs, paiNome, clientId, userId, avisos = [], config }) {
+    const criadas = [];
+    for (const c of crias) {
+        if (!c.vivo) { criadas.push({ sexo: c.sexo, vivo: false, peso: c.peso }); continue; }
+        const seq = await tx.animal.update({ where: { id: mae.id }, data: { ultimaSequenciaCria: { increment: 1 } }, select: { ultimaSequenciaCria: true, brinco: true } });
+        const provisoria = buildProvisionalIdentification(seq.brinco || mae.id, seq.ultimaSequenciaCria);
+        const brinco = c.identificacao || provisoria;
+        const bezerro = await tx.animal.create({
+            data: {
+                farmId, brinco, identityKey: normalizeAnimalIdentityKey(brinco),
+                raca: mae.raca || 'Não informada', sexo: c.sexo, dataNascimento: data,
+                pesoAtual: c.peso, currentPaddockId: mae.currentPaddockId, lotId: mae.lotId,
+                maeId: mae.id, paiNome, matrizResponsavelId: mae.id,
+                identificacaoProvisoria: !c.identificacao, identificacaoProvisoriaOriginal: provisoria,
+                identificacaoMatrizSnapshot: seq.brinco, sequenciaMatriz: seq.ultimaSequenciaCria,
+                origemNascimento: 'NATURAL', receptoraGestacionalId: mae.id, receptoraGestacionalSnapshot: seq.brinco,
+                touroSnapshot: paiNome,
+            },
+        });
+        if (mae.currentPaddockId) {
+            await tx.paddockMove.create({ data: { farmId, paddockId: mae.currentPaddockId, animalId: bezerro.id, startAt: data } });
+        }
+        await tx.herdEvent.create({
+            data: { farmId, animalId: bezerro.id, type: 'NASCIMENTO', date: data, peso: c.peso, observacoes: `Nascimento registrado na Reprodução — mãe: ${seq.brinco}` },
+        });
+        criadas.push({ sexo: c.sexo, vivo: true, peso: c.peso, calfAnimalId: bezerro.id, brinco });
+    }
+    const primeira = criadas.find((c) => c.vivo);
+    const evento = await tx.reproEvent.create({
+        data: {
+            farmId, animalId: mae.id, type: 'PARTO', date: data, lotId: mae.lotId, createdById: userId || null,
+            notes: obs ? String(obs).slice(0, 1000) : null,
+            payload: {
+                clientId, tipoParto, ecc, gemeos: crias.length > 1, crias: criadas,
+                calfAnimalId: primeira?.calfAnimalId || null, calfSex: primeira?.sexo || null, birthOrigin: 'NATURAL', avisos,
+            },
+        },
+    });
+    await recalcularVaca(tx, mae.id, config);
+    return { evento, criadas };
 }
 
 const serializarEvento = (e) => ({
@@ -765,47 +810,10 @@ export function registerReproRoutes(app) {
             const ecc = Number(body.ecc) >= 1 && Number(body.ecc) <= 5 ? Number(body.ecc) : null;
             const config = await carregarConfig(farmId);
 
-            const resultado = await prisma.$transaction(async (tx) => {
-                const criadas = [];
-                for (const c of crias) {
-                    if (!c.vivo) { criadas.push({ sexo: c.sexo, vivo: false, peso: c.peso }); continue; }
-                    const seq = await tx.animal.update({ where: { id: mae.id }, data: { ultimaSequenciaCria: { increment: 1 } }, select: { ultimaSequenciaCria: true, brinco: true } });
-                    const provisoria = buildProvisionalIdentification(seq.brinco || mae.id, seq.ultimaSequenciaCria);
-                    const brinco = c.identificacao || provisoria;
-                    const bezerro = await tx.animal.create({
-                        data: {
-                            farmId, brinco, identityKey: normalizeAnimalIdentityKey(brinco),
-                            raca: mae.raca || 'Não informada', sexo: c.sexo, dataNascimento: data,
-                            pesoAtual: c.peso, currentPaddockId: mae.currentPaddockId, lotId: mae.lotId,
-                            maeId: mae.id, paiNome, matrizResponsavelId: mae.id,
-                            identificacaoProvisoria: !c.identificacao, identificacaoProvisoriaOriginal: provisoria,
-                            identificacaoMatrizSnapshot: seq.brinco, sequenciaMatriz: seq.ultimaSequenciaCria,
-                            origemNascimento: 'NATURAL', receptoraGestacionalId: mae.id, receptoraGestacionalSnapshot: seq.brinco,
-                            touroSnapshot: paiNome,
-                        },
-                    });
-                    if (mae.currentPaddockId) {
-                        await tx.paddockMove.create({ data: { farmId, paddockId: mae.currentPaddockId, animalId: bezerro.id, startAt: data } });
-                    }
-                    await tx.herdEvent.create({
-                        data: { farmId, animalId: bezerro.id, type: 'NASCIMENTO', date: data, peso: c.peso, observacoes: `Nascimento registrado na Reprodução — mãe: ${seq.brinco}` },
-                    });
-                    criadas.push({ sexo: c.sexo, vivo: true, peso: c.peso, calfAnimalId: bezerro.id, brinco });
-                }
-                const primeira = criadas.find((c) => c.vivo);
-                const evento = await tx.reproEvent.create({
-                    data: {
-                        farmId, animalId: mae.id, type: 'PARTO', date: data, lotId: mae.lotId, createdById: req.user?.id || null,
-                        notes: body.obs ? String(body.obs).slice(0, 1000) : null,
-                        payload: {
-                            clientId, tipoParto: body.tipoParto, ecc, gemeos: crias.length > 1, crias: criadas,
-                            calfAnimalId: primeira?.calfAnimalId || null, calfSex: primeira?.sexo || null, birthOrigin: 'NATURAL', avisos,
-                        },
-                    },
-                });
-                await recalcularVaca(tx, mae.id, config);
-                return { evento, criadas };
-            }, { timeout: 60000 });
+            const resultado = await prisma.$transaction(
+                (tx) => gravarPartoTx(tx, { farmId, mae, data, tipoParto: body.tipoParto, crias, ecc, obs: body.obs, paiNome, clientId, userId: req.user?.id || null, avisos, config }),
+                { timeout: 60000 },
+            );
             void logActivity(prisma, req, { action: 'REPRO_PARTO', entity: 'ReproEvent', entityId: resultado.evento.id, description: `Parto da ${mae.brinco}: ${resultado.criadas.length} cria(s)`, farmId });
             res.status(201).json({ eventoId: resultado.evento.id, crias: resultado.criadas, avisos });
         } catch (error) {
@@ -1863,6 +1871,177 @@ export function registerReproRoutes(app) {
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: 'Erro ao avaliar a lotação dos lotes.' });
+        }
+    });
+
+    // ---------- Curral: uma tela só ----------
+
+    // Tudo o que o celular precisa levar para o curral: vaca, frase e ações já calculadas.
+    app.get('/farms/:farmId/reproducao/curral', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const agora = new Date();
+            const config = await carregarConfig(farmId);
+            const [femeas, bezerros] = await Promise.all([
+                prisma.animal.findMany({
+                    where: { farmId, sexo: 'FEMEA', status: 'VIVO', reproEvents: { some: { type: 'LIBERACAO' }, none: { type: 'DESCARTE' } } },
+                    select: { id: true, brinco: true, dataNascimento: true, lotId: true, lot: { select: { name: true } }, reproEvents: { orderBy: { date: 'asc' } } },
+                    orderBy: { brinco: 'asc' },
+                }),
+                prisma.animal.findMany({
+                    where: {
+                        farmId, status: 'VIVO', desmamadoEm: null,
+                        OR: [{ maeId: { not: null } }, { matrizResponsavelId: { not: null } }],
+                        dataNascimento: { gte: new Date(agora.getTime() - 540 * 86400000) },
+                    },
+                    select: { id: true, brinco: true, sexo: true, dataNascimento: true, pesoAtual: true, maeId: true, matrizResponsavelId: true },
+                }),
+            ]);
+            const prontosPorMae = new Map();
+            const bezerrosLista = bezerros.map((b) => {
+                const idadeDias = b.dataNascimento ? Math.floor((agora - b.dataNascimento) / 86400000) : null;
+                const pronto = prontoParaDesmama({ idadeDias, peso: b.pesoAtual }, config || {});
+                const maeId = b.matrizResponsavelId || b.maeId;
+                if (pronto && maeId) prontosPorMae.set(maeId, { id: b.id, brinco: b.brinco, idadeDias });
+                return { id: b.id, brinco: b.brinco, sexo: b.sexo, idadeDias, peso: b.pesoAtual, maeId, pronto };
+            });
+            const vacas = femeas.map((v) => {
+                const bezerro = prontosPorMae.get(v.id) || null;
+                const r = acoesDaVaca({ eventos: v.reproEvents, config: config || {}, temBezerroPronto: Boolean(bezerro), animal: v }, agora);
+                return {
+                    id: v.id, brinco: v.brinco, lote: v.lot?.name || null, lotId: v.lotId,
+                    resumo: resumoDaVaca({ eventos: v.reproEvents, config: config || {} }, agora),
+                    situacao: r.situacao, acoes: r.acoes, bezerroPronto: bezerro,
+                };
+            });
+            res.json({ baixadoEm: agora.toISOString(), vacas, bezerros: bezerrosLista, gestacaoDefinida: Boolean(config?.gestacaoDias) });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao preparar o curral.' });
+        }
+    });
+
+    // Um lançamento do curral: o servidor decide onde guardar. clientId evita gravar duas vezes.
+    app.post('/farms/:farmId/reproducao/curral/lancamentos', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const body = req.body || {};
+            const clientId = body.clientId ? String(body.clientId).slice(0, 64) : null;
+            const tipo = String(body.tipo || '');
+            const data = parseData(body.data) || new Date();
+            if (data > new Date(Date.now() + 86400000)) return res.status(400).json({ message: 'Data no futuro não é permitida.' });
+            const vaca = await prisma.animal.findFirst({
+                where: body.animalId ? { id: String(body.animalId), farmId } : { farmId, brinco: normalizarIdent(body.brinco) },
+                include: { reproEvents: { orderBy: { date: 'asc' } } },
+            });
+            if (!vaca) return res.status(404).json({ message: `Não achei a vaca ${body.brinco || ''}.` });
+            if (clientId) {
+                const repetido = await prisma.reproEvent.findFirst({ where: { farmId, animalId: vaca.id, payload: { path: ['clientId'], equals: clientId } }, select: { id: true } });
+                if (repetido) return res.json({ repetido: true, eventoId: repetido.id });
+            }
+            const config = await carregarConfig(farmId);
+            const userId = req.user?.id || null;
+            const dados = body.dados && typeof body.dados === 'object' ? body.dados : {};
+
+            if (tipo === 'DIAGNOSTICO') {
+                const resultado = ['PRENHE', 'VAZIA'].includes(dados.resultado) ? dados.resultado : null;
+                if (!resultado) return res.status(400).json({ message: 'Informe cheia ou falhada.' });
+                // Tudo o que foi lançado no mesmo dia entra na mesma sessão de toque.
+                const doDia = `curral-${data.toISOString().slice(0, 10)}`;
+                const sessao = await prisma.reproDiagnosisSession.upsert({
+                    where: { farmId_clientId: { farmId, clientId: doDia } },
+                    create: {
+                        farmId, clientId: doDia, date: data, metodo: METODOS_DIAGNOSTICO.includes(dados.metodo) ? dados.metodo : 'TOQUE',
+                        vetName: dados.veterinario ? String(dados.veterinario).slice(0, 120) : null, createdById: userId, pendencias: [], resumo: {},
+                    },
+                    update: {},
+                });
+                const ctxEventos = new Map([[vaca.id, vaca.reproEvents]]);
+                const vacasMapa = new Map([[normalizarIdent(vaca.brinco), {
+                    id: vaca.id, sexo: vaca.sexo, vivo: vaca.status === 'VIVO',
+                    liberada: vaca.reproEvents.some((e) => e.type === 'LIBERACAO'),
+                    descartada: vaca.reproEvents.some((e) => e.type === 'DESCARTE'),
+                }]]);
+                const r = processarToque([{ brinco: vaca.brinco, resultado, diasGestacao: dados.diasGestacao, ecc: dados.ecc, obs: dados.obs }], { data, vacas: vacasMapa, eventosPorVaca: ctxEventos });
+                if (!r.validas.length) return res.status(400).json({ message: r.pendencias[0]?.motivo || 'Não deu para lançar.' });
+                r.validas[0].clientId = clientId;
+                await prisma.$transaction(async (tx) => {
+                    await gravarDiagnosticos(tx, { farmId, sessao, validas: r.validas, data, metodo: sessao.metodo, vetName: sessao.vetName, userId, config });
+                    if (clientId) {
+                        const diag = await tx.reproEvent.findFirst({ where: { diagnosisSessionId: sessao.id, animalId: vaca.id, type: 'DIAGNOSTICO_PRENHEZ' }, orderBy: { createdAt: 'desc' } });
+                        if (diag) await tx.reproEvent.update({ where: { id: diag.id }, data: { payload: { ...(diag.payload || {}), clientId } } });
+                    }
+                });
+                return res.status(201).json({ ok: true, perda: r.validas[0].perda, avisos: r.validas[0].avisos });
+            }
+
+            if (tipo === 'PARTO') {
+                const crias = (Array.isArray(dados.crias) ? dados.crias : []).map((c) => ({
+                    sexo: String(c?.sexo || '').toUpperCase(),
+                    vivo: c?.vivo !== false,
+                    peso: c?.peso === '' || c?.peso == null ? null : Number(c.peso),
+                    identificacao: c?.identificacao ? String(c.identificacao).trim().slice(0, 40) : null,
+                }));
+                const { erros, avisos } = validarParto({ data, crias, tipoParto: dados.tipoParto || 'NORMAL' }, { eventos: vaca.reproEvents, sexo: vaca.sexo });
+                if (erros.length) return res.status(400).json({ message: erros[0], erros });
+                const cobertura = vaca.reproEvents.filter((e) => (e.type === 'COBERTURA' || e.type === 'IATF') && new Date(e.date) <= data).pop();
+                const r = await prisma.$transaction(
+                    (tx) => gravarPartoTx(tx, {
+                        farmId, mae: vaca, data, tipoParto: dados.tipoParto || 'NORMAL', crias,
+                        ecc: Number(dados.ecc) >= 1 && Number(dados.ecc) <= 5 ? Number(dados.ecc) : null,
+                        obs: dados.obs, paiNome: cobertura?.payload?.touro || null, clientId, userId, avisos, config,
+                    }),
+                    { timeout: 60000 },
+                );
+                return res.status(201).json({ ok: true, crias: r.criadas, avisos });
+            }
+
+            if (tipo === 'DESMAMA') {
+                const peso = Number(dados.peso);
+                if (!(peso > 0)) return res.status(400).json({ message: 'Informe o peso do bezerro.' });
+                const bezerro = await prisma.animal.findFirst({
+                    where: dados.bezerroId ? { id: String(dados.bezerroId), farmId } : { farmId, OR: [{ maeId: vaca.id }, { matrizResponsavelId: vaca.id }], desmamadoEm: null, status: 'VIVO' },
+                    select: { id: true, brinco: true, dataNascimento: true, desmamadoEm: true },
+                    orderBy: { dataNascimento: 'desc' },
+                });
+                if (!bezerro) return res.status(400).json({ message: 'Esta vaca não tem bezerro para desmamar.' });
+                if (bezerro.desmamadoEm) return res.json({ repetido: true, message: 'Bezerro já desmamado.' });
+                const saida = await weanCalf({ req: { ...req, body: { date: body.data, peso, lotId: dados.lotId || null } }, animalId: bezerro.id });
+                if (saida?.error) return res.status(saida.error.status).json({ message: saida.error.message });
+                const idadeDias = bezerro.dataNascimento ? Math.floor((data - bezerro.dataNascimento) / 86400000) : null;
+                const pn = (await prisma.herdEvent.findFirst({ where: { animalId: bezerro.id, type: 'NASCIMENTO', peso: { not: null } }, select: { peso: true } }))?.peso ?? config?.pesoNascerKg ?? null;
+                const ajustado = pesoAjustado205({ peso, idadeDias, pesoNascer: pn });
+                await prisma.reproEvent.create({
+                    data: {
+                        farmId, animalId: vaca.id, type: 'DESMAME', date: data, createdById: userId,
+                        payload: { clientId, bezerroId: bezerro.id, bezerro: bezerro.brinco, peso, idadeDias, pesoNascerUsado: pn, pesoAjustado205: ajustado, precoce: idadeDias != null && idadeDias < DESMAMA_PRECOCE_DIAS },
+                    },
+                });
+                return res.status(201).json({ ok: true, bezerro: bezerro.brinco, pesoAjustado205: ajustado });
+            }
+
+            if (['PERDA', 'DESCARTE', 'COBERTURA', 'OBSERVACAO'].includes(tipo)) {
+                const payload = { ...dados, clientId };
+                if (tipo === 'DESCARTE' && !MOTIVOS_DESCARTE.includes(dados.motivo)) return res.status(400).json({ message: 'Informe o motivo do descarte.' });
+                if (tipo === 'COBERTURA') {
+                    payload.tipo = 'MONTA_NATURAL';
+                    if (!String(dados.touro || '').trim()) return res.status(400).json({ message: 'Informe o touro.' });
+                    payload.touro = String(dados.touro).trim().slice(0, 120);
+                }
+                const evento = await prisma.$transaction(async (tx) => {
+                    const criado = await tx.reproEvent.create({
+                        data: { farmId, animalId: vaca.id, type: tipo, date: data, lotId: vaca.lotId, createdById: userId, payload, notes: dados.obs ? String(dados.obs).slice(0, 500) : null },
+                    });
+                    await recalcularVaca(tx, vaca.id, config);
+                    return criado;
+                });
+                return res.status(201).json({ ok: true, eventoId: evento.id });
+            }
+
+            return res.status(400).json({ message: 'Lançamento desconhecido.' });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao salvar o lançamento do curral.' });
         }
     });
 }
