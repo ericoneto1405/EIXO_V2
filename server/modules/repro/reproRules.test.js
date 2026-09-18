@@ -192,3 +192,43 @@ test('farol: prenhe em dia é verde; manter some até o próximo toque', () => {
     assert.equal(mantidaAteProximoToque(manter), true);
     assert.equal(mantidaAteProximoToque([...manter, { type: 'DIAGNOSTICO_PRENHEZ', date: '2026-08-01', payload: { resultado: 'VAZIA' } }]), false);
 });
+
+import { agendaDoProtocolo, alertasBotijao, faltaDose, origemDaPrenhez, podeEntrarNoProtocolo, validarProtocolo } from './reproRules.js';
+
+test('protocolo: exige nome, passos e dias diferentes', () => {
+    assert.ok(validarProtocolo({ nome: '', passos: [] }).erros.length);
+    assert.ok(validarProtocolo({ nome: 'P1', passos: [{ dia: 0, titulo: 'Implante' }, { dia: 0, titulo: 'Outro' }] }).erros.some((e) => e.includes('mesmo dia')));
+    assert.equal(validarProtocolo({ nome: 'P1', passos: [{ dia: 0, titulo: 'Implante' }, { dia: 8, titulo: 'Retirada' }] }).erros.length, 0);
+});
+
+test('agenda: hoje, amanhã e atrasado', () => {
+    const a = agendaDoProtocolo([{ dia: 0, titulo: 'Implante' }, { dia: 8, titulo: 'Retirada' }], '2026-09-16', ref);
+    assert.equal(a[0].quando, 'HOJE');
+    assert.equal(a[1].quando, 'FUTURO');
+    assert.equal(agendaDoProtocolo([{ dia: 0, titulo: 'x' }], '2026-09-10', ref)[0].quando, 'ATRASADO');
+});
+
+test('protocolo: vaca prenhe bloqueada; parida recente só avisa', () => {
+    const lib = { type: 'LIBERACAO', date: '2026-01-01' };
+    const prenhe = podeEntrarNoProtocolo([lib, { type: 'DIAGNOSTICO_PRENHEZ', date: '2026-08-01', payload: { resultado: 'PRENHE' } }], {}, ref);
+    assert.equal(prenhe.ok, false);
+    assert.ok(prenhe.motivo.includes('aborto'));
+    const parida = podeEntrarNoProtocolo([lib, { type: 'PARTO', date: '2026-09-05' }], {}, ref);
+    assert.equal(parida.ok, true);
+    assert.equal(parida.avisos.length, 1);
+});
+
+test('origem da prenhez: IATF quando a conta bate, senão repasse', () => {
+    assert.equal(origemDaPrenhez({ dataDiagnostico: '2026-09-16', diasGestacao: 60, dataIatf: '2026-07-18' }), 'IATF');
+    assert.equal(origemDaPrenhez({ dataDiagnostico: '2026-09-16', diasGestacao: 30, dataIatf: '2026-07-18' }), 'REPASSE');
+    assert.equal(origemDaPrenhez({ dataDiagnostico: '2026-09-16', diasGestacao: null, dataIatf: '2026-07-18' }), 'INCERTA');
+});
+
+test('botijão: alerta de medição e nível baixo; falta de dose', () => {
+    const t = { id: 't1', name: 'B1', intervaloMedicaoDias: 7, nivelMinCm: 10, readings: [{ date: '2026-09-01', nivelCm: 8 }] };
+    const a = alertasBotijao([t], ref);
+    assert.equal(a.length, 2);
+    assert.equal(a[1].cor, 'VERMELHO');
+    assert.equal(faltaDose({ dosesDisponiveis: 30, vacas: 42 }), 12);
+    assert.equal(faltaDose({ dosesDisponiveis: 50, vacas: 42 }), 0);
+});

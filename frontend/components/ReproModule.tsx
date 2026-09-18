@@ -22,15 +22,17 @@ import {
     salvarReproConfig,
 } from '../adapters/reproApi';
 import { DecidirVazias, ToqueCurral } from './ReproToque';
+import { listarToques } from '../adapters/reproApi';
 import { DesmamaAba, PartosAba } from './ReproParto';
 import { PainelAba } from './ReproPainel';
+import { BotijaoAba, CoberturaAba } from './ReproCobertura';
 
 interface ReproModuleProps {
     farmId?: string | null;
     farmName?: string | null;
 }
 
-type Aba = 'PAINEL' | 'CANDIDATAS' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'FICHA' | 'CRITERIOS';
+type Aba = 'PAINEL' | 'CANDIDATAS' | 'COBERTURA' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'BOTIJAO' | 'FICHA' | 'CRITERIOS';
 
 const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] disabled:opacity-60';
 const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
@@ -109,6 +111,7 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
     const [erro, setErro] = useState<string | null>(null);
     const [aviso, setAviso] = useState<string | null>(null);
     const [fichaId, setFichaId] = useState<string | null>(null);
+    const [lotes, setLotes] = useState<{ id: string; name: string }[]>([]);
 
     const carregarMeta = useCallback(async () => {
         if (!farmId) return;
@@ -122,6 +125,11 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
     useEffect(() => {
         void carregarMeta();
     }, [carregarMeta]);
+
+    useEffect(() => {
+        if (!farmId) return;
+        listarToques(farmId).then((r) => setLotes(r.lotes)).catch(() => setLotes([]));
+    }, [farmId]);
 
     // Sem Performance o painel é só o aviso do plano: abre direto nas Candidatas.
     useEffect(() => {
@@ -141,10 +149,12 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
                 {([
                     ['PAINEL', 'Painel'],
                     ['CANDIDATAS', 'Candidatas'],
+                    ['COBERTURA', 'Cobertura / IATF'],
                     ['TOQUE', 'Toque / ultrassom'],
                     ['DECIDIR', 'Vazias para decidir'],
                     ['PARTOS', 'Partos'],
                     ['DESMAMA', 'Desmama'],
+                    ['BOTIJAO', 'Botijão'],
                     ['FICHA', 'Ficha da vaca'],
                     ['CRITERIOS', 'Critérios'],
                 ] as [Aba, string][]).map(([valor, label]) => (
@@ -166,6 +176,8 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
                     </div>
                 ))}
             {aba === 'CANDIDATAS' && <Candidatas farmId={farmId} onErro={setErro} onAviso={setAviso} irParaCriterios={() => setAba('CRITERIOS')} />}
+            {aba === 'COBERTURA' && <CoberturaAba farmId={farmId} lotes={lotes} onErro={setErro} onAviso={setAviso} />}
+            {aba === 'BOTIJAO' && <BotijaoAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'TOQUE' && <ToqueCurral farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'DECIDIR' && <DecidirVazias farmId={farmId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}
             {aba === 'PARTOS' && <PartosAba farmId={farmId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}

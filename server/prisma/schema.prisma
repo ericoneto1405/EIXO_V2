@@ -286,6 +286,9 @@ model Farm {
   @@index([ibgeCode])
   reproSettings           ReproSettings?
   reproDiagnosisSessions  ReproDiagnosisSession[]
+  semenTanks              SemenTank[]
+  reproProtocols          ReproProtocol[]
+  iatfSessions            IatfSession[]
 }
 
 model Paddock {
@@ -1135,16 +1138,92 @@ model SemenBatch {
   dosesTotal         Int
   dosesDisponiveis   Int
   localArmazenamento String?
+  tankId             String?
+  caneca             String?
+  custoDose          Float?
   observacoes        String?
   createdAt          DateTime    @default(now())
   updatedAt          DateTime    @updatedAt
   bullAnimal         Animal?     @relation("SemenBullAnimal", fields: [bullAnimalId], references: [id])
+  tank               SemenTank?  @relation(fields: [tankId], references: [id])
   farm               Farm        @relation(fields: [farmId], references: [id], onDelete: Cascade)
   moves              SemenMove[]
 
   @@unique([farmId, lote])
   @@index([farmId])
   @@index([bullAnimalId])
+}
+
+// Botijão de sêmen: o mesmo estoque do Acasalamento, agora com lugar físico e nitrogênio.
+model SemenTank {
+  id                   String             @id @default(uuid())
+  farmId               String
+  name                 String
+  canecas              Int?
+  nivelMinCm           Float?
+  intervaloMedicaoDias Int?
+  ultimaRecargaEm      DateTime?
+  notes                String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  farm                 Farm               @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  batches              SemenBatch[]
+  readings             SemenTankReading[]
+
+  @@unique([farmId, name])
+  @@index([farmId])
+}
+
+model SemenTankReading {
+  id          String    @id @default(uuid())
+  tankId      String
+  date        DateTime
+  nivelCm     Float?
+  recarregado Boolean   @default(false)
+  notes       String?
+  createdById String?
+  createdAt   DateTime  @default(now())
+  tank        SemenTank @relation(fields: [tankId], references: [id], onDelete: Cascade)
+
+  @@index([tankId, date])
+}
+
+// Protocolo de IATF: passos com dia e hormônio. Quem define é o veterinário da fazenda.
+model ReproProtocol {
+  id        String        @id @default(uuid())
+  farmId    String
+  nome      String
+  passos    Json
+  ativo     Boolean       @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  farm      Farm          @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  sessions  IatfSession[]
+
+  @@unique([farmId, nome])
+}
+
+model IatfSession {
+  id          String         @id @default(uuid())
+  farmId      String
+  clientId    String?
+  protocolId  String?
+  dia0        DateTime
+  lotId       String?
+  seasonId    String?
+  responsavel String?
+  status      String         @default("ABERTO")
+  vacas       Json?
+  passosFeitos Json?
+  resumo      Json?
+  createdById String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  farm        Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  protocol    ReproProtocol? @relation(fields: [protocolId], references: [id])
+
+  @@unique([farmId, clientId])
+  @@index([farmId, dia0])
 }
 
 model EmbryoBatch {

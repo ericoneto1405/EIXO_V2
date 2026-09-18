@@ -369,3 +369,128 @@ export const manterVaca = (farmId: string, animalId: string, justificativa: stri
   request<{ ok: true }>(`${base(farmId)}/farol/manter`, { method: 'POST', body: JSON.stringify({ animalId, justificativa }) });
 
 export const fetchPainel = (farmId: string) => request<{ itens: ItemPainel[] }>(`${base(farmId)}/painel`);
+
+// ---------- Fase 5: cobertura (monta natural e IATF) e botijão ----------
+
+export interface PassoProtocolo {
+  dia: number;
+  titulo: string;
+  produtoId?: string | null;
+  dose?: number | null;
+}
+
+export interface Protocolo {
+  id: string;
+  nome: string;
+  passos: PassoProtocolo[];
+  ativo: boolean;
+}
+
+export interface ProdutoFarmacia {
+  id: string;
+  name: string;
+  unit: string;
+  applicationUnit: string | null;
+  batches: { id: string; lotNumber: string; quantity: number; expiresAt: string | null }[];
+}
+
+export interface Tanque {
+  id: string;
+  name: string;
+  canecas: number | null;
+  nivelMinCm: number | null;
+  intervaloMedicaoDias: number | null;
+  ultimaRecargaEm: string | null;
+  readings: { id: string; date: string; nivelCm: number | null; recarregado: boolean }[];
+}
+
+export interface PartidaSemen {
+  id: string;
+  lote: string;
+  touro: string;
+  bullRegistry: string | null;
+  fornecedor: string | null;
+  dosesTotal: number;
+  dosesDisponiveis: number;
+  tankId: string | null;
+  caneca: string | null;
+  custoDose: number | null;
+}
+
+export interface AgendaPasso {
+  dia: number;
+  titulo: string;
+  produtoId: string | null;
+  dose: number | null;
+  data: string;
+  quando: 'ATRASADO' | 'HOJE' | 'AMANHA' | 'FUTURO';
+  emDias: number;
+}
+
+export interface SessaoIatf {
+  id: string;
+  dia0: string;
+  status: string;
+  responsavel: string | null;
+  lotId: string | null;
+  protocolo: string | null;
+  vacas: { animalId: string; brinco: string; avisos?: string[] }[];
+  passosFeitos: { dia: number; data: string; consumo: number }[];
+  agenda: AgendaPasso[];
+  resumo: { fora?: { brinco: string; motivo: string }[]; alertas?: string[]; inseminadas?: number; pendencias?: { brinco: string; motivo: string }[] } | null;
+}
+
+export interface InseminacaoPayload {
+  data: string;
+  linhas: { brinco: string; semenBatchId: string; inseminador?: string }[];
+}
+
+export const listarProtocolos = (farmId: string) =>
+  request<{ protocolos: Protocolo[]; produtos: ProdutoFarmacia[] }>(`${base(farmId)}/protocolos`);
+
+export const salvarProtocolo = (farmId: string, body: { id?: string; nome: string; passos: PassoProtocolo[] }) =>
+  request<{ protocolo: Protocolo }>(`${base(farmId)}/protocolos`, { method: 'POST', body: JSON.stringify(body) });
+
+export const apagarProtocolo = (farmId: string, id: string) =>
+  request<{ ok: true; desativado?: boolean }>(`${base(farmId)}/protocolos/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+export const fetchBotijao = (farmId: string) =>
+  request<{ tanques: Tanque[]; partidas: PartidaSemen[]; alertas: { cor: Cor; tankId: string; texto: string }[] }>(`${base(farmId)}/botijao`);
+
+export const salvarTanque = (farmId: string, body: Record<string, any>) =>
+  request<{ tanque: Tanque }>(`${base(farmId)}/botijao/tanques`, { method: 'POST', body: JSON.stringify(body) });
+
+export const lancarMedicao = (farmId: string, tankId: string, body: { data?: string; nivelCm?: number | null; recarregado?: boolean; notes?: string }) =>
+  request<{ ok: true }>(`${base(farmId)}/botijao/tanques/${encodeURIComponent(tankId)}/medicoes`, { method: 'POST', body: JSON.stringify(body) });
+
+export const lancarEntradaSemen = (farmId: string, body: Record<string, any>) =>
+  request<{ partida: PartidaSemen }>(`${base(farmId)}/botijao/partidas`, { method: 'POST', body: JSON.stringify(body) });
+
+export const atualizarPartida = (farmId: string, id: string, body: Record<string, any>) =>
+  request<{ partida: PartidaSemen }>(`${base(farmId)}/botijao/partidas/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) });
+
+export const movimentarDoses = (farmId: string, id: string, body: { tipo: 'OUT' | 'ADJUST'; quantidade: number; motivo: string }) =>
+  request<{ ok: true; dosesDisponiveis: number }>(`${base(farmId)}/botijao/partidas/${encodeURIComponent(id)}/movimentos`, { method: 'POST', body: JSON.stringify(body) });
+
+export const lancarMontaNatural = (farmId: string, body: { lotId?: string | null; animalIds?: string[]; touro: string; inicio: string; fim?: string | null; repasse?: boolean; notes?: string }) =>
+  request<{ total: number }>(`${base(farmId)}/coberturas/monta-natural`, { method: 'POST', body: JSON.stringify(body) });
+
+export const listarIatf = (farmId: string) => request<{ sessoes: SessaoIatf[] }>(`${base(farmId)}/iatf`);
+
+export const abrirIatf = (farmId: string, body: { clientId?: string; protocolId?: string | null; dia0: string; lotId?: string | null; animalIds?: string[]; responsavel?: string }) =>
+  request<{ sessao: { id: string }; dentro?: { brinco: string }[]; fora?: { brinco: string; motivo: string }[]; alertas?: string[]; repetido?: boolean }>(
+    `${base(farmId)}/iatf`,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+
+export const marcarPasso = (farmId: string, sessaoId: string, dia: number) =>
+  request<{ ok: true; consumo: number }>(`${base(farmId)}/iatf/${encodeURIComponent(sessaoId)}/passos/${dia}`, { method: 'POST', body: JSON.stringify({}) });
+
+export const lancarInseminacao = (farmId: string, sessaoId: string, body: InseminacaoPayload) =>
+  request<{ inseminadas?: number; pendencias?: { brinco: string; motivo: string }[]; repetido?: boolean }>(
+    `${base(farmId)}/iatf/${encodeURIComponent(sessaoId)}/inseminacao`,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+
+export const apagarIatf = (farmId: string, sessaoId: string) =>
+  request<{ ok: true }>(`${base(farmId)}/iatf/${encodeURIComponent(sessaoId)}`, { method: 'DELETE' });

@@ -494,3 +494,88 @@ export function mantidaAteProximoToque(eventos = []) {
     if (idx < 0) return false;
     return !lista.slice(idx + 1).some((e) => e.type === 'DIAGNOSTICO_PRENHEZ');
 }
+
+// ---------- Fase 5: cobertura (monta natural e IATF) e botijão ----------
+
+export const TIPOS_COBERTURA = ['MONTA_NATURAL', 'IATF'];
+export const POS_PARTO_MIN_DIAS = 30;
+
+// Passos do protocolo: dia (0, 8, 10...), o que fazer e, se houver, o hormônio da Farmácia.
+export function validarProtocolo({ nome, passos = [] }) {
+    const erros = [];
+    if (!String(nome || '').trim()) erros.push('Dê um nome ao protocolo.');
+    if (!Array.isArray(passos) || !passos.length) erros.push('O protocolo precisa de pelo menos um passo.');
+    const dias = new Set();
+    for (const p of passos || []) {
+        const dia = Number(p?.dia);
+        if (!Number.isInteger(dia) || dia < 0 || dia > 60) { erros.push('Dia do passo inválido (0 a 60).'); continue; }
+        if (dias.has(dia)) erros.push(`Dois passos no mesmo dia ${dia}.`);
+        dias.add(dia);
+        if (!String(p?.titulo || '').trim()) erros.push(`Escreva o que fazer no dia ${dia}.`);
+        if (p?.dose != null && p.dose !== '' && !(Number(p.dose) > 0)) erros.push(`Dose inválida no dia ${dia}.`);
+    }
+    return { erros: [...new Set(erros)] };
+}
+
+// Agenda do protocolo a partir do dia 0.
+export function agendaDoProtocolo(passos = [], dia0, ref = new Date()) {
+    return ordenar(passos.map((p) => ({ ...p, date: new Date(new Date(dia0).getTime() + Number(p.dia) * DAY_MS) })))
+        .map((p) => {
+            // Conta em dias de calendário: meio-dia de hoje e a data do passo não podem virar "atrasado".
+            const diaRef = Date.UTC(new Date(ref).getUTCFullYear(), new Date(ref).getUTCMonth(), new Date(ref).getUTCDate());
+            const diaPasso = Date.UTC(p.date.getUTCFullYear(), p.date.getUTCMonth(), p.date.getUTCDate());
+            const dias = Math.round((diaPasso - diaRef) / DAY_MS);
+            return {
+                dia: p.dia, titulo: p.titulo, produtoId: p.produtoId || null, dose: p.dose ?? null,
+                data: p.date,
+                quando: dias < 0 ? 'ATRASADO' : dias === 0 ? 'HOJE' : dias === 1 ? 'AMANHA' : 'FUTURO',
+                emDias: dias,
+            };
+        });
+}
+
+// Pode entrar no protocolo? Prenhe bloqueia (hormônio pode causar aborto).
+export function podeEntrarNoProtocolo(eventos = [], config = {}, ref = new Date()) {
+    const lista = ordenar(eventos);
+    if (!lista.some((e) => e.type === 'LIBERACAO')) return { ok: false, motivo: 'Não liberada para reprodução' };
+    if (lista.some((e) => e.type === 'DESCARTE')) return { ok: false, motivo: 'Vaca descartada' };
+    const s = calcularSituacao(lista, config);
+    if (s.situacao === 'PRENHE') {
+        const diag = lista.filter((e) => e.type === 'DIAGNOSTICO_PRENHEZ').pop();
+        return { ok: false, motivo: `Prenhe no diagnóstico de ${new Date(diag.date).toISOString().slice(0, 10)} — hormônio pode causar aborto` };
+    }
+    const avisos = [];
+    const parto = lista.filter((e) => e.type === 'PARTO').pop();
+    if (parto && diasEntre(parto.date, ref) < POS_PARTO_MIN_DIAS) avisos.push('Pariu há menos de 30 dias');
+    return { ok: true, avisos };
+}
+
+// A prenhez veio da inseminação ou do touro de repasse?
+export function origemDaPrenhez({ dataDiagnostico, diasGestacao, dataIatf }) {
+    if (!dataIatf || !(diasGestacao > 0) || !dataDiagnostico) return 'INCERTA';
+    const concepcao = new Date(new Date(dataDiagnostico).getTime() - diasGestacao * DAY_MS);
+    return Math.abs(diasEntre(dataIatf, concepcao)) <= 7 ? 'IATF' : 'REPASSE';
+}
+
+// Alertas do botijão: medir nitrogênio, nível baixo e doses que não dão para o lote.
+export function alertasBotijao(tanques = [], ref = new Date()) {
+    const alertas = [];
+    for (const t of tanques) {
+        const ultima = t.readings?.length ? ordenar(t.readings)[t.readings.length - 1] : null;
+        if (t.intervaloMedicaoDias) {
+            const base = ultima?.date || t.createdAt;
+            if (base && diasEntre(base, ref) > t.intervaloMedicaoDias) {
+                alertas.push({ cor: 'AMARELO', tankId: t.id, texto: `Medir o nitrogênio do botijão ${t.name}` });
+            }
+        }
+        if (t.nivelMinCm != null && ultima?.nivelCm != null && ultima.nivelCm < t.nivelMinCm) {
+            alertas.push({ cor: 'VERMELHO', tankId: t.id, texto: `Botijão ${t.name} em risco — sêmen pode ser perdido (${ultima.nivelCm} cm)` });
+        }
+    }
+    return alertas;
+}
+
+export function faltaDose({ dosesDisponiveis, vacas }) {
+    const falta = Number(vacas) - Number(dosesDisponiveis || 0);
+    return falta > 0 ? falta : 0;
+}

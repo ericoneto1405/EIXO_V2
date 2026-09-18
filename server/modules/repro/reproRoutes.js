@@ -13,6 +13,7 @@ import {
     bloqueiosLiberacao, calcularSituacao, normalizarIdent, numerosDaVaca, processarToque, temBrucelose, validarEvento,
     DESMAMA_PRECOCE_DIAS, pesoAjustado205, prontoParaDesmama, statusPrevisao, validarParto,
     calcularIndicadores, farolVaca, mantidaAteProximoToque,
+    agendaDoProtocolo, alertasBotijao, faltaDose, podeEntrarNoProtocolo, validarProtocolo,
 } from './reproRules.js';
 
 const prisma = new PrismaClient();
@@ -1106,6 +1107,474 @@ export function registerReproRoutes(app) {
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: 'Erro ao montar o painel.' });
+        }
+    });
+
+    // ---------- Fase 5: cobertura (monta natural e IATF) e botijão ----------
+
+    // Protocolos ----------------------------------------------------------
+
+    app.get('/farms/:farmId/reproducao/protocolos', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const [protocolos, produtos] = await Promise.all([
+                prisma.reproProtocol.findMany({ where: { farmId }, orderBy: { nome: 'asc' } }),
+                prisma.pharmacyProduct.findMany({
+                    where: { farmId, active: true },
+                    select: { id: true, name: true, unit: true, applicationUnit: true, batches: { select: { id: true, lotNumber: true, quantity: true, expiresAt: true } } },
+                    orderBy: { name: 'asc' },
+                }),
+            ]);
+            res.json({ protocolos, produtos });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao listar os protocolos.' });
+        }
+    });
+
+    app.post('/farms/:farmId/reproducao/protocolos', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const nome = String(req.body?.nome || '').trim().slice(0, 120);
+            const passos = (Array.isArray(req.body?.passos) ? req.body.passos : []).map((p) => ({
+                dia: Number.parseInt(p?.dia, 10),
+                titulo: String(p?.titulo || '').trim().slice(0, 160),
+                produtoId: p?.produtoId ? String(p.produtoId) : null,
+                dose: p?.dose === '' || p?.dose == null ? null : Number(p.dose),
+            }));
+            const { erros } = validarProtocolo({ nome, passos });
+            if (erros.length) return res.status(400).json({ message: erros[0], erros });
+            const protocolo = req.body?.id
+                ? await prisma.reproProtocol.update({ where: { id: String(req.body.id) }, data: { nome, passos } })
+                : await prisma.reproProtocol.create({ data: { farmId, nome, passos } });
+            void logActivity(prisma, req, { action: 'REPRO_PROTOCOLO', entity: 'ReproProtocol', entityId: protocolo.id, description: `Protocolo ${nome}`, farmId });
+            res.json({ protocolo });
+        } catch (error) {
+            if (error?.code === 'P2002') return res.status(409).json({ message: 'Já existe um protocolo com esse nome.' });
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao salvar o protocolo.' });
+        }
+    });
+
+    app.delete('/farms/:farmId/reproducao/protocolos/:id', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const protocolo = await prisma.reproProtocol.findFirst({ where: { id: String(req.params.id), farmId }, select: { id: true } });
+            if (!protocolo) return res.status(404).json({ message: 'Protocolo não encontrado.' });
+            const emUso = await prisma.iatfSession.count({ where: { protocolId: protocolo.id } });
+            if (emUso) {
+                await prisma.reproProtocol.update({ where: { id: protocolo.id }, data: { ativo: false } });
+                return res.json({ ok: true, desativado: true });
+            }
+            await prisma.reproProtocol.delete({ where: { id: protocolo.id } });
+            res.json({ ok: true });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao apagar o protocolo.' });
+        }
+    });
+
+    // Botijão e estoque de sêmen (mesmas tabelas do Eixo Acasalamento) -----
+
+    app.get('/farms/:farmId/reproducao/botijao', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const [tanques, partidas] = await Promise.all([
+                prisma.semenTank.findMany({ where: { farmId }, include: { readings: { orderBy: { date: 'desc' }, take: 10 } }, orderBy: { name: 'asc' } }),
+                prisma.semenBatch.findMany({
+                    where: { farmId },
+                    select: {
+                        id: true, lote: true, bullName: true, bullRegistry: true, fornecedor: true, dosesTotal: true,
+                        dosesDisponiveis: true, tankId: true, caneca: true, custoDose: true, dataColeta: true,
+                        bullAnimal: { select: { brinco: true } },
+                    },
+                    orderBy: { lote: 'asc' },
+                }),
+            ]);
+            res.json({
+                tanques: tanques.map((t) => ({ ...t, readings: [...t.readings].reverse() })),
+                partidas: partidas.map((p) => ({ ...p, touro: p.bullName || p.bullAnimal?.brinco || 'Sem nome' })),
+                alertas: alertasBotijao(tanques.map((t) => ({ ...t, readings: [...t.readings].reverse() }))),
+            });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao carregar o botijão.' });
+        }
+    });
+
+    app.post('/farms/:farmId/reproducao/botijao/tanques', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const dados = {
+                name: String(req.body?.name || '').trim().slice(0, 80),
+                canecas: Number.parseInt(req.body?.canecas, 10) || null,
+                nivelMinCm: req.body?.nivelMinCm ? Number(req.body.nivelMinCm) : null,
+                intervaloMedicaoDias: Number.parseInt(req.body?.intervaloMedicaoDias, 10) || null,
+                ultimaRecargaEm: parseData(req.body?.ultimaRecargaEm),
+                notes: req.body?.notes ? String(req.body.notes).slice(0, 500) : null,
+            };
+            if (!dados.name) return res.status(400).json({ message: 'Dê um nome ao botijão.' });
+            const tanque = req.body?.id
+                ? await prisma.semenTank.update({ where: { id: String(req.body.id) }, data: dados })
+                : await prisma.semenTank.create({ data: { farmId, ...dados } });
+            res.json({ tanque });
+        } catch (error) {
+            if (error?.code === 'P2002') return res.status(409).json({ message: 'Já existe um botijão com esse nome.' });
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao salvar o botijão.' });
+        }
+    });
+
+    app.post('/farms/:farmId/reproducao/botijao/tanques/:id/medicoes', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const tanque = await prisma.semenTank.findFirst({ where: { id: String(req.params.id), farmId }, select: { id: true, name: true } });
+            if (!tanque) return res.status(404).json({ message: 'Botijão não encontrado.' });
+            const data = parseData(req.body?.data) || new Date();
+            const nivelCm = req.body?.nivelCm === '' || req.body?.nivelCm == null ? null : Number(req.body.nivelCm);
+            if (nivelCm != null && !(nivelCm >= 0)) return res.status(400).json({ message: 'Nível inválido.' });
+            const recarregado = Boolean(req.body?.recarregado);
+            await prisma.$transaction(async (tx) => {
+                await tx.semenTankReading.create({
+                    data: { tankId: tanque.id, date: data, nivelCm, recarregado, notes: req.body?.notes ? String(req.body.notes).slice(0, 300) : null, createdById: req.user?.id || null },
+                });
+                if (recarregado) await tx.semenTank.update({ where: { id: tanque.id }, data: { ultimaRecargaEm: data } });
+            });
+            res.json({ ok: true });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao salvar a medição.' });
+        }
+    });
+
+    app.post('/farms/:farmId/reproducao/botijao/partidas', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const lote = String(req.body?.lote || '').trim().slice(0, 80);
+            const doses = Number.parseInt(req.body?.doses, 10);
+            if (!lote) return res.status(400).json({ message: 'Informe a partida (lote) do sêmen.' });
+            if (!(doses > 0)) return res.status(400).json({ message: 'Informe quantas doses entraram.' });
+            const dados = {
+                bullName: req.body?.touro ? String(req.body.touro).trim().slice(0, 120) : null,
+                bullRegistry: req.body?.registro ? String(req.body.registro).trim().slice(0, 60) : null,
+                fornecedor: req.body?.fornecedor ? String(req.body.fornecedor).trim().slice(0, 120) : null,
+                dataColeta: parseData(req.body?.dataColeta),
+                tankId: req.body?.tankId ? String(req.body.tankId) : null,
+                caneca: req.body?.caneca ? String(req.body.caneca).trim().slice(0, 40) : null,
+                custoDose: req.body?.custoDose ? Number(req.body.custoDose) : null,
+            };
+            if (dados.tankId && !(await prisma.semenTank.findFirst({ where: { id: dados.tankId, farmId }, select: { id: true } }))) {
+                return res.status(400).json({ message: 'Botijão inválido.' });
+            }
+            const partida = await prisma.$transaction(async (tx) => {
+                const criada = await tx.semenBatch.create({ data: { farmId, lote, dosesTotal: doses, dosesDisponiveis: doses, ...dados } });
+                await tx.semenMove.create({ data: { semenBatchId: criada.id, date: new Date(), qty: doses, type: 'IN', notes: 'Entrada pela Reprodução' } });
+                return criada;
+            });
+            void logActivity(prisma, req, { action: 'REPRO_SEMEN_ENTRADA', entity: 'SemenBatch', entityId: partida.id, description: `Entrada de ${doses} doses (${lote})`, farmId });
+            res.status(201).json({ partida });
+        } catch (error) {
+            if (error?.code === 'P2002') return res.status(409).json({ message: 'Já existe uma partida com esse nome.' });
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao lançar a entrada de sêmen.' });
+        }
+    });
+
+    app.put('/farms/:farmId/reproducao/botijao/partidas/:id', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const partida = await prisma.semenBatch.findFirst({ where: { id: String(req.params.id), farmId }, select: { id: true } });
+            if (!partida) return res.status(404).json({ message: 'Partida não encontrada.' });
+            const data = {};
+            if ('tankId' in req.body) data.tankId = req.body.tankId ? String(req.body.tankId) : null;
+            if ('caneca' in req.body) data.caneca = req.body.caneca ? String(req.body.caneca).trim().slice(0, 40) : null;
+            if ('custoDose' in req.body) data.custoDose = req.body.custoDose === '' || req.body.custoDose == null ? null : Number(req.body.custoDose);
+            if (data.tankId && !(await prisma.semenTank.findFirst({ where: { id: data.tankId, farmId }, select: { id: true } }))) {
+                return res.status(400).json({ message: 'Botijão inválido.' });
+            }
+            res.json({ partida: await prisma.semenBatch.update({ where: { id: partida.id }, data }) });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao salvar a partida.' });
+        }
+    });
+
+    // Perda, descarte e acerto de contagem. Inseminação baixa sozinha.
+    app.post('/farms/:farmId/reproducao/botijao/partidas/:id/movimentos', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const tipo = ['OUT', 'ADJUST'].includes(req.body?.tipo) ? req.body.tipo : null;
+            if (!tipo) return res.status(400).json({ message: 'Informe perda/descarte (OUT) ou acerto de contagem (ADJUST).' });
+            const qtd = Number.parseInt(req.body?.quantidade, 10);
+            if (!Number.isInteger(qtd) || qtd === 0) return res.status(400).json({ message: 'Quantidade inválida.' });
+            if (tipo === 'OUT' && qtd < 0) return res.status(400).json({ message: 'Quantidade inválida.' });
+            const motivo = String(req.body?.motivo || '').trim().slice(0, 200);
+            if (!motivo) return res.status(400).json({ message: 'Escreva o motivo.' });
+            const partida = await prisma.semenBatch.findFirst({ where: { id: String(req.params.id), farmId } });
+            if (!partida) return res.status(404).json({ message: 'Partida não encontrada.' });
+            const delta = tipo === 'OUT' ? -qtd : qtd;
+            const saldo = partida.dosesDisponiveis + delta;
+            if (saldo < 0) return res.status(400).json({ message: `O botijão tem ${partida.dosesDisponiveis} dose(s) desta partida.` });
+            await prisma.$transaction(async (tx) => {
+                await tx.semenBatch.update({ where: { id: partida.id }, data: { dosesDisponiveis: saldo } });
+                await tx.semenMove.create({ data: { semenBatchId: partida.id, date: new Date(), qty: Math.abs(qtd), type: tipo, notes: motivo } });
+            });
+            res.json({ ok: true, dosesDisponiveis: saldo });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao movimentar as doses.' });
+        }
+    });
+
+    // Monta natural -------------------------------------------------------
+
+    app.post('/farms/:farmId/reproducao/coberturas/monta-natural', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const inicio = parseData(req.body?.inicio);
+            const fim = parseData(req.body?.fim);
+            const touro = String(req.body?.touro || '').trim().slice(0, 120);
+            if (!inicio) return res.status(400).json({ message: 'Informe quando o touro entrou no lote.' });
+            if (fim && fim < inicio) return res.status(400).json({ message: 'A saída do touro não pode ser antes da entrada.' });
+            if (!touro) return res.status(400).json({ message: 'Informe o touro.' });
+            const lotId = req.body?.lotId ? String(req.body.lotId) : null;
+            const where = { farmId, sexo: 'FEMEA', status: 'VIVO', reproEvents: { some: { type: 'LIBERACAO' }, none: { type: 'DESCARTE' } } };
+            if (lotId) where.lotId = lotId;
+            else if (Array.isArray(req.body?.animalIds) && req.body.animalIds.length) where.id = { in: req.body.animalIds.map(String) };
+            else return res.status(400).json({ message: 'Escolha o lote ou as vacas.' });
+            const vacas = await prisma.animal.findMany({ where, select: { id: true, brinco: true, lotId: true }, take: MAX_LOTE });
+            if (!vacas.length) return res.status(400).json({ message: 'Nenhuma vaca liberada nesse lote.' });
+            const config = await carregarConfig(farmId);
+            await prisma.$transaction(async (tx) => {
+                for (const v of vacas) {
+                    await tx.reproEvent.create({
+                        data: {
+                            farmId, animalId: v.id, type: 'COBERTURA', date: inicio, lotId: v.lotId, createdById: req.user?.id || null,
+                            notes: req.body?.notes ? String(req.body.notes).slice(0, 500) : null,
+                            payload: { tipo: 'MONTA_NATURAL', touro, inicio, fim: fim || null, repasse: Boolean(req.body?.repasse) },
+                        },
+                    });
+                    await recalcularVaca(tx, v.id, config);
+                }
+            }, { timeout: 60000 });
+            void logActivity(prisma, req, { action: 'REPRO_MONTA_NATURAL', entity: 'Animal', entityId: vacas[0].id, description: `Touro ${touro} em ${vacas.length} vaca(s)`, farmId });
+            res.status(201).json({ total: vacas.length });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao registrar a monta natural.' });
+        }
+    });
+
+    // IATF ----------------------------------------------------------------
+
+    app.get('/farms/:farmId/reproducao/iatf', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const sessoes = await prisma.iatfSession.findMany({
+                where: { farmId },
+                include: { protocol: { select: { nome: true, passos: true } } },
+                orderBy: { dia0: 'desc' },
+                take: 50,
+            });
+            const agora = new Date();
+            res.json({
+                sessoes: sessoes.map((s) => ({
+                    id: s.id, dia0: s.dia0, status: s.status, responsavel: s.responsavel, lotId: s.lotId,
+                    protocolo: s.protocol?.nome || null,
+                    vacas: Array.isArray(s.vacas) ? s.vacas : [],
+                    passosFeitos: Array.isArray(s.passosFeitos) ? s.passosFeitos : [],
+                    agenda: s.protocol?.passos ? agendaDoProtocolo(s.protocol.passos, s.dia0, agora) : [],
+                    resumo: s.resumo || null,
+                })),
+            });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao listar as IATF.' });
+        }
+    });
+
+    app.post('/farms/:farmId/reproducao/iatf', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const clientId = req.body?.clientId ? String(req.body.clientId).slice(0, 64) : null;
+            if (clientId) {
+                const existente = await prisma.iatfSession.findUnique({ where: { farmId_clientId: { farmId, clientId } } });
+                if (existente) return res.json({ sessao: existente, repetido: true });
+            }
+            const dia0 = parseData(req.body?.dia0);
+            if (!dia0) return res.status(400).json({ message: 'Informe o dia 0 do protocolo.' });
+            const protocolId = req.body?.protocolId ? String(req.body.protocolId) : null;
+            const protocolo = protocolId ? await prisma.reproProtocol.findFirst({ where: { id: protocolId, farmId } }) : null;
+            if (protocolId && !protocolo) return res.status(400).json({ message: 'Protocolo inválido.' });
+            const lotId = req.body?.lotId ? String(req.body.lotId) : null;
+            const where = { farmId, sexo: 'FEMEA', status: 'VIVO' };
+            if (lotId) where.lotId = lotId;
+            else if (Array.isArray(req.body?.animalIds) && req.body.animalIds.length) where.id = { in: req.body.animalIds.map(String) };
+            else return res.status(400).json({ message: 'Escolha o lote ou as vacas.' });
+            const candidatas = await prisma.animal.findMany({ where, include: { reproEvents: { orderBy: { date: 'asc' } } }, take: MAX_LOTE });
+            const config = await carregarConfig(farmId);
+            const abertas = await prisma.iatfSession.findMany({ where: { farmId, status: 'ABERTO' }, select: { vacas: true } });
+            const jaEmProtocolo = new Set(abertas.flatMap((s) => (Array.isArray(s.vacas) ? s.vacas.map((v) => v.animalId) : [])));
+
+            const dentro = [];
+            const fora = [];
+            for (const a of candidatas) {
+                if (jaEmProtocolo.has(a.id)) { fora.push({ brinco: a.brinco, motivo: 'Já está em outro protocolo aberto' }); continue; }
+                const r = podeEntrarNoProtocolo(a.reproEvents, config || {}, dia0);
+                if (!r.ok) { fora.push({ brinco: a.brinco, motivo: r.motivo }); continue; }
+                dentro.push({ animalId: a.id, brinco: a.brinco, avisos: r.avisos || [] });
+            }
+            if (!dentro.length) return res.status(400).json({ message: 'Nenhuma vaca pode entrar neste protocolo.', fora });
+
+            // Sêmen e hormônio: avisa antes, não bloqueia o protocolo.
+            const alertas = [];
+            const doses = await prisma.semenBatch.aggregate({ where: { farmId }, _sum: { dosesDisponiveis: true } });
+            const falta = faltaDose({ dosesDisponiveis: doses._sum.dosesDisponiveis || 0, vacas: dentro.length });
+            if (falta) alertas.push(`Faltam ${falta} dose(s) de sêmen no botijão para ${dentro.length} vaca(s).`);
+            for (const passo of (protocolo?.passos || []).filter((p) => p.produtoId && p.dose)) {
+                const estoque = await prisma.pharmacyBatch.aggregate({ where: { farmId, productId: passo.produtoId }, _sum: { quantity: true } });
+                const precisa = Number(passo.dose) * dentro.length;
+                if ((estoque._sum.quantity || 0) < precisa) alertas.push(`Hormônio do dia ${passo.dia}: faltam ${Math.ceil(precisa - (estoque._sum.quantity || 0))} na Farmácia.`);
+            }
+
+            const sessao = await prisma.iatfSession.create({
+                data: {
+                    farmId, clientId, protocolId, dia0, lotId,
+                    responsavel: req.body?.responsavel ? String(req.body.responsavel).slice(0, 120) : null,
+                    vacas: dentro, resumo: { fora, alertas }, createdById: req.user?.id || null,
+                },
+            });
+            void logActivity(prisma, req, { action: 'REPRO_IATF_ABERTA', entity: 'IatfSession', entityId: sessao.id, description: `IATF com ${dentro.length} vaca(s)`, farmId });
+            res.status(201).json({ sessao, dentro, fora, alertas });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao abrir o protocolo.' });
+        }
+    });
+
+    // Marca o passo do protocolo como feito e baixa o hormônio da Farmácia.
+    app.post('/farms/:farmId/reproducao/iatf/:id/passos/:dia', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const sessao = await prisma.iatfSession.findFirst({ where: { id: String(req.params.id), farmId }, include: { protocol: true } });
+            if (!sessao) return res.status(404).json({ message: 'Protocolo não encontrado.' });
+            const dia = Number.parseInt(req.params.dia, 10);
+            const passo = (sessao.protocol?.passos || []).find((p) => Number(p.dia) === dia);
+            if (!passo) return res.status(404).json({ message: 'Passo não encontrado.' });
+            const feitos = Array.isArray(sessao.passosFeitos) ? sessao.passosFeitos : [];
+            if (feitos.some((f) => Number(f.dia) === dia)) return res.status(400).json({ message: 'Este passo já foi marcado.' });
+            const vacas = Array.isArray(sessao.vacas) ? sessao.vacas : [];
+            const consumo = passo.produtoId && passo.dose ? Number(passo.dose) * vacas.length : 0;
+            let baixa = null;
+
+            if (consumo > 0) {
+                const lotes = await prisma.pharmacyBatch.findMany({
+                    where: { farmId, productId: passo.produtoId, quantity: { gt: 0 } },
+                    orderBy: [{ expiresAt: 'asc' }, { createdAt: 'asc' }],
+                });
+                const total = lotes.reduce((s, l) => s + l.quantity, 0);
+                if (total < consumo) return res.status(400).json({ message: `Farmácia: faltam ${Math.ceil(consumo - total)} para este passo.` });
+                baixa = [];
+                let restante = consumo;
+                for (const l of lotes) {
+                    if (restante <= 0) break;
+                    const usar = Math.min(l.quantity, restante);
+                    baixa.push({ batchId: l.id, usar, unitCost: l.unitCost });
+                    restante -= usar;
+                }
+            }
+
+            await prisma.$transaction(async (tx) => {
+                for (const b of baixa || []) {
+                    await tx.pharmacyBatch.update({ where: { id: b.batchId }, data: { quantity: { decrement: b.usar } } });
+                    await tx.pharmacyMovement.create({
+                        data: { farmId, productId: passo.produtoId, batchId: b.batchId, type: 'EXIT', quantity: b.usar, unitCost: b.unitCost, notes: `IATF dia ${dia}: ${vacas.length} vaca(s)` },
+                    });
+                }
+                await tx.iatfSession.update({
+                    where: { id: sessao.id },
+                    data: { passosFeitos: [...feitos, { dia, data: new Date(), consumo, vacas: vacas.length }] },
+                });
+            });
+            res.json({ ok: true, consumo });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao marcar o passo.' });
+        }
+    });
+
+    app.post('/farms/:farmId/reproducao/iatf/:id/inseminacao', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const sessao = await prisma.iatfSession.findFirst({ where: { id: String(req.params.id), farmId } });
+            if (!sessao) return res.status(404).json({ message: 'Protocolo não encontrado.' });
+            if (sessao.status === 'INSEMINADO') return res.json({ repetido: true, message: 'Esta IATF já foi lançada.' });
+            const data = parseData(req.body?.data) || new Date();
+            const linhas = (Array.isArray(req.body?.linhas) ? req.body.linhas : []).slice(0, MAX_LOTE);
+            if (!linhas.length) return res.status(400).json({ message: 'Nenhuma vaca inseminada.' });
+            const vacas = new Map((Array.isArray(sessao.vacas) ? sessao.vacas : []).map((v) => [normalizarIdent(v.brinco), v]));
+            const partidas = new Map((await prisma.semenBatch.findMany({ where: { farmId } })).map((p) => [p.id, p]));
+            const config = await carregarConfig(farmId);
+
+            const feitas = [];
+            const pendencias = [];
+            const usoPorPartida = new Map();
+            for (const l of linhas) {
+                const chave = normalizarIdent(l?.brinco);
+                const vaca = vacas.get(chave);
+                if (!vaca) { pendencias.push({ brinco: l?.brinco || '', motivo: 'Não está neste protocolo' }); continue; }
+                if (feitas.some((f) => f.animalId === vaca.animalId)) { pendencias.push({ brinco: chave, motivo: 'Lançada duas vezes' }); continue; }
+                const partida = partidas.get(String(l?.semenBatchId || ''));
+                if (!partida) { pendencias.push({ brinco: chave, motivo: 'Partida de sêmen não encontrada' }); continue; }
+                const usadas = (usoPorPartida.get(partida.id) || 0) + 1;
+                if (usadas > partida.dosesDisponiveis) { pendencias.push({ brinco: chave, motivo: `Sem dose da partida ${partida.lote}` }); continue; }
+                usoPorPartida.set(partida.id, usadas);
+                feitas.push({ animalId: vaca.animalId, brinco: chave, partida, inseminador: l?.inseminador ? String(l.inseminador).slice(0, 120) : null });
+            }
+            if (!feitas.length) return res.status(400).json({ message: pendencias[0]?.motivo || 'Nada para lançar.', pendencias });
+
+            await prisma.$transaction(async (tx) => {
+                for (const f of feitas) {
+                    await tx.reproEvent.create({
+                        data: {
+                            farmId, animalId: f.animalId, type: 'COBERTURA', date: data, lotId: sessao.lotId, createdById: req.user?.id || null,
+                            protocol: sessao.protocolId, seasonId: sessao.seasonId,
+                            payload: {
+                                tipo: 'IATF', touro: f.partida.bullName || f.partida.lote, semenBatchId: f.partida.id, partida: f.partida.lote,
+                                inseminador: f.inseminador, iatfSessionId: sessao.id, custoDose: f.partida.custoDose ?? null,
+                            },
+                        },
+                    });
+                    await recalcularVaca(tx, f.animalId, config);
+                }
+                for (const [partidaId, qtd] of usoPorPartida) {
+                    await tx.semenBatch.update({ where: { id: partidaId }, data: { dosesDisponiveis: { decrement: qtd } } });
+                    await tx.semenMove.create({ data: { semenBatchId: partidaId, date: data, qty: qtd, type: 'USE', notes: `IATF ${sessao.id.slice(0, 8)}` } });
+                }
+                await tx.iatfSession.update({
+                    where: { id: sessao.id },
+                    data: { status: 'INSEMINADO', resumo: { ...(sessao.resumo || {}), inseminadas: feitas.length, pendencias, dataInseminacao: data } },
+                });
+            }, { timeout: 60000 });
+            void logActivity(prisma, req, { action: 'REPRO_IATF_INSEMINACAO', entity: 'IatfSession', entityId: sessao.id, description: `Inseminou ${feitas.length} vaca(s)`, farmId });
+            res.json({ inseminadas: feitas.length, pendencias });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao lançar a inseminação.' });
+        }
+    });
+
+    app.delete('/farms/:farmId/reproducao/iatf/:id', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const sessao = await prisma.iatfSession.findFirst({ where: { id: String(req.params.id), farmId } });
+            if (!sessao) return res.status(404).json({ message: 'Protocolo não encontrado.' });
+            if (sessao.status === 'INSEMINADO') return res.status(400).json({ message: 'Já tem inseminação lançada: apague as coberturas pela ficha das vacas.' });
+            await prisma.iatfSession.delete({ where: { id: sessao.id } });
+            res.json({ ok: true });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao apagar o protocolo.' });
         }
     });
 }

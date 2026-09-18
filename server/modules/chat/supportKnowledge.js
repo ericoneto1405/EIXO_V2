@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-17.5';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-17';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-18.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-18';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -212,6 +212,20 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'As metas (prenhez, natalidade, desmama, intervalo entre partos e idade ao 1º parto) são definidas pelo produtor em Critérios; sem meta, o número aparece sem cor.',
             'O farol da vaca sempre mostra o motivo escrito. Vermelho vem de vazias seguidas, duas perdas de gestação, intervalo entre partos alto ou bezerros leves — os limites também são do produtor.',
             'Na sugestão de descarte, o produtor escolhe Descartar (grava o motivo na ficha) ou Manter (escreve o porquê; a vaca volta a aparecer depois do próximo toque).',
+        ],
+    },
+    {
+        id: 'reproducao-iatf-botijao',
+        title: 'Cobertura, IATF e botijão de sêmen (Reprodução)',
+        keywords: ['cobertura', 'monta natural', 'touro no lote', 'repasse', 'iatf', 'protocolo', 'inseminacao', 'inseminador', 'semen', 'botijao', 'nitrogenio', 'dose', 'caneca'],
+        href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
+        guidance: [
+            'Monta natural: na aba Cobertura / IATF informe o lote, o touro e as datas em que ele entrou e saiu. Marque "touro de repasse" quando ele entra depois da IATF.',
+            'O protocolo de IATF é cadastrado pelo produtor (nome, passos com o dia, o que fazer e o hormônio da Farmácia). O EIXO não sugere hormônio nem dose: quem define é o veterinário responsável.',
+            'Ao abrir o protocolo, o EIXO separa quem entra e quem fica fora com o motivo. Vaca prenhe é bloqueada porque o hormônio pode causar aborto; vaca em outro protocolo aberto também fica fora.',
+            'Cada passo aparece com a data e pode ser marcado como feito; ao marcar, o hormônio baixa sozinho do estoque da Farmácia, pelo lote que vence primeiro.',
+            'No dia de inseminar, escolha o sêmen (o mesmo para todas ou por vaca) e o inseminador. A dose baixa do botijão e a cobertura entra na ficha de cada vaca.',
+            'A aba Botijão mostra o mesmo estoque de sêmen do Eixo Acasalamento, agora com botijão, caneca, custo por dose, medição de nitrogênio e recarga. Nível abaixo do mínimo vira alerta vermelho; antes do protocolo o EIXO avisa se faltar dose ou hormônio.',
         ],
     },
     {
