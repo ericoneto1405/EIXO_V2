@@ -6,6 +6,7 @@ interface ChatMessage {
     role: 'user' | 'model';
     text: string;
     source?: 'user' | 'ai' | 'specialist' | 'system';
+    createdAt?: string;
 }
 
 interface RecentConversation {
@@ -44,6 +45,24 @@ const formatConversationDate = (value: string) => {
     });
 };
 
+const formatMessageTime = (value?: string) => {
+    if (!value) return '';
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toLocaleTimeString('pt-BR', {
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+};
+
+const SATISFACTION_LABELS: Record<number, string> = {
+    1: 'Ruim',
+    2: 'Fraco',
+    3: 'Ok',
+    4: 'Bom',
+    5: 'Ótimo',
+};
+
 const SendIcon: React.FC = () => (
     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -67,6 +86,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
     const [unresolvedReason, setUnresolvedReason] = useState('');
     const [feedbackPrompt, setFeedbackPrompt] = useState<string | null>(null);
     const [humanRequestLoading, setHumanRequestLoading] = useState(false);
+    const [showAllSuggestions, setShowAllSuggestions] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -163,6 +183,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                     role: msg.role === 'user' ? 'user' : 'model',
                     text: msg.text || '',
                     source: msg.source || (msg.role === 'user' ? 'user' : 'ai'),
+                    createdAt: msg.createdAt,
                 })),
             );
             setLoadError(null);
@@ -523,7 +544,7 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                             Tire suas dúvidas sobre como usar o sistema EIXO.
                         </p>
                         <div className="mt-5 flex flex-col gap-2 w-full">
-                            {SUGESTOES.map((s) => (
+                            {(showAllSuggestions ? SUGESTOES : SUGESTOES.slice(0, 4)).map((s) => (
                                 <button
                                     key={s}
                                     type="button"
@@ -533,6 +554,15 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                                     {s}
                                 </button>
                             ))}
+                            {!showAllSuggestions && SUGESTOES.length > 4 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAllSuggestions(true)}
+                                    className="text-center text-[11px] font-semibold text-[var(--eixo-text-muted)] underline underline-offset-2 hover:text-[var(--eixo-text)]"
+                                >
+                                    Ver mais perguntas
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}
@@ -571,13 +601,18 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                                 : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] rounded-bl-sm'
                         }`}>
                             {(msg.source === 'specialist' || msg.source === 'ai') && (
-                                <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-[var(--eixo-success)]">
+                                <p className="mb-1 text-[12px] font-bold uppercase tracking-wide text-[var(--eixo-success)]">
                                     {msg.source === 'specialist' ? 'Equipe EIXO' : 'Eixo Suporte automático'}
                                 </p>
                             )}
                             <div className="space-y-1">
                                 {renderText(msg.text)}
                             </div>
+                            {msg.createdAt && (
+                                <p className={`mt-1 text-[10px] ${msg.role === 'user' ? 'text-white/70' : 'text-[var(--eixo-text-soft)]'}`}>
+                                    {formatMessageTime(msg.createdAt)}
+                                </p>
+                            )}
                             {msg.id && msg.id === lastAiMessageId && !feedbackByMessage[msg.id] && humanStatus === 'none' && (
                                 <div className="mt-3 border-t border-[var(--eixo-border)] pt-2">
                                     <p className="mb-1.5 text-[11px] font-medium text-[var(--eixo-text-muted)]">Isso resolveu sua dúvida?</p>
@@ -642,12 +677,17 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                                                 type="button"
                                                 onClick={() => void sendSatisfaction(msg.id as string, rating)}
                                                 disabled={satisfactionLoading === msg.id}
-                                                aria-label={`${rating} de 5`}
+                                                aria-label={SATISFACTION_LABELS[rating]}
+                                                title={SATISFACTION_LABELS[rating]}
                                                 className="h-7 w-7 rounded-lg border border-[var(--eixo-border)] bg-white text-xs font-bold hover:bg-[var(--eixo-green-soft)] disabled:opacity-50"
                                             >
                                                 {rating}
                                             </button>
                                         ))}
+                                    </div>
+                                    <div className="mt-0.5 flex justify-between text-[10px] text-[var(--eixo-text-soft)]">
+                                        <span>Ruim</span>
+                                        <span>Ótimo</span>
                                     </div>
                                 </div>
                             )}
@@ -691,13 +731,15 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
 
             {/* Input */}
             <div className="border-t border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3">
-                <button
-                    type="button"
-                    onClick={handleCreateNewConversation}
-                    className="mb-2 w-full rounded-xl bg-[var(--eixo-text)] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-graphite)]"
-                >
-                    Iniciar nova conversa
-                </button>
+                {messages.length > 0 && (
+                    <button
+                        type="button"
+                        onClick={handleCreateNewConversation}
+                        className="mb-2 w-full rounded-xl bg-[var(--eixo-text)] px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-[var(--eixo-graphite)]"
+                    >
+                        Iniciar nova conversa
+                    </button>
+                )}
                 <div className={`flex items-end gap-2 rounded-2xl border bg-[var(--eixo-surface-soft)] px-3 py-2 transition-colors ${inputMessage.length >= MAX_CHARS ? 'border-[#c0644a]' : 'border-[var(--eixo-border)]'}`}>
                     <textarea
                         ref={inputRef}
@@ -720,16 +762,8 @@ const AssistantChat: React.FC<AssistantChatProps> = ({ onClose, farmId, onNaviga
                         <SendIcon />
                     </button>
                 </div>
-                <p className="mt-1 text-right text-[10px] text-[var(--eixo-text-soft)]">{inputMessage.length}/{MAX_CHARS}</p>
-                {humanStatus === 'none' && (
-                    <button
-                        type="button"
-                        onClick={() => void requestHumanSupport()}
-                        disabled={humanRequestLoading || !conversationId}
-                        className="mt-1 w-full text-center text-[11px] font-semibold text-[var(--eixo-text-muted)] underline underline-offset-2 hover:text-[var(--eixo-text)] disabled:opacity-50"
-                    >
-                        {humanRequestLoading ? 'Chamando a Equipe EIXO...' : 'Preciso falar com a Equipe EIXO'}
-                    </button>
+                {inputMessage.length >= MAX_CHARS * 0.8 && (
+                    <p className="mt-1 text-right text-[10px] text-[var(--eixo-text-soft)]">{inputMessage.length}/{MAX_CHARS}</p>
                 )}
                 <p className="mt-2 text-center text-[10px] text-[var(--eixo-text-soft)]">
                     Eixo Suporte responde com base na versão atual do sistema.
