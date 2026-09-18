@@ -579,3 +579,124 @@ export function faltaDose({ dosesDisponiveis, vacas }) {
     const falta = Number(vacas) - Number(dosesDisponiveis || 0);
     return falta > 0 ? falta : 0;
 }
+
+// ---------- Fase 6: estação de monta e touros ----------
+// A conta da lotação NÃO aparece na tela (decisão do Erico, 18/09/2026): o produtor vê
+// só a frase pronta. Base: Embrapa, Circular 53 (capacidade de serviço x ciclicidade).
+
+export const RESULTADOS_EXAME = ['SUPERIOR', 'APTO', 'APTO_RESTRICAO', 'INAPTO'];
+export const EXAME_VALIDADE_MESES = 12;
+export const TETO_VACAS_POR_TOURO = 60;
+export const CICLO_DIAS = 21;
+
+const CAPACIDADE_DIARIA = { SUPERIOR: 3, APTO: 2, APTO_RESTRICAO: 1, INAPTO: 0 };
+const CAPACIDADE_SEM_EXAME = 1;
+
+export function fatorIdadeTouro(idadeMeses) {
+    if (idadeMeses == null) return 0.6;
+    if (idadeMeses < 24) return 0;
+    if (idadeMeses < 36) return 0.6;
+    if (idadeMeses < 84) return 1;
+    if (idadeMeses < 108) return 0.85;
+    return 0.7;
+}
+
+export function fatorEstacao(duracaoDias) {
+    if (!duracaoDias) return 1;
+    if (duracaoDias <= 60) return 0.85;
+    if (duracaoDias >= 120) return 1.1;
+    return 1;
+}
+
+// Quanto do lote está ciclando, pela categoria e situação de cada fêmea.
+export function ciclicidadeDoLote(vacas = []) {
+    if (!vacas.length) return 0.8;
+    const valores = vacas.map((v) => {
+        if (v.categoria === 'Novilha') return 0.7;
+        if (v.categoria === 'Primípara' && v.situacao === 'PARIDA') return 0.5;
+        if (v.situacao === 'PARIDA') return 0.8;
+        return 0.9;
+    });
+    return valores.reduce((s, x) => s + x, 0) / valores.length;
+}
+
+export function exameValido(exames = [], ref = new Date()) {
+    const ultimo = ordenar(exames).pop();
+    if (!ultimo) return { resultado: null, valido: false, exame: null };
+    const meses = diasEntre(ultimo.date, ref) / 30.4375;
+    return { resultado: ultimo.resultado, valido: meses <= EXAME_VALIDADE_MESES, exame: ultimo };
+}
+
+/**
+ * Quantas vacas este touro atende neste lote. Devolve também o motivo em palavras,
+ * para a tela mostrar frase pronta — nunca a conta.
+ */
+export function capacidadeDoTouro({ exames = [], idadeMeses, ciclicidade = 0.8, duracaoEstacao = null, repasse = false, prenhezIatf = null, ajustePct = null }, ref = new Date()) {
+    const { resultado, valido } = exameValido(exames, ref);
+    const motivos = [];
+    let diaria = CAPACIDADE_SEM_EXAME;
+    if (resultado === 'INAPTO') return { vacas: 0, bloqueado: true, motivos: ['reprovado no exame de fertilidade'] };
+    if (!resultado) motivos.push('sem exame de fertilidade');
+    else if (!valido) motivos.push('exame de fertilidade vencido');
+    else diaria = CAPACIDADE_DIARIA[resultado] ?? CAPACIDADE_SEM_EXAME;
+
+    const idade = fatorIdadeTouro(idadeMeses);
+    if (idade === 0) return { vacas: 0, bloqueado: true, motivos: ['tem menos de 2 anos'] };
+    if (idadeMeses != null && idadeMeses < 36) motivos.push('é touro jovem');
+    if (idadeMeses != null && idadeMeses >= 108) motivos.push('já é touro velho');
+
+    let vacas = (diaria * idade * fatorEstacao(duracaoEstacao) * CICLO_DIAS) / (ciclicidade || 0.8);
+    if (ajustePct) {
+        vacas *= 1 + ajustePct / 100;
+        motivos.push('tem ajuste manual do produtor');
+    }
+    if (repasse) {
+        const retorno = prenhezIatf != null ? 1 - prenhezIatf / 100 : 0.5;
+        vacas = retorno > 0 ? vacas / retorno : vacas;
+    }
+    // Arredonda para baixo: na dúvida, recomenda menos vaca por touro.
+    return { vacas: Math.min(TETO_VACAS_POR_TOURO, Math.floor(vacas)), bloqueado: false, motivos };
+}
+
+// Farol do lote: frase pronta, sem número de fórmula.
+export function avaliarLotacao({ lote, vacas = [], touros = [], duracaoEstacao = null, prenhezIatf = null }, ref = new Date()) {
+    const ciclicidade = ciclicidadeDoLote(vacas);
+    const detalhes = touros.map((t) => ({
+        brinco: t.brinco,
+        ...capacidadeDoTouro({ ...t, ciclicidade, duracaoEstacao, prenhezIatf }, ref),
+    }));
+    const suporta = detalhes.reduce((s, d) => s + d.vacas, 0);
+    const nome = lote ? `Lote ${lote}` : 'Lote';
+    if (!touros.length) {
+        return vacas.length
+            ? { cor: 'AMARELO', texto: `${nome}: ${vacas.length} vaca(s) e nenhum touro no lote.`, suporta: 0, vacas: vacas.length, detalhes }
+            : { cor: null, texto: `${nome}: sem vacas e sem touro.`, suporta: 0, vacas: 0, detalhes };
+    }
+    const cabecalho = `${nome}: ${touros.length} touro(s) para ${vacas.length} vaca(s).`;
+    const explicacoes = detalhes.filter((d) => d.motivos.length).map((d) => `o touro ${d.brinco} ${d.motivos.join(' e ')}`);
+    if (!vacas.length) return { cor: null, texto: `${cabecalho} Sem vacas no lote.`, suporta, vacas: 0, detalhes };
+    const uso = (vacas.length / (suporta || 1)) * 100;
+    const cor = uso <= 100 ? 'VERDE' : uso <= 120 ? 'AMARELO' : 'VERMELHO';
+    const frase = cor === 'VERDE'
+        ? `${cabecalho} Está dentro.`
+        : `${cabecalho} Para este lote, o recomendado é até ${suporta} vaca(s)${cor === 'VERMELHO' ? '; considere mais um touro' : ''}.`;
+    return { cor, texto: [frase, ...explicacoes.map((e) => `Aqui ${e}.`)].join(' '), suporta, vacas: vacas.length, detalhes };
+}
+
+export function duracaoEstacaoDias(startAt, endAt) {
+    if (!startAt || !endAt) return null;
+    return diasEntre(startAt, endAt);
+}
+
+// Alertas da estação: cobertura fora do período e touro esquecido no lote.
+export function alertasEstacao({ estacao, coberturasFora = 0, tourosNoLote = [] }, ref = new Date()) {
+    const alertas = [];
+    if (!estacao) return alertas;
+    if (coberturasFora > 0) alertas.push({ cor: 'AMARELO', texto: `${coberturasFora} cobertura(s) lançada(s) fora do período da estação ${estacao.name}.` });
+    if (estacao.endAt && new Date(estacao.endAt) < new Date(ref)) {
+        for (const t of tourosNoLote.filter((x) => !x.endAt)) {
+            alertas.push({ cor: 'VERMELHO', texto: `A estação ${estacao.name} terminou e o touro ${t.brinco} continua no lote ${t.lote || ''}.`.trim() });
+        }
+    }
+    return alertas;
+}

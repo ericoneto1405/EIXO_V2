@@ -26,13 +26,14 @@ import { listarToques } from '../adapters/reproApi';
 import { DesmamaAba, PartosAba } from './ReproParto';
 import { PainelAba } from './ReproPainel';
 import { BotijaoAba, CoberturaAba } from './ReproCobertura';
+import { EstacaoAba, TourosAba } from './ReproTouros';
 
 interface ReproModuleProps {
     farmId?: string | null;
     farmName?: string | null;
 }
 
-type Aba = 'PAINEL' | 'CANDIDATAS' | 'COBERTURA' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'BOTIJAO' | 'FICHA' | 'CRITERIOS';
+type Aba = 'PAINEL' | 'CANDIDATAS' | 'COBERTURA' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'BOTIJAO' | 'ESTACAO' | 'TOUROS' | 'FICHA' | 'CRITERIOS';
 
 const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] disabled:opacity-60';
 const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
@@ -155,6 +156,8 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
                     ['PARTOS', 'Partos'],
                     ['DESMAMA', 'Desmama'],
                     ['BOTIJAO', 'Botijão'],
+                    ['ESTACAO', 'Estação de monta'],
+                    ['TOUROS', 'Touros'],
                     ['FICHA', 'Ficha da vaca'],
                     ['CRITERIOS', 'Critérios'],
                 ] as [Aba, string][]).map(([valor, label]) => (
@@ -178,6 +181,8 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
             {aba === 'CANDIDATAS' && <Candidatas farmId={farmId} onErro={setErro} onAviso={setAviso} irParaCriterios={() => setAba('CRITERIOS')} />}
             {aba === 'COBERTURA' && <CoberturaAba farmId={farmId} lotes={lotes} onErro={setErro} onAviso={setAviso} />}
             {aba === 'BOTIJAO' && <BotijaoAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
+            {aba === 'ESTACAO' && <EstacaoAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
+            {aba === 'TOUROS' && <TourosAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'TOQUE' && <ToqueCurral farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'DECIDIR' && <DecidirVazias farmId={farmId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}
             {aba === 'PARTOS' && <PartosAba farmId={farmId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}

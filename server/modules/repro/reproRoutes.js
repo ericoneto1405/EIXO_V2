@@ -14,6 +14,7 @@ import {
     DESMAMA_PRECOCE_DIAS, pesoAjustado205, prontoParaDesmama, statusPrevisao, validarParto,
     calcularIndicadores, farolVaca, mantidaAteProximoToque,
     agendaDoProtocolo, alertasBotijao, faltaDose, podeEntrarNoProtocolo, validarProtocolo,
+    RESULTADOS_EXAME, alertasEstacao, avaliarLotacao, capacidadeDoTouro, duracaoEstacaoDias, exameValido,
 } from './reproRules.js';
 
 const prisma = new PrismaClient();
@@ -1575,6 +1576,288 @@ export function registerReproRoutes(app) {
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: 'Erro ao apagar o protocolo.' });
+        }
+    });
+
+    // ---------- Fase 6: estação de monta e touros ----------
+
+    const TIPOS_ESTACAO = ['MONTA_NATURAL', 'IATF', 'IATF_REPASSE'];
+
+    async function vacasDoLote(farmId, lotId) {
+        const vacas = await prisma.animal.findMany({
+            where: { farmId, lotId, sexo: 'FEMEA', status: 'VIVO', reproEvents: { some: { type: 'LIBERACAO' }, none: { type: 'DESCARTE' } } },
+            select: { id: true, brinco: true, reproEvents: { orderBy: { date: 'asc' } } },
+        });
+        return vacas.map((v) => {
+            const s = calcularSituacao(v.reproEvents);
+            return { id: v.id, brinco: v.brinco, categoria: s.categoria, situacao: s.situacao };
+        });
+    }
+
+    const idadeMeses = (dataNascimento) => (dataNascimento
+        ? Math.floor((Date.now() - new Date(dataNascimento).getTime()) / (30.4375 * 86400000))
+        : null);
+
+    // Estação de monta ----------------------------------------------------
+
+    app.get('/farms/:farmId/reproducao/estacoes', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const agora = new Date();
+            const [estacoes, lotes] = await Promise.all([
+                prisma.breedingSeason.findMany({ where: { farmId }, orderBy: { startAt: 'desc' }, take: 30 }),
+                prisma.lot.findMany({ where: { farmId }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+            ]);
+            const lista = [];
+            for (const e of estacoes) {
+                const lotIds = Array.isArray(e.lotIds) ? e.lotIds.map(String) : [];
+                const vacas = lotIds.length
+                    ? await prisma.animal.findMany({
+                        where: { farmId, lotId: { in: lotIds }, sexo: 'FEMEA', status: 'VIVO', reproEvents: { some: { type: 'LIBERACAO' }, none: { type: 'DESCARTE' } } },
+                        select: { id: true, reproEvents: { where: { date: { gte: e.startAt } }, orderBy: { date: 'asc' } } },
+                    })
+                    : [];
+                let cobertas = 0;
+                let diagnosticadas = 0;
+                let prenhes = 0;
+                for (const v of vacas) {
+                    const eventos = v.reproEvents;
+                    if (eventos.some((x) => x.type === 'COBERTURA' || x.type === 'IATF')) cobertas += 1;
+                    const diags = eventos.filter((x) => x.type === 'DIAGNOSTICO_PRENHEZ');
+                    if (diags.length) {
+                        diagnosticadas += 1;
+                        if (diags[diags.length - 1].payload?.resultado === 'PRENHE') prenhes += 1;
+                    }
+                }
+                const coberturasFora = lotIds.length
+                    ? await prisma.reproEvent.count({
+                        where: {
+                            farmId, type: 'COBERTURA', lotId: { in: lotIds },
+                            OR: [{ date: { lt: e.startAt } }, { date: { gt: e.endAt } }],
+                            createdAt: { gte: e.createdAt },
+                        },
+                    })
+                    : 0;
+                const tourosNoLote = lotIds.length
+                    ? (await prisma.bullLotAssignment.findMany({
+                        where: { farmId, lotId: { in: lotIds }, endAt: null },
+                        include: { animal: { select: { brinco: true } }, lot: { select: { name: true } } },
+                    })).map((t) => ({ brinco: t.animal.brinco, lote: t.lot.name, endAt: t.endAt }))
+                    : [];
+                lista.push({
+                    id: e.id, name: e.name, startAt: e.startAt, endAt: e.endAt, tipo: e.tipo, lotIds, notes: e.notes,
+                    duracaoDias: duracaoEstacaoDias(e.startAt, e.endAt),
+                    emAndamento: new Date(e.startAt) <= agora && new Date(e.endAt) >= agora,
+                    diasRestantes: Math.max(0, Math.ceil((new Date(e.endAt) - agora) / 86400000)),
+                    painel: { expostas: vacas.length, cobertas, diagnosticadas, prenhes },
+                    alertas: alertasEstacao({ estacao: e, coberturasFora, tourosNoLote }, agora),
+                });
+            }
+            res.json({ estacoes: lista, lotes, tipos: TIPOS_ESTACAO });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao listar as estações.' });
+        }
+    });
+
+    app.post('/farms/:farmId/reproducao/estacoes', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const name = String(req.body?.name || '').trim().slice(0, 120);
+            const startAt = parseData(req.body?.startAt);
+            const endAt = parseData(req.body?.endAt);
+            if (!name) return res.status(400).json({ message: 'Dê um nome à estação.' });
+            if (!startAt || !endAt) return res.status(400).json({ message: 'Informe o início e o fim da estação.' });
+            if (endAt <= startAt) return res.status(400).json({ message: 'O fim da estação tem que ser depois do início.' });
+            const tipo = TIPOS_ESTACAO.includes(req.body?.tipo) ? req.body.tipo : null;
+            const lotIds = [...new Set((Array.isArray(req.body?.lotIds) ? req.body.lotIds : []).map(String))];
+            const validos = lotIds.length ? (await prisma.lot.findMany({ where: { farmId, id: { in: lotIds } }, select: { id: true } })).map((l) => l.id) : [];
+            const dados = { name, startAt, endAt, tipo, lotIds: validos, notes: req.body?.notes ? String(req.body.notes).slice(0, 500) : null };
+            const estacao = req.body?.id
+                ? await prisma.breedingSeason.update({ where: { id: String(req.body.id) }, data: dados })
+                : await prisma.breedingSeason.create({ data: { farmId, ...dados } });
+            void logActivity(prisma, req, { action: 'REPRO_ESTACAO', entity: 'BreedingSeason', entityId: estacao.id, description: `Estação ${name}`, farmId });
+            res.json({ estacao });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao salvar a estação.' });
+        }
+    });
+
+    app.delete('/farms/:farmId/reproducao/estacoes/:id', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const estacao = await prisma.breedingSeason.findFirst({ where: { id: String(req.params.id), farmId }, select: { id: true } });
+            if (!estacao) return res.status(404).json({ message: 'Estação não encontrada.' });
+            const eventos = await prisma.reproEvent.count({ where: { seasonId: estacao.id } });
+            if (eventos) return res.status(400).json({ message: 'Esta estação já tem eventos ligados a ela.' });
+            await prisma.breedingSeason.delete({ where: { id: estacao.id } });
+            res.json({ ok: true });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao apagar a estação.' });
+        }
+    });
+
+    // Touros --------------------------------------------------------------
+
+    app.get('/farms/:farmId/reproducao/touros', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const agora = new Date();
+            const touros = await prisma.animal.findMany({
+                where: { farmId, sexo: 'MACHO', status: 'VIVO' },
+                select: {
+                    id: true, brinco: true, raca: true, dataNascimento: true, funcaoReprodutiva: true, categoria: true, lotId: true,
+                    bullExams: { orderBy: { date: 'asc' } },
+                    bullLots: { include: { lot: { select: { name: true } } }, orderBy: { startAt: 'desc' }, take: 20 },
+                },
+                orderBy: { brinco: 'asc' },
+            });
+            const reprodutores = touros.filter((t) => /touro|reprodut/i.test(`${t.funcaoReprodutiva || ''} ${t.categoria || ''}`) || t.bullExams.length || t.bullLots.length);
+            const lista = reprodutores.map((t) => {
+                const { resultado, valido, exame } = exameValido(t.bullExams, agora);
+                const noLote = t.bullLots.find((l) => !l.endAt);
+                return {
+                    id: t.id, brinco: t.brinco, raca: t.raca, idadeMeses: idadeMeses(t.dataNascimento),
+                    exame: exame ? { id: exame.id, date: exame.date, resultado, valido, vetName: exame.vetName, libido: exame.libido, perimetroCm: exame.perimetroCm } : null,
+                    inapto: resultado === 'INAPTO',
+                    noLote: noLote ? { id: noLote.id, lote: noLote.lot.name, lotId: noLote.lotId, startAt: noLote.startAt, repasse: noLote.repasse } : null,
+                    historico: t.bullLots.map((l) => ({ lote: l.lot.name, startAt: l.startAt, endAt: l.endAt, repasse: l.repasse })),
+                };
+            });
+            const lotes = await prisma.lot.findMany({ where: { farmId }, select: { id: true, name: true }, orderBy: { name: 'asc' } });
+            res.json({ touros: lista, lotes, resultados: RESULTADOS_EXAME });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao listar os touros.' });
+        }
+    });
+
+    app.post('/farms/:farmId/reproducao/touros/:animalId/exames', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const touro = await prisma.animal.findFirst({ where: { id: String(req.params.animalId), farmId }, select: { id: true, sexo: true, brinco: true, funcaoReprodutiva: true } });
+            if (!touro) return res.status(404).json({ message: 'Animal não encontrado.' });
+            if (touro.sexo !== 'MACHO') return res.status(400).json({ message: 'Exame de fertilidade é do touro.' });
+            const date = parseData(req.body?.date);
+            const resultado = RESULTADOS_EXAME.includes(req.body?.resultado) ? req.body.resultado : null;
+            if (!date || date > new Date(Date.now() + 86400000)) return res.status(400).json({ message: 'Data do exame inválida.' });
+            if (!resultado) return res.status(400).json({ message: 'Informe o resultado do exame.' });
+            const exame = await prisma.$transaction(async (tx) => {
+                const criado = await tx.bullExam.create({
+                    data: {
+                        farmId, animalId: touro.id, date, resultado,
+                        libido: req.body?.libido ? String(req.body.libido).slice(0, 40) : null,
+                        perimetroCm: req.body?.perimetroCm ? Number(req.body.perimetroCm) : null,
+                        vetName: req.body?.vetName ? String(req.body.vetName).slice(0, 120) : null,
+                        vetCrmv: req.body?.vetCrmv ? String(req.body.vetCrmv).slice(0, 30) : null,
+                        notes: req.body?.notes ? String(req.body.notes).slice(0, 500) : null,
+                        createdById: req.user?.id || null,
+                    },
+                });
+                if (!touro.funcaoReprodutiva) await tx.animal.update({ where: { id: touro.id }, data: { funcaoReprodutiva: 'Touro' } });
+                // Touro infértil é boi para descarte: sai do lote e perde a função de reprodutor.
+                if (resultado === 'INAPTO') {
+                    await tx.bullLotAssignment.updateMany({ where: { animalId: touro.id, endAt: null }, data: { endAt: date } });
+                    await tx.animal.update({ where: { id: touro.id }, data: { funcaoReprodutiva: 'Descarte' } });
+                }
+                return criado;
+            });
+            void logActivity(prisma, req, { action: 'REPRO_EXAME_TOURO', entity: 'BullExam', entityId: exame.id, description: `Exame do touro ${touro.brinco}: ${resultado}`, farmId });
+            res.status(201).json({ exame, descartado: resultado === 'INAPTO' });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao salvar o exame.' });
+        }
+    });
+
+    app.post('/farms/:farmId/reproducao/touros/:animalId/lotes', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const agora = new Date();
+            const touro = await prisma.animal.findFirst({
+                where: { id: String(req.params.animalId), farmId },
+                select: { id: true, brinco: true, sexo: true, status: true, dataNascimento: true, bullExams: { orderBy: { date: 'asc' } } },
+            });
+            if (!touro) return res.status(404).json({ message: 'Touro não encontrado.' });
+            if (touro.sexo !== 'MACHO' || touro.status !== 'VIVO') return res.status(400).json({ message: 'Só touro vivo entra em lote.' });
+            const capacidade = capacidadeDoTouro({ exames: touro.bullExams, idadeMeses: idadeMeses(touro.dataNascimento) }, agora);
+            if (capacidade.bloqueado) return res.status(400).json({ message: `O touro ${touro.brinco} ${capacidade.motivos[0]}.` });
+            const lotId = String(req.body?.lotId || '');
+            const lote = await prisma.lot.findFirst({ where: { id: lotId, farmId }, select: { id: true, name: true } });
+            if (!lote) return res.status(400).json({ message: 'Lote inválido.' });
+            const startAt = parseData(req.body?.startAt) || agora;
+            const aberto = await prisma.bullLotAssignment.findFirst({ where: { animalId: touro.id, endAt: null } });
+            if (aberto) return res.status(400).json({ message: 'Este touro já está em um lote. Tire ele de lá primeiro.' });
+            const alocacao = await prisma.bullLotAssignment.create({
+                data: {
+                    farmId, animalId: touro.id, lotId: lote.id, startAt,
+                    seasonId: req.body?.seasonId ? String(req.body.seasonId) : null,
+                    repasse: Boolean(req.body?.repasse),
+                    ajustePct: Number.isInteger(Number(req.body?.ajustePct)) ? Number(req.body.ajustePct) : null,
+                    createdById: req.user?.id || null,
+                },
+            });
+            void logActivity(prisma, req, { action: 'REPRO_TOURO_LOTE', entity: 'BullLotAssignment', entityId: alocacao.id, description: `Touro ${touro.brinco} no lote ${lote.name}`, farmId });
+            res.status(201).json({ alocacao, avisos: capacidade.motivos.map((m) => `O touro ${touro.brinco} ${m}.`) });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao colocar o touro no lote.' });
+        }
+    });
+
+    app.post('/farms/:farmId/reproducao/touros/lotes/:id/saida', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const alocacao = await prisma.bullLotAssignment.findFirst({ where: { id: String(req.params.id), farmId } });
+            if (!alocacao) return res.status(404).json({ message: 'Registro não encontrado.' });
+            const endAt = parseData(req.body?.endAt) || new Date();
+            if (endAt < alocacao.startAt) return res.status(400).json({ message: 'A saída não pode ser antes da entrada.' });
+            await prisma.bullLotAssignment.update({ where: { id: alocacao.id }, data: { endAt } });
+            res.json({ ok: true });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao tirar o touro do lote.' });
+        }
+    });
+
+    // Lotação por lote: frase pronta, sem mostrar a conta.
+    app.get('/farms/:farmId/reproducao/lotacao', async (req, res) => {
+        try {
+            const farmId = req.reproFarm.id;
+            const agora = new Date();
+            const [alocacoes, estacoes] = await Promise.all([
+                prisma.bullLotAssignment.findMany({
+                    where: { farmId, endAt: null },
+                    include: { animal: { select: { id: true, brinco: true, dataNascimento: true, bullExams: { orderBy: { date: 'asc' } } } }, lot: { select: { id: true, name: true } } },
+                }),
+                prisma.breedingSeason.findMany({ where: { farmId, startAt: { lte: agora }, endAt: { gte: agora } } }),
+            ]);
+            const porLote = new Map();
+            for (const a of alocacoes) {
+                if (!porLote.has(a.lotId)) porLote.set(a.lotId, { lote: a.lot.name, touros: [] });
+                porLote.get(a.lotId).touros.push({
+                    brinco: a.animal.brinco,
+                    exames: a.animal.bullExams,
+                    idadeMeses: idadeMeses(a.animal.dataNascimento),
+                    repasse: a.repasse,
+                    ajustePct: a.ajustePct,
+                });
+            }
+            const estacao = estacoes[0] || null;
+            const duracao = estacao ? duracaoEstacaoDias(estacao.startAt, estacao.endAt) : null;
+            const lotes = [];
+            for (const [lotId, dados] of porLote) {
+                const vacas = await vacasDoLote(farmId, lotId);
+                const r = avaliarLotacao({ lote: dados.lote, vacas, touros: dados.touros, duracaoEstacao: duracao }, agora);
+                lotes.push({ lotId, lote: dados.lote, cor: r.cor, texto: r.texto, vacas: r.vacas, touros: dados.touros.length });
+            }
+            lotes.sort((a, b) => (a.cor === b.cor ? 0 : a.cor === 'VERMELHO' ? -1 : b.cor === 'VERMELHO' ? 1 : a.cor === 'AMARELO' ? -1 : 1));
+            res.json({ lotes, estacao: estacao ? { id: estacao.id, name: estacao.name } : null });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Erro ao avaliar a lotação dos lotes.' });
         }
     });
 }

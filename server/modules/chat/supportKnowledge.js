@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-18.1';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-18.2';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-18';
 
 export const SUPPORT_TONE_RULES = [
@@ -226,6 +226,20 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Cada passo aparece com a data e pode ser marcado como feito; ao marcar, o hormônio baixa sozinho do estoque da Farmácia, pelo lote que vence primeiro.',
             'No dia de inseminar, escolha o sêmen (o mesmo para todas ou por vaca) e o inseminador. A dose baixa do botijão e a cobertura entra na ficha de cada vaca.',
             'A aba Botijão mostra o mesmo estoque de sêmen do Eixo Acasalamento, agora com botijão, caneca, custo por dose, medição de nitrogênio e recarga. Nível abaixo do mínimo vira alerta vermelho; antes do protocolo o EIXO avisa se faltar dose ou hormônio.',
+        ],
+    },
+    {
+        id: 'reproducao-estacao-touros',
+        title: 'Estação de monta e touros (Reprodução)',
+        keywords: ['estacao de monta', 'estacao', 'touro', 'exame andrologico', 'fertilidade', 'inapto', 'lotacao', 'touro por vaca', 'repasse', 'retirar touro'],
+        href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
+        guidance: [
+            'A estação de monta é opcional: quem cobre o ano todo não cadastra nada e o EIXO usa os últimos 12 meses.',
+            'Na aba Estação de monta, informe nome, início, fim, tipo (monta natural, IATF ou IATF com repasse) e os lotes. O painel mostra fêmeas na estação, cobertas, diagnosticadas e prenhes, além dos dias que faltam.',
+            'A estação avisa quando há cobertura lançada fora do período e quando ela terminou com touro ainda no lote.',
+            'Na aba Touros, cada touro tem o exame de fertilidade (data, resultado, libido, perímetro e veterinário). O exame vale 12 meses.',
+            'Touro reprovado (inapto) sai do lote na hora, perde a função de reprodutor e vai para a lista de descarte; ele não pode voltar a lote.',
+            'O EIXO calcula sozinho quantas vacas cada lote suporta e mostra uma frase pronta, por exemplo "Lote 2: 1 touro para 55 vacas. Para este lote, o recomendado é até 48". Quando o número cai por falta de exame ou por idade do touro, o EIXO explica em palavras. Nunca bloqueia: lotação é decisão do produtor.',
         ],
     },
     {

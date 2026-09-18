@@ -232,3 +232,47 @@ test('botijão: alerta de medição e nível baixo; falta de dose', () => {
     assert.equal(faltaDose({ dosesDisponiveis: 30, vacas: 42 }), 12);
     assert.equal(faltaDose({ dosesDisponiveis: 50, vacas: 42 }), 0);
 });
+
+import { avaliarLotacao, capacidadeDoTouro, ciclicidadeDoLote, exameValido, fatorIdadeTouro } from './reproRules.js';
+
+const exame = (resultado, date = '2026-06-01') => ({ type: 'EXAME', date, resultado });
+
+test('capacidade: apto adulto em lote de paridas dá 52 vacas', () => {
+    const r = capacidadeDoTouro({ exames: [exame('APTO')], idadeMeses: 60, ciclicidade: 0.8, duracaoEstacao: 90 }, ref);
+    assert.equal(r.vacas, 52);
+    assert.equal(r.motivos.length, 0);
+});
+
+test('capacidade: sem exame e touro jovem cai para 16 e explica', () => {
+    const r = capacidadeDoTouro({ exames: [], idadeMeses: 30, ciclicidade: 0.8, duracaoEstacao: 90 }, ref);
+    assert.equal(r.vacas, 15);
+    assert.deepEqual(r.motivos, ['sem exame de fertilidade', 'é touro jovem']);
+});
+
+test('capacidade: inapto e menor de 2 anos ficam bloqueados; teto de 60', () => {
+    assert.equal(capacidadeDoTouro({ exames: [exame('INAPTO')], idadeMeses: 60 }, ref).bloqueado, true);
+    assert.equal(capacidadeDoTouro({ exames: [exame('APTO')], idadeMeses: 20 }, ref).bloqueado, true);
+    assert.equal(capacidadeDoTouro({ exames: [exame('SUPERIOR')], idadeMeses: 48, ciclicidade: 0.5 }, ref).vacas, 60);
+});
+
+test('exame vencido volta para a capacidade conservadora', () => {
+    const r = capacidadeDoTouro({ exames: [exame('SUPERIOR', '2024-01-01')], idadeMeses: 60, ciclicidade: 0.8 }, ref);
+    assert.ok(r.motivos.includes('exame de fertilidade vencido'));
+    assert.equal(r.vacas, 26);
+    assert.equal(exameValido([exame('APTO', '2026-06-01')], ref).valido, true);
+});
+
+test('ciclicidade e idade', () => {
+    assert.equal(ciclicidadeDoLote([{ categoria: 'Primípara', situacao: 'PARIDA' }, { categoria: 'Multípara', situacao: 'PARIDA' }]), 0.65);
+    assert.equal(fatorIdadeTouro(120), 0.7);
+});
+
+test('lotação: frase pronta, sem número de fórmula', () => {
+    const vacas = Array.from({ length: 55 }, () => ({ categoria: 'Multípara', situacao: 'PARIDA' }));
+    const r = avaliarLotacao({ lote: '2', vacas, touros: [{ brinco: 'T1', exames: [exame('APTO')], idadeMeses: 60 }], duracaoEstacao: 90 }, ref);
+    assert.equal(r.cor, 'AMARELO');
+    assert.ok(r.texto.startsWith('Lote 2: 1 touro(s) para 55 vaca(s).'));
+    assert.ok(!/0,8|×|21/.test(r.texto));
+    const semTouro = avaliarLotacao({ lote: '3', vacas, touros: [] }, ref);
+    assert.equal(semTouro.cor, 'AMARELO');
+});

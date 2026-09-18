@@ -287,6 +287,8 @@ model Farm {
   reproSettings           ReproSettings?
   reproDiagnosisSessions  ReproDiagnosisSession[]
   semenTanks              SemenTank[]
+  bullExams               BullExam[]
+  bullLots                BullLotAssignment[]
   reproProtocols          ReproProtocol[]
   iatfSessions            IatfSession[]
 }
@@ -348,6 +350,7 @@ model Lot {
 
   @@index([farmId])
   @@index([paddockId])
+  bullLots             BullLotAssignment[]
 }
 
 model Animal {
@@ -427,6 +430,8 @@ model Animal {
   nutritionAssignments NutritionAssignment[]
   paddockMoves         PaddockMove[]
   reproEvents          ReproEvent[]
+  bullExams            BullExam[]
+  bullLots             BullLotAssignment[]
   sanitaryRecords      SanitaryRecord[]
   sanitaryApplications SanitaryApplication[]
   sanitaryCases        SanitaryCase[]
@@ -627,11 +632,15 @@ model BreedingSeason {
   name            String
   startAt         DateTime
   endAt           DateTime
+  tipo            String?
+  lotIds          Json?
+  notes           String?
   createdAt       DateTime              @default(now())
   updatedAt       DateTime              @updatedAt
   farm            Farm                  @relation(fields: [farmId], references: [id], onDelete: Cascade)
   exposures       Exposure[]
   events          ReproEvent[]
+  bullLots        BullLotAssignment[]
 
   @@index([farmId, startAt])
 }
@@ -697,6 +706,52 @@ model ReproDiagnosisSession {
 
   @@unique([farmId, clientId])
   @@index([farmId, date])
+}
+
+// Exame andrológico (exame de fertilidade do touro).
+model BullExam {
+  id            String   @id @default(uuid())
+  farmId        String
+  animalId      String
+  date          DateTime
+  resultado     String
+  libido        String?
+  perimetroCm   Float?
+  vetName       String?
+  vetCrmv       String?
+  notes         String?
+  createdById   String?
+  createdAt     DateTime @default(now())
+  farm          Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  animal        Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@index([farmId, date])
+  @@index([animalId, date])
+}
+
+// Touro dentro de um lote, com entrada e saída.
+model BullLotAssignment {
+  id          String          @id @default(uuid())
+  farmId      String
+  animalId    String
+  lotId       String
+  seasonId    String?
+  startAt     DateTime
+  endAt       DateTime?
+  repasse     Boolean         @default(false)
+  ajustePct   Int?
+  notes       String?
+  createdById String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  farm        Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  animal      Animal          @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  lot         Lot             @relation(fields: [lotId], references: [id], onDelete: Cascade)
+  season      BreedingSeason? @relation(fields: [seasonId], references: [id])
+
+  @@index([farmId, startAt])
+  @@index([lotId, startAt])
+  @@index([animalId])
 }
 
 // Critérios da fazenda para a Reprodução. Decisão do produtor: nada vem preenchido.

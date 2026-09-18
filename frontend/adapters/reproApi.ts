@@ -494,3 +494,64 @@ export const lancarInseminacao = (farmId: string, sessaoId: string, body: Insemi
 
 export const apagarIatf = (farmId: string, sessaoId: string) =>
   request<{ ok: true }>(`${base(farmId)}/iatf/${encodeURIComponent(sessaoId)}`, { method: 'DELETE' });
+
+// ---------- Fase 6: estação de monta e touros ----------
+
+export interface Estacao {
+  id: string;
+  name: string;
+  startAt: string;
+  endAt: string;
+  tipo: string | null;
+  lotIds: string[];
+  notes: string | null;
+  duracaoDias: number | null;
+  emAndamento: boolean;
+  diasRestantes: number;
+  painel: { expostas: number; cobertas: number; diagnosticadas: number; prenhes: number };
+  alertas: { cor: string; texto: string }[];
+}
+
+export interface TouroFicha {
+  id: string;
+  brinco: string;
+  raca: string | null;
+  idadeMeses: number | null;
+  exame: { id: string; date: string; resultado: string; valido: boolean; vetName: string | null; libido: string | null; perimetroCm: number | null } | null;
+  inapto: boolean;
+  noLote: { id: string; lote: string; lotId: string; startAt: string; repasse: boolean } | null;
+  historico: { lote: string; startAt: string; endAt: string | null; repasse: boolean }[];
+}
+
+export interface LotacaoLote {
+  lotId: string;
+  lote: string;
+  cor: Cor;
+  texto: string;
+  vacas: number;
+  touros: number;
+}
+
+export const listarEstacoes = (farmId: string) =>
+  request<{ estacoes: Estacao[]; lotes: { id: string; name: string }[]; tipos: string[] }>(`${base(farmId)}/estacoes`);
+
+export const salvarEstacao = (farmId: string, body: Record<string, any>) =>
+  request<{ estacao: Estacao }>(`${base(farmId)}/estacoes`, { method: 'POST', body: JSON.stringify(body) });
+
+export const apagarEstacao = (farmId: string, id: string) =>
+  request<{ ok: true }>(`${base(farmId)}/estacoes/${encodeURIComponent(id)}`, { method: 'DELETE' });
+
+export const listarTouros = (farmId: string) =>
+  request<{ touros: TouroFicha[]; lotes: { id: string; name: string }[]; resultados: string[] }>(`${base(farmId)}/touros`);
+
+export const lancarExameTouro = (farmId: string, animalId: string, body: Record<string, any>) =>
+  request<{ exame: { id: string }; descartado: boolean }>(`${base(farmId)}/touros/${encodeURIComponent(animalId)}/exames`, { method: 'POST', body: JSON.stringify(body) });
+
+export const colocarTouroNoLote = (farmId: string, animalId: string, body: { lotId: string; startAt?: string; repasse?: boolean; seasonId?: string | null }) =>
+  request<{ alocacao: { id: string }; avisos: string[] }>(`${base(farmId)}/touros/${encodeURIComponent(animalId)}/lotes`, { method: 'POST', body: JSON.stringify(body) });
+
+export const tirarTouroDoLote = (farmId: string, alocacaoId: string, endAt?: string) =>
+  request<{ ok: true }>(`${base(farmId)}/touros/lotes/${encodeURIComponent(alocacaoId)}/saida`, { method: 'POST', body: JSON.stringify({ endAt }) });
+
+export const fetchLotacao = (farmId: string) =>
+  request<{ lotes: LotacaoLote[]; estacao: { id: string; name: string } | null }>(`${base(farmId)}/lotacao`);
