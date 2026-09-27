@@ -18,8 +18,9 @@ import {
     updateWeighing,
 } from '../adapters/herdApi';
 import { getCurrentNutrition } from '../adapters/nutritionApi';
-import { useOfflineQueue } from '../hooks/useOfflineQueue';
+import { useOfflineQueue, type OfflineQueueItem } from '../hooks/useOfflineQueue';
 import { buildApiUrl } from '../api';
+import OfflineRejectedItems from './OfflineRejectedItems';
 
 interface OfflineHerdEvent {
     animalId: string;
@@ -50,6 +51,7 @@ interface OfflineSanitaryRecord {
 
 interface AnimalDetailModalProps {
     animal: (Animal | HerdAnimal) | null;
+    currentUserId?: string | null;
     mode?: HerdType;
     herdType?: HerdType;
     onClose: () => void;
@@ -109,6 +111,7 @@ const CloseIcon: React.FC = () => (
 
 const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     animal,
+    currentUserId,
     mode,
     herdType,
     onClose,
@@ -117,24 +120,34 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const resolvedMode: HerdType = mode ?? herdType ?? 'COMMERCIAL';
     const animalBasePath = '/animals';
     const farmIdForOffline = (animal as any)?.farmId ?? null;
-    const sendOfflineEvent = async (item: OfflineHerdEvent) => {
-        await createHerdEvent(item.animalId, item.herdType, item);
+    const sendOfflineEvent = async (item: OfflineQueueItem<OfflineHerdEvent>) => {
+        await createHerdEvent(item.animalId, item.herdType, { ...item, clientRequestId: item.tempId });
     };
-    const sendOfflineSanitary = async (item: OfflineSanitaryRecord) => {
-        await createSanitaryRecord(item.animalId, item.herdType, item);
+    const sendOfflineSanitary = async (item: OfflineQueueItem<OfflineSanitaryRecord>) => {
+        await createSanitaryRecord(item.animalId, item.herdType, { ...item, clientRequestId: item.tempId });
     };
     const offlineEvents = useOfflineQueue<OfflineHerdEvent>('eixo:herd-events:offline:', farmIdForOffline, {
+        userId: currentUserId,
         autoSync: sendOfflineEvent,
         onSynced: (result) => {
             void loadHerdEvents();
-            setEventsOfflineNotice(`${result.sent} evento(s) sincronizado(s) com sucesso!`);
+            if (result.storageError) {
+                setEventsError('O evento chegou ao servidor, mas a fila do aparelho não pôde ser atualizada. Não envie novamente.');
+            } else {
+                setEventsOfflineNotice(`${result.sent} evento(s) sincronizado(s) com sucesso!`);
+            }
         },
     });
     const offlineSanitary = useOfflineQueue<OfflineSanitaryRecord>('eixo:sanitary:offline:', farmIdForOffline, {
+        userId: currentUserId,
         autoSync: sendOfflineSanitary,
         onSynced: (result) => {
             void loadSanitaryRecords();
-            setSanitaryOfflineNotice(`${result.sent} registro(s) sincronizado(s) com sucesso!`);
+            if (result.storageError) {
+                setSanitaryError('O registro chegou ao servidor, mas a fila do aparelho não pôde ser atualizada. Não envie novamente.');
+            } else {
+                setSanitaryOfflineNotice(`${result.sent} registro(s) sincronizado(s) com sucesso!`);
+            }
         },
     });
     const [activeTab, setActiveTab] = useState<ModalTab>('weighing');
@@ -187,6 +200,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const [eventDestino, setEventDestino] = useState('');
     const [eventObs, setEventObs] = useState('');
     const [isSavingEvent, setIsSavingEvent] = useState(false);
+    const [editingOfflineEventId, setEditingOfflineEventId] = useState<string | null>(null);
 
     // Manejo sanitário
     const [sanitaryRecords, setSanitaryRecords] = useState<SanitaryRecord[]>([]);
@@ -200,6 +214,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const [sanitaryProxima, setSanitaryProxima] = useState('');
     const [sanitaryObs, setSanitaryObs] = useState('');
     const [isSavingSanitary, setIsSavingSanitary] = useState(false);
+    const [editingOfflineSanitaryId, setEditingOfflineSanitaryId] = useState<string | null>(null);
 
     // Edição de dados básicos
     const [editBrinco, setEditBrinco] = useState('');
@@ -511,7 +526,11 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             saleType: eventType === 'VENDA' ? eventSaleType : undefined,
         };
         try {
-            const created = await createHerdEvent(animalId, resolvedMode, eventPayload);
+            const created = await createHerdEvent(animalId, resolvedMode, editingOfflineEventId
+                ? { ...eventPayload, clientRequestId: editingOfflineEventId }
+                : eventPayload);
+            if (editingOfflineEventId) await offlineEvents.remove(editingOfflineEventId);
+            setEditingOfflineEventId(null);
             setEventsWarning(created.aviso || null);
             setEventPeso('');
             setEventValor('');
@@ -523,7 +542,16 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             const isNetworkFailure = error instanceof TypeError
                 || (typeof navigator !== 'undefined' && navigator.onLine === false);
             if (isNetworkFailure) {
-                offlineEvents.enqueue(eventPayload);
+                const queued = editingOfflineEventId
+                    ? (await offlineEvents.update(editingOfflineEventId, eventPayload)
+                        ? { ok: true as const }
+                        : { ok: false as const, error: 'Não foi possível atualizar o registro salvo no celular.' })
+                    : await offlineEvents.enqueue(eventPayload);
+                if (!queued.ok) {
+                    setEventsError(queued.error);
+                    return;
+                }
+                setEditingOfflineEventId(null);
                 setEventPeso('');
                 setEventValor('');
                 setEventOrigem('');
@@ -541,7 +569,13 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const syncOfflineEvents = async () => {
         setEventsError(null);
         const result = await offlineEvents.sync(sendOfflineEvent);
-        if (result.pending > 0) {
+        if (result.storageError) {
+            setEventsError('O evento chegou ao servidor, mas a fila do aparelho não pôde ser atualizada. Não envie novamente.');
+            return;
+        }
+        if (result.rejected > 0) {
+            setEventsError(`${result.rejected} evento(s) precisam ser corrigidos ou descartados abaixo.`);
+        } else if (result.pending > 0) {
             setEventsError(`${result.sent} evento(s) sincronizado(s). ${result.pending} ainda sem internet.`);
         }
     };
@@ -554,14 +588,21 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         setIsSavingSanitary(true);
         setSanitaryError(null);
         try {
-            await createSanitaryRecord(animalId, resolvedMode, {
+            const sanitaryPayload: OfflineSanitaryRecord = {
+                animalId,
+                herdType: resolvedMode,
                 tipo: sanitaryTipo,
                 produto: sanitaryProduto,
                 date: sanitaryDate,
                 dose: sanitaryDose || undefined,
                 proximaAplicacao: sanitaryProxima || undefined,
                 observacoes: sanitaryObs || undefined,
-            });
+            };
+            await createSanitaryRecord(animalId, resolvedMode, editingOfflineSanitaryId
+                ? { ...sanitaryPayload, clientRequestId: editingOfflineSanitaryId }
+                : sanitaryPayload);
+            if (editingOfflineSanitaryId) await offlineSanitary.remove(editingOfflineSanitaryId);
+            setEditingOfflineSanitaryId(null);
             setSanitaryProduto('');
             setSanitaryDose('');
             setSanitaryProxima('');
@@ -571,7 +612,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
             const isNetworkFailure = error instanceof TypeError
                 || (typeof navigator !== 'undefined' && navigator.onLine === false);
             if (isNetworkFailure) {
-                offlineSanitary.enqueue({
+                const sanitaryPayload: OfflineSanitaryRecord = {
                     animalId,
                     herdType: resolvedMode,
                     tipo: sanitaryTipo,
@@ -580,7 +621,17 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                     dose: sanitaryDose || undefined,
                     proximaAplicacao: sanitaryProxima || undefined,
                     observacoes: sanitaryObs || undefined,
-                });
+                };
+                const queued = editingOfflineSanitaryId
+                    ? (await offlineSanitary.update(editingOfflineSanitaryId, sanitaryPayload)
+                        ? { ok: true as const }
+                        : { ok: false as const, error: 'Não foi possível atualizar o registro salvo no celular.' })
+                    : await offlineSanitary.enqueue(sanitaryPayload);
+                if (!queued.ok) {
+                    setSanitaryError(queued.error);
+                    return;
+                }
+                setEditingOfflineSanitaryId(null);
                 setSanitaryProduto('');
                 setSanitaryDose('');
                 setSanitaryProxima('');
@@ -597,7 +648,13 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
     const syncOfflineSanitary = async () => {
         setSanitaryError(null);
         const result = await offlineSanitary.sync(sendOfflineSanitary);
-        if (result.pending > 0) {
+        if (result.storageError) {
+            setSanitaryError('O registro chegou ao servidor, mas a fila do aparelho não pôde ser atualizada. Não envie novamente.');
+            return;
+        }
+        if (result.rejected > 0) {
+            setSanitaryError(`${result.rejected} registro(s) precisam ser corrigidos ou descartados abaixo.`);
+        } else if (result.pending > 0) {
             setSanitaryError(`${result.sent} registro(s) sincronizado(s). ${result.pending} ainda sem internet.`);
         }
     };
@@ -1163,14 +1220,35 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingEvent ? 'Salvando...' : 'Registrar evento'}
                                         </button>
                                     </form>
-                                    {offlineEvents.pendingCount > 0 && (
+                                    {offlineEvents.waitingCount > 0 && (
                                         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs text-[var(--eixo-text-muted)]">
-                                            <span>{offlineEvents.pendingCount} evento(s) salvo(s) no celular, aguardando internet.</span>
+                                            <span>{offlineEvents.waitingCount} evento(s) salvo(s) no celular, aguardando internet.</span>
                                             <button type="button" onClick={() => { void syncOfflineEvents(); }} className="rounded-lg bg-[var(--eixo-green)] px-2.5 py-1 font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]">
                                                 Sincronizar agora
                                             </button>
                                         </div>
                                     )}
+                                    <OfflineRejectedItems<OfflineQueueItem<OfflineHerdEvent>>
+                                        items={offlineEvents.rejectedItems.filter((item) => item.animalId === animalId)}
+                                        getLabel={(item) => `${EVENT_TYPE_LABELS[item.type] || item.type} de ${new Date(item.date).toLocaleDateString('pt-BR')}`}
+                                        onCorrect={(item) => {
+                                            setEventType(item.type);
+                                            setEventDate(item.date);
+                                            setEventPeso(item.peso == null ? '' : String(item.peso));
+                                            setEventValor(item.valor == null ? '' : String(item.valor));
+                                            setEventOrigem(item.origem || '');
+                                            setEventDestino(item.destino || '');
+                                            setEventObs(item.observacoes || '');
+                                            setEventPurchasePurpose(item.purchasePurpose || 'PRODUCTION');
+                                            setEventSaleType(item.saleType || 'ABATE');
+                                            setEditingOfflineEventId(item.tempId);
+                                            setEventsError('Corrija os dados acima e registre novamente.');
+                                        }}
+                                        onDiscard={(tempId) => {
+                                            void offlineEvents.remove(tempId);
+                                            if (editingOfflineEventId === tempId) setEditingOfflineEventId(null);
+                                        }}
+                                    />
                                     {eventsOfflineNotice && <p className="mb-4 text-sm text-[var(--eixo-success)]">{eventsOfflineNotice}</p>}
                                     {eventsWarning && <p role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800">{eventsWarning}</p>}
                                     {eventsError && <p className="mb-4 text-sm text-[var(--eixo-danger)]">{eventsError}</p>}
@@ -1236,14 +1314,32 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                             {isSavingSanitary ? 'Salvando...' : 'Registrar'}
                                         </button>
                                     </form>
-                                    {offlineSanitary.pendingCount > 0 && (
+                                    {offlineSanitary.waitingCount > 0 && (
                                         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs text-[var(--eixo-text-muted)]">
-                                            <span>{offlineSanitary.pendingCount} registro(s) salvo(s) no celular, aguardando internet.</span>
+                                            <span>{offlineSanitary.waitingCount} registro(s) salvo(s) no celular, aguardando internet.</span>
                                             <button type="button" onClick={() => { void syncOfflineSanitary(); }} className="rounded-lg bg-[var(--eixo-green)] px-2.5 py-1 font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]">
                                                 Sincronizar agora
                                             </button>
                                         </div>
                                     )}
+                                    <OfflineRejectedItems<OfflineQueueItem<OfflineSanitaryRecord>>
+                                        items={offlineSanitary.rejectedItems.filter((item) => item.animalId === animalId)}
+                                        getLabel={(item) => `${SANITARY_TIPO_LABELS[item.tipo] || item.tipo}: ${item.produto}`}
+                                        onCorrect={(item) => {
+                                            setSanitaryTipo(item.tipo);
+                                            setSanitaryProduto(item.produto);
+                                            setSanitaryDate(item.date);
+                                            setSanitaryDose(item.dose || '');
+                                            setSanitaryProxima(item.proximaAplicacao || '');
+                                            setSanitaryObs(item.observacoes || '');
+                                            setEditingOfflineSanitaryId(item.tempId);
+                                            setSanitaryError('Corrija os dados acima e registre novamente.');
+                                        }}
+                                        onDiscard={(tempId) => {
+                                            void offlineSanitary.remove(tempId);
+                                            if (editingOfflineSanitaryId === tempId) setEditingOfflineSanitaryId(null);
+                                        }}
+                                    />
                                     {sanitaryOfflineNotice && <p className="mb-4 text-sm text-[var(--eixo-success)]">{sanitaryOfflineNotice}</p>}
                                     {sanitaryError && <p className="mb-4 text-sm text-[var(--eixo-danger)]">{sanitaryError}</p>}
                                     {isLoadingSanitary ? (

@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useOfflineQueue } from '../hooks/useOfflineQueue';
+import { useOfflineQueue, type OfflineQueueItem } from '../hooks/useOfflineQueue';
+import OfflineRejectedItems from './OfflineRejectedItems';
 import {
     AcaoVaca,
     LancamentoCurral,
-    ReproApiError,
     VacaCurralUnico,
     baixarCurral,
     enviarLancamento,
@@ -39,34 +39,32 @@ type Passo = { acao: AcaoVaca; vaca: VacaCurralUnico } | null;
 
 export const CurralUnico: React.FC<{
     farmId: string;
+    currentUserId?: string | null;
     lotes: { id: string; name: string }[];
     onErro: (m: string | null) => void;
     onAviso: (m: string | null) => void;
-}> = ({ farmId, lotes, onErro, onAviso }) => {
-    const chave = `eixo:repro:curral:${farmId}`;
+}> = ({ farmId, currentUserId, lotes, onErro, onAviso }) => {
+    const chave = `eixo:repro:curral:${currentUserId || 'none'}:${farmId}`;
     const [cache, setCache] = useState<{ baixadoEm: string | null; vacas: VacaCurralUnico[] }>(() => lerLocal(chave, { baixadoEm: null, vacas: [] }));
     const [ident, setIdent] = useState('');
     const [passo, setPasso] = useState<Passo>(null);
+    const [correcaoOffline, setCorrecaoOffline] = useState<OfflineQueueItem<LancamentoCurral> | null>(null);
     const [feitos, setFeitos] = useState<string[]>([]);
-    const [recusas, setRecusas] = useState<string[]>([]);
     const [baixando, setBaixando] = useState(false);
     const identRef = useRef<HTMLInputElement | null>(null);
 
     const enviar = async (item: LancamentoCurral) => {
-        try {
-            const r = await enviarLancamento(farmId, item);
-            if (r.avisos?.length) onAviso(`${item.brinco}: ${r.avisos.join(' ')}`);
-        } catch (e) {
-            // Erro de conteúdo não adianta repetir: sai da fila e aparece na tela.
-            if (e instanceof ReproApiError && e.status >= 400 && e.status < 500) {
-                setRecusas((x) => [...x, `${item.brinco}: ${e.message}`]);
-                return;
-            }
-            throw e;
-        }
+        const r = await enviarLancamento(farmId, item);
+        if (r.avisos?.length) onAviso(`${item.brinco}: ${r.avisos.join(' ')}`);
     };
 
-    const fila = useOfflineQueue<LancamentoCurral>('eixo:repro:curral:fila:', farmId, { autoSync: enviar });
+    const fila = useOfflineQueue<LancamentoCurral>('eixo:repro:curral:fila:', farmId, {
+        userId: currentUserId,
+        autoSync: enviar,
+        onSynced: (result) => {
+            if (result.storageError) onErro('O lançamento chegou ao servidor, mas a fila do aparelho não pôde ser atualizada. Não envie novamente.');
+        },
+    });
 
     const baixar = useCallback(async () => {
         setBaixando(true);
@@ -91,7 +89,17 @@ export const CurralUnico: React.FC<{
     const vaca = ident ? porIdent.get(norm(ident)) : undefined;
 
     const lancar = async (item: LancamentoCurral, frase: string) => {
-        fila.enqueue(item);
+        const payload = correcaoOffline ? { ...item, clientId: correcaoOffline.clientId } : item;
+        const queued = correcaoOffline
+            ? (await fila.update(correcaoOffline.tempId, payload)
+                ? { ok: true as const }
+                : { ok: false as const, error: 'Não foi possível atualizar o lançamento salvo no celular.' })
+            : await fila.enqueue(payload);
+        if (!queued.ok) {
+            onErro(queued.error);
+            return;
+        }
+        setCorrecaoOffline(null);
         setFeitos((f) => [frase, ...f].slice(0, 6));
         setPasso(null);
         setIdent('');
@@ -107,18 +115,38 @@ export const CurralUnico: React.FC<{
                     <p className="font-semibold">{cache.vacas.length} vaca(s) no celular</p>
                     <p className="text-xs text-[var(--eixo-text-muted)]">
                         {cache.baixadoEm ? `Baixadas em ${new Date(cache.baixadoEm).toLocaleString('pt-BR')}` : 'Baixe antes de ir ao curral.'}
-                        {fila.items.length > 0 ? ` · ${fila.items.length} lançamento(s) esperando internet` : ''}
+                        {fila.waitingCount > 0 ? ` · ${fila.waitingCount} lançamento(s) esperando internet` : ''}
                     </p>
                 </div>
                 <div className="flex gap-2">
-                    {fila.items.length > 0 && <button type="button" className={secondaryButton} onClick={() => void fila.sync(enviar)}>Enviar agora</button>}
+                    {fila.waitingCount > 0 && <button type="button" className={secondaryButton} onClick={() => void fila.sync(enviar)}>Enviar agora</button>}
                     <button type="button" className={secondaryButton} disabled={baixando} onClick={baixar}>{baixando ? 'Baixando…' : 'Baixar vacas'}</button>
                 </div>
             </div>
 
-            {recusas.length > 0 && (
-                <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{recusas.map((r) => <p key={r}>{r}</p>)}</div>
-            )}
+            <OfflineRejectedItems<OfflineQueueItem<LancamentoCurral>>
+                items={fila.rejectedItems}
+                getLabel={(item) => `${item.brinco} · ${item.tipo}`}
+                onCorrect={(item) => {
+                    const target = cache.vacas.find((candidate) => candidate.id === item.animalId);
+                    const action = target?.acoes.find((candidate) => candidate.tipo === item.tipo);
+                    if (!target || !action) {
+                        onErro('Baixe novamente as vacas para corrigir este lançamento.');
+                        return;
+                    }
+                    setIdent(item.brinco);
+                    setPasso({ vaca: target, acao: action });
+                    setCorrecaoOffline(item);
+                    onAviso('Lançamento carregado para correção. Confira e salve novamente.');
+                }}
+                onDiscard={(tempId) => {
+                    void fila.remove(tempId);
+                    if (correcaoOffline?.tempId === tempId) {
+                        setCorrecaoOffline(null);
+                        setPasso(null);
+                    }
+                }}
+            />
 
             {!passo && (
                 <div className={`${cardClass} space-y-3`}>
@@ -141,7 +169,10 @@ export const CurralUnico: React.FC<{
                             <div className="space-y-2">
                                 {vaca.acoes.map((a) => (
                                     <button key={a.tipo} type="button" className={a.tipo === 'DESCARTE' ? `${botaoGrande} text-red-700` : botaoGrande}
-                                        onClick={() => setPasso({ acao: a, vaca })}>
+                                        onClick={() => {
+                                            setCorrecaoOffline(null);
+                                            setPasso({ acao: a, vaca });
+                                        }}>
                                         {a.titulo}
                                         <span className="block text-sm font-normal text-[var(--eixo-text-muted)]">{a.ajuda}</span>
                                     </button>
@@ -160,7 +191,17 @@ export const CurralUnico: React.FC<{
                 </div>
             )}
 
-            {passo && <FormPasso passo={passo} lotes={lotes} onVoltar={() => setPasso(null)} onLancar={lancar} />}
+            {passo && <FormPasso
+                key={correcaoOffline?.tempId || `${passo.vaca.id}:${passo.acao.tipo}`}
+                passo={passo}
+                lotes={lotes}
+                initialItem={correcaoOffline}
+                onVoltar={() => {
+                    setPasso(null);
+                    setCorrecaoOffline(null);
+                }}
+                onLancar={lancar}
+            />}
         </div>
     );
 };
@@ -168,16 +209,18 @@ export const CurralUnico: React.FC<{
 const FormPasso: React.FC<{
     passo: NonNullable<Passo>;
     lotes: { id: string; name: string }[];
+    initialItem?: LancamentoCurral | null;
     onVoltar: () => void;
     onLancar: (item: LancamentoCurral, frase: string) => void;
-}> = ({ passo, lotes, onVoltar, onLancar }) => {
+}> = ({ passo, lotes, initialItem, onVoltar, onLancar }) => {
     const { acao, vaca } = passo;
-    const [dados, setDados] = useState<Record<string, any>>({ sexo: 'MACHO', vivo: true, tipoParto: 'NORMAL' });
+    const [dados, setDados] = useState<Record<string, any>>({ sexo: 'MACHO', vivo: true, tipoParto: 'NORMAL', ...(initialItem?.dados || {}) });
+    const [data, setData] = useState(initialItem?.data || hoje());
     const set = (campo: string, valor: any) => setDados((d) => ({ ...d, [campo]: valor }));
 
     const enviar = (extra: Record<string, any>, frase: string) => {
         onLancar(
-            { clientId: crypto.randomUUID(), animalId: vaca.id, brinco: vaca.brinco, tipo: acao.tipo, data: hoje(), dados: { ...dados, ...extra } },
+            { clientId: initialItem?.clientId || crypto.randomUUID(), animalId: vaca.id, brinco: vaca.brinco, tipo: acao.tipo, data, dados: { ...dados, ...extra } },
             `${vaca.brinco}: ${frase}`,
         );
     };
@@ -188,6 +231,8 @@ const FormPasso: React.FC<{
                 <p className="text-sm text-[var(--eixo-text-muted)]">{vaca.brinco} · {vaca.resumo}</p>
                 <h3 className="text-xl font-bold">{acao.titulo}</h3>
             </div>
+            <label className="block"><span className={labelClass}>Data</span>
+                <input type="date" className={inputClass} value={data} max={hoje()} onChange={(e) => setData(e.target.value)} /></label>
 
             {acao.tipo === 'DIAGNOSTICO' && (
                 <>
@@ -201,11 +246,11 @@ const FormPasso: React.FC<{
                         <summary className="cursor-pointer text-sm text-[var(--eixo-text-muted)]">Anotar mais (opcional)</summary>
                         <div className="mt-2 grid gap-3 sm:grid-cols-3">
                             <label><span className={labelClass}>Dias de gestação</span>
-                                <input type="number" inputMode="numeric" className={inputClass} onChange={(e) => set('diasGestacao', e.target.value ? Number(e.target.value) : null)} /></label>
+                                <input type="number" inputMode="numeric" className={inputClass} value={dados.diasGestacao ?? ''} onChange={(e) => set('diasGestacao', e.target.value ? Number(e.target.value) : null)} /></label>
                             <label><span className={labelClass}>ECC (1 a 5)</span>
-                                <input type="number" inputMode="decimal" min={1} max={5} step={0.25} className={inputClass} onChange={(e) => set('ecc', e.target.value ? Number(e.target.value) : null)} /></label>
+                                <input type="number" inputMode="decimal" min={1} max={5} step={0.25} className={inputClass} value={dados.ecc ?? ''} onChange={(e) => set('ecc', e.target.value ? Number(e.target.value) : null)} /></label>
                             <label><span className={labelClass}>Veterinário</span>
-                                <input className={inputClass} onChange={(e) => set('veterinario', e.target.value)} /></label>
+                                <input className={inputClass} value={dados.veterinario || ''} onChange={(e) => set('veterinario', e.target.value)} /></label>
                         </div>
                     </details>
                 </>
@@ -232,7 +277,7 @@ const FormPasso: React.FC<{
                             </div>
                         </div>
                         <label><span className={labelClass}>Peso ao nascer (opcional)</span>
-                            <input type="number" inputMode="decimal" min={1} max={99} className={inputClass} onChange={(e) => set('peso', e.target.value)} /></label>
+                            <input type="number" inputMode="decimal" min={1} max={99} className={inputClass} value={dados.peso ?? ''} onChange={(e) => set('peso', e.target.value)} /></label>
                     </div>
                     <button type="button" className={primaryButton}
                         onClick={() => enviar({ crias: [{ sexo: dados.sexo, vivo: dados.vivo, peso: dados.peso || null }] }, dados.vivo ? 'pariu' : 'pariu (cria morta)')}>
@@ -244,9 +289,9 @@ const FormPasso: React.FC<{
             {acao.tipo === 'DESMAMA' && (
                 <>
                     <label className="block"><span className={labelClass}>Peso do bezerro {vaca.bezerroPronto ? `(${vaca.bezerroPronto.brinco})` : ''}</span>
-                        <input type="number" inputMode="decimal" min={1} autoFocus className={`${inputClass} text-2xl font-bold`} onChange={(e) => set('peso', e.target.value)} /></label>
+                        <input type="number" inputMode="decimal" min={1} autoFocus className={`${inputClass} text-2xl font-bold`} value={dados.peso ?? ''} onChange={(e) => set('peso', e.target.value)} /></label>
                     <label className="block"><span className={labelClass}>Mandar para o lote (opcional)</span>
-                        <select className={inputClass} onChange={(e) => set('lotId', e.target.value || null)}>
+                        <select className={inputClass} value={dados.lotId || ''} onChange={(e) => set('lotId', e.target.value || null)}>
                             <option value="">Não mudar</option>
                             {lotes.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
                         </select></label>
@@ -260,9 +305,9 @@ const FormPasso: React.FC<{
             {acao.tipo === 'COBERTURA' && (
                 <>
                     <label className="block"><span className={labelClass}>Qual touro?</span>
-                        <input autoFocus className={`${inputClass} text-xl`} onChange={(e) => set('touro', e.target.value)} /></label>
+                        <input autoFocus className={`${inputClass} text-xl`} value={dados.touro || ''} onChange={(e) => set('touro', e.target.value)} /></label>
                     <button type="button" className={primaryButton} disabled={!dados.touro}
-                        onClick={() => enviar({ inicio: hoje() }, `solta com o touro ${dados.touro}`)}>
+                        onClick={() => enviar({ inicio: data }, `solta com o touro ${dados.touro}`)}>
                         Salvar
                     </button>
                 </>
@@ -280,7 +325,7 @@ const FormPasso: React.FC<{
             {acao.tipo === 'DESCARTE' && (
                 <>
                     <label className="block"><span className={labelClass}>Motivo</span>
-                        <select className={inputClass} onChange={(e) => set('motivo', e.target.value)}>
+                        <select className={inputClass} value={dados.motivo || ''} onChange={(e) => set('motivo', e.target.value)}>
                             <option value="">Escolha</option>
                             {['Vazia', 'Vazia repetida', 'Aborto', 'Intervalo entre partos longo', 'Bezerro leve', 'Idade/dentição', 'Úbere', 'Casco/aprumo', 'Temperamento', 'Doença', 'Outro'].map((m) => (
                                 <option key={m} value={m}>{m}</option>

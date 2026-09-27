@@ -36,6 +36,7 @@ export interface PreviewLinha {
     /** avisos não bloqueiam a linha — informam algo que o sistema assumiu (ex.: dia da pesagem). */
     avisos?: string[];
     dados: Record<string, unknown>;
+    conflito?: { animalId: string; farmId: string; farmName?: string | null } | null;
     /** marcada localmente quando o usuário edita alguma célula */
     editada?: boolean;
 }
@@ -45,6 +46,7 @@ interface ImportPreviewTableProps {
     catalogos: PreviewCatalogos;
     onChange: (linhas: PreviewLinha[]) => void;
     disabled?: boolean;
+    onOpenExistingAnimal?: (farmId: string, animalId: string) => void;
 }
 
 type StatusLinha = 'pronto' | 'revisao' | 'erro';
@@ -146,6 +148,7 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
     catalogos,
     onChange,
     disabled = false,
+    onOpenExistingAnimal,
 }) => {
     const [soComProblema, setSoComProblema] = useState(false);
 
@@ -181,6 +184,7 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                 editada: true,
                 dados: { ...linha.dados, [key]: valor },
                 identificacao: key === 'identificacao' ? valor : linha.identificacao,
+                conflito: key === 'identificacao' ? null : linha.conflito,
             };
         });
         onChange(proximas);
@@ -391,6 +395,17 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                                                     {linha.motivos.map((motivo, i) => (
                                                         <li key={i}>{motivo}</li>
                                                     ))}
+                                                    {linha.conflito && onOpenExistingAnimal && status !== 'revisao' && (
+                                                        <li className="pt-1">
+                                                            <button
+                                                                type="button"
+                                                                className="font-semibold text-[var(--eixo-green-dark)] underline underline-offset-2"
+                                                                onClick={() => onOpenExistingAnimal(linha.conflito!.farmId, linha.conflito!.animalId)}
+                                                            >
+                                                                Acessar animal na {linha.conflito.farmName || 'fazenda informada'}
+                                                            </button>
+                                                        </li>
+                                                    )}
                                                 </ul>
                                             ) : linha.avisos && linha.avisos.length > 0 ? (
                                                 <ul className="min-w-[12rem] space-y-0.5 text-[var(--eixo-text-muted)]">

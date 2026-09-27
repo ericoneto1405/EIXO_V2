@@ -1,7 +1,8 @@
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
-import { requireAuth, requireNonFieldWorker, requireModule } from '../middlewares/requireAuth.js';
-import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
+import { requireAuth, requireNonFieldWorker, requireModule, requireOrganizationOwner } from '../middlewares/requireAuth.js';
+import { asyncRoute } from '../middlewares/errorHandler.js';
+import { buildFarmScopeFilter, buildFarmRelationFilter, buildFarmAccountFilter } from '../middlewares/farmScope.js';
 import {
     parseNumber, parseDateValue, parseInteger,
     normalizeSexo, formatSexoLabel,
@@ -24,6 +25,11 @@ import { normalizarCategoriaParaGravar } from '../herd/animalCategories.js';
 import { registerNutritionModuleRoutes } from '../../nutritionModule.js';
 import { registerAcasalamentoRoutes } from '../../acasalamentoModule.js';
 const prisma = new PrismaClient();
+
+const hasInvalidOptionalText = (value) => value !== undefined && value !== null && typeof value !== 'string';
+const hasInvalidClientRequestId = (value) => value !== undefined
+    && value !== null
+    && (typeof value !== 'string' || !value.trim() || value.length > 100);
 
 const findInventoryAnimal = async ({ id, farmId }) => {
     if (!id) {
@@ -1563,9 +1569,10 @@ app.get('/nutrition/plans', async (req, res) => {
     }
 });
 
-app.post('/nutrition/plans', async (req, res) => {
+app.post('/nutrition/plans', asyncRoute(async (req, res) => {
     const { farmId, nome, fase, startAt, endAt, metaGmd, observacoes } = req.body || {};
-    if (!farmId || !nome?.trim() || !startAt) {
+    if ([farmId, nome, fase, startAt, endAt, observacoes].some(hasInvalidOptionalText)
+        || !farmId || !nome?.trim() || !startAt) {
         return res.status(400).json({ message: 'Dados obrigatórios do plano ausentes.' });
     }
     const parsedStart = parseDateValue(startAt);
@@ -1617,7 +1624,7 @@ app.post('/nutrition/plans', async (req, res) => {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar plano.' });
     }
-});
+}));
 
 app.patch('/nutrition/plans/:id', async (req, res) => {
     const { id } = req.params;
@@ -1956,7 +1963,10 @@ app.get('/animals', requireAuth, async (req, res) => {
         let matrizesComParto = new Set();
         if (femeaIds.length) {
             const crias = await prisma.animal.findMany({
-                where: { maeId: { in: femeaIds } },
+                where: {
+                    maeId: { in: femeaIds },
+                    farm: buildFarmAccountFilter(farm),
+                },
                 select: { maeId: true },
                 distinct: ['maeId'],
             });
@@ -1981,7 +1991,7 @@ app.get('/animals', requireAuth, async (req, res) => {
     }
 });
 
-app.post('/animals', requireAuth, async (req, res) => {
+app.post('/animals', requireAuth, asyncRoute(async (req, res) => {
     const { farmId, lotId, brinco, raca, sexo, dataNascimento, ultimoPeso, paddockId, paddockStartAt, valorCompra, dataCompra, tipoCadastro,
             tatuagem, sisbov, maeId, maeNome, paiId, paiNome,
             nome, brincoEletronico, padraoRacial, tipoRaca, composicaoMestica, racaPredominante,
@@ -1990,7 +2000,17 @@ app.post('/animals', requireAuth, async (req, res) => {
         return res.status(400).json({ message: 'Campo inválido: use "ultimoPeso" no lugar de "pesoAtual".' });
     }
 
-    if (!farmId || !brinco?.trim() || !raca?.trim() || !sexo) {
+    const optionalTextFields = [
+        farmId, lotId, dataNascimento, paddockId, paddockStartAt, dataCompra, tipoCadastro,
+        tatuagem, sisbov, maeId, maeNome, paiId, paiNome, nome, brincoEletronico,
+        padraoRacial, tipoRaca, composicaoMestica, racaPredominante, funcaoReprodutiva,
+        statusReprodutivo, previsaoParto, observacoes, categoria,
+    ];
+    if (optionalTextFields.some(hasInvalidOptionalText)) {
+        return res.status(400).json({ message: 'Os campos de texto do animal possuem formato inválido.' });
+    }
+    if (typeof brinco !== 'string' || typeof raca !== 'string' || typeof sexo !== 'string'
+        || !farmId || !brinco.trim() || !raca.trim() || !sexo.trim()) {
         return res.status(400).json({ message: 'Dados obrigatórios do animal ausentes.' });
     }
     // paddockId é opcional — animais podem ser importados sem pasto e alocados depois
@@ -2054,8 +2074,29 @@ app.post('/animals', requireAuth, async (req, res) => {
         }
 
         // Resolver maeId/paiId por brinco se não vier como UUID direto
-        let resolvedMaeId = maeId || null;
-        let resolvedPaiId = paiId || null;
+        let resolvedMaeId = null;
+        let resolvedPaiId = null;
+        const parentFarmFilter = buildFarmAccountFilter(farm);
+        if (maeId) {
+            const maeAnimal = await prisma.animal.findFirst({
+                where: { id: maeId, farm: parentFarmFilter },
+                select: { id: true },
+            });
+            if (!maeAnimal) {
+                return res.status(400).json({ message: 'Genitor inválido para esta conta.' });
+            }
+            resolvedMaeId = maeAnimal.id;
+        }
+        if (paiId) {
+            const paiAnimal = await prisma.animal.findFirst({
+                where: { id: paiId, farm: parentFarmFilter },
+                select: { id: true },
+            });
+            if (!paiAnimal) {
+                return res.status(400).json({ message: 'Genitor inválido para esta conta.' });
+            }
+            resolvedPaiId = paiAnimal.id;
+        }
         if (!resolvedMaeId && maeNome?.trim()) {
             const maeAnimal = await prisma.animal.findFirst({ where: { farmId, brinco: maeNome.trim() } });
             if (maeAnimal) resolvedMaeId = maeAnimal.id;
@@ -2169,7 +2210,7 @@ app.post('/animals', requireAuth, async (req, res) => {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar animal.' });
     }
-});
+}));
 
 // ── Registrar nascimento — fluxo dedicado ─────────────────────────────────────
 // Cria o bezerro puxando raça e pasto da mãe automaticamente quando possível
@@ -2596,7 +2637,7 @@ app.post('/animals/batch', requireAuth, async (req, res) => {
 
 // ── Ações em massa ────────────────────────────────────────────────────────────
 
-app.post('/animals/bulk-delete', requireAuth, async (req, res) => {
+app.post('/animals/bulk-delete', requireAuth, requireOrganizationOwner, asyncRoute(async (req, res) => {
     const { ids } = req.body || {};
     if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ message: 'Informe ao menos um animal.' });
@@ -2614,13 +2655,22 @@ app.post('/animals/bulk-delete', requireAuth, async (req, res) => {
         if (new Set(animals.map((animal) => animal.farmId)).size !== 1) {
             return res.status(400).json({ message: 'Selecione animais de apenas uma fazenda.' });
         }
-        await prisma.animal.deleteMany({ where: { id: { in: ids.map(String) } } });
+        await prisma.$transaction(async (tx) => {
+            await tx.animal.deleteMany({ where: { id: { in: ids.map(String) } } });
+            await logActivity(tx, req, {
+                action: 'ANIMAIS_EXCLUIDOS',
+                entity: 'Animal',
+                description: `Excluiu ${ids.length} animal(is) e os históricos vinculados`,
+                farmId: animals[0].farmId,
+                required: true,
+            });
+        });
         return res.json({ deleted: ids.length });
     } catch (error) {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao excluir animais.' });
     }
-});
+}));
 
 app.post('/animals/bulk-move-lot', requireAuth, async (req, res) => {
     const { ids, lotId } = req.body || {};
@@ -2802,8 +2852,13 @@ app.get('/animals/:id/pesagens', async (req, res) => {
 
 app.post('/animals/:id/pesagens', requireAuth, async (req, res) => {
     const { id } = req.params;
-    const { data, peso, forceReplace } = req.body || {};
+    const { data, peso, forceReplace, clientRequestId } = req.body || {};
     const weighingSessionId = req.body?.weighingSessionId ?? null;
+
+    if (hasInvalidClientRequestId(clientRequestId)) {
+        return res.status(400).json({ message: 'Identificador da operação inválido.' });
+    }
+    const normalizedClientRequestId = typeof clientRequestId === 'string' ? clientRequestId.trim() : null;
 
     const weighingDate = parseDateValue(data);
     if (!weighingDate) {
@@ -2821,6 +2876,22 @@ app.post('/animals/:id/pesagens', requireAuth, async (req, res) => {
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
+        }
+        if (normalizedClientRequestId) {
+            const existingWeighing = await prisma.weighing.findFirst({
+                where: { clientRequestId: normalizedClientRequestId, animalId: id },
+            });
+            if (existingWeighing) {
+                return res.status(200).json({
+                    pesagem: {
+                        id: existingWeighing.id,
+                        data: existingWeighing.data.toISOString(),
+                        peso: existingWeighing.peso,
+                        gmd: existingWeighing.gmd,
+                        weighingSessionId: existingWeighing.weighingSessionId,
+                    },
+                });
+            }
         }
 
         let validWeighingSessionId = null;
@@ -2864,6 +2935,7 @@ app.post('/animals/:id/pesagens', requireAuth, async (req, res) => {
                     data: weighingDate,
                     peso: parsedPeso,
                     gmd: gmdValue,
+                    clientRequestId: normalizedClientRequestId,
                     ...(validWeighingSessionId ? { weighingSessionId: validWeighingSessionId } : {}),
                 },
             });
@@ -2908,6 +2980,23 @@ app.post('/animals/:id/pesagens', requireAuth, async (req, res) => {
             },
         });
     } catch (error) {
+        if (error?.code === 'P2002' && normalizedClientRequestId) {
+            const existingWeighing = await prisma.weighing.findFirst({
+                where: { clientRequestId: normalizedClientRequestId, animalId: id },
+            });
+            if (existingWeighing) {
+                return res.status(200).json({
+                    pesagem: {
+                        id: existingWeighing.id,
+                        data: existingWeighing.data.toISOString(),
+                        peso: existingWeighing.peso,
+                        gmd: existingWeighing.gmd,
+                        weighingSessionId: existingWeighing.weighingSessionId,
+                    },
+                });
+            }
+            return res.status(409).json({ message: 'Esta operação já foi processada.' });
+        }
         if (error?.code === 'P2002') {
             return res.status(409).json({ message: 'Já existe pesagem cadastrada nesta data.' });
         }

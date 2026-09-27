@@ -32,6 +32,7 @@ import {
 } from '../adapters/nutritionApi';
 
 interface FeedsUser {
+    id?: string;
     name?: string;
     roles?: string[];
     membershipRole?: string | null;
@@ -257,10 +258,13 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
         return roles.some((role) => ['admin', 'manager', 'gerente', 'tech', 'tecnico', 'técnico'].includes(String(role).toLowerCase()));
     }, [currentUser]);
 
-    const offlineStorageKey = React.useMemo(() => `${OFFLINE_PREFIX}${farmId || 'none'}`, [farmId]);
+    const offlineStorageKey = React.useMemo(
+        () => `${OFFLINE_PREFIX}${currentUser?.id || 'none'}:${farmId || 'none'}`,
+        [currentUser?.id, farmId],
+    );
 
     const loadLots = React.useCallback(async () => {
-        if (!farmId) {
+        if (!farmId || !currentUser?.id) {
             setLots([]);
             return;
         }
@@ -288,12 +292,13 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
         } catch {
             setOfflineReadings([]);
         }
-    }, [farmId, offlineStorageKey]);
+    }, [currentUser?.id, farmId, offlineStorageKey]);
 
     const saveOfflineReadings = React.useCallback((items: OfflineReading[]) => {
+        if (!farmId || !currentUser?.id) return;
         window.localStorage.setItem(offlineStorageKey, JSON.stringify(items));
         setOfflineReadings(items);
-    }, [offlineStorageKey]);
+    }, [currentUser?.id, farmId, offlineStorageKey]);
 
     const loadAll = React.useCallback(async () => {
         if (!farmId) {

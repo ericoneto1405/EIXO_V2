@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { requireAuth, requireNonFieldWorker } from '../middlewares/requireAuth.js';
 import { requireBillingAccess } from '../middlewares/requireAuth.js';
+import { asyncRoute } from '../middlewares/errorHandler.js';
 import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
 import { parseCoordinate, validateCoordinatePair, parseFarmLocation } from '../utils/validators.js';
 import { parseNumber, parseDateValue } from '../utils/formatters.js';
@@ -13,6 +14,7 @@ import { serializeAnimal } from '../utils/serializers.js';
 import { REPRO_WINDOW_DAYS } from '../config/env.js';
 import { calculateActivePaddockArea, hasActivePaddock, hasDuplicatePaddockNames } from './farmRules.js';
 const prisma = new PrismaClient();
+const hasInvalidOptionalText = (value) => value !== undefined && value !== null && typeof value !== 'string';
 
 // Tudo que indica uso real da fazenda (não configuração). Se qualquer um desses
 // tiver registro, a fazenda tem histórico e nunca pode ser excluída — nem pelo
@@ -600,8 +602,11 @@ app.get('/pastos', async (req, res) => {
     }
 });
 
-app.post('/pastos', requireNonFieldWorker, async (req, res) => {
+app.post('/pastos', requireNonFieldWorker, asyncRoute(async (req, res) => {
     const { farmId, nome, name, areaHa, size, capacity, ativo, active, divisionType, type, forrageira, lotacaoUaHa, sistemaPastejo, diasDescanso } = req.body || {};
+    if ([farmId, nome, name, divisionType, type, forrageira, sistemaPastejo].some(hasInvalidOptionalText)) {
+        return res.status(400).json({ message: 'Os campos de texto do pasto possuem formato inválido.' });
+    }
     const paddockName = (nome || name || '').trim();
     if (!farmId || !paddockName) {
         return res.status(400).json({ message: 'Informe fazenda e nome do pasto.' });
@@ -669,7 +674,7 @@ app.post('/pastos', requireNonFieldWorker, async (req, res) => {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar pasto.' });
     }
-});
+}));
 
 app.patch('/pastos/:id', requireNonFieldWorker, async (req, res) => {
     const { id } = req.params;
@@ -813,9 +818,9 @@ app.get('/seasons', async (req, res) => {
     }
 });
 
-app.post('/seasons', async (req, res) => {
+app.post('/seasons', asyncRoute(async (req, res) => {
     const { farmId, name, startAt, endAt } = req.body || {};
-    if (!farmId || !name?.trim()) {
+    if (typeof farmId !== 'string' || typeof name !== 'string' || !name.trim()) {
         return res.status(400).json({ message: 'Informe fazenda e nome da estação.' });
     }
 
@@ -852,7 +857,7 @@ app.post('/seasons', async (req, res) => {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar estação.' });
     }
-});
+}));
 
 app.patch('/seasons/:id', async (req, res) => {
     const { id } = req.params;
@@ -1063,13 +1068,14 @@ const parseOptionalPositive = (value) => {
     return { ok: true, value: parsed };
 };
 
-app.post('/lots', requireNonFieldWorker, async (req, res) => {
+app.post('/lots', requireNonFieldWorker, asyncRoute(async (req, res) => {
     const {
         farmId, name, notes, objective, phase, productionPhase, status, startDate,
         categoria, paddockId, entryHeadcount, entryWeightAvg, targetGmd, targetExitWeight, weighIntervalDays,
         animalIds, entryWeights,
     } = req.body || {};
-    if (!farmId || !name?.trim()) {
+    if ([farmId, name, notes, objective, phase, productionPhase, status, startDate, categoria, paddockId].some(hasInvalidOptionalText)
+        || !farmId || !name?.trim()) {
         return res.status(400).json({ message: 'Informe fazenda e nome do lote.' });
     }
     const parsedStartDate = startDate ? parseDateValue(startDate) : null;
@@ -1208,12 +1214,13 @@ app.post('/lots', requireNonFieldWorker, async (req, res) => {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar lote.' });
     }
-});
+}));
 
-app.patch('/lots/:id', requireNonFieldWorker, async (req, res) => {
+app.patch('/lots/:id', requireNonFieldWorker, asyncRoute(async (req, res) => {
     const { id } = req.params;
     const { name, notes, objective, phase, productionPhase, status, startDate } = req.body || {};
-    if (!name?.trim()) {
+    if ([name, notes, objective, phase, productionPhase, status, startDate].some(hasInvalidOptionalText)
+        || !name?.trim()) {
         return res.status(400).json({ message: 'Informe o nome do lote.' });
     }
     const parsedStartDate = startDate ? parseDateValue(startDate) : null;
@@ -1245,7 +1252,7 @@ app.patch('/lots/:id', requireNonFieldWorker, async (req, res) => {
         console.error(error);
         return res.status(500).json({ message: 'Erro ao editar lote.' });
     }
-});
+}));
 
 app.delete('/lots/:id', requireNonFieldWorker, async (req, res) => {
     const { id } = req.params;
@@ -1379,10 +1386,10 @@ app.get('/farms/:farmId/breeds', async (req, res) => {
     }
 });
 
-app.post('/farms/:farmId/breeds', async (req, res) => {
+app.post('/farms/:farmId/breeds', asyncRoute(async (req, res) => {
     const { farmId } = req.params;
     const { name } = req.body || {};
-    if (!name?.trim()) {
+    if (typeof name !== 'string' || !name.trim()) {
         return res.status(400).json({ message: 'Nome da raça é obrigatório.' });
     }
     try {
@@ -1402,7 +1409,7 @@ app.post('/farms/:farmId/breeds', async (req, res) => {
         console.error(err);
         return res.status(500).json({ message: 'Erro ao cadastrar raça.' });
     }
-});
+}));
 
 app.delete('/farms/:farmId/breeds/:breedId', async (req, res) => {
     const { farmId, breedId } = req.params;

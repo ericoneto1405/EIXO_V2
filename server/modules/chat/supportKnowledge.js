@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-18.4';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-18';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-26.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-26';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -89,6 +89,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Pagamento da compra: À vista (entra como pago), Entrada + parcelado (entrada paga na data da compra e saldo em parcelas) ou Parcelado (1 a 60 parcelas; 1 parcela = pagamento único com prazo).',
             'Na compra, informe fornecedor, GTA, data, valor total, finalidade e pagamento; o valor vai para o Financeiro e todas as linhas precisam estar certas para gravar.',
             'Animal P.O. entra pela mesma planilha: basta preencher Registro (P.O.), Pai e Mãe.',
+            'A importação exige a permissão Editar Animais e aceita no máximo 1.000 animais por planilha.',
+            'Se a identificação já estiver em outra fazenda da mesma organização, o sistema informa a fazenda. Cadastros de outra organização não são revelados.',
             'Envie a planilha preenchida, revise a prévia e confirme a importação.',
             'Bezerro nascido na fazenda não entra por planilha: registre o nascimento vinculado à mãe, no Rebanho.',
         ],
@@ -373,6 +375,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Todo o módulo APP EIXO CAMPO, incluindo ocorrências e fotos, é exclusivo do plano EIXO Performance. O acesso também depende do perfil, da fazenda autorizada e da ativação do dispositivo.',
             'Confirme com o administrador da organização se o usuário e a fazenda estão liberados.',
             'Pesagens podem ser salvas sem internet e ficam pendentes até a sincronização automática ou pelo botão Sincronizar agora.',
+            'Se o servidor recusar definitivamente um registro offline, a tela mostra o motivo e permite corrigir ou descartar o item.',
             'As demais telas do painel web precisam de conexão.',
         ],
     },

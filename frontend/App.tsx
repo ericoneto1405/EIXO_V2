@@ -309,7 +309,7 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         contentScrollRef.current?.scrollTo(0, 0);
     }, [activeView]);
-    const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number; openAnimalForm?: boolean; openImportModal?: boolean } | null>(null);
+    const [herdTabRequest, setHerdTabRequest] = useState<{ tab: HerdNavigationTab; nonce: number; openAnimalForm?: boolean; openImportModal?: boolean; openAnimalId?: string } | null>(null);
     const [sanidadeTabRequest, setSanidadeTabRequest] = useState<{ tab: SanidadeTab; nonce: number } | null>(null);
     const [financeOnboardingAction, setFinanceOnboardingAction] = useState<{ action: 'SAIDA' | 'ENTRADA' | 'RESULTADO'; nonce: number } | null>(null);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -900,6 +900,16 @@ const AppContent: React.FC = () => {
         setActiveView(view);
     }, []);
 
+    const handleOpenExistingAnimal = React.useCallback((farmId: string, animalId: string) => {
+        if (!farms.some((farm) => farm.id === farmId)) {
+            window.alert('Você não possui acesso a esta fazenda. Peça acesso a um responsável pela conta.');
+            return;
+        }
+        setSelectedFarmId(farmId);
+        setActiveView('Rebanho Comercial');
+        setHerdTabRequest({ tab: 'animals', nonce: Date.now(), openAnimalId: animalId });
+    }, [farms]);
+
     // Atalhos fixos do header — cada chave leva direto pro módulo/aba certa.
     // Nutrição e Financeiro já abrem na aba certa por padrão; Rebanho reaproveita
     // o herdTabRequest que já existe.
@@ -1140,7 +1150,7 @@ const AppContent: React.FC = () => {
                         />
                     );
                 }
-                return <ReproModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
+                return <ReproModule farmId={selectedFarmId} farmName={selectedFarm?.name} currentUserId={currentUser?.id || null} />;
             case 'Sanidade':
                 if (!hasSelectedFarm) {
                     return (
@@ -1198,12 +1208,16 @@ const AppContent: React.FC = () => {
                 return (
                     <HerdModule
                         farmId={selectedFarmId}
+                        currentUserId={currentUser?.id || null}
                         farmName={selectedFarm?.name}
                         herdType="COMMERCIAL"
                         paddocksRefreshNonce={paddocksRefreshNonce}
                         isFreePlan={isFreePlan}
                         initialTabRequest={herdTabRequest}
                         onUpgradeRequest={() => setUpgradeModal('Exportação de dados')}
+                        canImportAnimals={currentAllowedModules.includes('Editar Animais')}
+                        canBulkDeleteAnimals={String(currentUser?.membershipRole || '').toUpperCase() === 'OWNER'}
+                        onOpenAnimalLink={handleOpenExistingAnimal}
                     />
                 );
             case 'Eixo Genetics':

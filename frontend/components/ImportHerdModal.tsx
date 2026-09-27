@@ -112,6 +112,7 @@ interface ImportHerdModalProps {
     herdType: HerdType;
     paddocks?: Paddock[];
     lots?: Lot[];
+    onOpenExistingAnimal?: (farmId: string, animalId: string) => void;
 }
 
 const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
@@ -124,6 +125,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
     herdType,
     paddocks = [],
     lots = [],
+    onOpenExistingAnimal,
 }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [status, setStatus] = useState<Status>('idle');
@@ -667,6 +669,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             catalogos={catalogos}
                             onChange={setPreviewLinhas}
                             disabled={status === 'saving'}
+                            onOpenExistingAnimal={onOpenExistingAnimal}
                         />
                     </div>
                 )}

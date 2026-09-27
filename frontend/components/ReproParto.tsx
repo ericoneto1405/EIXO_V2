@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useOfflineQueue } from '../hooks/useOfflineQueue';
+import { useOfflineQueue, type OfflineQueueItem } from '../hooks/useOfflineQueue';
+import OfflineRejectedItems from './OfflineRejectedItems';
 import {
     BezerroDesmama,
     CriaPayload,
@@ -7,7 +8,6 @@ import {
     PartoPayload,
     PartoPrevisto,
     PartoRecente,
-    ReproApiError,
     TipoParto,
     VacaCurral,
     apagarParto,
@@ -46,30 +46,18 @@ const gravarLocal = (chave: string, valor: unknown) => {
     }
 };
 
-// Erro de conteúdo (4xx) sai da fila e é mostrado; sem internet, continua guardado.
-const tratarEnvio = async (fn: () => Promise<void>, onRecusa: (m: string) => void) => {
-    try {
-        await fn();
-    } catch (e) {
-        if (e instanceof ReproApiError && e.status >= 400 && e.status < 500) {
-            onRecusa(e.message);
-            return;
-        }
-        throw e;
-    }
-};
-
 const criaVazia = (): CriaPayload => ({ sexo: 'MACHO', vivo: true, peso: null, identificacao: '' });
 
 // ---------- Partos ----------
 
 export const PartosAba: React.FC<{
     farmId: string;
+    currentUserId?: string | null;
     onErro: (m: string | null) => void;
     onAviso: (m: string | null) => void;
     onAbrirFicha: (id: string) => void;
-}> = ({ farmId, onErro, onAviso, onAbrirFicha }) => {
-    const chaveVacas = `eixo:repro:vacas:${farmId}`;
+}> = ({ farmId, currentUserId, onErro, onAviso, onAbrirFicha }) => {
+    const chaveVacas = `eixo:repro:vacas:${currentUserId || 'none'}:${farmId}`;
     const [cache, setCache] = useState<{ baixadoEm: string | null; vacas: VacaCurral[]; lotes: { id: string; name: string }[] }>(
         () => lerLocal(chaveVacas, { baixadoEm: null, vacas: [], lotes: [] }),
     );
@@ -82,7 +70,7 @@ export const PartosAba: React.FC<{
     const [ecc, setEcc] = useState('');
     const [obs, setObs] = useState('');
     const [crias, setCrias] = useState<CriaPayload[]>([criaVazia()]);
-    const [recusas, setRecusas] = useState<string[]>([]);
+    const [editingOfflineId, setEditingOfflineId] = useState<string | null>(null);
     const [apagarId, setApagarId] = useState<string | null>(null);
 
     const carregar = useCallback(async () => {
@@ -97,15 +85,17 @@ export const PartosAba: React.FC<{
     }, [farmId]);
 
     const enviar = async (item: PartoPayload) => {
-        await tratarEnvio(async () => {
-            const r = await lancarParto(farmId, item);
-            if (r.avisos?.length) onAviso(`Parto da ${item.brinco}: ${r.avisos.join(' ')}`);
-        }, (m) => setRecusas((x) => [...x, `Parto da ${item.brinco} em ${fmtData(item.data)}: ${m}`]));
+        const r = await lancarParto(farmId, item);
+        if (r.avisos?.length) onAviso(`Parto da ${item.brinco}: ${r.avisos.join(' ')}`);
     };
 
     const fila = useOfflineQueue<PartoPayload>('eixo:repro:parto:fila:', farmId, {
+        userId: currentUserId,
         autoSync: enviar,
-        onSynced: () => void carregar(),
+        onSynced: (result) => {
+            if (result.storageError) onErro('O parto chegou ao servidor, mas a fila do aparelho não pôde ser atualizada. Não envie novamente.');
+            void carregar();
+        },
     });
 
     useEffect(() => {
@@ -128,8 +118,9 @@ export const PartosAba: React.FC<{
         setCrias((lista) => lista.map((c, idx) => (idx === i ? { ...c, [campo]: valor } : c)));
 
     const salvar = async () => {
+        const rejectedItem = editingOfflineId ? fila.items.find((item) => item.tempId === editingOfflineId) : null;
         const item: PartoPayload = {
-            clientId: crypto.randomUUID(),
+            clientId: rejectedItem?.clientId || crypto.randomUUID(),
             brinco: brinco.trim(),
             vacaId: vaca?.id,
             data,
@@ -138,7 +129,16 @@ export const PartosAba: React.FC<{
             obs: obs.trim() || undefined,
             crias: crias.map((c) => ({ ...c, peso: c.peso ? Number(c.peso) : null, identificacao: c.identificacao?.trim() || null })),
         };
-        fila.enqueue(item);
+        const queued = editingOfflineId
+            ? (await fila.update(editingOfflineId, item)
+                ? { ok: true as const }
+                : { ok: false as const, error: 'Não foi possível atualizar o parto salvo no celular.' })
+            : await fila.enqueue(item);
+        if (!queued.ok) {
+            onErro(queued.error);
+            return;
+        }
+        setEditingOfflineId(null);
         setBrinco('');
         setEcc('');
         setObs('');
@@ -164,13 +164,34 @@ export const PartosAba: React.FC<{
 
     return (
         <div className="space-y-4">
-            {recusas.length > 0 && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{recusas.map((r) => <p key={r}>{r}</p>)}</div>}
+            <OfflineRejectedItems<OfflineQueueItem<PartoPayload>>
+                items={fila.rejectedItems}
+                getLabel={(item) => `Parto de ${item.brinco || 'matriz'} em ${fmtData(item.data)}`}
+                onCorrect={(item) => {
+                    setBrinco(item.brinco || '');
+                    setData(item.data);
+                    setTipo(item.tipoParto);
+                    setEcc(item.ecc == null ? '' : String(item.ecc));
+                    setObs(item.obs || '');
+                    setCrias(item.crias.map((cria) => ({
+                        ...cria,
+                        peso: cria.peso ?? null,
+                        identificacao: cria.identificacao || '',
+                    })));
+                    setEditingOfflineId(item.tempId);
+                    onAviso('Parto carregado para correção. Confira e salve novamente.');
+                }}
+                onDiscard={(tempId) => {
+                    void fila.remove(tempId);
+                    if (editingOfflineId === tempId) setEditingOfflineId(null);
+                }}
+            />
 
             <div className={`${cardClass} space-y-3`}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="font-bold">Lançar parto</h3>
                     <div className="flex gap-2">
-                        {fila.items.length > 0 && <button type="button" className={secondaryButton} onClick={() => void fila.sync(enviar)}>Enviar agora ({fila.items.length})</button>}
+                        {fila.waitingCount > 0 && <button type="button" className={secondaryButton} onClick={() => void fila.sync(enviar)}>Enviar agora ({fila.waitingCount})</button>}
                         <button type="button" className={secondaryButton} onClick={baixar}>Baixar vacas</button>
                     </div>
                 </div>
@@ -289,12 +310,13 @@ export const PartosAba: React.FC<{
 
 export const DesmamaAba: React.FC<{
     farmId: string;
+    currentUserId?: string | null;
     onErro: (m: string | null) => void;
     onAviso: (m: string | null) => void;
     irParaCriterios: () => void;
-}> = ({ farmId, onErro, onAviso, irParaCriterios }) => {
-    const chave = `eixo:repro:bezerros:${farmId}`;
-    const chaveVacas = `eixo:repro:vacas:${farmId}`;
+}> = ({ farmId, currentUserId, onErro, onAviso, irParaCriterios }) => {
+    const chave = `eixo:repro:bezerros:${currentUserId || 'none'}:${farmId}`;
+    const chaveVacas = `eixo:repro:vacas:${currentUserId || 'none'}:${farmId}`;
     const lotes = lerLocal<{ lotes: { id: string; name: string }[] }>(chaveVacas, { lotes: [] }).lotes || [];
     const [info, setInfo] = useState<{ bezerros: BezerroDesmama[]; criteriosDefinidos: boolean; recentes: { id: string; mae: string; date: string; payload: Record<string, any> }[] }>(
         () => lerLocal(chave, { bezerros: [], criteriosDefinidos: false, recentes: [] }),
@@ -305,6 +327,7 @@ export const DesmamaAba: React.FC<{
     const [pesos, setPesos] = useState<Record<string, string>>({});
     const [resultado, setResultado] = useState<string[]>([]);
     const [desfazerId, setDesfazerId] = useState<string | null>(null);
+    const [editingOfflineId, setEditingOfflineId] = useState<string | null>(null);
 
     const carregar = useCallback(async () => {
         try {
@@ -317,17 +340,19 @@ export const DesmamaAba: React.FC<{
     }, [farmId, chave]);
 
     const enviar = async (item: DesmamaPayload) => {
-        await tratarEnvio(async () => {
-            const r = await lancarDesmama(farmId, item);
-            const linhas = r.feitos.filter((f) => !f.repetido).map((f) => `${f.brinco}: ${f.peso} kg${f.pesoAjustado205 ? ` (205 dias: ${f.pesoAjustado205} kg)` : ''}${f.precoce ? ' · desmama precoce' : ''}`);
-            const erros = r.erros.map((e) => `${e.brinco}: ${e.motivo}`);
-            setResultado((x) => [...x, ...linhas, ...erros.map((e) => `NÃO GRAVADO — ${e}`)]);
-        }, (m) => setResultado((x) => [...x, `NÃO GRAVADO — desmama de ${fmtData(item.data)}: ${m}`]));
+        const r = await lancarDesmama(farmId, item);
+        const linhas = r.feitos.filter((f) => !f.repetido).map((f) => `${f.brinco}: ${f.peso} kg${f.pesoAjustado205 ? ` (205 dias: ${f.pesoAjustado205} kg)` : ''}${f.precoce ? ' · desmama precoce' : ''}`);
+        const erros = r.erros.map((e) => `${e.brinco}: ${e.motivo}`);
+        setResultado((x) => [...x, ...linhas, ...erros.map((e) => `NÃO GRAVADO — ${e}`)]);
     };
 
     const fila = useOfflineQueue<DesmamaPayload>('eixo:repro:desmama:fila:', farmId, {
+        userId: currentUserId,
         autoSync: enviar,
-        onSynced: () => void carregar(),
+        onSynced: (result) => {
+            if (result.storageError) onErro('A desmama chegou ao servidor, mas a fila do aparelho não pôde ser atualizada. Não envie novamente.');
+            void carregar();
+        },
     });
 
     useEffect(() => {
@@ -340,12 +365,23 @@ export const DesmamaAba: React.FC<{
     const salvar = async () => {
         const precoces = preenchidos.filter((b) => b.idadeDias != null && b.idadeDias < 90).map((b) => b.brinco);
         if (precoces.length) onAviso(`Desmama precoce (menos de 90 dias): ${precoces.join(', ')}. Confirme que é manejo planejado.`);
-        fila.enqueue({
-            clientId: crypto.randomUUID(),
+        const rejectedItem = editingOfflineId ? fila.items.find((item) => item.tempId === editingOfflineId) : null;
+        const payload: DesmamaPayload = {
+            clientId: rejectedItem?.clientId || crypto.randomUUID(),
             data,
             lotId: lotId || null,
             linhas: preenchidos.map((b) => ({ animalId: b.id, brinco: b.brinco, peso: Number(pesos[b.id]) })),
-        });
+        };
+        const queued = editingOfflineId
+            ? (await fila.update(editingOfflineId, payload)
+                ? { ok: true as const }
+                : { ok: false as const, error: 'Não foi possível atualizar a desmama salva no celular.' })
+            : await fila.enqueue(payload);
+        if (!queued.ok) {
+            onErro(queued.error);
+            return;
+        }
+        setEditingOfflineId(null);
         setPesos({});
         setResultado([]);
         if (navigator.onLine) await fila.sync(enviar);
@@ -376,6 +412,35 @@ export const DesmamaAba: React.FC<{
                     {resultado.map((r) => <p key={r} className={r.startsWith('NÃO') ? 'text-red-700' : ''}>{r}</p>)}
                 </div>
             )}
+            <OfflineRejectedItems<OfflineQueueItem<DesmamaPayload>>
+                items={fila.rejectedItems}
+                getLabel={(item) => `Desmama de ${fmtData(item.data)} · ${item.linhas.length} animal(is)`}
+                onCorrect={(item) => {
+                    const nextWeights: Record<string, string> = {};
+                    const missingAnimal = item.linhas.some((line) => {
+                        const animal = info.bezerros.find((bezerro) => (
+                            bezerro.id === line.animalId || bezerro.brinco === line.brinco
+                        ));
+                        if (!animal) return true;
+                        nextWeights[animal.id] = String(line.peso);
+                        return false;
+                    });
+                    if (missingAnimal) {
+                        onErro('Atualize a lista de bezerros antes de corrigir esta desmama. O registro continua guardado.');
+                        return;
+                    }
+                    setData(item.data);
+                    setLotId(item.lotId || '');
+                    setSoProntos(false);
+                    setPesos(nextWeights);
+                    setEditingOfflineId(item.tempId);
+                    onAviso('Desmama carregada para correção. Confira e salve novamente.');
+                }}
+                onDiscard={(tempId) => {
+                    void fila.remove(tempId);
+                    if (editingOfflineId === tempId) setEditingOfflineId(null);
+                }}
+            />
             <div className={`${cardClass} space-y-3`}>
                 <div className="flex flex-wrap items-end gap-3">
                     <label>
@@ -395,7 +460,7 @@ export const DesmamaAba: React.FC<{
                             Só os prontos
                         </label>
                     )}
-                    {fila.items.length > 0 && <button type="button" className={secondaryButton} onClick={() => void fila.sync(enviar)}>Enviar agora ({fila.items.length})</button>}
+                    {fila.waitingCount > 0 && <button type="button" className={secondaryButton} onClick={() => void fila.sync(enviar)}>Enviar agora ({fila.waitingCount})</button>}
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[520px] text-sm">
