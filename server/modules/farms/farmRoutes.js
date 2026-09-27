@@ -16,6 +16,24 @@ import { calculateActivePaddockArea, hasActivePaddock, hasDuplicatePaddockNames 
 const prisma = new PrismaClient();
 const hasInvalidOptionalText = (value) => value !== undefined && value !== null && typeof value !== 'string';
 
+const activeAnimalCountInclude = {
+    _count: {
+        select: {
+            animals: { where: { status: 'VIVO' } },
+        },
+    },
+};
+
+const serializeFarm = (farm) => {
+    const { _count, ...farmData } = farm;
+    return {
+        ...farmData,
+        responsibleName: farm.responsibleName ?? null,
+        animalsCount: _count?.animals ?? 0,
+        paddocks: (farm.paddocks || []).map(serializePaddock),
+    };
+};
+
 // Tudo que indica uso real da fazenda (não configuração). Se qualquer um desses
 // tiver registro, a fazenda tem histórico e nunca pode ser excluída — nem pelo
 // dono, nem por um admin. O histórico fica guardado permanentemente (também
@@ -78,17 +96,16 @@ app.get('/farms', async (req, res) => {
     try {
         const farms = await prisma.farm.findMany({
             where: buildFarmScopeFilter(req),
-            include: { paddocks: { orderBy: { createdAt: 'asc' } } },
+            include: {
+                paddocks: { orderBy: { createdAt: 'asc' } },
+                ...activeAnimalCountInclude,
+            },
             orderBy: { createdAt: 'desc' },
             // mapData e mapAssetPath: campos do "mapa geral" antigo, sem uso
             // em nenhuma tela hoje (o mapa por pasto usa paddock.mapGeometry).
             omit: { mapData: true, mapAssetPath: true },
         });
-        const items = farms.map((farm) => ({
-            ...farm,
-            responsibleName: farm.responsibleName ?? null,
-            paddocks: farm.paddocks.map(serializePaddock),
-        }));
+        const items = farms.map(serializeFarm);
         return res.json({ farms: items, items, total: items.length });
     } catch (error) {
         console.error(error);
@@ -225,15 +242,11 @@ app.post('/farms', requireNonFieldWorker, async (req, res) => {
                     create: normalizedPaddocks,
                 },
             },
-            include: { paddocks: true },
+            include: { paddocks: true, ...activeAnimalCountInclude },
         });
         logActivity(prisma, req, { action: 'FAZENDA_CRIADA', entity: 'Farm', entityId: newFarm.id, description: `Cadastrou a fazenda ${newFarm.name}`, farmId: newFarm.id });
         return res.status(201).json({
-            farm: {
-                ...newFarm,
-                responsibleName: newFarm.responsibleName ?? null,
-                paddocks: newFarm.paddocks.map(serializePaddock),
-            },
+            farm: serializeFarm(newFarm),
         });
     } catch (error) {
         console.error(error);
@@ -435,16 +448,12 @@ app.patch('/farms/:id', requireNonFieldWorker, async (req, res) => {
                     notes: notes?.trim() || null,
                     responsibleName: responsibleName?.trim() || null,
                 },
-                include: { paddocks: true },
+                include: { paddocks: true, ...activeAnimalCountInclude },
             });
         });
 
         return res.json({
-            farm: {
-                ...updatedFarm,
-                responsibleName: updatedFarm.responsibleName ?? null,
-                paddocks: updatedFarm.paddocks.map(serializePaddock),
-            },
+            farm: serializeFarm(updatedFarm),
         });
     } catch (error) {
         console.error(error);

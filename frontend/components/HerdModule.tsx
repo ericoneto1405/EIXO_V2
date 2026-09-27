@@ -23,6 +23,8 @@ import {
 } from '../adapters/herdApi';
 import { getMyHerdColumns, updateMyHerdColumns } from '../adapters/usersApi';
 import { CATEGORIAS_ANIMAL } from '../constants/animalCategories';
+import { getPaddockCapacityUa } from '../paddockCapacity';
+import { summarizeHerdAllocation } from '../herdAllocation';
 import { buildApiUrl } from '../api';
 import type { Paddock } from '../types';
 
@@ -280,6 +282,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
     const [showImportModal, setShowImportModal] = useState(false);
     const [animals, setAnimals] = useState<HerdAnimal[]>([]);
+    const [activeAnimals, setActiveAnimals] = useState<HerdAnimal[]>([]);
     const [lots, setLots] = useState<HerdLot[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [loadError, setLoadError] = useState<string | null>(null);
@@ -359,6 +362,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
     const [animalForm, setAnimalForm] = useState<AnimalFormState>(createInitialAnimalForm);
     const [paddocks, setPaddocks] = useState<Paddock[]>([]);
+    const [allPaddocks, setAllPaddocks] = useState<Paddock[]>([]);
     const [farmBreeds, setFarmBreeds] = useState<string[]>([]);
     
     const advancedFiltersStorageKey = useMemo(
@@ -398,22 +402,26 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             if (!farmId) {
                 if (isActive) {
                     setPaddocks([]);
+                    setAllPaddocks([]);
                 }
                 return;
             }
             try {
-                const response = await fetch(buildApiUrl(`/pastos?farmId=${farmId}`), { credentials: 'include' });
+                const response = await fetch(buildApiUrl(`/pastos?farmId=${farmId}&includeInactive=true`), { credentials: 'include' });
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
                     throw new Error(payload?.message || 'Erro ao carregar pastos.');
                 }
                 if (isActive) {
-                    setPaddocks(payload.items || []);
+                    const items: Paddock[] = payload.items || [];
+                    setAllPaddocks(items);
+                    setPaddocks(items.filter((paddock) => paddock.active !== false));
                 }
             } catch (error) {
                 console.error(error);
                 if (isActive) {
                     setPaddocks([]);
+                    setAllPaddocks([]);
                 }
             }
         };
@@ -458,16 +466,23 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const loadData = useCallback(async () => {
         if (!farmId) {
             setAnimals([]);
+            setActiveAnimals([]);
             setLots([]);
             return;
         }
         setIsLoading(true);
         setLoadError(null);
         try {
-            const [animalsResult, lotsResult] = await Promise.all([
-                listAnimals(farmId, resolvedMode, animalStatusFilter),
+            const activeAnimalsRequest = listAnimals(farmId, resolvedMode, 'VIVO');
+            const listedAnimalsRequest = animalStatusFilter === 'VIVO'
+                ? activeAnimalsRequest
+                : listAnimals(farmId, resolvedMode, animalStatusFilter);
+            const [activeAnimalsResult, animalsResult, lotsResult] = await Promise.all([
+                activeAnimalsRequest,
+                listedAnimalsRequest,
                 listLots(farmId, resolvedMode),
             ]);
+            setActiveAnimals(activeAnimalsResult);
             setAnimals(animalsResult);
             setLots(lotsResult);
         } catch (error: any) {
@@ -549,12 +564,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         const animalId = initialTabRequest?.openAnimalId;
         const nonce = initialTabRequest?.nonce;
         if (!animalId || !nonce || handledAnimalLinkNonceRef.current === nonce) return;
-        const animal = animals.find((item) => item.id === animalId);
+        const animal = animals.find((item) => item.id === animalId)
+            || activeAnimals.find((item) => item.id === animalId);
         if (!animal) return;
         handledAnimalLinkNonceRef.current = nonce;
         setActiveTab('animals');
         setSelectedAnimal(animal);
-    }, [animals, initialTabRequest?.nonce, initialTabRequest?.openAnimalId]);
+    }, [activeAnimals, animals, initialTabRequest?.nonce, initialTabRequest?.openAnimalId]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -771,7 +787,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         let readyForWeaning = 0;
         let weanedAwaitingId = 0;
 
-        for (const animal of animals) {
+        for (const animal of activeAnimals) {
             const hasPaddock = Boolean(animal.currentPaddockId || animal.currentPaddockName);
             if (!hasPaddock) withoutPaddock++;
 
@@ -799,7 +815,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         }
 
         return { withoutPaddock, withoutWeighing, staleWeighing, automaticCategory, withoutCategory, belowTargetGmd, readyForWeaning, weanedAwaitingId };
-    }, [animals]);
+    }, [activeAnimals]);
 
     const activeQuickFilterLabel = healthQuickFilter === 'none'
         ? null
@@ -828,6 +844,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     };
 
     const openAnimalsWithQuickFilter = (quickFilter: Exclude<HealthQuickFilter, 'none'>) => {
+        setAnimalStatusFilter('VIVO');
         applyHealthQuickFilter(quickFilter);
         setActiveTab('animals');
     };
@@ -908,9 +925,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     }, [filteredAnimals, sortColumn, sortDirection]);
 
     const overviewStats = useMemo(() => {
-        const total = animals.length;
+        const total = activeAnimals.length;
 
-        const weights = animals
+        const weights = activeAnimals
             .map((a) => a.ultimoPeso)
             .filter((p): p is number => typeof p === 'number');
         const avgWeight = weights.length
@@ -918,26 +935,26 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             : null;
 
         // GMD médio usa gmd30 — mais estável para comparar o rebanho
-        const gmds30 = animals
+        const gmds30 = activeAnimals
             .map((a) => a.gmd30)
             .filter((g): g is number => typeof g === 'number');
         const avgGmd = gmds30.length
             ? gmds30.reduce((s, v) => s + v, 0) / gmds30.length
             : null;
 
-        const machos = animals.filter((a) =>
+        const machos = activeAnimals.filter((a) =>
             a.sexo?.toLowerCase() === 'macho').length;
 
-        const femeas = animals.filter((a) =>
+        const femeas = activeAnimals.filter((a) =>
             a.sexo?.toLowerCase() === 'fêmea' ||
             a.sexo?.toLowerCase() === 'femea').length;
 
-        const semPesagem = animals.filter((a) => !a.ultimoPeso || a.ultimoPeso <= 0).length;
+        const semPesagem = activeAnimals.filter((a) => !a.ultimoPeso || a.ultimoPeso <= 0).length;
 
         const avgArroba = avgWeight !== null ? avgWeight / 15 : null;
 
         const catMap = new Map<string, { count: number; totalPeso: number }>();
-        for (const a of animals) {
+        for (const a of activeAnimals) {
             const cat = a.categoria?.trim() || 'Sem categoria';
             const entry = catMap.get(cat) ?? { count: 0, totalPeso: 0 };
             entry.count++;
@@ -953,7 +970,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             .sort((a, b) => b.count - a.count);
 
         const racaMap = new Map<string, { count: number; totalPeso: number }>();
-        for (const a of animals) {
+        for (const a of activeAnimals) {
             const raca = a.raca?.trim() || 'Sem raça';
             const entry = racaMap.get(raca) ?? { count: 0, totalPeso: 0 };
             entry.count++;
@@ -969,7 +986,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             .sort((a, b) => b.count - a.count);
 
         return { total, avgWeight, avgArroba, avgGmd, machos, femeas, semPesagem, porCategoria, porRaca };
-    }, [animals]);
+    }, [activeAnimals]);
 
     const resetAnimalForm = () => {
         setAnimalForm(createInitialAnimalForm());
@@ -2123,6 +2140,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
 
     const renderPastures = () => {
         const totalAreaHa = paddocks.reduce((total, paddock) => total + (Number(paddock.areaHa) || 0), 0);
+        const {
+            paddockCounts,
+            visiblePaddocks,
+            allocatedCount,
+            withoutPaddockCount,
+            totalActive,
+        } = summarizeHerdAllocation(activeAnimals, allPaddocks);
 
         return (
             <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
@@ -2138,28 +2162,29 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                             </tr>
                         </thead>
                         <tbody>
-                            {paddocks.length === 0 ? (
+                            {visiblePaddocks.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-10 text-center text-sm text-[var(--eixo-text-muted)]">
                                         Nenhum pasto cadastrado em Fazendas e Pastos.
                                     </td>
                                 </tr>
                             ) : (
-                                paddocks.map((paddock) => {
-                                    const animalCount = animals.filter(a => a.currentPaddockId === paddock.id).length;
+                                visiblePaddocks.map((paddock) => {
+                                    const animalCount = paddockCounts.get(paddock.id) || 0;
+                                    const capacityUa = getPaddockCapacityUa(paddock);
                                     return (
                                     <tr key={paddock.id} className="border-b border-[var(--eixo-border)] last:border-0">
                                         <td className="px-4 py-3 font-medium text-[var(--eixo-text)]">{paddock.name}</td>
                                         <td className="px-4 py-3">{paddock.areaHa ?? '—'}</td>
-                                        <td className="px-4 py-3">{paddock.capacity ?? '—'}</td>
                                         <td className="px-4 py-3">
-                                            {animalCount > 0 ? (
-                                                <span className="inline-flex items-center rounded-full bg-[var(--eixo-green-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--eixo-graphite)]">
-                                                    {animalCount}
-                                                </span>
-                                            ) : (
-                                                <span className="text-[var(--eixo-text-muted)]">—</span>
-                                            )}
+                                            {capacityUa === null
+                                                ? 'Não informada'
+                                                : `${capacityUa.toLocaleString('pt-BR', { maximumFractionDigits: 1 })} UA`}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${animalCount > 0 ? 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>
+                                                {animalCount}
+                                            </span>
                                         </td>
                                         <td className="px-4 py-3">
                                             {paddock.active === false ? 'Inativo' : 'Ativo'}
@@ -2169,12 +2194,17 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 })
                             )}
                         </tbody>
-                        {paddocks.length > 0 && (
+                        {visiblePaddocks.length > 0 && (
                             <tfoot className="bg-[var(--eixo-surface-soft)] font-semibold text-[var(--eixo-text)]">
                                 <tr>
                                     <td className="px-4 py-3">Total da fazenda</td>
                                     <td className="px-4 py-3">{totalAreaHa.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ha</td>
                                     <td colSpan={3} />
+                                </tr>
+                                <tr className="border-t border-[var(--eixo-border)]">
+                                    <td colSpan={5} className="px-4 py-3 text-sm">
+                                        Alocados: {allocatedCount.toLocaleString('pt-BR')} · Sem pasto: {withoutPaddockCount.toLocaleString('pt-BR')} · Total ativo: {totalActive.toLocaleString('pt-BR')}
+                                    </td>
                                 </tr>
                             </tfoot>
                         )}
@@ -2190,7 +2220,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                     <div>
                         <h2 className="font-brand m-0 text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">{title}</h2>
-                        <p className="mt-1 font-sans text-[13px] text-[var(--eixo-text-muted)]">{farmName || 'Fazenda'} · {animals.length} animais ativos</p>
+                        <p className="mt-1 font-sans text-[13px] text-[var(--eixo-text-muted)]">{farmName || 'Fazenda'} · {activeAnimals.length} animais ativos</p>
                     </div>
                     <div className="flex flex-col gap-3 xl:items-end">
                         {activeTab === 'animals' && (
@@ -2436,7 +2466,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 <WeighingsTab
                     farmId={farmId}
                     currentUserId={currentUserId}
-                    animals={animals}
+                    animals={activeAnimals}
                     lots={lots}
                     herdType={resolvedMode}
                     managementMode={weighingOnlyMode}
@@ -2916,7 +2946,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 <NewLotForm
                     farmId={farmId}
                     herdType={resolvedMode}
-                    animals={animals}
+                    animals={activeAnimals}
                     lots={lots}
                     paddocks={paddocks}
                     objectiveOptions={LOT_OBJECTIVE_OPTIONS}
@@ -3013,7 +3043,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 <label className="block text-sm font-semibold text-[#2F2F2F]">Receptora</label>
                                 <select required value={embryoTransferForm.recipientId} onChange={(event) => setEmbryoTransferForm((prev) => ({ ...prev, recipientId: event.target.value }))} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm">
                                     <option value="">Selecione a fêmea</option>
-                                    {animals.filter((animal) => ['FÊMEA', 'FEMEA'].includes(String(animal.sexo).toUpperCase())).map((animal) => <option key={animal.id} value={animal.id}>{animal.identificacao}{animal.nome ? ` — ${animal.nome}` : ''}</option>)}
+                                    {activeAnimals.filter((animal) => ['FÊMEA', 'FEMEA'].includes(String(animal.sexo).toUpperCase())).map((animal) => <option key={animal.id} value={animal.id}>{animal.identificacao}{animal.nome ? ` — ${animal.nome}` : ''}</option>)}
                                 </select>
                             </div>
                             <div>
@@ -3098,13 +3128,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     list="mae-suggestions"
                                     onChange={(e) => {
                                         const val = e.target.value;
-                                        const found = animals.find(a => a.brinco === val || a.nome === val);
+                                        const found = activeAnimals.find(a => a.brinco === val || a.nome === val);
                                         setNascimentoForm(prev => ({ ...prev, maeNome: val, maeId: found?.id || '' }));
                                     }}
                                     className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm focus:border-[#B6E23A] focus:outline-none focus:ring-2 focus:ring-[#B6E23A]/20"
                                 />
                                 <datalist id="mae-suggestions">
-                                    {animals.filter(a => a.sexo === 'Fêmea' || a.sexo === 'FEMEA').map(a => (
+                                    {activeAnimals.filter(a => a.sexo === 'Fêmea' || a.sexo === 'FEMEA').map(a => (
                                         <option key={a.id} value={a.brinco}>{a.brinco}{a.nome ? ` — ${a.nome}` : ''}</option>
                                     ))}
                                 </datalist>
@@ -3301,7 +3331,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 className="w-full rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm"
                             >
                                 <option value="">Selecione a nova matriz</option>
-                                {animals
+                                {activeAnimals
                                     .filter((animal) => animal.id !== identificationAnimal.id && ['FÊMEA', 'FEMEA'].includes(String(animal.sexo).toUpperCase()))
                                     .map((animal) => (
                                         <option key={animal.id} value={animal.id}>{animal.identificacao}{animal.nome ? ` — ${animal.nome}` : ''}</option>
