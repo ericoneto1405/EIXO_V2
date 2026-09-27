@@ -32,6 +32,7 @@ import { CurralUnico } from './ReproCurral';
 interface ReproModuleProps {
     farmId?: string | null;
     farmName?: string | null;
+    currentUserId?: string | null;
 }
 
 type Aba = 'HOJE' | 'NUMEROS' | 'CURRAL' | 'CANDIDATAS' | 'COBERTURA' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'BOTIJAO' | 'ESTACAO' | 'TOUROS' | 'FICHA' | 'CRITERIOS';
@@ -118,7 +119,7 @@ function resumoEvento(e: EventoRepro) {
     }
 }
 
-const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
+const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName, currentUserId }) => {
     const [aba, setAba] = useState<Aba>('HOJE');
     const [meta, setMeta] = useState<ConfigResposta | null>(null);
     const [erro, setErro] = useState<string | null>(null);
@@ -193,11 +194,11 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName }) => {
             {aba === 'BOTIJAO' && <BotijaoAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'ESTACAO' && <EstacaoAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'TOUROS' && <TourosAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
-            {aba === 'CURRAL' && <CurralUnico farmId={farmId} lotes={lotes} onErro={setErro} onAviso={setAviso} />}
-            {aba === 'TOQUE' && <ToqueCurral farmId={farmId} onErro={setErro} onAviso={setAviso} />}
+            {aba === 'CURRAL' && <CurralUnico farmId={farmId} currentUserId={currentUserId} lotes={lotes} onErro={setErro} onAviso={setAviso} />}
+            {aba === 'TOQUE' && <ToqueCurral farmId={farmId} currentUserId={currentUserId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'DECIDIR' && <DecidirVazias farmId={farmId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}
-            {aba === 'PARTOS' && <PartosAba farmId={farmId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}
-            {aba === 'DESMAMA' && <DesmamaAba farmId={farmId} onErro={setErro} onAviso={setAviso} irParaCriterios={() => setAba('CRITERIOS')} />}
+            {aba === 'PARTOS' && <PartosAba farmId={farmId} currentUserId={currentUserId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}
+            {aba === 'DESMAMA' && <DesmamaAba farmId={farmId} currentUserId={currentUserId} onErro={setErro} onAviso={setAviso} irParaCriterios={() => setAba('CRITERIOS')} />}
             {aba === 'FICHA' && meta && <FichaVaca farmId={farmId} meta={meta} vacaId={fichaId} onSelecionar={setFichaId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'CRITERIOS' && meta && <Criterios farmId={farmId} meta={meta} onSalvo={carregarMeta} onErro={setErro} />}
             <p className="text-xs text-[var(--eixo-text-muted)]">

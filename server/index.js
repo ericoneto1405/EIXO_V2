@@ -80,6 +80,7 @@ import {
     isFieldWorkerRequest, requireBillingAccess, requireNonFieldWorker, requireEntitlement,
     requireAuth, requireSuperAdmin, requireModule,
 } from './modules/middlewares/requireAuth.js';
+import { apiErrorHandler } from './modules/middlewares/errorHandler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -262,6 +263,8 @@ registerFieldRoutes(app);
 registerFinancialRoutes(app);
 registerOverviewRoutes(app);
 registerNewsRoutes(app);
+
+app.use(apiErrorHandler);
 
 const MAX_PORT_ATTEMPTS = Number(process.env.PORT_ATTEMPTS) || 10;
 const BASE_PORT = Number(PORT) || 3001;

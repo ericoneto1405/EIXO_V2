@@ -124,14 +124,18 @@ const isReadyForWeaning = (animal: HerdAnimal) => {
 
 interface HerdModuleProps {
     farmId?: string | null;
+    currentUserId?: string | null;
     farmName?: string | null;
     paddocksRefreshNonce?: number;
     mode?: HerdType;
     herdType?: HerdType;
     isFreePlan?: boolean;
     onUpgradeRequest?: (animalCount?: number) => void;
-    initialTabRequest?: { tab: TabKey; nonce: number; openAnimalForm?: boolean; openImportModal?: boolean } | null;
+    initialTabRequest?: { tab: TabKey; nonce: number; openAnimalForm?: boolean; openImportModal?: boolean; openAnimalId?: string } | null;
     weighingOnlyMode?: boolean;
+    canImportAnimals?: boolean;
+    canBulkDeleteAnimals?: boolean;
+    onOpenAnimalLink?: (farmId: string, animalId: string) => void;
 }
 
 const LockIcon: React.FC<{ className?: string }> = ({ className = 'w-4 h-4' }) => (
@@ -259,6 +263,7 @@ const downloadWorkbook = async (fileName: string, sheetName: string, rows: Array
 
 const HerdModule: React.FC<HerdModuleProps> = ({
     farmId,
+    currentUserId,
     farmName,
     paddocksRefreshNonce = 0,
     mode,
@@ -267,6 +272,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     onUpgradeRequest,
     initialTabRequest,
     weighingOnlyMode = false,
+    canImportAnimals = false,
+    canBulkDeleteAnimals = false,
+    onOpenAnimalLink,
 }) => {
     const resolvedMode: HerdType = herdType ?? mode ?? 'COMMERCIAL';
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
@@ -317,6 +325,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [bulkLoading, setBulkLoading] = useState(false);
     const [bulkError, setBulkError] = useState<string | null>(null);
     const [selectedAnimal, setSelectedAnimal] = useState<HerdAnimal | null>(null);
+    const handledAnimalLinkNonceRef = useRef<number | null>(null);
     const [selectedLot, setSelectedLot] = useState<HerdLot | null>(null);
     const [lotModalOpen, setLotModalOpen] = useState(false);
     const [animalFormOpen, setAnimalFormOpen] = useState(false);
@@ -530,11 +539,22 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 setAnimalFormError(null);
                 setAnimalFormOpen(true);
             }
-            if (initialTabRequest.openImportModal) {
+            if (initialTabRequest.openImportModal && canImportAnimals) {
                 setShowImportModal(true);
             }
         }
-    }, [initialTabRequest?.nonce]);
+    }, [initialTabRequest?.nonce, canImportAnimals]);
+
+    useEffect(() => {
+        const animalId = initialTabRequest?.openAnimalId;
+        const nonce = initialTabRequest?.nonce;
+        if (!animalId || !nonce || handledAnimalLinkNonceRef.current === nonce) return;
+        const animal = animals.find((item) => item.id === animalId);
+        if (!animal) return;
+        handledAnimalLinkNonceRef.current = nonce;
+        setActiveTab('animals');
+        setSelectedAnimal(animal);
+    }, [animals, initialTabRequest?.nonce, initialTabRequest?.openAnimalId]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -1372,13 +1392,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         >
                             Transferir para Fazenda
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => { setBulkError(null); setBulkDeleteOpen(true); }}
-                            className="rounded-xl bg-[#fce8e8] px-3 py-1.5 text-xs font-semibold text-[#8c2020] hover:bg-[#f5d0d0]"
-                        >
-                            Excluir selecionados
-                        </button>
+                        {canBulkDeleteAnimals && (
+                            <button
+                                type="button"
+                                onClick={() => { setBulkError(null); setBulkDeleteOpen(true); }}
+                                className="rounded-xl bg-[#fce8e8] px-3 py-1.5 text-xs font-semibold text-[#8c2020] hover:bg-[#f5d0d0]"
+                            >
+                                Excluir selecionados
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={() => setSelectedAnimals(new Set())}
@@ -1552,17 +1574,19 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         <div className="flex flex-col items-center gap-3 py-4">
                                             <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum animal cadastrado ainda. Muitos animais? Importe pela planilha. Poucos? Cadastre na tela.</p>
                                             <div className="flex flex-wrap items-center justify-center gap-[10px]">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowImportModal(true)}
-                                                    title="Importe para o Eixo o rebanho que já era seu ou uma compra, tudo de uma vez."
-                                                    className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
-                                                >
-                                                    <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
-                                                    </svg>
-                                                    <span className="ml-2">Importar rebanho (via planilha)</span>
-                                                </button>
+                                                {canImportAnimals && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setShowImportModal(true)}
+                                                        title="Importe para o Eixo o rebanho que já era seu ou uma compra, tudo de uma vez."
+                                                        className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                                                    >
+                                                        <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                                                        </svg>
+                                                        <span className="ml-2">Importar rebanho (via planilha)</span>
+                                                    </button>
+                                                )}
                                                 <button
                                                     type="button"
                                                     onClick={openAnimalForm}
@@ -2172,18 +2196,20 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         {activeTab === 'animals' && (
                             <>
                                 <div className="flex flex-wrap items-start gap-[10px] xl:justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowImportModal(true)}
-                                        title="Importe para o Eixo o rebanho que já era seu ou uma compra, tudo de uma vez."
-                                        aria-label="Importar rebanho (via planilha)"
-                                        className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
-                                    >
-                                        <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
-                                        </svg>
-                                        <span className="ml-2">Importar rebanho (via planilha)</span>
-                                    </button>
+                                    {canImportAnimals && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowImportModal(true)}
+                                            title="Importe para o Eixo o rebanho que já era seu ou uma compra, tudo de uma vez."
+                                            aria-label="Importar rebanho (via planilha)"
+                                            className="flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                                        >
+                                            <svg className="h-[18px] w-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                                            </svg>
+                                            <span className="ml-2">Importar rebanho (via planilha)</span>
+                                        </button>
+                                    )}
                                     <div className="relative" ref={entriesMenuRef}>
                                         <button
                                             type="button"
@@ -2409,6 +2435,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             {activeTab === 'weighings' && farmId && (
                 <WeighingsTab
                     farmId={farmId}
+                    currentUserId={currentUserId}
                     animals={animals}
                     lots={lots}
                     herdType={resolvedMode}
@@ -2421,7 +2448,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 <HerdSettingsTab farmId={farmId} />
             )}
             {/* Modal: Confirmar exclusão em massa */}
-            {bulkDeleteOpen && (
+            {bulkDeleteOpen && canBulkDeleteAnimals && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
                     <div className="w-full max-w-lg rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
                         <header className="border-b border-[var(--eixo-border)] p-5">
@@ -2904,6 +2931,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             {selectedAnimal && (
                 <HerdAnimalModal
                     animal={selectedAnimal}
+                    currentUserId={currentUserId}
                     mode={resolvedMode}
                     onClose={() => setSelectedAnimal(null)}
                     onAnimalUpdated={loadData}
@@ -2931,17 +2959,23 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                 herdType={resolvedMode}
             />
 
-            <ImportHerdModal
-                open={showImportModal}
-                onClose={() => setShowImportModal(false)}
-                onDownloadTemplate={handleDownloadImportTemplate}
-                farmId={farmId}
-                farmName={farmName}
-                onSuccess={loadData}
-                herdType={resolvedMode}
-                paddocks={paddocks}
-                lots={lots}
-            />
+            {canImportAnimals && (
+                <ImportHerdModal
+                    open={showImportModal}
+                    onClose={() => setShowImportModal(false)}
+                    onDownloadTemplate={handleDownloadImportTemplate}
+                    farmId={farmId}
+                    farmName={farmName}
+                    onSuccess={loadData}
+                    herdType={resolvedMode}
+                    paddocks={paddocks}
+                    lots={lots}
+                    onOpenExistingAnimal={(targetFarmId, animalId) => {
+                        setShowImportModal(false);
+                        onOpenAnimalLink?.(targetFarmId, animalId);
+                    }}
+                />
+            )}
 
             {embryoTransferModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

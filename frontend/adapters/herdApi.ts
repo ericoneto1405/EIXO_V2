@@ -8,6 +8,15 @@ export type HerdLot = LotUI;
 export type HerdWeighing = WeighingUI;
 export type HerdWeighingSession = WeighingSessionUI;
 
+export class HerdApiError extends Error {
+    status: number;
+
+    constructor(message: string, status: number) {
+        super(message);
+        this.status = status;
+    }
+}
+
 const getAnimalsBasePath = (herdType: HerdType) => ('/animals');
 const getLotsBasePath = (herdType: HerdType) => ('/lots');
 
@@ -386,7 +395,7 @@ export const createWeighing = async (
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-        throw new Error(data?.message || 'Erro ao salvar pesagem.');
+        throw new HerdApiError(data?.message || 'Erro ao salvar pesagem.', response.status);
     }
     return data.pesagem;
 };
@@ -604,7 +613,7 @@ export const createHerdEvent = async (
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-        throw new Error(data?.message || 'Erro ao salvar evento.');
+        throw new HerdApiError(data?.message || 'Erro ao salvar evento.', response.status);
     }
     return { ...data.event, aviso: data.aviso ?? null };
 };
@@ -635,7 +644,7 @@ export const createSanitaryRecord = async (
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
-        throw new Error(data?.message || 'Erro ao salvar registro sanitário.');
+        throw new HerdApiError(data?.message || 'Erro ao salvar registro sanitário.', response.status);
     }
     return data.record;
 };

@@ -10,7 +10,8 @@ import {
     listWeighingSessions,
     updateWeighing,
 } from '../adapters/herdApi';
-import { useOfflineQueue } from '../hooks/useOfflineQueue';
+import { useOfflineQueue, type OfflineQueueItem } from '../hooks/useOfflineQueue';
+import OfflineRejectedItems from './OfflineRejectedItems';
 import type {
     HerdAnimal,
     HerdLot,
@@ -51,6 +52,7 @@ interface OfflinePesagem {
 
 interface WeighingsTabProps {
     farmId: string;
+    currentUserId?: string | null;
     animals: HerdAnimal[];
     lots: HerdLot[];
     herdType: HerdType;
@@ -208,6 +210,7 @@ const playSuccessBeep = () => {
 
 const WeighingsTab: React.FC<WeighingsTabProps> = ({
     farmId,
+    currentUserId,
     animals,
     lots,
     herdType,
@@ -250,21 +253,26 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
     const [formSaving, setFormSaving] = useState(false);
     const [formMsg, setFormMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
     const [pendingReplace, setPendingReplace] = useState<PendingReplaceData | null>(null);
+    const [editingOfflineWeighingId, setEditingOfflineWeighingId] = useState<string | null>(null);
     const [activeSessionMode, setActiveSessionMode] = useState<SessionMode>('INDIVIDUAL');
     const [manualSessionWeighings, setManualSessionWeighings] = useState<ManualSessionWeighing[]>([]);
-    const sendOfflinePesagem = async (item: OfflinePesagem) => {
+    const sendOfflinePesagem = async (item: OfflineQueueItem<OfflinePesagem>) => {
         await createWeighing(item.animalId, item.herdType, {
             data: item.date,
             peso: item.weightKg,
+            clientRequestId: item.tempId,
             ...(item.weighingSessionId ? { weighingSessionId: item.weighingSessionId } : {}),
         });
     };
     const offlinePesagens = useOfflineQueue<OfflinePesagem>('eixo:pesagens:offline:', farmId, {
+        userId: currentUserId,
         autoSync: sendOfflinePesagem,
         onSynced: (result) => {
             load();
             loadSessions();
-            setFormMsg({ text: `${result.sent} pesagem(ns) sincronizada(s) com sucesso!`, type: 'success' });
+            setFormMsg(result.storageError
+                ? { text: 'A pesagem chegou ao servidor, mas a fila do aparelho não pôde ser atualizada. Não envie novamente.', type: 'error' }
+                : { text: `${result.sent} pesagem(ns) sincronizada(s) com sucesso!`, type: 'success' });
         },
     });
     const [groupAnimalsCount, setGroupAnimalsCount] = useState('');
@@ -659,9 +667,12 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
             await createWeighing(animal.id, herdType, {
                 data: formDate,
                 peso: pesoNum,
+                ...(editingOfflineWeighingId ? { clientRequestId: editingOfflineWeighingId } : {}),
                 ...(forceReplace ? { forceReplace: true } : {}),
                 ...(activeSession ? { weighingSessionId: activeSession.id } : {}),
             });
+            if (editingOfflineWeighingId) await offlinePesagens.remove(editingOfflineWeighingId);
+            setEditingOfflineWeighingId(null);
             playSuccessBeep();
             setPendingReplace(null);
             setManualSessionWeighings((current) => [
@@ -688,7 +699,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                 || (typeof navigator !== 'undefined' && navigator.onLine === false);
 
             if (isNetworkFailure && !forceReplace) {
-                offlinePesagens.enqueue({
+                const offlinePayload: OfflinePesagem = {
                     animalId: animal.id,
                     animalLabel: animal.identificacao || animal.brinco || animal.nome || animal.id,
                     lotName,
@@ -696,7 +707,18 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                     date: formDate,
                     weightKg: pesoNum,
                     weighingSessionId: activeSession ? activeSession.id : null,
-                });
+                };
+                const queued = editingOfflineWeighingId
+                    ? (await offlinePesagens.update(editingOfflineWeighingId, offlinePayload)
+                        ? { ok: true as const }
+                        : { ok: false as const, error: 'Não foi possível atualizar a pesagem salva no celular.' })
+                    : await offlinePesagens.enqueue(offlinePayload);
+                if (!queued.ok) {
+                    setPendingReplace(null);
+                    setFormMsg({ text: queued.error, type: 'error' });
+                    return;
+                }
+                setEditingOfflineWeighingId(null);
                 setPendingReplace(null);
                 setManualSessionWeighings((current) => [
                     {
@@ -738,7 +760,13 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
     const syncOfflinePesagens = async () => {
         setFormMsg(null);
         const result = await offlinePesagens.sync(sendOfflinePesagem);
-        if (result.pending > 0) {
+        if (result.storageError) {
+            setFormMsg({ text: 'Os dados foram enviados, mas a fila do aparelho não pôde ser atualizada. Não envie novamente.', type: 'error' });
+            return;
+        }
+        if (result.rejected > 0) {
+            setFormMsg({ text: `${result.rejected} pesagem(ns) precisam ser corrigidas ou descartadas abaixo.`, type: 'error' });
+        } else if (result.pending > 0) {
             setFormMsg({ text: `${result.sent} pesagem(ns) sincronizada(s). ${result.pending} ainda sem internet.`, type: 'error' });
         }
     };
@@ -1549,10 +1577,10 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                         />
                                     </div>
                                 )}
-                                {offlinePesagens.pendingCount > 0 && (
+                                {offlinePesagens.waitingCount > 0 && (
                                     <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-xs text-[#6d6558]">
                                         <span>
-                                            {offlinePesagens.pendingCount} pesagem(ns) salva(s) no celular, aguardando internet.
+                                            {offlinePesagens.waitingCount} pesagem(ns) salva(s) no celular, aguardando internet.
                                         </span>
                                         <button
                                             type="button"
@@ -1563,6 +1591,29 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                         </button>
                                     </div>
                                 )}
+                                <OfflineRejectedItems<OfflineQueueItem<OfflinePesagem>>
+                                    items={offlinePesagens.rejectedItems}
+                                    getLabel={(item) => `${item.animalLabel} · ${item.date} · ${item.weightKg} kg`}
+                                    onCorrect={(item) => {
+                                        const animal = animals.find((candidate) => candidate.id === item.animalId);
+                                        setActiveSessionMode('INDIVIDUAL');
+                                        setFormAnimalCode(animal?.identificacao || animal?.brinco || item.animalLabel);
+                                        setFormDate(item.date);
+                                        setFormWeight(String(item.weightKg));
+                                        setPendingReplace(null);
+                                        setEditingOfflineWeighingId(item.tempId);
+                                        setManualSessionWeighings((current) => current.filter((record) => !(
+                                            record.animalId === item.animalId
+                                            && record.date === item.date
+                                            && record.weightKg === item.weightKg
+                                        )));
+                                        setFormMsg({ text: 'Corrija os dados acima e registre novamente.', type: 'error' });
+                                    }}
+                                    onDiscard={(tempId) => {
+                                        void offlinePesagens.remove(tempId);
+                                        if (editingOfflineWeighingId === tempId) setEditingOfflineWeighingId(null);
+                                    }}
+                                />
                                 {formMsg && (
                                     <p className={formMsg.type === 'success' ? 'text-[#b9d6a9]' : 'text-[#f0b4a7]'}>
                                         {formMsg.text}

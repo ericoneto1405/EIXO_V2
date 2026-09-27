@@ -42,7 +42,7 @@ import {
     serializeAuthUser, serializeAuthUserWithContext,
     buildAllowedModulesFromPlan,
 } from '../utils/saasContext.js';
-import { requireAuth, requireBillingAccess, requireEntitlement, requireModule } from '../middlewares/requireAuth.js';
+import { requireAuth, requireBillingAccess, requireEntitlement, requireHerdWriteAccess, requireModule } from '../middlewares/requireAuth.js';
 
 const prisma = new PrismaClient();
 const resend = process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_...' ? new Resend(process.env.RESEND_API_KEY) : null;
@@ -425,6 +425,8 @@ app.use(
     ['/farms', '/lots', '/animals', '/pastos'],
     requireAuth,
 );
+
+app.use(['/animals', '/lots', '/pastos'], requireHerdWriteAccess);
 
 app.use(
     ['/users', '/seasons', '/repro-events', '/repro'],

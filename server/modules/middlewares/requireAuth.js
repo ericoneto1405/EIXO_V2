@@ -30,6 +30,14 @@ export const requireNonFieldWorker = (req, res, next) => {
     return next();
 };
 
+export const requireOrganizationOwner = (req, res, next) => {
+    const membershipRole = String(req.saas?.membershipRole || '').trim().toUpperCase();
+    if (membershipRole !== 'OWNER') {
+        return res.status(403).json({ message: 'Apenas o proprietário da conta pode realizar esta ação.' });
+    }
+    return next();
+};
+
 // Cruza o plano da organização com as permissões da pessoa.
 export const requireModule = (moduleName) => (req, res, next) => {
     if (req.user?.roles?.includes('SUPER_ADMIN')) {
@@ -46,6 +54,15 @@ export const requireModule = (moduleName) => (req, res, next) => {
         return res.status(403).json({ message: `Módulo "${moduleName}" não liberado para este usuário.` });
     }
     return next();
+};
+
+const requireEditAnimals = requireModule('Editar Animais');
+
+export const requireHerdWriteAccess = (req, res, next) => {
+    if (['GET', 'HEAD', 'OPTIONS'].includes(String(req.method || '').toUpperCase())) {
+        return next();
+    }
+    return requireEditAnimals(req, res, next);
 };
 
 export const requireEntitlement = (...codes) => async (req, res, next) => {

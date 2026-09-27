@@ -18,7 +18,7 @@ export async function ensureActivityLogColumns(prisma) {
     }
 }
 
-export async function logActivity(prisma, req, { action, entity, entityId, description, farmId } = {}) {
+export async function logActivity(prisma, req, { action, entity, entityId, description, farmId, required = false } = {}) {
     try {
         const userId = req.user?.id;
         const organizationId = req.saas?.organizationId || null;
@@ -30,7 +30,10 @@ export async function logActivity(prisma, req, { action, entity, entityId, descr
             id, userId, organizationId, farmId ?? null,
             action ?? null, entity ?? null, entityId ?? null, description ?? null,
         );
-    } catch { /* log nunca deve quebrar a operação principal */ }
+    } catch (error) {
+        if (required) throw error;
+        // Logs informativos não quebram a operação principal.
+    }
 }
 
 export async function recordActivityLog(prisma, req, { statusCode = null, requestMeta = null } = {}) {

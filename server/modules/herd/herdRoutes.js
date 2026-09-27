@@ -3,23 +3,31 @@ import express from 'express';
 import { randomUUID } from 'node:crypto';
 import ExcelJS from 'exceljs';
 import multer from 'multer';
-import * as XLSX from 'xlsx';
-import { requireAuth } from '../middlewares/requireAuth.js';
-import { buildFarmScopeFilter, buildFarmRelationFilter } from '../middlewares/farmScope.js';
+import { requireAuth, requireModule, requireNonFieldWorker } from '../middlewares/requireAuth.js';
+import { asyncRoute } from '../middlewares/errorHandler.js';
+import { buildFarmScopeFilter, buildFarmRelationFilter, buildFarmAccountFilter } from '../middlewares/farmScope.js';
 import { parseNumber, parseDateValue, normalizeAnimalIdentityKey } from '../utils/formatters.js';
 import { logActivity } from '../utils/activityLog.js';
+import { findDuplicateIdentitiesInAccount } from '../utils/animalIdentity.js';
 import { serializeHerdEvent, serializeSanitaryRecord } from '../utils/serializers.js';
 import { HERD_EVENT_CATEGORY_MAP, SANITARY_CATEGORY_MAP } from '../config/env.js';
 import { buildPurchasePaymentSchedule, createIntegratedTransaction, describePurchaseInstallment, upsertAutomaticResult } from '../financial/financialService.js';
 import { normalizeSexoImport, normalizeTipoRacaImport, parseImportDate, parseNascimentoImport, parsePesagemImport } from './herdImportRules.js';
 import { normalizarCategoriaParaGravar } from './animalCategories.js';
 import { normalizeSpreadsheetDates } from './herdSpreadsheetDates.js';
+import { MAX_IMPORT_ANIMALS, readBoundedSpreadsheet } from './herdSpreadsheetLimits.js';
 import { calcularCarencias, limparCacheLembretes } from '../sanity/sanityCalendar.js';
 import { avaliarVenda } from '../sanity/sanityStatus.js';
 const prisma = new PrismaClient();
 
 const VALID_EVENT_TYPES = ['NASCIMENTO', 'COMPRA', 'VENDA', 'MORTE'];
 const VALID_SANITARY_TIPOS = ['VACINA', 'VERMIFUGO', 'TRATAMENTO'];
+const herdImportAccess = [requireAuth, requireNonFieldWorker, requireModule('Editar Animais')];
+
+const hasInvalidOptionalText = (value) => value !== undefined && value !== null && typeof value !== 'string';
+const hasInvalidClientRequestId = (value) => value !== undefined
+    && value !== null
+    && (typeof value !== 'string' || !value.trim() || value.length > 100);
 
 export function registerHerdRoutes(app) {
 app.get('/animals/:id/eventos', async (req, res) => {
@@ -44,11 +52,18 @@ app.get('/animals/:id/eventos', async (req, res) => {
 
 app.post('/animals/:id/eventos', requireAuth, async (req, res) => {
     const { id } = req.params;
-    const { type, date, peso, valor, origem, destino, observacoes, purchasePurpose, saleType } = req.body || {};
+    const { type, date, peso, valor, origem, destino, observacoes, purchasePurpose, saleType, clientRequestId } = req.body || {};
 
-    if (!VALID_EVENT_TYPES.includes(type?.toUpperCase?.())) {
+    if (typeof type !== 'string' || !VALID_EVENT_TYPES.includes(type.toUpperCase())) {
         return res.status(400).json({ message: 'Tipo inválido. Use NASCIMENTO, COMPRA, VENDA ou MORTE.' });
     }
+    if ([origem, destino, observacoes, purchasePurpose, saleType].some(hasInvalidOptionalText)) {
+        return res.status(400).json({ message: 'Os campos de texto do evento possuem formato inválido.' });
+    }
+    if (hasInvalidClientRequestId(clientRequestId)) {
+        return res.status(400).json({ message: 'Identificador da operação inválido.' });
+    }
+    const normalizedClientRequestId = typeof clientRequestId === 'string' ? clientRequestId.trim() : null;
     const eventDate = parseDateValue(date);
     if (!eventDate) {
         return res.status(400).json({ message: 'Data do evento inválida.' });
@@ -60,6 +75,14 @@ app.post('/animals/:id/eventos', requireAuth, async (req, res) => {
         });
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
+        }
+        if (normalizedClientRequestId) {
+            const existingEvent = await prisma.herdEvent.findFirst({
+                where: { clientRequestId: normalizedClientRequestId, farmId: animal.farmId, animalId: id },
+            });
+            if (existingEvent) {
+                return res.status(200).json({ event: serializeHerdEvent(existingEvent), aviso: null });
+            }
         }
         const eventType = type.toUpperCase();
         if (purchasePurpose && !['PRODUCTION', 'BREEDING'].includes(purchasePurpose)) {
@@ -87,6 +110,7 @@ app.post('/animals/:id/eventos', requireAuth, async (req, res) => {
                 observacoes: [observacoes?.trim(), avisoVenda].filter(Boolean).join(' — ') || null,
                 purchasePurpose: resolvedPurchasePurpose,
                 saleType: resolvedSaleType,
+                clientRequestId: normalizedClientRequestId,
             } });
             const financialMap = HERD_EVENT_CATEGORY_MAP[eventType];
             const parsedValor = parseNumber(valor);
@@ -118,6 +142,15 @@ app.post('/animals/:id/eventos', requireAuth, async (req, res) => {
         if (eventType === 'VENDA' || eventType === 'MORTE') limparCacheLembretes(animal.farmId);
         return res.status(201).json({ event: serializeHerdEvent(event), aviso: avisoVenda });
     } catch (error) {
+        if (error?.code === 'P2002' && normalizedClientRequestId) {
+            const existingEvent = await prisma.herdEvent.findFirst({
+                where: { clientRequestId: normalizedClientRequestId, animalId: id, farm: buildFarmRelationFilter(req) },
+            });
+            if (existingEvent) {
+                return res.status(200).json({ event: serializeHerdEvent(existingEvent), aviso: null });
+            }
+            return res.status(409).json({ message: 'Esta operação já foi processada.' });
+        }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar evento.' });
     }
@@ -147,16 +180,23 @@ app.get('/animals/:id/sanitario', async (req, res) => {
     }
 });
 
-app.post('/animals/:id/sanitario', requireAuth, async (req, res) => {
+app.post('/animals/:id/sanitario', requireAuth, asyncRoute(async (req, res) => {
     const { id } = req.params;
-    const { tipo, produto, date, dose, proximaAplicacao, observacoes, valorUnitario } = req.body || {};
+    const { tipo, produto, date, dose, proximaAplicacao, observacoes, valorUnitario, clientRequestId } = req.body || {};
 
-    if (!VALID_SANITARY_TIPOS.includes(tipo?.toUpperCase?.())) {
+    if (typeof tipo !== 'string' || !VALID_SANITARY_TIPOS.includes(tipo.toUpperCase())) {
         return res.status(400).json({ message: 'Tipo inválido. Use VACINA, VERMIFUGO ou TRATAMENTO.' });
     }
-    if (!produto?.trim()) {
+    if (typeof produto !== 'string' || !produto.trim()) {
         return res.status(400).json({ message: 'Nome do produto é obrigatório.' });
     }
+    if ([dose, observacoes].some(hasInvalidOptionalText)) {
+        return res.status(400).json({ message: 'Dose e observações devem ser textos.' });
+    }
+    if (hasInvalidClientRequestId(clientRequestId)) {
+        return res.status(400).json({ message: 'Identificador da operação inválido.' });
+    }
+    const normalizedClientRequestId = typeof clientRequestId === 'string' ? clientRequestId.trim() : null;
     const eventDate = parseDateValue(date);
     if (!eventDate) {
         return res.status(400).json({ message: 'Data do registro inválida.' });
@@ -169,6 +209,14 @@ app.post('/animals/:id/sanitario', requireAuth, async (req, res) => {
         if (!animal) {
             return res.status(404).json({ message: 'Animal não encontrado.' });
         }
+        if (normalizedClientRequestId) {
+            const existingRecord = await prisma.sanitaryRecord.findFirst({
+                where: { clientRequestId: normalizedClientRequestId, farmId: animal.farmId, animalId: id },
+            });
+            if (existingRecord) {
+                return res.status(200).json({ record: serializeSanitaryRecord(existingRecord) });
+            }
+        }
         const tipoUpper = tipo.toUpperCase();
         const parsedValor = parseNumber(valorUnitario);
         const record = await prisma.$transaction(async (tx) => {
@@ -176,6 +224,7 @@ app.post('/animals/:id/sanitario', requireAuth, async (req, res) => {
                 farmId: animal.farmId, animalId: id, tipo: tipoUpper, produto: produto.trim(),
                 date: eventDate, dose: dose?.trim() || null, proximaAplicacao: parseDateValue(proximaAplicacao),
                 observacoes: observacoes?.trim() || null, valorUnitario: parsedValor || null,
+                clientRequestId: normalizedClientRequestId,
             } });
             const sanitaryMap = SANITARY_CATEGORY_MAP[tipoUpper];
             if (sanitaryMap && parsedValor && parsedValor > 0) {
@@ -201,10 +250,19 @@ app.post('/animals/:id/sanitario', requireAuth, async (req, res) => {
 
         return res.status(201).json({ record: serializeSanitaryRecord(record) });
     } catch (error) {
+        if (error?.code === 'P2002' && normalizedClientRequestId) {
+            const existingRecord = await prisma.sanitaryRecord.findFirst({
+                where: { clientRequestId: normalizedClientRequestId, animalId: id, farm: buildFarmRelationFilter(req) },
+            });
+            if (existingRecord) {
+                return res.status(200).json({ record: serializeSanitaryRecord(existingRecord) });
+            }
+            return res.status(409).json({ message: 'Esta operação já foi processada.' });
+        }
         console.error(error);
         return res.status(500).json({ message: 'Erro ao salvar registro sanitário.' });
     }
-});
+}));
 
 // =============================================
 // PLANILHA MODELO — Template de Importação
@@ -332,7 +390,7 @@ const IMPORT_CELL_BORDER = {
 
 const IMPORT_COLUMN_WIDTHS = { date: 13, number: 12, list: 16, text: 18 };
 
-app.get('/herd/import/template', requireAuth, async (req, res) => {
+app.get('/herd/import/template', ...herdImportAccess, asyncRoute(async (req, res) => {
   try {
     const farmId = String(req.query?.farmId || req.saas?.farmId || '');
     if (!farmId) return res.status(400).json({ message: 'Selecione uma fazenda para gerar a planilha modelo.' });
@@ -627,7 +685,7 @@ app.get('/herd/import/template', requireAuth, async (req, res) => {
     console.error('Erro ao gerar planilha modelo:', error);
     return res.status(500).json({ message: 'Erro ao gerar planilha modelo.' });
   }
-});
+}));
 
 // =============================================
 // UPLOAD DE PLANILHA — Importação simplificada (novo template)
@@ -768,9 +826,10 @@ function buildImportCorrectionRows(rows, errors, warnings = []) {
   const errorsByLine = new Map();
   errors.forEach((error) => {
     const line = Number(error.line);
-    const current = errorsByLine.get(line) || { identificacao: null, motivos: [] };
+    const current = errorsByLine.get(line) || { identificacao: null, motivos: [], conflito: null };
     current.identificacao = current.identificacao || error.identificacao || null;
     current.motivos.push(...(error.motivos || []));
+    current.conflito = current.conflito || error.conflito || null;
     errorsByLine.set(line, current);
   });
 
@@ -789,6 +848,7 @@ function buildImportCorrectionRows(rows, errors, warnings = []) {
       line,
       identificacao: error?.identificacao || row.identificacao || null,
       motivos: [...new Set(error?.motivos || [])],
+      conflito: error?.conflito || null,
       // Avisos não bloqueiam a linha (por isso ficam fora de `motivos`) — só
       // avisam o produtor de algo que o sistema assumiu no lugar dele.
       avisos: [...new Set(warningsByLine.get(line) || [])],
@@ -797,34 +857,36 @@ function buildImportCorrectionRows(rows, errors, warnings = []) {
   });
 }
 
-const getOrganizationFarmFilter = (farm) => (
-  farm.organizationId ? { organizationId: farm.organizationId } : { userId: farm.userId }
-);
-
-async function loadOrganizationAnimalReferences(farm) {
-  const farmFilter = getOrganizationFarmFilter(farm);
+async function loadOrganizationAnimalReferences(farm, req) {
+  const farmFilter = buildFarmAccountFilter(farm);
   const commercialAnimals = await prisma.animal.findMany({
       where: { farm: farmFilter },
-      select: { identityKey: true, registro: true, farm: { select: { name: true } } },
+      select: { id: true, identityKey: true, registro: true, farmId: true, farm: { select: { name: true } } },
     });
   const identities = new Map();
   const registrations = new Map();
   const legacyRegistrations = new Map();
-  const addIdentity = (value, source, farmName) => {
+  const buildConflict = (source, animalId, farmId, farmName) => ({
+    source,
+    animalId,
+    farmId,
+    farmName,
+  });
+  const addIdentity = (value, source, animalId, farmId, farmName) => {
     const key = normalizeHeader(value);
-    if (key && !identities.has(key)) identities.set(key, { source, farmName });
+    if (key && !identities.has(key)) identities.set(key, buildConflict(source, animalId, farmId, farmName));
   };
-  const addRegistration = (entity, number, source, farmName) => {
+  const addRegistration = (entity, number, source, animalId, farmId, farmName) => {
     const numberKey = normalizeHeader(number);
     if (!numberKey) return;
     const entityKey = normalizeHeader(entity);
     const target = entityKey ? registrations : legacyRegistrations;
     const key = entityKey ? `${entityKey}|${numberKey}` : numberKey;
-    if (!target.has(key)) target.set(key, { source, farmName });
+    if (!target.has(key)) target.set(key, buildConflict(source, animalId, farmId, farmName));
   };
   commercialAnimals.forEach((animal) => {
-    addIdentity(animal.identityKey, 'rebanho Comercial', animal.farm.name);
-    addRegistration(null, animal.registro, 'rebanho Comercial', animal.farm.name);
+    addIdentity(animal.identityKey, 'rebanho Comercial', animal.id, animal.farmId, animal.farm.name);
+    addRegistration(null, animal.registro, 'rebanho Comercial', animal.id, animal.farmId, animal.farm.name);
   });
 
   return { identities, registrations, legacyRegistrations };
@@ -844,14 +906,7 @@ function findRegistrationConflict(references, entity, number) {
 }
 
 function parseSpreadsheet(buffer, originalName) {
-  // SheetJS lê .xlsx, .xls e .csv direto do buffer
-  const wb = XLSX.read(buffer, { type: 'buffer', cellNF: true });
-  // Procura a aba "Dados" (case-insensitive); se não achar, usa a primeira
-  const sheetName = wb.SheetNames.find((n) => n.toLowerCase() === 'dados') || wb.SheetNames[0];
-  const sheet = wb.Sheets[sheetName];
-  if (!sheet) throw new Error('Planilha vazia ou sem abas.');
-
-  const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false });
+  const { workbook: wb, sheet, rows: rawRows } = readBoundedSpreadsheet(buffer);
   if (!Array.isArray(rawRows) || rawRows.length === 0) return [];
 
   // Detectar linha de cabeçalho: primeira linha que tenha "Identificação" (com ou sem *)
@@ -996,6 +1051,7 @@ async function carregarContextoImportacao(req, { farmId, paddockId, lotId, racaP
   }
 
   return {
+    req,
     farm,
     paddocks,
     lots,
@@ -1139,7 +1195,7 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
   // erro (não bloqueiam mais as demais linhas — só ficam de fora da criação).
   const conflictedLines = new Set();
   if (prepared.length) {
-    const organizationReferences = await loadOrganizationAnimalReferences(farm);
+    const organizationReferences = await loadOrganizationAnimalReferences(farm, contexto.req);
     prepared.forEach((item) => {
       const identityConflict = organizationReferences.identities.get(normalizeHeader(item.identityKey));
       const registrationConflict = item.data.registro
@@ -1151,7 +1207,12 @@ async function analisarLinhasImportacao(rows, contexto, farmId) {
         erros.push({
           line: item.line,
           identificacao: item.brinco,
-          motivos: [`Animal já existe na organização (${conflict.source}, fazenda ${conflict.farmName})`],
+          motivos: [`Animal já cadastrado na fazenda ${conflict.farmName || 'informada'}.`],
+          conflito: {
+            animalId: conflict.animalId,
+            farmId: conflict.farmId,
+            farmName: conflict.farmName,
+          },
           dados: { ...item.raw },
         });
       }
@@ -1208,7 +1269,7 @@ function montarRespostaImportacao(rows, erros, criados) {
   };
 }
 
-app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, res) => {
+app.post('/herd/import/upload', ...herdImportAccess, uploadHerdImportFile, asyncRoute(async (req, res) => {
   try {
     const { farmId, paddockId, lotId, racaPadrao } = req.body || {};
     if (!farmId) {
@@ -1228,8 +1289,8 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
     if (!rows.length) {
       return res.status(400).json({ message: 'Planilha sem linhas para importar.' });
     }
-    if (rows.length > 1000) {
-      return res.status(400).json({ message: `Limite de 1000 linhas por importação. Sua planilha tem ${rows.length}.` });
+    if (rows.length > MAX_IMPORT_ANIMALS) {
+      return res.status(400).json({ message: `Limite de ${MAX_IMPORT_ANIMALS} linhas por importação. Sua planilha tem ${rows.length}.` });
     }
 
     const contexto = await carregarContextoImportacao(req, { farmId, paddockId, lotId, racaPadrao });
@@ -1245,7 +1306,7 @@ app.post('/herd/import/upload', requireAuth, uploadHerdImportFile, async (req, r
     console.error('Erro no upload de rebanho:', error);
     return res.status(500).json({ message: 'Erro interno ao processar planilha.' });
   }
-});
+}));
 
 // =============================================
 // PRÉVIA EDITÁVEL — conferir sem gravar, depois confirmar
@@ -1271,7 +1332,7 @@ function montarCatalogosImportacao(contexto) {
 
 // Confere a planilha e devolve TODAS as linhas com seus motivos de erro.
 // Não grava nada — é o que alimenta a prévia editável.
-app.post('/herd/import/validar', requireAuth, uploadHerdImportFile, async (req, res) => {
+app.post('/herd/import/validar', ...herdImportAccess, uploadHerdImportFile, asyncRoute(async (req, res) => {
   try {
     const { farmId, paddockId, lotId, racaPadrao } = req.body || {};
     if (!farmId) {
@@ -1291,8 +1352,8 @@ app.post('/herd/import/validar', requireAuth, uploadHerdImportFile, async (req, 
     if (!rows.length) {
       return res.status(400).json({ message: 'Planilha sem linhas para importar.' });
     }
-    if (rows.length > 1000) {
-      return res.status(400).json({ message: `Limite de 1000 linhas por importação. Sua planilha tem ${rows.length}.` });
+    if (rows.length > MAX_IMPORT_ANIMALS) {
+      return res.status(400).json({ message: `Limite de ${MAX_IMPORT_ANIMALS} linhas por importação. Sua planilha tem ${rows.length}.` });
     }
 
     const contexto = await carregarContextoImportacao(req, { farmId, paddockId, lotId, racaPadrao });
@@ -1315,7 +1376,7 @@ app.post('/herd/import/validar', requireAuth, uploadHerdImportFile, async (req, 
     console.error('Erro ao validar planilha de rebanho:', error);
     return res.status(500).json({ message: 'Erro interno ao conferir a planilha.' });
   }
-});
+}));
 
 // Recebe as linhas já corrigidas na tela e grava.
 // Confere tudo de novo do zero: o que volta do navegador nunca é confiável.
@@ -1485,7 +1546,7 @@ async function criarAnimaisCompra(farmId, prontos, compra) {
   return criados;
 }
 
-app.post('/herd/import/confirmar', requireAuth, express.json({ limit: '10mb' }), async (req, res) => {
+app.post('/herd/import/confirmar', ...herdImportAccess, express.json({ limit: '10mb' }), asyncRoute(async (req, res) => {
   try {
     const { farmId, paddockId, lotId, racaPadrao, linhas, origem, compra: compraBody } = req.body || {};
     if (!farmId) {
@@ -1498,14 +1559,29 @@ app.post('/herd/import/confirmar', requireAuth, express.json({ limit: '10mb' }),
     if (!Array.isArray(linhas) || linhas.length === 0) {
       return res.status(400).json({ message: 'Nenhuma linha recebida para importar.' });
     }
-    if (linhas.length > 1000) {
-      return res.status(400).json({ message: `Limite de 1000 linhas por importação. Você enviou ${linhas.length}.` });
+    if (linhas.length > MAX_IMPORT_ANIMALS) {
+      return res.status(400).json({ message: `Limite de ${MAX_IMPORT_ANIMALS} linhas por importação. Você enviou ${linhas.length}.` });
+    }
+
+    const linhaInvalida = linhas.some((item) => {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return true;
+      const dados = item.dados;
+      if (!dados || typeof dados !== 'object' || Array.isArray(dados)) return true;
+      return Object.values(dados).some((valor) => (
+        valor !== undefined
+        && valor !== null
+        && typeof valor !== 'string'
+        && (typeof valor !== 'number' || !Number.isFinite(valor))
+      ));
+    });
+    if (linhaInvalida) {
+      return res.status(400).json({ message: 'As linhas da importação devem conter apenas textos ou números.' });
     }
 
     // Reconstrói as linhas no mesmo formato que sai da planilha, para passar
     // exatamente pela mesma conferência do upload por arquivo.
     const rows = linhas.map((item, index) => {
-      const dados = (item && typeof item.dados === 'object' && item.dados) || {};
+      const dados = item.dados;
       const limpo = {};
       Object.keys(dados).forEach((key) => {
         if (key === '__line') return;
@@ -1554,12 +1630,12 @@ app.post('/herd/import/confirmar', requireAuth, express.json({ limit: '10mb' }),
     console.error('Erro ao confirmar importação de rebanho:', error);
     return res.status(500).json({ message: 'Erro interno ao gravar os animais.' });
   }
-});
+}));
 
 // =============================================
 // PLANILHA DE ERROS — Para o cliente corrigir e reenviar
 // =============================================
-app.post('/herd/import/erros-xlsx', requireAuth, async (req, res) => {
+app.post('/herd/import/erros-xlsx', ...herdImportAccess, asyncRoute(async (req, res) => {
   try {
     const { erros, linhasCorrecao } = req.body || {};
     const linhas = Array.isArray(linhasCorrecao) && linhasCorrecao.length > 0 ? linhasCorrecao : erros;
@@ -1659,7 +1735,7 @@ app.post('/herd/import/erros-xlsx', requireAuth, async (req, res) => {
     console.error('Erro ao gerar planilha de erros:', error);
     return res.status(500).json({ message: 'Erro ao gerar planilha de erros.' });
   }
-});
+}));
 
 const REQUIRED_COLUMNS = ['identificacao'];
 const OPTIONAL_COLUMNS = [
@@ -1702,8 +1778,8 @@ function validateImportRows(rows) {
     errors.push('Nenhuma linha para importar.');
     return errors;
   }
-  if (rows.length > 2000) {
-    errors.push('Limite de 2000 linhas por importação.');
+  if (rows.length > MAX_IMPORT_ANIMALS) {
+    errors.push(`Limite de ${MAX_IMPORT_ANIMALS} linhas por importação.`);
     return errors;
   }
   const allColumns = [...REQUIRED_COLUMNS, ...OPTIONAL_COLUMNS];
@@ -1717,14 +1793,32 @@ function validateImportRows(rows) {
   }
   rows.forEach((row, i) => {
     const line = i + 1;
-    if (!row?.identificacao?.trim()) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) {
+      errors.push(`Linha ${line}: formato inválido.`);
+      return;
+    }
+    const invalidValue = Object.values(row).some((value) => (
+      value !== undefined
+      && value !== null
+      && typeof value !== 'string'
+      && (typeof value !== 'number' || !Number.isFinite(value))
+    ));
+    if (invalidValue) {
+      errors.push(`Linha ${line}: use apenas textos ou números nas colunas.`);
+      return;
+    }
+    if (typeof row.identificacao !== 'string' && typeof row.identificacao !== 'number') {
+      errors.push(`Linha ${line}: identificacao é obrigatória.`);
+      return;
+    }
+    if (!String(row.identificacao).trim()) {
       errors.push(`Linha ${line}: identificacao é obrigatória.`);
     }
   });
   return errors;
 }
 
-app.post('/herd/import', requireAuth, async (req, res) => {
+app.post('/herd/import', ...herdImportAccess, asyncRoute(async (req, res) => {
   const { farmId, rows } = req.body || {};
 
   if (!farmId) {
@@ -1744,11 +1838,20 @@ app.post('/herd/import', requireAuth, async (req, res) => {
     return res.status(404).json({ message: 'Fazenda não encontrada ou sem acesso.' });
   }
 
+  const requestedIdentityKeys = rows.map((row) => normalizeAnimalIdentityKey(String(row.identificacao || '')));
+  const existingAnimals = await findDuplicateIdentitiesInAccount(prisma, req, farm, {
+    identityKeys: requestedIdentityKeys,
+  });
+  const existingByIdentityKey = new Map(existingAnimals.map((animal) => [animal.identityKey, animal]));
+
   const results = [];
   const createdAnimals = [];
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
+    const row = Object.fromEntries(Object.entries(rows[i]).map(([key, value]) => [
+      key,
+      typeof value === 'number' ? String(value) : value,
+    ]));
     const line = i + 1;
     const rowResult = { line, brinco: row.identificacao, status: 'ok', created: {} };
 
@@ -1763,13 +1866,13 @@ app.post('/herd/import', requireAuth, async (req, res) => {
 
       const identityKey = normalizeAnimalIdentityKey(brinco);
 
-      const existing = await prisma.animal.findFirst({
-        where: { farmId, identityKey },
-      });
+      const existing = existingByIdentityKey.get(identityKey);
       if (existing) {
         rowResult.status = 'skipped';
-        rowResult.message = 'Animal já existe';
+        rowResult.message = `Animal já cadastrado na fazenda ${existing.farmName || 'informada'}.`;
         rowResult.existingId = existing.id;
+        rowResult.existingFarmId = existing.farmId;
+        rowResult.existingFarmName = existing.farmName || null;
         results.push(rowResult);
         createdAnimals.push(existing);
         continue;
@@ -1804,6 +1907,13 @@ app.post('/herd/import', requireAuth, async (req, res) => {
 
       rowResult.created.animal = animal.id;
       createdAnimals.push(animal);
+      existingByIdentityKey.set(identityKey, {
+        id: animal.id,
+        farmId: farm.id,
+        farmName: farm.name,
+        identityKey,
+        canRevealDetails: true,
+      });
 
       if (row.pai_nome?.trim() || row.pai_registro?.trim()) {
         const paiKey = normalizeAnimalIdentityKey(row.pai_registro?.trim() || row.pai_nome.trim());
@@ -1988,7 +2098,7 @@ app.post('/herd/import', requireAuth, async (req, res) => {
   });
 
   return res.status(201).json({ summary, results });
-});
+}));
 
 // =============================================
 // EVENTOS DE INVENTÁRIO — Plantel P.O.

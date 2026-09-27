@@ -2,7 +2,7 @@
 // uso em QUALQUER fazenda da mesma organização — não só na fazenda atual.
 // Isso evita que o mesmo número seja reaproveitado por engano em outro
 // animal, mesmo que seja de uma fazenda diferente da mesma conta.
-import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
+import { buildFarmAccountFilter, buildFarmScopeFilter } from '../middlewares/farmScope.js';
 
 export async function findDuplicateIdentityInOrganization(prisma, req, { identityKey, excludeAnimalId } = {}) {
     if (!identityKey) return null;
@@ -51,4 +51,32 @@ export async function findDuplicateIdentitiesInOrganization(prisma, req, { ident
         select: { id: true, farmId: true, brinco: true, identityKey: true },
     });
     return existingList.map((item) => ({ ...item, farmName: farmNameById.get(item.farmId) || null }));
+}
+
+export async function findDuplicateIdentitiesInAccount(prisma, req, farm, { identityKeys = [] } = {}) {
+    const keys = Array.from(new Set(identityKeys.filter(Boolean)));
+    if (!farm || !keys.length) return [];
+
+    const existingList = await prisma.animal.findMany({
+        where: {
+            identityKey: { in: keys },
+            farm: buildFarmAccountFilter(farm),
+        },
+        select: {
+            id: true,
+            farmId: true,
+            brinco: true,
+            identityKey: true,
+            farm: { select: { name: true } },
+        },
+    });
+
+    return existingList.map((item) => ({
+        id: item.id,
+        farmId: item.farmId,
+        brinco: item.brinco,
+        identityKey: item.identityKey,
+        farmName: item.farm?.name || null,
+        canRevealDetails: true,
+    }));
 }

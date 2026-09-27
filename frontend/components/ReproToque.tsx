@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useOfflineQueue } from '../hooks/useOfflineQueue';
+import { useOfflineQueue, type OfflineQueueItem } from '../hooks/useOfflineQueue';
+import OfflineRejectedItems from './OfflineRejectedItems';
 import {
     Faixa,
     LinhaToque,
     Metodo,
-    ReproApiError,
     SessaoToque,
     ToquePayload,
     VacaCurral,
@@ -66,11 +66,12 @@ const novoRascunho = (): Rascunho => ({
 
 export const ToqueCurral: React.FC<{
     farmId: string;
+    currentUserId?: string | null;
     onErro: (m: string | null) => void;
     onAviso: (m: string | null) => void;
-}> = ({ farmId, onErro, onAviso }) => {
-    const chaveVacas = `eixo:repro:vacas:${farmId}`;
-    const chaveRascunho = `eixo:repro:toque:rascunho:${farmId}`;
+}> = ({ farmId, currentUserId, onErro, onAviso }) => {
+    const chaveVacas = `eixo:repro:vacas:${currentUserId || 'none'}:${farmId}`;
+    const chaveRascunho = `eixo:repro:toque:rascunho:${currentUserId || 'none'}:${farmId}`;
     const [cache, setCache] = useState<{ baixadoEm: string | null; vacas: VacaCurral[]; lotes: { id: string; name: string }[] }>(
         () => lerLocal(chaveVacas, { baixadoEm: null, vacas: [], lotes: [] }),
     );
@@ -83,7 +84,7 @@ export const ToqueCurral: React.FC<{
     const [conferindo, setConferindo] = useState(false);
     const [sessoes, setSessoes] = useState<SessaoToque[]>([]);
     const [baixando, setBaixando] = useState(false);
-    const [recusados, setRecusados] = useState<string[]>([]);
+    const [editingOfflineId, setEditingOfflineId] = useState<string | null>(null);
     const identRef = useRef<HTMLInputElement | null>(null);
 
     useEffect(() => gravarLocal(chaveRascunho, rascunho), [chaveRascunho, rascunho]);
@@ -103,22 +104,18 @@ export const ToqueCurral: React.FC<{
     }, [farmId, chaveVacas]);
 
     const enviar = async (item: ToquePayload) => {
-        try {
-            await enviarToque(farmId, item);
-        } catch (e) {
-            // Erro de conteúdo não adianta repetir: sai da fila e avisa. Sem internet, continua na fila.
-            if (e instanceof ReproApiError && e.status >= 400 && e.status < 500) {
-                setRecusados((r) => [...r, `Toque de ${fmtData(item.data)}: ${e.message}`]);
-                return;
-            }
-            throw e;
-        }
+        await enviarToque(farmId, item);
     };
 
     const fila = useOfflineQueue<ToquePayload>('eixo:repro:toque:fila:', farmId, {
+        userId: currentUserId,
         autoSync: enviar,
         onSynced: (r) => {
-            onAviso(`${r.sent} toque(s) enviado(s). Confira as pendências abaixo.`);
+            if (r.storageError) {
+                onErro('O toque chegou ao servidor, mas a fila do aparelho não pôde ser atualizada. Não envie novamente.');
+            } else {
+                onAviso(`${r.sent} toque(s) enviado(s). Confira as pendências abaixo.`);
+            }
             void carregarSessoes();
         },
     });
@@ -172,7 +169,17 @@ export const ToqueCurral: React.FC<{
 
     const fechar = async () => {
         const { linhas, clientId, data, metodo, veterinario, crmv, lotId } = rascunho;
-        fila.enqueue({ clientId, data, metodo, veterinario, crmv, lotId: lotId || null, linhas: [...linhas].reverse() });
+        const payload: ToquePayload = { clientId, data, metodo, veterinario, crmv, lotId: lotId || null, linhas: [...linhas].reverse() };
+        const queued = editingOfflineId
+            ? (await fila.update(editingOfflineId, payload)
+                ? { ok: true as const }
+                : { ok: false as const, error: 'Não foi possível atualizar o toque salvo no celular.' })
+            : await fila.enqueue(payload);
+        if (!queued.ok) {
+            onErro(queued.error);
+            return;
+        }
+        setEditingOfflineId(null);
         setRascunho(novoRascunho());
         setConferindo(false);
         if (navigator.onLine) {
@@ -194,9 +201,9 @@ export const ToqueCurral: React.FC<{
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    {fila.items.length > 0 && (
+                    {fila.waitingCount > 0 && (
                         <button type="button" className={secondaryButton} onClick={() => void fila.sync(enviar)}>
-                            Enviar agora ({fila.items.length} guardado{fila.items.length > 1 ? 's' : ''})
+                            Enviar agora ({fila.waitingCount} guardado{fila.waitingCount > 1 ? 's' : ''})
                         </button>
                     )}
                     <button type="button" className={secondaryButton} disabled={baixando} onClick={baixar}>
@@ -204,11 +211,28 @@ export const ToqueCurral: React.FC<{
                     </button>
                 </div>
             </div>
-            {recusados.length > 0 && (
-                <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-                    {recusados.map((r) => <p key={r}>{r}</p>)}
-                </div>
-            )}
+            <OfflineRejectedItems<OfflineQueueItem<ToquePayload>>
+                items={fila.rejectedItems}
+                getLabel={(item) => `Toque de ${fmtData(item.data)} · ${item.linhas.length} vaca(s)`}
+                onCorrect={(item) => {
+                    setRascunho({
+                        clientId: item.clientId,
+                        data: item.data,
+                        metodo: item.metodo,
+                        veterinario: item.veterinario || '',
+                        crmv: item.crmv || '',
+                        lotId: item.lotId || '',
+                        linhas: [...item.linhas].reverse(),
+                    });
+                    setEditingOfflineId(item.tempId);
+                    setConferindo(false);
+                    onAviso('Toque carregado para correção. Confira e feche o toque novamente.');
+                }}
+                onDiscard={(tempId) => {
+                    void fila.remove(tempId);
+                    if (editingOfflineId === tempId) setEditingOfflineId(null);
+                }}
+            />
 
             <div className={`${cardClass} space-y-3`}>
                 <h3 className="font-bold">Novo toque</h3>
