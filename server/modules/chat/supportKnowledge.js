@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-26.1';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-26';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-27.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-27';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -32,6 +32,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         guidance: [
             'Acesse Visão Geral para acompanhar os principais indicadores da fazenda selecionada.',
             'Confirme a fazenda no seletor antes de interpretar os números.',
+            'O total do rebanho considera somente os animais vivos; vendidos e mortos não entram nos indicadores nem na ocupação.',
         ],
     },
     {
@@ -44,6 +45,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Use Adicionar fazenda para os dados básicos.',
             'Escolha primeiro o estado e depois a cidade na lista oficial; ela define quais vacinas são obrigatórias na região.',
             'Depois abra a fazenda e cadastre os pastos.',
+            'Animais atuais mostra a quantidade de animais vivos em cabeças, igual ao total da Visão Geral e do Manejo do Rebanho.',
+            'A capacidade soma somente pastos ativos de pastejo com UA informada ou com área e lotação válidas; área sozinha não vira UA. Quando faltarem dados, a tela informa capacidade não informada ou parcial.',
         ],
     },
     {
@@ -73,6 +76,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Acesse Manejo do Rebanho e abra a aba Animais.',
             'Use Adicionar animal para um cadastro individual.',
             'Localize o animal na lista para consultar ou completar seus dados.',
+            'A Visão do Rebanho e a aba Pastos continuam usando todos os animais vivos mesmo quando a Lista está filtrada para vendidos ou mortos.',
+            'Na aba Pastos, alocados mais sem pasto deve fechar o total ativo; pasto vazio aparece com zero.',
             'Nos cartões de atenção, categoria sugerida automaticamente foi calculada pelos dados do animal; categoria não identificada indica que faltam dados para o cálculo.',
             'Para confirmar ou informar a categoria, abra o animal, selecione a categoria, salve e registre a justificativa da alteração.',
         ],

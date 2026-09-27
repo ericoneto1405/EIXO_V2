@@ -582,6 +582,11 @@ const AppContent: React.FC = () => {
         }
     }, [currentUser?.defaultFarmId]);
 
+    useEffect(() => {
+        if (!isAuthenticated || activeView !== 'Fazendas') return;
+        void loadFarms(selectedFarmId);
+    }, [activeView, isAuthenticated, loadFarms]);
+
     const handleFarmCreated = React.useCallback(
         (farm: Farm) => {
             setFarms((current) => {

@@ -48,6 +48,7 @@ export function registerOverviewRoutes(app) {
                 where: {
                     farmId: { in: farmIds },
                     farm: buildFarmRelationFilter(req),
+                    status: 'VIVO',
                 },
                 select: {
                     id: true, categoria: true, dataNascimento: true,

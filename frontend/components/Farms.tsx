@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import FarmRegistrationForm from './FarmRegistrationForm';
 import { Farm } from '../types';
+import { summarizeActiveGrazingCapacity } from '../paddockCapacity';
 
 const FarmMap = React.lazy(() => import('./FarmMap'));
 
@@ -289,13 +290,10 @@ const Farms: React.FC<FarmsProps> = ({
                                 const activePaddocks = paddocks.filter((paddock) => paddock.active !== false);
                                 const paddocksCount = activePaddocks.length;
                                 const totalPaddockArea = activePaddocks.reduce((sum, paddock) => sum + (paddock.areaHa ?? 0), 0);
-                                const totalCapacityUa = activePaddocks.reduce((sum, paddock) => {
-                                    if (typeof paddock.capacity === 'number') return sum + paddock.capacity;
-                                    if (typeof paddock.areaHa === 'number' && typeof paddock.lotacaoUaHa === 'number') {
-                                        return sum + (paddock.areaHa * paddock.lotacaoUaHa);
-                                    }
-                                    return sum;
-                                }, 0);
+                                const capacitySummary = summarizeActiveGrazingCapacity(activePaddocks);
+                                const capacityLabel = capacitySummary.state === 'not-informed'
+                                    ? 'Não informada'
+                                    : `${formatNumber(capacitySummary.totalUa)} UA${capacitySummary.state === 'partial' ? ' · parcial' : ''}`;
                                 const areaCoverage = farm.size > 0 ? (totalPaddockArea / farm.size) * 100 : 0;
                                 const GRAZING_TYPES = ['pasto', 'piquete de maternidade'];
                                 const INFRA_TYPES = ['curral de manejo', 'curral de engorda'];
@@ -315,9 +313,7 @@ const Farms: React.FC<FarmsProps> = ({
                                 const pctGrazing = (areaGrazing / farmSizeForCalc) * 100;
                                 const pctInfra = (areaInfra / farmSizeForCalc) * 100;
                                 const pctNonProd = (areaNonProd / farmSizeForCalc) * 100;
-                                const animalsCount = typeof (farm as Farm & { animalsCount?: number }).animalsCount === 'number'
-                                    ? (farm as Farm & { animalsCount?: number }).animalsCount
-                                    : null;
+                                const animalsCount = typeof farm.animalsCount === 'number' ? farm.animalsCount : 0;
 
                                 return (
                                     <div
@@ -373,11 +369,11 @@ const Farms: React.FC<FarmsProps> = ({
                                             </div>
                                             <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
                                                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Capacidade total</p>
-                                                <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{formatNumber(totalCapacityUa)} UA</p>
+                                                <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{capacityLabel}</p>
                                             </div>
                                             <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
                                                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Animais atuais</p>
-                                                <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{animalsCount ?? '—'}</p>
+                                                <p className="mt-1 text-sm font-bold text-[var(--eixo-text)]">{animalsCount.toLocaleString('pt-BR')} cabeças</p>
                                             </div>
                                             <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
                                                 <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Área distribuída</p>

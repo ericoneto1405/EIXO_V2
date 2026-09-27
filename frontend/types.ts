@@ -222,6 +222,7 @@ export interface Farm {
     size: number;
     notes?: string;
     responsibleName?: string | null;
+    animalsCount: number;
     paddocks: Paddock[];
     createdAt: string;
     userId?: string;
