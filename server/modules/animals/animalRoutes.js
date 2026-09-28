@@ -174,7 +174,7 @@ export const moveAnimalBetweenPaddocks = async ({ animalId, paddockId, startAt, 
     }
 };
 
-export const moveAnimalsBetweenPaddocks = async ({ ids, paddockId, startAt, notes, scopeFilter }) => {
+export const moveAnimalsBetweenPaddocks = async ({ ids, paddockId, startAt, notes, scopeFilter, database = prisma }) => {
     const normalizedIds = Array.isArray(ids) ? [...new Set(ids.map(String).filter(Boolean))] : [];
     if (!normalizedIds.length || !paddockId) {
         return { error: { status: 400, message: 'Informe ao menos um animal e o pasto.' } };
@@ -188,10 +188,10 @@ export const moveAnimalsBetweenPaddocks = async ({ ids, paddockId, startAt, note
         return { error: { status: 400, message: 'Data de entrada no pasto inválida.' } };
     }
     const trimmedNotes = typeof notes === 'string' && notes.trim() ? notes.trim() : null;
-    const animalModel = prisma.animal;
+    const animalModel = database.animal;
     const animals = await animalModel.findMany({
         where: { id: { in: normalizedIds }, farm: scopeFilter },
-        select: { id: true, farmId: true, brinco: true, currentPaddockId: true },
+        select: { id: true, farmId: true, brinco: true, currentPaddockId: true, status: true },
     });
     if (animals.length !== normalizedIds.length) {
         return { error: { status: 403, message: 'Um ou mais animais não pertencem a esta conta.' } };
@@ -201,23 +201,34 @@ export const moveAnimalsBetweenPaddocks = async ({ ids, paddockId, startAt, note
     if (farmIds.size !== 1) {
         return { error: { status: 400, message: 'Selecione animais de apenas uma fazenda por movimentação.' } };
     }
+    if (animals.some((animal) => animal.status !== 'VIVO')) {
+        return { error: { status: 409, message: 'A movimentação foi recusada porque a seleção contém animais vendidos ou mortos.' } };
+    }
     const farmId = animals[0].farmId;
     const targetPaddockId = String(paddockId);
-    const paddock = await prisma.paddock.findFirst({
-        where: { id: targetPaddockId, farmId, farm: scopeFilter },
-        select: { id: true },
+    const paddock = await database.paddock.findFirst({
+        where: { id: targetPaddockId, farmId, active: true, farm: scopeFilter },
+        select: { id: true, name: true },
     });
     if (!paddock) {
-        return { error: { status: 400, message: 'Pasto inválido para esta fazenda.' } };
+        return { error: { status: 400, message: 'Selecione um pasto ativo desta fazenda.' } };
     }
-    const animalAlreadyInPaddock = animals.find((animal) => animal.currentPaddockId === targetPaddockId);
-    if (animalAlreadyInPaddock) {
-        const label = animalAlreadyInPaddock.brinco ? ` "${animalAlreadyInPaddock.brinco}"` : '';
-        return { error: { status: 409, message: `O animal${label} já está alocado neste pasto.` } };
+    const movableAnimals = animals.filter((animal) => animal.currentPaddockId !== targetPaddockId);
+    const unchanged = animals.length - movableAnimals.length;
+    if (!movableAnimals.length) {
+        return {
+            result: {
+                updated: 0,
+                unchanged,
+                paddockId: targetPaddockId,
+                paddockName: paddock.name,
+            },
+        };
     }
 
-    const relationFilter = { animalId: { in: normalizedIds } };
-    const openMoves = await prisma.paddockMove.findMany({
+    const movableIds = movableAnimals.map((animal) => animal.id);
+    const relationFilter = { animalId: { in: movableIds } };
+    const openMoves = await database.paddockMove.findMany({
         where: { ...relationFilter, endAt: null },
         select: { id: true, startAt: true },
     });
@@ -225,29 +236,45 @@ export const moveAnimalsBetweenPaddocks = async ({ ids, paddockId, startAt, note
         return { error: { status: 400, message: 'Data da movimentação deve ser posterior à última entrada no pasto.' } };
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-        const txAnimalModel = tx.animal;
-        await tx.paddockMove.updateMany({
-            where: { ...relationFilter, endAt: null },
-            data: { endAt: moveStartAt },
-        });
-        await tx.paddockMove.createMany({
-            data: normalizedIds.map((animalId) => ({
-                farmId,
+    try {
+        const result = await database.$transaction(async (tx) => {
+            const txAnimalModel = tx.animal;
+            const updatedAnimals = await txAnimalModel.updateMany({
+                where: { id: { in: movableIds }, farmId, status: 'VIVO' },
+                data: { currentPaddockId: targetPaddockId },
+            });
+            if (updatedAnimals.count !== movableIds.length) {
+                const error = new Error('NON_ACTIVE_SELECTION');
+                error.code = 'NON_ACTIVE_SELECTION';
+                throw error;
+            }
+            await tx.paddockMove.updateMany({
+                where: { ...relationFilter, endAt: null },
+                data: { endAt: moveStartAt },
+            });
+            await tx.paddockMove.createMany({
+                data: movableIds.map((animalId) => ({
+                    farmId,
+                    paddockId: targetPaddockId,
+                    ...({ animalId }),
+                    startAt: moveStartAt,
+                    notes: trimmedNotes,
+                })),
+            });
+            return {
+                updated: movableIds.length,
+                unchanged,
                 paddockId: targetPaddockId,
-                ...({ animalId }),
-                startAt: moveStartAt,
-                notes: trimmedNotes,
-            })),
+                paddockName: paddock.name,
+            };
         });
-        await txAnimalModel.updateMany({
-            where: { id: { in: normalizedIds }, farmId },
-            data: { currentPaddockId: targetPaddockId },
-        });
-        return { updated: normalizedIds.length, paddockId: targetPaddockId };
-    });
-
-    return { result };
+        return { result };
+    } catch (error) {
+        if (error?.code === 'NON_ACTIVE_SELECTION') {
+            return { error: { status: 409, message: 'A movimentação foi recusada porque a seleção contém animais vendidos ou mortos.' } };
+        }
+        throw error;
+    }
 };
 
 export const createBulkWeighings = async ({ ids, farmId, animalCount, date, totalWeightKg, weighingSessionId, scopeFilter }) => {
