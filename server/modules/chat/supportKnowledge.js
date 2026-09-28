@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-27.1';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-27';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-28.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-28';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -70,7 +70,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
     {
         id: 'animais-cadastro',
         title: 'Cadastrar e consultar animais',
-        keywords: ['animal', 'animais', 'brinco', 'cadastro animal', 'rebanho', 'categoria', 'categoria automática', 'categoria não identificada'],
+        keywords: ['animal', 'animais', 'brinco', 'cadastro animal', 'rebanho', 'categoria', 'categoria automática', 'categoria não identificada', 'sem pasto', 'mover para pasto', 'movimentação em lote'],
         href: 'eixo:view:Rebanho%20Comercial?tab=animals',
         guidance: [
             'Acesse Manejo do Rebanho e abra a aba Animais.',
@@ -78,6 +78,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Localize o animal na lista para consultar ou completar seus dados.',
             'A Visão do Rebanho e a aba Pastos continuam usando todos os animais vivos mesmo quando a Lista está filtrada para vendidos ou mortos.',
             'Na aba Pastos, alocados mais sem pasto deve fechar o total ativo; pasto vazio aparece com zero.',
+            'Para alocar vários animais, filtre a Lista, use Selecionar os N desta lista, escolha Mover para Pasto e confirme o destino. A seleção considera todas as páginas do filtro atual.',
+            'A movimentação para pasto aceita somente animais vivos e pastos ativos da fazenda. Quem já estiver no destino permanece sem criar outro movimento.',
             'Nos cartões de atenção, categoria sugerida automaticamente foi calculada pelos dados do animal; categoria não identificada indica que faltam dados para o cálculo.',
             'Para confirmar ou informar a categoria, abra o animal, selecione a categoria, salve e registre a justificativa da alteração.',
         ],

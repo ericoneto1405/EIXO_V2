@@ -319,6 +319,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const [bulkTransferFarmOpen, setBulkTransferFarmOpen] = useState(false);
     const [bulkTargetLotId, setBulkTargetLotId] = useState('');
     const [bulkTargetPastoId, setBulkTargetPastoId] = useState('');
+    const [bulkMoveFeedback, setBulkMoveFeedback] = useState<string | null>(null);
     const [transferFarms, setTransferFarms] = useState<TransferFarmOption[]>([]);
     const [transferPaddocks, setTransferPaddocks] = useState<Paddock[]>([]);
     const [transferTargetFarmId, setTransferTargetFarmId] = useState('');
@@ -525,10 +526,19 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         setBulkTransferFarmOpen(false);
         setBulkTargetLotId('');
         setBulkTargetPastoId('');
+        setBulkMoveFeedback(null);
         setBulkError(null);
         setIdentificationAnimal(null);
         setIdentificationError(null);
     }, [farmId, resolvedMode]);
+
+    useEffect(() => {
+        setSelectedAnimals(new Set());
+        setBulkMoveToPastoOpen(false);
+        setBulkTargetPastoId('');
+        setBulkError(null);
+        setBulkMoveFeedback(null);
+    }, [animalStatusFilter]);
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -1119,6 +1129,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
         if (!bulkTargetPastoId) { setBulkError('Selecione um pasto.'); return; }
         setBulkLoading(true);
         setBulkError(null);
+        setBulkMoveFeedback(null);
         try {
             const endpoint = '/animals/bulk-move-pasto';
             const res = await fetch(buildApiUrl(endpoint), {
@@ -1129,6 +1140,14 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             });
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data?.message || 'Erro ao mover animais.');
+            const updated = Number(data?.updated) || 0;
+            const unchanged = Number(data?.unchanged) || 0;
+            const paddockName = data?.paddockName
+                || paddocks.find((paddock) => paddock.id === bulkTargetPastoId)?.name
+                || 'pasto selecionado';
+            setBulkMoveFeedback(
+                `${updated} ${updated === 1 ? 'movido' : 'movidos'} · ${unchanged} ${unchanged === 1 ? 'já estava' : 'já estavam'} no ${paddockName}`,
+            );
             setSelectedAnimals(new Set());
             setBulkMoveToPastoOpen(false);
             setBulkTargetPastoId('');
@@ -1379,9 +1398,37 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     const renderTable = () => {
         const totalPages = Math.ceil(sortedAnimals.length / PAGE_SIZE);
         const paginatedAnimals = sortedAnimals.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+        const allFilteredAnimalsSelected = sortedAnimals.length > 0
+            && sortedAnimals.every((animal) => selectedAnimals.has(animal.id));
 
         return (
             <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
+                {bulkMoveFeedback && (
+                    <div role="status" className="flex items-center justify-between gap-3 border-b border-[#d9ead0] bg-[var(--eixo-green-soft)] px-4 py-3 text-sm font-semibold text-[var(--eixo-text)]">
+                        <span>{bulkMoveFeedback}</span>
+                        <button
+                            type="button"
+                            onClick={() => setBulkMoveFeedback(null)}
+                            className="text-xs text-[var(--eixo-text-muted)] hover:underline"
+                        >
+                            Fechar
+                        </button>
+                    </div>
+                )}
+                {!isLoading && animalStatusFilter === 'VIVO' && sortedAnimals.length > 0 && !allFilteredAnimalsSelected && (
+                    <div className="flex flex-col items-start justify-between gap-3 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 sm:flex-row sm:items-center">
+                        <span className="text-xs text-[var(--eixo-text-muted)]">
+                            A seleção considera todos os resultados do filtro atual, inclusive outras páginas.
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedAnimals(new Set(sortedAnimals.map((animal) => animal.id)))}
+                            className="rounded-xl border border-[var(--eixo-green)] bg-[var(--eixo-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-green-dark)] hover:bg-[var(--eixo-green)]/10"
+                        >
+                            Selecionar os {sortedAnimals.length.toLocaleString('pt-BR')} desta lista
+                        </button>
+                    </div>
+                )}
                 {/* Barra de ações em massa */}
                 {selectedAnimals.size > 0 && (
                     <div className="flex flex-wrap items-center gap-3 border-b border-[var(--eixo-border)] bg-[#f0f9d4] px-4 py-3">
@@ -1395,13 +1442,15 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                         >
                             Mover para Lote
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => { setBulkError(null); setBulkMoveToPastoOpen(true); }}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
-                        >
-                            Mover para Pasto
-                        </button>
+                        {animalStatusFilter === 'VIVO' && (
+                            <button
+                                type="button"
+                                onClick={() => { setBulkError(null); setBulkMoveFeedback(null); setBulkMoveToPastoOpen(true); }}
+                                className="rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                            >
+                                Mover para Pasto
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={() => { void openBulkTransferFarm(); }}
@@ -1694,19 +1743,21 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                             ) : (
                                                 <div className="flex flex-col items-start gap-1">
                                                     <span className="text-[#6d6558]">Sem pasto</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setSelectedAnimals(new Set([animal.id]));
-                                                            setBulkError(null);
-                                                            setBulkTargetPastoId('');
-                                                            setBulkMoveToPastoOpen(true);
-                                                        }}
-                                                        className="invisible inline-flex items-center rounded-md border border-[#d7cab3] bg-[#fffaf1] px-2 py-0.5 text-[11px] font-semibold text-[#6d6558] opacity-0 transition-opacity duration-150 hover:bg-[#f3ebdc] group-hover:visible group-hover:opacity-100 focus:visible focus:opacity-100"
-                                                    >
-                                                        Associar
-                                                    </button>
+                                                    {animalStatusFilter === 'VIVO' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedAnimals(new Set([animal.id]));
+                                                                setBulkError(null);
+                                                                setBulkTargetPastoId('');
+                                                                setBulkMoveToPastoOpen(true);
+                                                            }}
+                                                            className="invisible inline-flex items-center rounded-md border border-[#d7cab3] bg-[#fffaf1] px-2 py-0.5 text-[11px] font-semibold text-[#6d6558] opacity-0 transition-opacity duration-150 hover:bg-[#f3ebdc] group-hover:visible group-hover:opacity-100 focus:visible focus:opacity-100"
+                                                        >
+                                                            Associar
+                                                        </button>
+                                                    )}
                                                 </div>
                                             )}
                                         </td>
@@ -2317,6 +2368,8 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         ? 'Revise a sugestão, selecione a categoria e salve para confirmá-la.'
                                         : healthQuickFilter === 'sem_categoria'
                                             ? 'Informe os dados necessários ou selecione a categoria e salve o animal.'
+                                            : healthQuickFilter === 'sem_pasto'
+                                                ? 'Selecione os animais desta lista e mova todos para um pasto de uma vez.'
                                             : 'Abra um animal da lista para concluir a pendência.'}
                                 </p>
                             </div>
@@ -2330,13 +2383,13 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                         Registrar pesagens
                                     </button>
                                 )}
-                                {healthQuickFilter === 'sem_pasto' && (
+                                {healthQuickFilter === 'sem_pasto' && sortedAnimals.length > 0 && (
                                     <button
                                         type="button"
-                                        onClick={() => setActiveTab('pastures')}
+                                        onClick={() => setSelectedAnimals(new Set(sortedAnimals.map((animal) => animal.id)))}
                                         className="rounded-lg border border-[var(--eixo-green)] bg-[var(--eixo-surface)] px-3 py-1.5 text-xs font-semibold text-[var(--eixo-green-dark)] transition-colors hover:bg-[var(--eixo-green)]/10"
                                     >
-                                        Ver pastos
+                                        Selecionar os {sortedAnimals.length.toLocaleString('pt-BR')} desta lista
                                     </button>
                                 )}
                                 <button
@@ -2540,7 +2593,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             )}
 
             {/* Modal: Mover para Pasto */}
-            {bulkMoveToPastoOpen && (
+            {bulkMoveToPastoOpen && animalStatusFilter === 'VIVO' && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
                     <div className="w-full max-w-lg rounded-2xl bg-[var(--eixo-surface)] shadow-2xl">
                         <header className="border-b border-[var(--eixo-border)] p-5">
@@ -2558,6 +2611,12 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
                             </select>
+                            {bulkTargetPastoId && (
+                                <p className="rounded-xl border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-2 text-sm text-[var(--eixo-text)]">
+                                    Mover <strong>{selectedAnimals.size}</strong> {selectedAnimals.size === 1 ? 'animal' : 'animais'} para{' '}
+                                    <strong>{paddocks.find((paddock) => paddock.id === bulkTargetPastoId)?.name}</strong>?
+                                </p>
+                            )}
                             {bulkError && <p className="text-sm text-[#8c2020]">{bulkError}</p>}
                         </div>
                         <footer className="flex justify-end gap-3 border-t border-[var(--eixo-border)] px-5 py-4">
@@ -2565,9 +2624,9 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                                 className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
                                 Cancelar
                             </button>
-                            <button type="button" onClick={handleBulkMoveToPasto} disabled={bulkLoading}
+                            <button type="button" onClick={handleBulkMoveToPasto} disabled={bulkLoading || !bulkTargetPastoId}
                                 className="rounded-xl bg-[#B6E23A] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#a3d130] disabled:opacity-50">
-                                {bulkLoading ? 'Movendo...' : 'Confirmar'}
+                                {bulkLoading ? 'Movendo...' : 'Mover animais'}
                             </button>
                         </footer>
                     </div>
