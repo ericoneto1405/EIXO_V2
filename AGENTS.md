@@ -61,6 +61,11 @@ Se o usuário disser claramente “faça”, “corrija”, “altere”, “apl
 
 O fluxo oficial está documentado em `infra/DEPLOY.md` e deve ser seguido integralmente.
 
+Comandos padronizados para qualquer chat deste projeto:
+
+- `Prepare o deploy do lote atual.`: analisar o estado do projeto e mostrar exatamente o que será publicado, incluindo arquivos, resumo das alterações, migrações, validações previstas e riscos. Não iniciar commit, push, pull request, mesclagem ou deploy. Ao final, pedir uma única autorização para o lote apresentado.
+- `Autorizo o deploy completo do lote apresentado.`: executar todo o fluxo aprovado, incluindo validação, branch, commit, push, pull request, CI, mesclagem, deploy e verificação de produção.
+
 Quando o usuário solicitar explicitamente commit, push, pull request e deploy, considere essas etapas autorizadas em conjunto. Não peça uma nova confirmação entre validação, commit, push, pull request, CI, mesclagem, deploy e verificação de produção.
 
 Interrompa e consulte o usuário somente se houver risco alto, teste ou backup com falha, alteração local fora do escopo, ação destrutiva ou mudança não prevista de banco ou configuração de produção.
