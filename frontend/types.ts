@@ -225,7 +225,7 @@ export interface Farm {
     animalsCount: number;
     paddocks: Paddock[];
     createdAt: string;
-    userId?: string;
+    userId?: string | null;
 }
 
 export interface ManagedUser {

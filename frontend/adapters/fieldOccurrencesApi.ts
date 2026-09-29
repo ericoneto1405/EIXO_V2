@@ -15,7 +15,7 @@ export interface FieldOccurrenceAttachment {
 export interface FieldOccurrence {
     id: string;
     farmId: string;
-    createdById: string;
+    createdById: string | null;
     createdByName?: string | null;
     type: FieldOccurrenceType;
     status: FieldOccurrenceStatus;

@@ -7,6 +7,7 @@ interface ProfileUser {
     email: string;
     phone?: string | null;
     avatarUrl?: string | null;
+    membershipRole?: string | null;
 }
 
 interface ProfileModalProps {
@@ -15,7 +16,14 @@ interface ProfileModalProps {
     onUpdated: (updates: Partial<ProfileUser>) => void;
 }
 
-type Tab = 'dados' | 'celular' | 'senha' | 'foto';
+type Tab = 'dados' | 'celular' | 'senha' | 'foto' | 'encerramento';
+type ClosureType = 'LOGIN' | 'ORGANIZATION';
+interface ClosureRequest {
+    protocol: string;
+    type: ClosureType;
+    status: 'OPEN' | 'CLOSED';
+    createdAt: string;
+}
 
 const CloseIcon: React.FC = () => (
     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -34,6 +42,55 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
     const RESEND_COOLDOWN_SECONDS = 45;
     const EDIT_PHONE_COOLDOWN_SECONDS = 5 * 60;
     const [activeTab, setActiveTab] = useState<Tab>('dados');
+    const [closureType, setClosureType] = useState<ClosureType>('LOGIN');
+    const [closureRequests, setClosureRequests] = useState<ClosureRequest[]>([]);
+    const [closureEmail, setClosureEmail] = useState('');
+    const [closureLoading, setClosureLoading] = useState(false);
+    const [closureSubmitting, setClosureSubmitting] = useState(false);
+    const [closureError, setClosureError] = useState<string | null>(null);
+    const isOwner = user.membershipRole === 'OWNER';
+
+    React.useEffect(() => {
+        if (activeTab !== 'encerramento') return;
+        let cancelled = false;
+        setClosureLoading(true);
+        setClosureError(null);
+        fetch(buildApiUrl('/account-closure-requests'), { credentials: 'include' })
+            .then(async (response) => {
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload?.message || 'Erro ao consultar pedidos.');
+                if (!cancelled) setClosureRequests(payload.requests || []);
+            })
+            .catch((error) => {
+                if (!cancelled) setClosureError(error instanceof Error ? error.message : 'Erro ao consultar pedidos.');
+            })
+            .finally(() => { if (!cancelled) setClosureLoading(false); });
+        return () => { cancelled = true; };
+    }, [activeTab]);
+
+    const openClosureRequest = closureRequests.find((request) => request.type === closureType && request.status === 'OPEN');
+
+    const handleRequestClosure = async () => {
+        if (closureSubmitting || openClosureRequest) return;
+        setClosureError(null);
+        setClosureSubmitting(true);
+        try {
+            const response = await fetch(buildApiUrl('/account-closure-requests'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ type: closureType, confirmationEmail: closureEmail.trim() }),
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload?.message || 'Erro ao registrar pedido.');
+            setClosureRequests((current) => [payload.request, ...current.filter((request) => request.protocol !== payload.request.protocol)]);
+            setClosureEmail('');
+        } catch (error) {
+            setClosureError(error instanceof Error ? error.message : 'Erro ao registrar pedido.');
+        } finally {
+            setClosureSubmitting(false);
+        }
+    };
 
     // ── Dados pessoais ──
     const [name, setName] = useState(user.name);
@@ -280,12 +337,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
         { id: 'celular', label: 'Celular' },
         { id: 'senha', label: 'Senha' },
         { id: 'foto', label: 'Foto' },
+        { id: 'encerramento', label: 'Encerramento' },
     ];
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" onClick={onClose}>
             <div
-                className="w-full max-w-lg rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
+                className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
@@ -301,13 +359,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 border-b border-[var(--eixo-border)] px-6 pt-4">
+                <div className="flex flex-wrap gap-1 border-b border-[var(--eixo-border)] px-4 pt-4">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             type="button"
                             onClick={() => setActiveTab(tab.id)}
-                            className={`mb-[-1px] rounded-t-xl px-4 py-2 text-sm font-semibold transition-colors ${
+                            className={`mb-[-1px] whitespace-nowrap rounded-t-xl px-2.5 py-2 text-sm font-semibold transition-colors ${
                                 activeTab === tab.id
                                     ? 'border-b-2 border-[var(--eixo-green)] text-[var(--eixo-text)]'
                                     : 'text-[var(--eixo-text-muted)] hover:text-[var(--eixo-text)]'
@@ -517,6 +575,61 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                             </div>
                             {fotoError && <p className="text-sm text-[var(--eixo-danger)]">{fotoError}</p>}
                             {fotoSuccess && <p className="text-sm text-[var(--eixo-success)]">Foto atualizada com sucesso.</p>}
+                        </div>
+                    )}
+
+                    {activeTab === 'encerramento' && (
+                        <div className="space-y-4">
+                            <div>
+                                <h3 className="text-base font-bold text-[var(--eixo-text)]">Pedido de encerramento da conta EIXO</h3>
+                                <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">
+                                    O pedido gera um protocolo para análise. Seu acesso e seus dados continuam ativos nesta etapa.
+                                </p>
+                            </div>
+                            <fieldset className="space-y-2">
+                                <legend className="text-sm font-semibold text-[var(--eixo-text)]">O que deseja encerrar?</legend>
+                                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--eixo-border)] p-3 text-sm text-[var(--eixo-text)]">
+                                    <input type="radio" name="closure-type" value="LOGIN" checked={closureType === 'LOGIN'} onChange={() => { setClosureType('LOGIN'); setClosureError(null); }} className="mt-1" />
+                                    <span><strong>Meu login</strong><span className="block text-[var(--eixo-text-muted)]">Meu acesso pessoal ao EIXO.</span></span>
+                                </label>
+                                {isOwner && (
+                                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--eixo-border)] p-3 text-sm text-[var(--eixo-text)]">
+                                        <input type="radio" name="closure-type" value="ORGANIZATION" checked={closureType === 'ORGANIZATION'} onChange={() => { setClosureType('ORGANIZATION'); setClosureError(null); }} className="mt-1" />
+                                        <span><strong>Organização</strong><span className="block text-[var(--eixo-text-muted)]">Inclui a análise de fazendas, rebanho, financeiro e cobrança.</span></span>
+                                    </label>
+                                )}
+                            </fieldset>
+                            {closureLoading ? (
+                                <p className="text-sm text-[var(--eixo-text-muted)]">Consultando pedidos...</p>
+                            ) : openClosureRequest ? (
+                                <div role="status" className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4 text-sm text-[var(--eixo-text)]">
+                                    <p className="font-semibold">Pedido em análise</p>
+                                    <p className="mt-1">Protocolo: <strong className="break-all">{openClosureRequest.protocol}</strong></p>
+                                    <p className="mt-1 text-[var(--eixo-text-muted)]">Registrado em {new Date(openClosureRequest.createdAt).toLocaleString('pt-BR')}.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <p className="text-sm text-[var(--eixo-text-muted)]">Para confirmar o pedido, digite o e-mail da sua conta.</p>
+                                    <label htmlFor="closure-confirmation-email" className="block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">E-mail de confirmação</label>
+                                    <input
+                                        id="closure-confirmation-email"
+                                        type="email"
+                                        value={closureEmail}
+                                        onChange={(event) => setClosureEmail(event.target.value)}
+                                        autoComplete="email"
+                                        className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleRequestClosure}
+                                        disabled={closureSubmitting || closureLoading || closureEmail.trim().toLowerCase() !== user.email.toLowerCase()}
+                                        className="w-full rounded-xl bg-[var(--eixo-text)] py-2.5 text-sm font-semibold text-[var(--eixo-surface)] disabled:opacity-60"
+                                    >
+                                        {closureSubmitting ? 'Registrando...' : 'Registrar pedido de encerramento'}
+                                    </button>
+                                </div>
+                            )}
+                            {closureError && <p role="alert" className="text-sm text-[var(--eixo-danger)]">{closureError}</p>}
                         </div>
                     )}
                 </div>

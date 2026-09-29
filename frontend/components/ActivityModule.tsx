@@ -7,9 +7,9 @@ interface ActivityLog {
     description: string;
     farmId: string | null;
     createdAt: string;
-    userId: string;
+    userId: string | null;
     userName: string;
-    userEmail: string;
+    userEmail: string | null;
 }
 
 interface ActivityLogMeta {

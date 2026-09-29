@@ -23,6 +23,7 @@ import { registerOverviewRoutes } from './modules/overview/dashboardRoute.js';
 import { registerNewsRoutes } from './modules/news/newsService.js';
 import { registerAuthRoutes } from "./modules/auth/authRoutes.js";
 import { registerUserRoutes } from "./modules/users/userRoutes.js";
+import { registerAccountClosureRoutes } from "./modules/users/accountClosureRoutes.js";
 import { registerFarmRoutes } from "./modules/farms/farmRoutes.js";
 import { registerAnimalRoutes } from "./modules/animals/animalRoutes.js";
 import { registerHerdWeighingRoutes } from "./modules/animals/herdWeighingRoutes.js";
@@ -198,9 +199,10 @@ app.get('/activity-logs', requireAuth, requireModule('Registro de Atividades'), 
         const rows = await prisma.$queryRawUnsafe(`
             SELECT al.id, al.action, al.entity, al."entityId", al.description,
                    al."farmId", al."createdAt", al."userId",
-                   u.name AS "userName", u.email AS "userEmail"
+                   COALESCE(u.name, al."requestMeta"->>'actorName', 'Usuário excluído') AS "userName",
+                   u.email AS "userEmail"
             FROM "ActivityLog" al
-            JOIN "User" u ON u.id = al."userId"
+            LEFT JOIN "User" u ON u.id = al."userId"
             WHERE ${conditions.join(' AND ')}
             ORDER BY al."createdAt" DESC
             LIMIT $${limitIndex} OFFSET $${offsetIndex}
@@ -245,6 +247,7 @@ app.get('/activity-logs/meta', requireAuth, requireModule('Registro de Atividade
 // ─── Registro de Módulos Extraídos (Fase 4) ──────────────────────────────────
 registerAuthRoutes(app);
 registerUserRoutes(app);
+registerAccountClosureRoutes(app);
 app.use(['/animals', '/lots', '/farms', '/po', '/nutrition'], rejectLegacyPoReference);
 registerFarmRoutes(app);
 registerAnimalRoutes(app);

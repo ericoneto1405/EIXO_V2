@@ -1,0 +1,40 @@
+{
+  "releaseEnabled": false,
+  "decisions": {
+    "priorMigrations": {
+      "status": "APPROVED",
+      "decision": "As duas migrações anteriores já estão aplicadas em produção. Confirmar novamente o estado antes do deploy.",
+      "evidence": "infra/ACCOUNT_CLOSURE_MIGRATION_REVIEW.md",
+      "decidedBy": "Codex - revisão técnica",
+      "decidedAt": "2026-09-29T19:39:26.000Z",
+      "migrationRequired": true,
+      "migrationNames": [
+        "20260921120000_repair_cross_organization_parent_links",
+        "20260926120000_add_offline_idempotency_keys"
+      ]
+    },
+    "migrationVolume": {
+      "status": "APPROVED",
+      "decision": "Volume atual pequeno; publicar com backup, em período de baixo uso, e conferir integridade após a migração.",
+      "evidence": "infra/ACCOUNT_CLOSURE_MIGRATION_REVIEW.md",
+      "decidedBy": "Codex - revisão técnica",
+      "decidedAt": "2026-09-29T19:39:26.000Z",
+      "migrationRequired": true,
+      "migrationNames": [
+        "20260929100000_preserve_activity_on_user_delete",
+        "20260929110000_preserve_business_data_on_user_delete",
+        "20260929120000_move_animal_edits_to_activity_log",
+        "20260929130000_move_record_authorship_to_activity_log"
+      ]
+    },
+    "legacyFarms": {
+      "status": "PENDING",
+      "decision": "",
+      "evidence": "",
+      "decidedBy": "",
+      "decidedAt": null,
+      "migrationRequired": null,
+      "migrationNames": []
+    }
+  }
+}

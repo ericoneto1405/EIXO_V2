@@ -30,30 +30,16 @@ model User {
   accessType                     AppAccessType                  @default(WEB)
   appActivationStatus            AppActivationStatus?
   fieldProfile                   FieldProfile?
-  acasalamentoSessions           AcasalamentoSession[]          @relation("AcasalamentoSessionCreatedBy")
   activityLogs                   ActivityLog[]
   appActivationCodes             AppActivationCode[]
   appDevices                     AppDevice[]
-  commercialClients               CommercialClient[]             @relation("CommercialClientCreatedBy")
-  commercialDeals                 CommercialDeal[]                @relation("CommercialDealCreatedBy")
-  commercialContracts              CommercialContract[]           @relation("CommercialContractCreatedBy")
-  commercialReminders              CommercialReminder[]           @relation("CommercialReminderCreatedBy")
-  externalOperations             ExternalOperation[]            @relation("ExternalOperationCreatedBy")
-  externalOperationLedgerEntries ExternalOperationLedgerEntry[] @relation("ExternalOperationLedgerCreatedBy")
-  externalOperationSettlements   ExternalOperationSettlement[]  @relation("ExternalOperationSettlementCreatedBy")
   farms                          Farm[]
-  feedlotContracts               FeedlotContract[]              @relation("FeedlotContractCreatedBy")
-  feedlotLedgerEntries           FeedlotLedgerEntry[]           @relation("FeedlotLedgerCreatedBy")
-  feedlotSettlements             FeedlotSettlement[]            @relation("FeedlotSettlementCreatedBy")
-  fieldOccurrences               FieldOccurrence[]              @relation("FieldOccurrenceCreatedBy")
-  geneticsAnalysisRuns           GeneticsAnalysisRun[]          @relation("GeneticsAnalysisCreatedBy")
   memberships                    OrganizationMembership[]
   passwordResetTokens            PasswordResetToken[]
   sessions                       Session[]
   activeOrganization             Organization?                  @relation("ActiveOrganization", fields: [activeOrganizationId], references: [id])
   farmAccesses                   UserFarmAccess[]
-  marketPricesCreated            MarketPrice[]                  @relation("MarketPriceCreatedBy")
-  animalEditLogs                 AnimalEditLog[]
+  accountClosureRequests         AccountClosureRequest[]
 
   @@index([phone])
 }
@@ -116,7 +102,6 @@ model MarketPrice {
   updatedAt              DateTime          @updatedAt
   region                 MarketRegion      @relation(fields: [regionId], references: [id], onDelete: Restrict)
   source                 MarketSource      @relation(fields: [sourceId], references: [id], onDelete: Restrict)
-  createdByUser          User?             @relation("MarketPriceCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
 
   @@index([regionId, productType, status, referenceDate])
   @@index([sourceId, status, referenceDate])
@@ -219,7 +204,7 @@ model Farm {
   organizationId          String?
   createdAt               DateTime                 @default(now())
   reproMode               ReproMode                @default(CONTINUO)
-  userId                  String
+  userId                  String?
   responsibleName         String?                  @map("responsible_name")
   acasalamentoSessions    AcasalamentoSession[]
   accountCategories       AccountCategory[]
@@ -236,7 +221,7 @@ model Farm {
   commercialReminders     CommercialReminder[]
   externalOperations      ExternalOperation[]
   organization            Organization?            @relation(fields: [organizationId], references: [id])
-  user                    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                    User?                    @relation(fields: [userId], references: [id], onDelete: SetNull)
   feedlotContracts        FeedlotContract[]
   fieldOccurrences        FieldOccurrence[]
   financialPayables       FinancialPayable[]
@@ -246,7 +231,6 @@ model Farm {
   geneticsAnalysisRuns    GeneticsAnalysisRun[]
   herdCategoryTargets     HerdCategoryTarget[]
   herdEvents              HerdEvent[]
-  animalEditLogs          AnimalEditLog[]
   herdImportPendings      HerdImportPending[]
   herdSettings            HerdSettings?
   lots                    Lot[]
@@ -440,7 +424,6 @@ model Animal {
   semenBatches         SemenBatch[]          @relation("SemenBullAnimal")
   embryoDonorBatches   EmbryoBatch[]         @relation("EmbryoDonorAnimal")
   embryoSireBatches    EmbryoBatch[]         @relation("EmbryoSireAnimal")
-  editLogs             AnimalEditLog[]
   partners             AnimalPartner[]
   documents            AnimalDocument[]
   valuations           AnimalValuation[]
@@ -459,23 +442,6 @@ model Animal {
   @@index([desmamadoEm])
   @@index([farmId, identificacaoProvisoria])
   @@index([farmId, status])
-}
-
-model AnimalEditLog {
-  id            String   @id @default(uuid())
-  animalId      String
-  farmId        String
-  userId        String
-  changes       Json
-  justificativa String
-  createdAt     DateTime @default(now())
-  animal        Animal   @relation(fields: [animalId], references: [id], onDelete: Cascade)
-  farm          Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  user          User     @relation(fields: [userId], references: [id], onDelete: Restrict)
-
-  @@index([animalId])
-  @@index([farmId])
-  @@index([userId])
 }
 
 model Weighing {
@@ -569,6 +535,7 @@ model Organization {
   entitlements         OrganizationProductEntitlement[]
   activeUsers          User[]                           @relation("ActiveOrganization")
   financialSettings    OrganizationFinancialSettings?
+  accountClosureRequests AccountClosureRequest[]
 
   @@index([accessState])
 }
@@ -610,6 +577,22 @@ model OrganizationMembership {
 
   @@unique([organizationId, userId])
   @@index([userId])
+}
+
+model AccountClosureRequest {
+  protocol        String        @id
+  type            String
+  status          String        @default("OPEN")
+  requesterUserId String?
+  requesterEmail  String
+  organizationId  String?
+  createdAt       DateTime      @default(now())
+  closedAt        DateTime?
+  requester       User?         @relation(fields: [requesterUserId], references: [id], onDelete: SetNull)
+  organization    Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  @@index([requesterUserId, type, status])
+  @@index([organizationId, type, status])
 }
 
 model Invitation {
@@ -1401,7 +1384,7 @@ model PaddockMove {
 
 model ActivityLog {
   id             String   @id
-  userId         String
+  userId         String?
   organizationId String?
   method         String?
   path           String?
@@ -1415,7 +1398,7 @@ model ActivityLog {
   entityId       String?
   description    String?
   farmId         String?
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, createdAt])
   @@index([userId, createdAt])
@@ -1449,7 +1432,7 @@ model AppActivationCode {
   expiresAt      DateTime
   usedAt         DateTime?
   revokedAt      DateTime?
-  createdById    String
+  createdById    String?
   createdAt      DateTime  @default(now())
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1485,7 +1468,7 @@ model FieldOccurrence {
   id               String                      @id @default(uuid())
   organizationId   String
   farmId           String
-  createdById      String
+  createdById      String?
   type             FieldOccurrenceType
   status           FieldOccurrenceStatus       @default(PENDENTE)
   description      String?
@@ -1496,16 +1479,17 @@ model FieldOccurrence {
   lng              Float?
   offlineCreatedAt DateTime?
   syncSource       String?
+  syncKey          String?
   createdAt        DateTime                    @default(now())
   updatedAt        DateTime                    @updatedAt
   animal           Animal?                     @relation(fields: [animalId], references: [id])
-  createdBy        User                        @relation("FieldOccurrenceCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   farm             Farm                        @relation(fields: [farmId], references: [id], onDelete: Cascade)
   paddock          Paddock?                    @relation(fields: [paddockId], references: [id])
   attachments      FieldOccurrenceAttachment[]
 
   @@index([organizationId, farmId, occurredAt])
   @@index([createdById, occurredAt])
+  @@index([farmId, syncKey])
   @@index([farmId, status, occurredAt])
   @@index([animalId])
   @@index([paddockId])
@@ -1721,7 +1705,7 @@ model GeneticsAnalysisRun {
   id             String                      @id
   organizationId String
   farmId         String?
-  createdById    String
+  createdById    String?
   herdType       String
   strategy       String
   objective      String?
@@ -1729,7 +1713,6 @@ model GeneticsAnalysisRun {
   resultCount    Int                         @default(0)
   summary        Json?
   createdAt      DateTime                    @default(now())
-  createdBy      User                        @relation("GeneticsAnalysisCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   farm           Farm?                       @relation(fields: [farmId], references: [id])
   organization   Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   topResults     GeneticsAnalysisTopResult[]
@@ -1858,7 +1841,7 @@ model AcasalamentoSession {
   id             String                             @id @default(uuid())
   organizationId String
   farmId         String
-  createdById    String
+  createdById    String?
   targetMode     AcasalamentoTargetMode
   objective      AcasalamentoProofTrait
   breed          String                             @default("Nelore")
@@ -1866,7 +1849,6 @@ model AcasalamentoSession {
   summary        Json?
   createdAt      DateTime                           @default(now())
   results        AcasalamentoRecommendationResult[]
-  createdBy      User                               @relation("AcasalamentoSessionCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   farm           Farm                               @relation(fields: [farmId], references: [id], onDelete: Cascade)
   organization   Organization                       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -1932,7 +1914,7 @@ model HerdImportPending {
 model ExternalOperation {
   id                String                           @id
   farmId            String
-  createdById       String
+  createdById       String?
   code              String
   title             String
   partnerName       String
@@ -1952,7 +1934,6 @@ model ExternalOperation {
   notes             String?
   createdAt         DateTime                         @default(now())
   updatedAt         DateTime                         @updatedAt
-  createdBy         User                             @relation("ExternalOperationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   farm              Farm                             @relation(fields: [farmId], references: [id], onDelete: Cascade)
   documents         ExternalOperationDocument[]
   ledgerEntries     ExternalOperationLedgerEntry[]
@@ -1980,7 +1961,7 @@ model ExternalOperationDocument {
 model ExternalOperationLedgerEntry {
   id                String                       @id
   operationId       String
-  createdById       String
+  createdById       String?
   type              ExternalLedgerEntryType
   occurredAt        DateTime
   description       String
@@ -1993,7 +1974,6 @@ model ExternalOperationLedgerEntry {
   notes             String?
   createdAt         DateTime                     @default(now())
   updatedAt         DateTime                     @updatedAt
-  createdBy         User                         @relation("ExternalOperationLedgerCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   operation         ExternalOperation            @relation(fields: [operationId], references: [id], onDelete: Cascade)
 
   @@index([operationId, occurredAt])
@@ -2055,7 +2035,7 @@ model ExternalOperationRule {
 model ExternalOperationSettlement {
   id                   String                 @id
   operationId          String
-  createdById          String
+  createdById          String?
   type                 ExternalSettlementType
   exitDate             DateTime
   destination          String
@@ -2078,7 +2058,6 @@ model ExternalOperationSettlement {
   addendumData         Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
-  createdBy            User                   @relation("ExternalOperationSettlementCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   operation            ExternalOperation      @relation(fields: [operationId], references: [id], onDelete: Cascade)
 
   @@index([operationId, exitDate])
@@ -2088,7 +2067,7 @@ model ExternalOperationSettlement {
 model CommercialClient {
   id          String                 @id
   farmId      String
-  createdById String
+  createdById String?
   name        String
   type        CommercialClientType
   document    String?
@@ -2101,7 +2080,6 @@ model CommercialClient {
   createdAt   DateTime               @default(now())
   updatedAt   DateTime               @updatedAt
   farm        Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  createdBy   User                   @relation("CommercialClientCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   deals       CommercialDeal[]
   reminders   CommercialReminder[]
 
@@ -2113,7 +2091,7 @@ model CommercialDeal {
   id                String              @id
   farmId            String
   clientId          String
-  createdById       String
+  createdById       String?
   title             String
   stage             CommercialDealStage @default(PROSPECCAO)
   lotLabel          String?
@@ -2128,7 +2106,6 @@ model CommercialDeal {
   updatedAt         DateTime            @updatedAt
   farm              Farm                @relation(fields: [farmId], references: [id], onDelete: Cascade)
   client            CommercialClient    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdBy         User                @relation("CommercialDealCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   contract          CommercialContract?
 
   @@index([farmId, stage])
@@ -2139,7 +2116,7 @@ model CommercialContract {
   id               String         @id
   dealId           String         @unique
   farmId           String
-  createdById      String
+  createdById      String?
   commissionPct    Float?
   commissionAmount Float?
   paymentTerms     String?
@@ -2151,7 +2128,6 @@ model CommercialContract {
   updatedAt        DateTime       @updatedAt
   deal             CommercialDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
   farm             Farm           @relation(fields: [farmId], references: [id], onDelete: Cascade)
-  createdBy        User           @relation("CommercialContractCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([farmId])
 }
@@ -2160,7 +2136,7 @@ model CommercialReminder {
   id          String                 @id
   farmId      String
   clientId    String
-  createdById String
+  createdById String?
   type        CommercialReminderType
   dueDate     DateTime
   message     String?
@@ -2169,7 +2145,6 @@ model CommercialReminder {
   updatedAt   DateTime               @updatedAt
   farm        Farm                   @relation(fields: [farmId], references: [id], onDelete: Cascade)
   client      CommercialClient       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdBy   User                   @relation("CommercialReminderCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([farmId, dueDate])
   @@index([clientId])
@@ -2178,7 +2153,7 @@ model CommercialReminder {
 model FeedlotContract {
   id                 String                         @id
   farmId             String
-  createdById        String
+  createdById        String?
   code               String
   title              String
   type               FeedlotContractType
@@ -2195,7 +2170,6 @@ model FeedlotContract {
   notes              String?
   createdAt          DateTime                       @default(now())
   updatedAt          DateTime                       @updatedAt
-  createdBy          User                           @relation("FeedlotContractCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   farm               Farm                           @relation(fields: [farmId], references: [id], onDelete: Cascade)
   attachments        FeedlotContractAttachment[]
   lots               FeedlotContractLot[]
@@ -2235,7 +2209,7 @@ model FeedlotContractLot {
 model FeedlotLedgerEntry {
   id                String                 @id
   contractId        String
-  createdById       String
+  createdById       String?
   type              FeedlotLedgerEntryType
   occurredAt        DateTime
   description       String
@@ -2249,7 +2223,6 @@ model FeedlotLedgerEntry {
   createdAt         DateTime               @default(now())
   updatedAt         DateTime               @updatedAt
   contract          FeedlotContract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  createdBy         User                   @relation("FeedlotLedgerCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([contractId, occurredAt])
   @@index([contractId, type])
@@ -2258,7 +2231,7 @@ model FeedlotLedgerEntry {
 model FeedlotSettlement {
   id                   String                @id
   contractId           String
-  createdById          String
+  createdById          String?
   type                 FeedlotSettlementType
   exitDate             DateTime
   destination          String
@@ -2282,7 +2255,6 @@ model FeedlotSettlement {
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
   contract             FeedlotContract       @relation(fields: [contractId], references: [id], onDelete: Cascade)
-  createdBy            User                  @relation("FeedlotSettlementCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([contractId, exitDate])
   @@index([contractId, type])
