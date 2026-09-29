@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { SUPER_ADMIN_ALL_MODULES, serializeAuthUser, buildAllowedModulesFromPlan, canAccessEixoCampo, canUpgradePlan, getPlanLimits, normalizePlanCode } from './saasContext.js';
+import { SUPER_ADMIN_ALL_MODULES, serializeAuthUser, serializeManagedUser, buildAllowedModulesFromPlan, canAccessEixoCampo, canUpgradePlan, getPlanLimits, normalizePlanCode, resolveUserFarmAccess } from './saasContext.js';
 
 test('normaliza os nomes equivalentes do plano gratuito', () => {
     assert.equal(normalizePlanCode('gratis'), 'GRATIS');
@@ -70,8 +70,55 @@ test('contratar Performance não concede permissões individuais automaticamente
 test('dono recebe os módulos contratados e perde os exclusivos após downgrade', () => {
     assert.ok(access('EIXO_DECISAO', 'OWNER', []).includes('Eixo Genetics'));
     assert.ok(access('EIXO_GESTAO', 'OWNER', []).includes('Reprodução'));
+    assert.ok(access('GRATIS', 'OWNER', []).includes('Editar Animais'));
+    assert.ok(access('EIXO_GESTAO', 'OWNER', []).includes('Editar Animais'));
+    assert.ok(access('EIXO_DECISAO', 'OWNER', []).includes('Editar Animais'));
     assert.ok(!access('EIXO_GESTAO', 'OWNER', ['Eixo Genetics']).includes('Eixo Genetics'));
     assert.ok(!access('GRATIS', 'OWNER', []).includes('Nutrição'));
+});
+
+test('editar animais continua sendo permissão individual para quem não é dono', () => {
+    assert.ok(!access('GRATIS', 'ADMIN', []).includes('Editar Animais'));
+    assert.ok(access('GRATIS', 'ADMIN', ['Editar Animais']).includes('Editar Animais'));
+});
+
+test('lista de usuários mostra editar animais para o proprietário, mas não concede ao membro', () => {
+    const user = { id: 'user-1', name: 'Usuário', email: 'usuario@eixo.local', modules: ['Fazendas'], roles: ['user'] };
+    assert.ok(serializeManagedUser(user, 'OWNER').modules.includes('Editar Animais'));
+    assert.ok(!serializeManagedUser(user, 'MEMBER').modules.includes('Editar Animais'));
+});
+
+test('usuário web sem vínculos acessa todas as fazendas', () => {
+    const accessContext = resolveUserFarmAccess({ roles: ['user'], accessType: 'WEB', lastFarmId: 'farm-1' }, []);
+    assert.deepEqual(accessContext.allowedFarmIds, []);
+    assert.equal(accessContext.defaultFarmId, 'farm-1');
+    assert.equal(accessContext.restrictToFarmIds, null);
+});
+
+test('usuário web com vínculos fica restrito às fazendas selecionadas', () => {
+    const accessContext = resolveUserFarmAccess(
+        { roles: ['user'], accessType: 'WEB', lastFarmId: 'farm-2' },
+        [
+            { farmId: 'farm-1', isDefault: true },
+            { farmId: 'farm-2', isDefault: false },
+        ],
+    );
+    assert.deepEqual(accessContext.allowedFarmIds, ['farm-1', 'farm-2']);
+    assert.equal(accessContext.defaultFarmId, 'farm-1');
+    assert.deepEqual(accessContext.restrictToFarmIds, ['farm-1', 'farm-2']);
+});
+
+test('acesso do App Campo continua exigindo exatamente uma fazenda', () => {
+    const fieldUser = { roles: ['user', 'field_worker'], accessType: 'APP_MANEJO' };
+    assert.throws(() => resolveUserFarmAccess(fieldUser, []), /sem fazenda válida/);
+    assert.throws(
+        () => resolveUserFarmAccess(fieldUser, [{ farmId: 'farm-1' }, { farmId: 'farm-2' }]),
+        /sem fazenda válida/,
+    );
+    assert.deepEqual(
+        resolveUserFarmAccess(fieldUser, [{ farmId: 'farm-1', isDefault: true }]).restrictToFarmIds,
+        ['farm-1'],
+    );
 });
 
 test('aliases antigos também respeitam o plano e perfil', () => {

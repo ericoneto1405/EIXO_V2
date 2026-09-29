@@ -466,6 +466,8 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
 }) => {
     const [name, setName] = React.useState('');
     const [email, setEmail] = React.useState('');
+    const [farmAccessMode, setFarmAccessMode] = React.useState<'ALL' | 'SELECTED'>('ALL');
+    const [selectedFarmIds, setSelectedFarmIds] = React.useState<string[]>([]);
     const [defaultFarmId, setDefaultFarmId] = React.useState('');
     const [selectedModules, setSelectedModules] = React.useState<string[]>([]);
     const [farmError, setFarmError] = React.useState<string | null>(null);
@@ -480,6 +482,8 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
         if (!isOpen || !user) {
             setName('');
             setEmail('');
+            setFarmAccessMode('ALL');
+            setSelectedFarmIds([]);
             setDefaultFarmId('');
             setSelectedModules(allModules);
             setFarmError(null);
@@ -488,7 +492,14 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
         }
         setName(user.name || '');
         setEmail(user.email || '');
-        setDefaultFarmId(user.defaultFarmId || user.lastFarmId || '');
+        const allowedFarmIds = user.accessType === 'WEB' ? (user.allowedFarmIds || []) : [];
+        setFarmAccessMode(allowedFarmIds.length ? 'SELECTED' : 'ALL');
+        setSelectedFarmIds(allowedFarmIds);
+        setDefaultFarmId(
+            user.accessType === 'WEB'
+                ? (allowedFarmIds.includes(user.defaultFarmId || '') ? (user.defaultFarmId || '') : (allowedFarmIds[0] || ''))
+                : (user.defaultFarmId || user.lastFarmId || ''),
+        );
         const filteredModules = user.modules.filter((module) => allModules.includes(module));
         setSelectedModules(filteredModules.length ? filteredModules : allModules);
         setFarmError(null);
@@ -504,6 +515,19 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
         setSelectedModules((prev) =>
             prev.includes(module) ? prev.filter((item) => item !== module) : [...prev, module],
         );
+    };
+
+    const toggleFarm = (farmId: string) => {
+        setSelectedFarmIds((current) => {
+            const next = current.includes(farmId)
+                ? current.filter((item) => item !== farmId)
+                : [...current, farmId];
+            setDefaultFarmId((currentDefault) => (
+                next.includes(currentDefault) ? currentDefault : (next[0] || '')
+            ));
+            return next;
+        });
+        setFarmError(null);
     };
 
     return (
@@ -533,7 +557,16 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
                     className="flex-1 space-y-4 overflow-y-auto px-6 py-5"
                     onSubmit={(event) => {
                         event.preventDefault();
-                        if (!defaultFarmId) {
+                        if (user.accessType === 'WEB') {
+                            if (farmAccessMode === 'SELECTED' && selectedFarmIds.length === 0) {
+                                setFarmError('Selecione ao menos uma fazenda.');
+                                return;
+                            }
+                            if (farmAccessMode === 'SELECTED' && !selectedFarmIds.includes(defaultFarmId)) {
+                                setFarmError('Selecione uma fazenda inicial entre as permitidas.');
+                                return;
+                            }
+                        } else if (!defaultFarmId) {
                             setFarmError('Selecione a fazenda padrão do usuário.');
                             return;
                         }
@@ -547,7 +580,12 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
                             name,
                             email,
                             modules: selectedModules,
-                            defaultFarmId,
+                            defaultFarmId: user.accessType === 'WEB' && farmAccessMode === 'ALL'
+                                ? null
+                                : defaultFarmId,
+                            ...(user.accessType === 'WEB'
+                                ? { allowedFarmIds: farmAccessMode === 'ALL' ? null : selectedFarmIds }
+                                : {}),
                         });
                     }}
                 >
@@ -561,25 +599,122 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
                         <input id="edit-user-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} required />
                     </div>
 
-                    <div>
-                        <label htmlFor="edit-user-farm" className="block text-sm font-medium text-[var(--eixo-text-muted)]">Fazenda padrão</label>
-                        <select
-                            id="edit-user-farm"
-                            value={defaultFarmId}
-                            onChange={(event) => {
-                                setDefaultFarmId(event.target.value);
-                                setFarmError(null);
-                            }}
-                            className={inputClass}
-                            required
-                        >
-                            <option value="">Selecione a fazenda</option>
-                            {farms.map((farm) => (
-                                <option key={farm.id} value={farm.id}>{farm.name}</option>
-                            ))}
-                        </select>
-                        {farmError && <p className="mt-2 text-xs font-medium text-[var(--eixo-danger)]">{farmError}</p>}
-                    </div>
+                    {user.accessType === 'WEB' ? (
+                        <fieldset className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
+                            <legend className="px-1 text-sm font-semibold text-[var(--eixo-text)]">Acesso às fazendas</legend>
+                            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                <label className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 text-sm ${
+                                    farmAccessMode === 'ALL'
+                                        ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
+                                        : 'border-[var(--eixo-border)] text-[var(--eixo-text-muted)]'
+                                }`}>
+                                    <input
+                                        type="radio"
+                                        name="farm-access-mode"
+                                        value="ALL"
+                                        checked={farmAccessMode === 'ALL'}
+                                        onChange={() => {
+                                            setFarmAccessMode('ALL');
+                                            setFarmError(null);
+                                        }}
+                                        className="mt-0.5 accent-[var(--eixo-green)]"
+                                    />
+                                    <span>
+                                        <span className="block font-semibold">Todas as fazendas</span>
+                                        <span className="mt-0.5 block text-xs">Sem restrição por fazenda.</span>
+                                    </span>
+                                </label>
+                                <label className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 text-sm ${
+                                    farmAccessMode === 'SELECTED'
+                                        ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
+                                        : 'border-[var(--eixo-border)] text-[var(--eixo-text-muted)]'
+                                }`}>
+                                    <input
+                                        type="radio"
+                                        name="farm-access-mode"
+                                        value="SELECTED"
+                                        checked={farmAccessMode === 'SELECTED'}
+                                        onChange={() => {
+                                            const nextFarmIds = selectedFarmIds.length
+                                                ? selectedFarmIds
+                                                : (farms[0] ? [farms[0].id] : []);
+                                            setFarmAccessMode('SELECTED');
+                                            setSelectedFarmIds(nextFarmIds);
+                                            setDefaultFarmId((current) => (
+                                                nextFarmIds.includes(current) ? current : (nextFarmIds[0] || '')
+                                            ));
+                                            setFarmError(null);
+                                        }}
+                                        className="mt-0.5 accent-[var(--eixo-green)]"
+                                    />
+                                    <span>
+                                        <span className="block font-semibold">Fazendas específicas</span>
+                                        <span className="mt-0.5 block text-xs">Acesso somente às selecionadas.</span>
+                                    </span>
+                                </label>
+                            </div>
+
+                            {farmAccessMode === 'SELECTED' && (
+                                <div className="mt-4 space-y-4">
+                                    <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
+                                        {farms.map((farm) => (
+                                            <label key={farm.id} className="flex cursor-pointer items-center gap-2.5 text-sm text-[var(--eixo-text)]">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedFarmIds.includes(farm.id)}
+                                                    onChange={() => toggleFarm(farm.id)}
+                                                    className="accent-[var(--eixo-green)]"
+                                                />
+                                                <span>{farm.name}</span>
+                                            </label>
+                                        ))}
+                                        {farms.length === 0 && (
+                                            <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma fazenda disponível.</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label htmlFor="edit-user-farm" className="block text-sm font-medium text-[var(--eixo-text-muted)]">Fazenda inicial</label>
+                                        <select
+                                            id="edit-user-farm"
+                                            value={defaultFarmId}
+                                            onChange={(event) => {
+                                                setDefaultFarmId(event.target.value);
+                                                setFarmError(null);
+                                            }}
+                                            className={inputClass}
+                                            required
+                                        >
+                                            <option value="">Selecione a fazenda inicial</option>
+                                            {farms.filter((farm) => selectedFarmIds.includes(farm.id)).map((farm) => (
+                                                <option key={farm.id} value={farm.id}>{farm.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            )}
+                            {farmError && <p className="mt-2 text-xs font-medium text-[var(--eixo-danger)]">{farmError}</p>}
+                        </fieldset>
+                    ) : (
+                        <div>
+                            <label htmlFor="edit-user-farm" className="block text-sm font-medium text-[var(--eixo-text-muted)]">Fazenda padrão</label>
+                            <select
+                                id="edit-user-farm"
+                                value={defaultFarmId}
+                                onChange={(event) => {
+                                    setDefaultFarmId(event.target.value);
+                                    setFarmError(null);
+                                }}
+                                className={inputClass}
+                                required
+                            >
+                                <option value="">Selecione a fazenda</option>
+                                {farms.map((farm) => (
+                                    <option key={farm.id} value={farm.id}>{farm.name}</option>
+                                ))}
+                            </select>
+                            {farmError && <p className="mt-2 text-xs font-medium text-[var(--eixo-danger)]">{farmError}</p>}
+                        </div>
+                    )}
 
                     <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
                         <p className="text-sm font-semibold text-[var(--eixo-text)]">Módulos liberados</p>
@@ -826,6 +961,12 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
     };
 
     const getFarmLabel = (user: ManagedUser) => {
+        if (user.accessType === 'WEB') {
+            if (!user.allowedFarmIds?.length) return 'Todas as fazendas';
+            return user.allowedFarmIds
+                .map((farmId) => farmNameById.get(farmId) || 'Fazenda vinculada')
+                .join(', ');
+        }
         if (!user.defaultFarmId) return 'Não definido';
         return farmNameById.get(user.defaultFarmId) || 'Fazenda vinculada';
     };
@@ -1083,7 +1224,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                 <DesktopIcon />
                                 <p className="text-sm font-semibold text-[var(--eixo-text)]">Acesso ao Sistema</p>
                             </div>
-                            <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Cadastro com nome, e-mail, senha, módulos e fazenda padrão.</p>
+                            <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Cadastro com nome, e-mail, senha, módulos e acesso às fazendas.</p>
                         </div>
                         {canManageUsers && (
                             <button
@@ -1109,7 +1250,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                                 <thead className="bg-[var(--eixo-surface)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
                                     <tr>
                                         <th className="px-6 py-3">Usuário</th>
-                                        <th className="px-6 py-3">Fazenda padrão</th>
+                                        <th className="px-6 py-3">Fazendas com acesso</th>
                                         <th className="px-6 py-3">Módulos</th>
                                         <th className="px-6 py-3">Ações</th>
                                     </tr>

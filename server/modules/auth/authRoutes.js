@@ -48,6 +48,8 @@ const prisma = new PrismaClient();
 const resend = process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_...' ? new Resend(process.env.RESEND_API_KEY) : null;
 const twilioClient = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN ? twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN) : null;
 
+export const FREE_PLAN_MODULES = ['Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Financeiro', 'Visão Geral'];
+
 // Map temporário: phone -> { verifiedAt: number }  (TTL 30 min, uso único)
 const verifiedPhones    = new Map();
 
@@ -335,8 +337,7 @@ app.post('/register', async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(String(password), 10);
-        // Plano grátis: Estrutura da Fazenda + Manejo do Rebanho + Financeiro + Visão Geral (Dashboard)
-        const FREE_PLAN_MODULES = ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'];
+        // Plano grátis: estrutura, manejo com escrita, financeiro e visão geral.
         const newUser = await prisma.user.create({
             data: {
                 name: normalizedName,

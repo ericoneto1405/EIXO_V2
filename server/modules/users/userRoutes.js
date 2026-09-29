@@ -38,8 +38,17 @@ import {
 const prisma = new PrismaClient();
 const resend = process.env.RESEND_API_KEY && process.env.RESEND_API_KEY !== 're_...' ? new Resend(process.env.RESEND_API_KEY) : null;
 
-function normalizeUserModulesLocal(modules, roles, accessType) {
-    return normalizeUserModules(modules, roles, accessType);
+export function normalizeManagedUserModules(modules, roles, accessType) {
+    return normalizeUserModulesFn(modules, roles, accessType);
+}
+
+export function normalizeAllowedFarmIds(value) {
+    if (value === null) return null;
+    if (!Array.isArray(value)) return undefined;
+    return Array.from(new Set(value
+        .filter((farmId) => typeof farmId === 'string')
+        .map((farmId) => farmId.trim())
+        .filter(Boolean)));
 }
 
 export function registerUserRoutes(app) {
@@ -140,7 +149,7 @@ app.post('/users', requireAuth, async (req, res) => {
         : inferredFieldProfile === 'ADMIN_CAMPO'
             ? ['user', FIELD_ADMIN_ROLE]
             : ['user'];
-    const normalizedModules = normalizeUserModules(modules, normalizedRoles, normalizedAccessType);
+    const normalizedModules = normalizeManagedUserModules(modules, normalizedRoles, normalizedAccessType);
     const normalizedDefaultFarmId = typeof defaultFarmId === 'string' && defaultFarmId.trim()
         ? defaultFarmId.trim()
         : null;
@@ -289,13 +298,17 @@ app.post('/users', requireAuth, async (req, res) => {
 });
 
 app.patch('/users/:id', requireAuth, async (req, res) => {
-    const { name, email, modules, defaultFarmId } = req.body || {};
+    const { name, email, modules, defaultFarmId, allowedFarmIds } = req.body || {};
+    const hasAllowedFarmIds = Object.prototype.hasOwnProperty.call(req.body || {}, 'allowedFarmIds');
     const normalizedName = typeof name === 'string' ? name.trim() : '';
     const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-    const normalizedModules = normalizeUserModules(modules, ['user'], 'WEB');
+    const normalizedModules = normalizeManagedUserModules(modules, ['user'], 'WEB');
     const normalizedDefaultFarmId = typeof defaultFarmId === 'string' && defaultFarmId.trim()
         ? defaultFarmId.trim()
         : null;
+    const normalizedAllowedFarmIds = hasAllowedFarmIds
+        ? normalizeAllowedFarmIds(allowedFarmIds)
+        : undefined;
 
     if (!normalizedName || !normalizedEmail || !Array.isArray(modules)) {
         return res.status(400).json({ message: 'Dados obrigatórios ausentes.' });
@@ -303,6 +316,10 @@ app.patch('/users/:id', requireAuth, async (req, res) => {
 
     if (normalizedModules.length === 0) {
         return res.status(400).json({ message: 'Selecione ao menos um módulo.' });
+    }
+
+    if (hasAllowedFarmIds && normalizedAllowedFarmIds === undefined) {
+        return res.status(400).json({ message: 'Seleção de fazendas inválida.' });
     }
 
     try {
@@ -347,6 +364,15 @@ app.patch('/users/:id', requireAuth, async (req, res) => {
             return res.status(400).json({ message: 'Esse acesso deve ser editado no painel do App EIXO Campo.' });
         }
 
+        if (targetUser.accessType === 'WEB' && Array.isArray(normalizedAllowedFarmIds)) {
+            if (normalizedAllowedFarmIds.length === 0) {
+                return res.status(400).json({ message: 'Selecione ao menos uma fazenda.' });
+            }
+            if (!normalizedDefaultFarmId || !normalizedAllowedFarmIds.includes(normalizedDefaultFarmId)) {
+                return res.status(400).json({ message: 'Selecione uma fazenda inicial entre as fazendas permitidas.' });
+            }
+        }
+
         if (normalizedDefaultFarmId) {
             const farm = await prisma.farm.findFirst({
                 where: buildFarmScopeFilter(req, { id: normalizedDefaultFarmId }),
@@ -354,6 +380,16 @@ app.patch('/users/:id', requireAuth, async (req, res) => {
             });
             if (!farm) {
                 return res.status(400).json({ message: 'Fazenda padrão inválida para esse usuário.' });
+            }
+        }
+
+        if (targetUser.accessType === 'WEB' && Array.isArray(normalizedAllowedFarmIds)) {
+            const allowedFarms = await prisma.farm.findMany({
+                where: buildFarmScopeFilter(req, { id: { in: normalizedAllowedFarmIds } }),
+                select: { id: true },
+            });
+            if (allowedFarms.length !== normalizedAllowedFarmIds.length) {
+                return res.status(400).json({ message: 'Uma ou mais fazendas selecionadas são inválidas para esse usuário.' });
             }
         }
 
@@ -385,7 +421,18 @@ app.patch('/users/:id', requireAuth, async (req, res) => {
                 },
             });
 
-            if (normalizedDefaultFarmId && (savedUser.accessType === 'WEB_APP' || savedUser.fieldProfile)) {
+            if (savedUser.accessType === 'WEB' && hasAllowedFarmIds) {
+                await tx.userFarmAccess.deleteMany({ where: { userId: savedUser.id } });
+                if (Array.isArray(normalizedAllowedFarmIds)) {
+                    await tx.userFarmAccess.createMany({
+                        data: normalizedAllowedFarmIds.map((farmId) => ({
+                            userId: savedUser.id,
+                            farmId,
+                            isDefault: farmId === normalizedDefaultFarmId,
+                        })),
+                    });
+                }
+            } else if (normalizedDefaultFarmId && (savedUser.accessType === 'WEB_APP' || savedUser.fieldProfile)) {
                 await tx.userFarmAccess.updateMany({
                     where: { userId: savedUser.id, isDefault: true },
                     data: { isDefault: false },
@@ -496,7 +543,7 @@ app.patch('/users/:id/app-access', requireAuth, async (req, res) => {
             'user',
             fieldRole,
         ]));
-        const nextModules = normalizeUserModules(targetUser.modules, nextRoles, targetUser.accessType);
+        const nextModules = normalizeManagedUserModules(targetUser.modules, nextRoles, targetUser.accessType);
 
         const updatedUser = await prisma.$transaction(async (tx) => {
             const savedUser = await tx.user.update({
