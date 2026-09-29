@@ -20,9 +20,9 @@ export const PLAN_ENTITLEMENTS = {
     EIXO_DECISAO: ['CORE', 'GENETICS', 'PO', 'NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO', 'EIXO_NUTRITION'],
 };
 export const PLAN_MODULES = {
-    GRATIS: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral'],
-    EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Gestão Comercial', 'Reprodução', 'Sanidade'],
-    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Confinamento e Contratos', 'Meus Leilões', 'Sanidade'],
+    GRATIS: ['Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Financeiro', 'Visão Geral'],
+    EIXO_GESTAO: ['Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Gestão Comercial', 'Reprodução', 'Sanidade'],
+    EIXO_DECISAO: ['Fazendas', 'Rebanho Comercial', 'Editar Animais', 'Financeiro', 'Visão Geral', 'Nutrição', 'Registro de Atividades', 'Eixo Genetics', 'Reprodução', 'Gestão Comercial', 'Confinamento e Contratos', 'Meus Leilões', 'Sanidade'],
 };
 
 export const PLAN_LIMITS = {
@@ -242,7 +242,9 @@ export const serializeManagedUser = (user, membershipRole = null) => ({
     id: user.id,
     name: user.name,
     email: user.email,
-    modules: Array.isArray(user.modules) ? user.modules : [],
+    modules: membershipRole === 'OWNER'
+        ? Array.from(new Set([...(Array.isArray(user.modules) ? user.modules : []), 'Editar Animais']))
+        : (Array.isArray(user.modules) ? user.modules : []),
     roles: Array.isArray(user.roles) ? user.roles : [],
     accessType: getDerivedAccessType(user),
     fieldProfile: getDerivedFieldProfile(user),
@@ -262,12 +264,19 @@ export const normalizeOrganizationSlug = (value) =>
         .replace(/^-+|-+$/g, '')
         .slice(0, 48) || 'org';
 
-export const ensureFieldWorkerFarmAccess = async (user, saasContext = null) => {
+export const resolveUserFarmAccess = (user, farmAccesses = []) => {
+    const allowedFarmIds = farmAccesses.map((item) => item.farmId);
+
     if (!isFieldAppUser(user)) {
+        const defaultFarmId = farmAccesses.find((item) => item.isDefault)?.farmId
+            || (allowedFarmIds.includes(user.lastFarmId) ? user.lastFarmId : null)
+            || allowedFarmIds[0]
+            || user.lastFarmId
+            || null;
         return {
-            allowedFarmIds: [],
-            defaultFarmId: user.lastFarmId ?? null,
-            restrictToFarmIds: null,
+            allowedFarmIds,
+            defaultFarmId,
+            restrictToFarmIds: allowedFarmIds.length ? allowedFarmIds : null,
             appContext: {
                 profile: 'full_user',
                 mode: 'full',
@@ -275,22 +284,6 @@ export const ensureFieldWorkerFarmAccess = async (user, saasContext = null) => {
         };
     }
 
-    const farmAccesses = await prisma.userFarmAccess.findMany({
-        where: {
-            userId: user.id,
-            farm: saasContext?.organizationId
-                ? { organizationId: saasContext.organizationId }
-                : undefined,
-        },
-        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
-        include: {
-            farm: {
-                select: { id: true },
-            },
-        },
-    });
-
-    const allowedFarmIds = farmAccesses.map((item) => item.farmId);
     const defaultFarmId = farmAccesses.find((item) => item.isDefault)?.farmId
         || allowedFarmIds[0]
         || null;
@@ -308,6 +301,29 @@ export const ensureFieldWorkerFarmAccess = async (user, saasContext = null) => {
             mode: 'field',
         },
     };
+};
+
+export const ensureFieldWorkerFarmAccess = async (user, saasContext = null) => {
+    if (user?.roles?.includes('SUPER_ADMIN')) {
+        return resolveUserFarmAccess(user, []);
+    }
+
+    const farmAccesses = await prisma.userFarmAccess.findMany({
+        where: {
+            userId: user.id,
+            farm: saasContext?.organizationId
+                ? { organizationId: saasContext.organizationId }
+                : undefined,
+        },
+        orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
+        include: {
+            farm: {
+                select: { id: true },
+            },
+        },
+    });
+
+    return resolveUserFarmAccess(user, farmAccesses);
 };
 
 export class SaasContextError extends Error {

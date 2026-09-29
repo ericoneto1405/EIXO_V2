@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-28.1';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-28.3';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-28';
 
 export const SUPPORT_TONE_RULES = [
@@ -404,6 +404,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         guidance: [
             'Acesse Usuários e Permissões para cadastrar usuários do sistema web e revisar seus acessos. Para colaboradores do aplicativo, acesse APP EIXO CAMPO.',
             'Somente um usuário autorizado pode alterar permissões da organização.',
+            'Ao editar um usuário web, escolha acesso a todas as fazendas ou somente a fazendas específicas. Para acesso específico, defina também a fazenda inicial.',
+            'O proprietário da organização recebe Editar Animais para cadastrar, corrigir e movimentar o rebanho. Para os demais usuários web, essa permissão precisa ser liberada individualmente.',
         ],
     },
     {

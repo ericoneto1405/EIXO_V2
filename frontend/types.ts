@@ -275,6 +275,7 @@ export interface WebUserUpdatePayload {
     email: string;
     modules: string[];
     defaultFarmId?: string | null;
+    allowedFarmIds?: string[] | null;
 }
 
 export interface FieldCollaboratorCreatePayload {
