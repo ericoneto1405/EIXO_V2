@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-28.3';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-28';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-29.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-29';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -421,11 +421,14 @@ const SUPPORT_TOPIC_DEFINITIONS = [
     {
         id: 'conta-seguranca',
         title: 'Conta, senha e segurança',
-        keywords: ['conta', 'senha', 'trocar senha', 'esqueci senha', 'recuperar acesso', 'segurança'],
+        keywords: ['conta', 'senha', 'trocar senha', 'esqueci senha', 'recuperar acesso', 'segurança', 'encerrar conta', 'excluir conta', 'exclusão de conta'],
         href: 'eixo:view:Configura%C3%A7%C3%B5es',
         guidance: [
             'Em Configurações, o usuário autenticado pode trocar a própria senha.',
             'Se não conseguir entrar, use Esqueci a senha na tela de login e siga o link enviado ao e-mail cadastrado.',
+            'Para pedir encerramento, abra o menu do usuário, Meu Perfil e a aba Encerramento. Confirme o pedido digitando o e-mail da conta.',
+            'Qualquer usuário autenticado pode pedir o encerramento do próprio login. Somente o proprietário pode pedir o encerramento da organização.',
+            'O pedido gera um protocolo para análise; não desativa o acesso nem exclui dados automaticamente. Se já houver pedido em aberto do mesmo tipo, o protocolo existente é mostrado.',
             'O EIXO Suporte nunca solicita nem exibe senhas.',
         ],
     },

@@ -61,7 +61,7 @@ jobs:
 
             echo "▶ Atualizando código..."
             git fetch origin main
-            git reset --hard origin/main
+            git reset --hard "${{ github.sha }}"
 
             echo "▶ Restaurando server/.env.production..."
             cp -f /tmp/.env.production.bak server/.env.production 2>/dev/null || true

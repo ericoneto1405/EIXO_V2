@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { FIELD_OCCURRENCE_UPLOAD_ROOT, FIELD_ATTACHMENT_MAX_FILES, FIELD_OCCURRENCE_TYPES, FIELD_OCCURRENCE_STATUSES, FIELD_ATTACHMENT_ALLOWED_MIME_TYPES } from '../config/env.js';
 import { parseCoordinate, validateCoordinatePair } from '../utils/validators.js';
@@ -13,6 +14,31 @@ import { requireEixoCampoPlan } from '../middlewares/requireEixoCampoPlan.js';
 import { hasSanidadeAccess } from '../middlewares/requireAuth.js';
 import { carregarLembretesComCache, carregarSituacao } from '../sanity/sanityCalendar.js';
 const prisma = new PrismaClient();
+
+async function withOccurrenceAuthors(occurrences) {
+    if (!occurrences.length) return occurrences;
+    const logs = await prisma.activityLog.findMany({
+        where: {
+            entity: 'FieldOccurrence',
+            entityId: { in: occurrences.map((occurrence) => occurrence.id) },
+            action: { in: ['AUTORIA_REGISTRADA', 'OCORRENCIA_CAMPO_CRIADA'] },
+        },
+        include: { user: { select: { name: true } } },
+        orderBy: { createdAt: 'asc' },
+    });
+    const authors = new Map();
+    for (const log of logs) {
+        if (!authors.has(log.entityId)) authors.set(log.entityId, log);
+    }
+    return occurrences.map((occurrence) => {
+        const author = authors.get(occurrence.id);
+        return {
+            ...occurrence,
+            auditCreatorId: author?.userId ?? null,
+            auditCreatorName: author ? (author.user?.name || 'Usuário excluído') : null,
+        };
+    });
+}
 
 const sanitizeUploadFileName = (value) =>
     String(value || 'arquivo')
@@ -76,7 +102,6 @@ export function registerFieldRoutes(app) {
                         },
                         include: {
                             paddock: true,
-                            createdBy: { select: { id: true, name: true } },
                         },
                         orderBy: { occurredAt: 'desc' },
                     }),
@@ -89,7 +114,6 @@ export function registerFieldRoutes(app) {
                         include: {
                             animal: true,
                             paddock: true,
-                            createdBy: { select: { id: true, name: true } },
                         },
                         orderBy: { occurredAt: 'desc' },
                         take: 50,
@@ -104,7 +128,11 @@ export function registerFieldRoutes(app) {
                 });
 
                 const latestByKey = new Map();
-                staleOccurrences.forEach((occurrence) => {
+                const [staleWithAuthors, immediateWithAuthors] = await Promise.all([
+                    withOccurrenceAuthors(staleOccurrences),
+                    withOccurrenceAuthors(immediateOccurrences),
+                ]);
+                staleWithAuthors.forEach((occurrence) => {
                     const scopeId = occurrence.paddockId || '__farm__';
                     const key = `${occurrence.farmId}:${occurrence.type}:${scopeId}`;
                     if (!latestByKey.has(key)) {
@@ -125,7 +153,7 @@ export function registerFieldRoutes(app) {
                                 continue;
                             }
                             const daysSince = getDaysSince(latest?.occurredAt);
-                            const workerName = latest?.createdBy?.name ? String(latest.createdBy.name).trim() : '';
+                            const workerName = latest?.auditCreatorName ? String(latest.auditCreatorName).trim() : '';
                             const workerPrefix = workerName ? `${workerName}, ` : '';
                             alerts.push({
                                 id: `stale-${type.toLowerCase()}-${farm.id}-${scope.id}`,
@@ -141,7 +169,7 @@ export function registerFieldRoutes(app) {
                     }
                 }
 
-                immediateOccurrences
+                immediateWithAuthors
                     .map(buildFieldOccurrenceAlert)
                     .filter(Boolean)
                     .forEach((alert) => alerts.push(alert));
@@ -299,7 +327,6 @@ export function registerFieldRoutes(app) {
             const items = await prisma.fieldOccurrence.findMany({
                 where,
                 include: {
-                    createdBy: { select: { id: true, name: true } },
                     animal: { include: { currentPaddock: true } },
                     paddock: true,
                     attachments: { orderBy: { uploadedAt: 'asc' } },
@@ -310,7 +337,7 @@ export function registerFieldRoutes(app) {
             });
 
             return res.json({
-                occurrences: items.map(serializeFieldOccurrence),
+                occurrences: (await withOccurrenceAuthors(items)).map(serializeFieldOccurrence),
                 total: items.length,
             });
         } catch (error) {
@@ -372,24 +399,26 @@ export function registerFieldRoutes(app) {
             }
 
             const normalizedSyncSource = typeof syncSource === 'string' ? syncSource.trim() || null : null;
+            const syncKey = normalizedSyncSource
+                ? createHash('md5').update(`${req.user.id}:${normalizedSyncSource}`).digest('hex')
+                : null;
 
             if (normalizedSyncSource) {
                 const existingOccurrence = await prisma.fieldOccurrence.findFirst({
                     where: {
                         organizationId: farm.organizationId || req.saas?.organizationId,
                         farmId: String(farmId),
-                        createdById: req.user.id,
-                        syncSource: normalizedSyncSource,
+                        syncKey,
                     },
                     include: {
-                        createdBy: { select: { id: true, name: true } },
                         animal: { include: { currentPaddock: true } },
                         paddock: true,
                         attachments: true,
                     },
                 });
                 if (existingOccurrence) {
-                    return res.json({ occurrence: serializeFieldOccurrence(existingOccurrence) });
+                    const [existingWithAuthor] = await withOccurrenceAuthors([existingOccurrence]);
+                    return res.json({ occurrence: serializeFieldOccurrence(existingWithAuthor) });
                 }
             }
 
@@ -426,6 +455,7 @@ export function registerFieldRoutes(app) {
                     organizationId: farm.organizationId || req.saas?.organizationId,
                     farmId: String(farmId),
                     createdById: req.user.id,
+                    syncKey,
                     type: normalizedType,
                     status: normalizedStatus,
                     description: typeof description === 'string' ? description.trim() || null : null,
@@ -438,7 +468,6 @@ export function registerFieldRoutes(app) {
                     syncSource: normalizedSyncSource,
                 },
                 include: {
-                    createdBy: { select: { id: true, name: true } },
                     animal: { include: { currentPaddock: true } },
                     paddock: true,
                     attachments: true,
@@ -453,7 +482,8 @@ export function registerFieldRoutes(app) {
                 farmId: occurrence.farmId,
             });
 
-            return res.status(201).json({ occurrence: serializeFieldOccurrence(occurrence) });
+            const [occurrenceWithAuthor] = await withOccurrenceAuthors([occurrence]);
+            return res.status(201).json({ occurrence: serializeFieldOccurrence(occurrenceWithAuthor) });
         } catch (error) {
             console.error(error);
             return res.status(500).json({ message: 'Erro ao salvar ocorrência de campo.' });

@@ -299,7 +299,7 @@ export function serializeFieldOccurrence(occurrence) {
         id: occurrence.id,
         organizationId: occurrence.organizationId,
         farmId: occurrence.farmId,
-        createdById: occurrence.createdById,
+        createdById: occurrence.auditCreatorId ?? null,
         type: occurrence.type,
         status: occurrence.status,
         description: occurrence.description ?? null,
@@ -312,7 +312,7 @@ export function serializeFieldOccurrence(occurrence) {
         syncSource: occurrence.syncSource ?? null,
         createdAt: occurrence.createdAt?.toISOString?.() ?? null,
         updatedAt: occurrence.updatedAt?.toISOString?.() ?? null,
-        createdByName: occurrence.createdBy?.name ?? null,
+        createdByName: occurrence.auditCreatorName ?? null,
         animal: occurrence.animal ? serializeAnimal(occurrence.animal) : null,
         paddock: occurrence.paddock ? serializePaddock(occurrence.paddock) : null,
         attachments: Array.isArray(occurrence.attachments)
@@ -404,7 +404,7 @@ export function buildFieldOccurrenceAlert(occurrence) {
     const paddockLabel = occurrence.paddock?.name || 'Local não informado';
     const description = occurrence.description ? String(occurrence.description).trim() : '';
     const createdAt = occurrence.occurredAt?.toISOString?.() ?? occurrence.createdAt?.toISOString?.() ?? null;
-    const workerName = occurrence.createdBy?.name ? String(occurrence.createdBy.name).trim() : '';
+    const workerName = occurrence.auditCreatorName ? String(occurrence.auditCreatorName).trim() : '';
 
     const parts = [];
     if (workerName) parts.push(workerName);

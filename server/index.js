@@ -23,6 +23,7 @@ import { registerOverviewRoutes } from './modules/overview/dashboardRoute.js';
 import { registerNewsRoutes } from './modules/news/newsService.js';
 import { registerAuthRoutes } from "./modules/auth/authRoutes.js";
 import { registerUserRoutes } from "./modules/users/userRoutes.js";
+import { registerAccountClosureRoutes } from "./modules/users/accountClosureRoutes.js";
 import { registerFarmRoutes } from "./modules/farms/farmRoutes.js";
 import { registerAnimalRoutes } from "./modules/animals/animalRoutes.js";
 import { registerHerdWeighingRoutes } from "./modules/animals/herdWeighingRoutes.js";
@@ -81,6 +82,7 @@ import {
     requireAuth, requireSuperAdmin, requireModule,
 } from './modules/middlewares/requireAuth.js';
 import { apiErrorHandler } from './modules/middlewares/errorHandler.js';
+import { createMaintenanceModeMiddleware } from './modules/middlewares/maintenanceMode.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,6 +96,7 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(createCorsMiddleware(IS_PROD, CORS_ORIGIN));
 app.use(createSecurityHeadersMiddleware(IS_PROD, CORS_ORIGIN));
+app.use(createMaintenanceModeMiddleware(process.env.EIXO_MAINTENANCE_MODE === 'on'));
 // A confirmação da prévia de importação envia até 1000 linhas de animais em JSON,
 // bem acima do limite padrão de 100 kb. O parser maior NÃO fica aqui: montado
 // como middleware global ele rodaria antes do requireAuth, e um request anônimo
@@ -198,9 +201,10 @@ app.get('/activity-logs', requireAuth, requireModule('Registro de Atividades'), 
         const rows = await prisma.$queryRawUnsafe(`
             SELECT al.id, al.action, al.entity, al."entityId", al.description,
                    al."farmId", al."createdAt", al."userId",
-                   u.name AS "userName", u.email AS "userEmail"
+                   COALESCE(u.name, al."requestMeta"->>'actorName', 'Usuário excluído') AS "userName",
+                   u.email AS "userEmail"
             FROM "ActivityLog" al
-            JOIN "User" u ON u.id = al."userId"
+            LEFT JOIN "User" u ON u.id = al."userId"
             WHERE ${conditions.join(' AND ')}
             ORDER BY al."createdAt" DESC
             LIMIT $${limitIndex} OFFSET $${offsetIndex}
@@ -245,6 +249,7 @@ app.get('/activity-logs/meta', requireAuth, requireModule('Registro de Atividade
 // ─── Registro de Módulos Extraídos (Fase 4) ──────────────────────────────────
 registerAuthRoutes(app);
 registerUserRoutes(app);
+registerAccountClosureRoutes(app);
 app.use(['/animals', '/lots', '/farms', '/po', '/nutrition'], rejectLegacyPoReference);
 registerFarmRoutes(app);
 registerAnimalRoutes(app);

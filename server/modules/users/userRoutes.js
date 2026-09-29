@@ -30,6 +30,7 @@ import {
     createSessionForUser, buildCookieOptions, getSessionFromRequest,
 } from '../middlewares/session.js';
 import { buildFarmRelationFilter } from '../middlewares/farmScope.js';
+import { isRealDeletionReleased } from './accountDeletionRelease.js';
 import {
     normalizeOrganizationSlug, ensureSaasContextForUser as ensureSaas,
     isSaasContextError,
@@ -640,11 +641,35 @@ app.delete('/users/:id', requireAuth, async (req, res) => {
                     some: { organizationId },
                 },
             },
-            select: { id: true, name: true },
+            select: { id: true },
         });
 
         if (!targetUser) {
             return res.status(404).json({ message: 'Usuário não encontrado.' });
+        }
+
+        if (!(await isRealDeletionReleased(prisma))) {
+            return res.status(503).json({ message: 'A exclusão de usuários está indisponível até a conclusão das decisões de segurança e das migrações necessárias.' });
+        }
+
+        const ownerMembership = await prisma.organizationMembership.findFirst({
+            where: { userId: targetUser.id, role: 'OWNER' },
+            select: { id: true },
+        });
+        if (ownerMembership) {
+            return res.status(423).json({ message: 'A exclusão de um proprietário exige análise da titularidade da organização pela equipe EIXO.' });
+        }
+
+        const [otherMemberships, legacyFarms] = await Promise.all([
+            prisma.organizationMembership.count({
+                where: { userId: targetUser.id, organizationId: { not: organizationId } },
+            }),
+            prisma.farm.count({ where: { userId: targetUser.id, organizationId: null } }),
+        ]);
+        if (otherMemberships || legacyFarms) {
+            return res.status(423).json({
+                message: 'Este usuário possui vínculo com outra organização ou fazenda antiga. Peça uma análise à equipe EIXO antes de excluir o acesso.',
+            });
         }
 
         await prisma.$transaction(async (tx) => {
@@ -653,10 +678,21 @@ app.delete('/users/:id', requireAuth, async (req, res) => {
             await tx.appActivationCode.deleteMany({ where: { userId: targetUser.id } });
             await tx.userFarmAccess.deleteMany({ where: { userId: targetUser.id } });
             await tx.organizationMembership.deleteMany({ where: { organizationId, userId: targetUser.id } });
+            await tx.$executeRaw`
+                UPDATE "ActivityLog"
+                SET "requestMeta" = "requestMeta" - 'actorName'
+                WHERE "userId" = ${targetUser.id} AND "requestMeta" ? 'actorName'
+            `;
             await tx.user.delete({ where: { id: targetUser.id } });
+            await logActivity(tx, req, {
+                action: 'USUARIO_EXCLUIDO',
+                entity: 'User',
+                entityId: targetUser.id,
+                description: 'Excluiu um usuário da organização',
+                required: true,
+            });
         });
 
-        logActivity(prisma, req, { action: 'USUARIO_EXCLUIDO', entity: 'User', entityId: targetUser.id, description: `Excluiu o usuário ${targetUser.name}` });
         return res.status(204).send();
     } catch (error) {
         console.error(error);

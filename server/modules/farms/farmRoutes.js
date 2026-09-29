@@ -499,8 +499,17 @@ app.delete('/farms/:id', requireNonFieldWorker, async (req, res) => {
             return res.status(400).json({ message: 'Informe a senha do proprietário para confirmar a exclusão.' });
         }
 
-        const owner = await prisma.user.findUnique({ where: { id: farm.userId } });
-        const passwordValid = owner ? await bcrypt.compare(String(password), owner.password) : false;
+        const ownerPasswords = farm.organizationId
+            ? (await prisma.organizationMembership.findMany({
+                where: { organizationId: farm.organizationId, role: 'OWNER' },
+                include: { user: { select: { password: true } } },
+            })).map((membership) => membership.user.password)
+            : farm.userId
+                ? [(await prisma.user.findUnique({ where: { id: farm.userId }, select: { password: true } }))?.password]
+                : [];
+        const passwordValid = (await Promise.all(
+            ownerPasswords.filter(Boolean).map((ownerPassword) => bcrypt.compare(String(password), ownerPassword)),
+        )).some(Boolean);
         if (!passwordValid) {
             await recordActivityLog(prisma, req, {
                 statusCode: 401,

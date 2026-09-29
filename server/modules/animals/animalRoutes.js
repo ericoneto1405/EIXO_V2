@@ -1,4 +1,5 @@
 import bcrypt from 'bcrypt';
+import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { requireAuth, requireNonFieldWorker, requireModule, requireOrganizationOwner } from '../middlewares/requireAuth.js';
 import { asyncRoute } from '../middlewares/errorHandler.js';
@@ -866,25 +867,25 @@ app.patch('/animals/:id', requireAuth, requireModule('Editar Animais'), async (r
             return res.status(400).json({ message: 'Informe uma justificativa para editar dados do animal.' });
         }
 
-        const updated = await prisma.animal.update({
-            where: { id },
-            data: updateData,
+        const updated = await prisma.$transaction(async (tx) => {
+            const result = await tx.animal.update({ where: { id }, data: updateData });
+            if (hasFieldChanges) {
+                await tx.activityLog.create({
+                    data: {
+                        id: randomUUID(),
+                        userId: req.user.id,
+                        organizationId: req.saas?.organizationId || null,
+                        farmId: animal.farmId,
+                        action: 'ANIMAL_DADOS_EDITADOS',
+                        entity: 'Animal',
+                        entityId: id,
+                        description: `Editou os dados do animal ${animal.brinco || id}`,
+                        requestMeta: { changes, justificativa: justificativaTrimmed },
+                    },
+                });
+            }
+            return result;
         });
-
-        // Toda edição de dado do animal (fora troca de lote) fica registrada com
-        // quem editou, o que mudou e por quê — pra sempre, mesmo que o dado seja
-        // corrigido de novo depois.
-        if (hasFieldChanges) {
-            await prisma.animalEditLog.create({
-                data: {
-                    animalId: id,
-                    farmId: animal.farmId,
-                    userId: req.user.id,
-                    changes,
-                    justificativa: justificativaTrimmed,
-                },
-            });
-        }
         if (updateData.lotId !== undefined) {
             await logActivity(prisma, req, {
                 action: 'ANIMAL_LOTE_ALTERADO',
