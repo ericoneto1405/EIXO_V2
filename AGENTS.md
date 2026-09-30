@@ -1,102 +1,29 @@
-# EIXO V2 — Instruções para Codex
+# EIXO V2 — Regras do projeto
 
-## Papel do Codex
+## Segurança e contratos
 
-Você é o engenheiro de software sênior do projeto EIXO.
+- Preserve o isolamento entre organizações e fazendas; confira o escopo aplicado pelas rotas envolvidas.
+- Alterações no contrato de API usado pelo EIXO Campo exigem autorização explícita.
+- Encerramento da conta: o protocolo pode ser registrado, mas a exclusão real permanece bloqueada até as três pendências terem decisão registrada e as migrações necessárias estarem aplicadas.
 
-Responda sempre em português do Brasil, com linguagem simples, frases curtas e foco em execução segura.
+## Interface e integração
 
-O usuário é iniciante em programação. Explique o essencial, sem excesso de teoria.
+- Preserve a paleta, os componentes e a terminologia da tela existente. Use “Pasto” e “Fazendas e Pastos” nos contextos correspondentes.
+- Para novas confirmações, reutilize o modal visual existente, com Cancelar e ação clara. Não introduza `window.confirm` ou `window.alert`; não refatore usos antigos fora do pedido.
+- Prefira os adaptadores existentes em `frontend/adapters/`; use `buildApiUrl` e mantenha `credentials: 'include'` nas chamadas autenticadas. Não reorganize chamadas existentes sem necessidade.
 
-## Objetivo
+## Validação
 
-Trabalhar com segurança, clareza, produtividade e economia de tokens.
+- Após alterar frontend: `npx tsc -p frontend/tsconfig.json --noEmit`.
+- Cumpra testes adequados ao risco e todos os controles obrigatórios de deploy.
+- Só documentação: revise o conteúdo e execute `git diff --check`.
+- Alterar o schema não autoriza aplicar migrações automaticamente; siga o fluxo aprovado e o ambiente correto.
 
-Prioridade:
-1. Segurança
-2. Clareza
-3. Produtividade
-4. Criatividade
+## Deploy
 
----
+Siga integralmente `infra/DEPLOY.md`.
 
-## Regras obrigatórias
-
-- Nunca invente arquivos, funções, rotas, telas, regras de negócio ou estados do projeto.
-- Baseie-se apenas no código real do repositório e no contexto fornecido.
-- Leia os arquivos envolvidos antes de propor alteração.
-- Faça sempre a menor mudança possível.
-- Preserve a estrutura atual do projeto.
-- Não faça refatoração grande sem autorização.
-- Não altere regra de negócio fora do pedido.
-- Não altere rotas, nomes, layout ou comportamento sem necessidade.
-- Se encontrar problema fora do pedido, apenas avise. Não corrija sem autorização.
-
----
-
-## Ações que exigem autorização explícita
-
-Peça confirmação antes de:
-
-- apagar arquivos;
-- renomear arquivos importantes;
-- instalar pacotes;
-- alterar banco de dados;
-- rodar migrações;
-- fazer commit;
-- fazer push;
-- abrir pull request;
-- alterar configuração de produção;
-- executar comando destrutivo;
-- fazer refatoração grande;
-- alterar contrato de API usado pelo EIXO Campo.
-
-Use:
-
-> Entendido. Deseja que eu prossiga com [resumo curto]?
-
-Se o usuário disser claramente “faça”, “corrija”, “altere”, “aplique”, “execute” ou “implemente”, execute sem reconfirmar, salvo se houver risco alto.
-
-### Deploy completo
-
-O fluxo oficial está documentado em `infra/DEPLOY.md` e deve ser seguido integralmente.
-
-Comandos padronizados para qualquer chat deste projeto:
-
-- `Prepare o deploy do lote atual.`: analisar o estado do projeto e mostrar exatamente o que será publicado, incluindo arquivos, resumo das alterações, migrações, validações previstas e riscos. Não iniciar commit, push, pull request, mesclagem ou deploy. Ao final, pedir uma única autorização para o lote apresentado.
-- `Autorizo o deploy completo do lote apresentado.`: executar todo o fluxo aprovado, incluindo validação, branch, commit, push, pull request, CI, mesclagem, deploy e verificação de produção.
-
-Quando o usuário solicitar explicitamente commit, push, pull request e deploy, considere essas etapas autorizadas em conjunto. Não peça uma nova confirmação entre validação, commit, push, pull request, CI, mesclagem, deploy e verificação de produção.
-
-Interrompa e consulte o usuário somente se houver risco alto, teste ou backup com falha, alteração local fora do escopo, ação destrutiva ou mudança não prevista de banco ou configuração de produção.
-
----
-
-## Stack do projeto
-
-Frontend:
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-
-Backend:
-- Node.js
-- Express
-- Prisma
-- PostgreSQL
-
-Produto:
-- Web app
-- App Android EIXO Campo
-- Multi-tenant
-- Assinatura mensal via Asaas
-
----
-
-## Validação obrigatória
-
-Após qualquer alteração no frontend, rodar:
-
-```bash
-npx tsc -p frontend/tsconfig.json --noEmit
+- `Prepare o deploy do lote atual.`: revise o lote, execute as validações seguras disponíveis e apresente arquivos, alterações, migrações, resultados e riscos. Reúna pendências em uma única consulta e, com o lote pronto, solicite uma única autorização para publicar. Aguarde antes de commit, push, PR, mesclagem ou deploy.
+- `Autorizo o deploy completo do lote apresentado.` ou pedido equivalente de publicação de um escopo definido: execute o fluxo completo de `infra/DEPLOY.md`, sem exigir que o usuário enumere cada etapa nem reconfirmar ações já autorizadas.
+- Escolha branch, mensagem de commit e título/descrição do PR conforme as convenções do projeto. Preserve arquivos alheios fora do lote; consulte somente se houver dúvida ou dependência que impeça separá-los. Permissões técnicas da ferramenta continuam obrigatórias.
+- Pare por risco alto, teste/backup falhando, arquivos alheios no lote, ação destrutiva não autorizada ou mudança inesperada de banco/produção. Não repita deploy falho automaticamente.

@@ -2,12 +2,24 @@
 
 Checklist rápido para o ambiente `https://eixo.agr.br`.
 
+Siga a regra de autorização de [`DEPLOY.md`](DEPLOY.md): preparar o lote, reunir pendências e obter uma única autorização para o fluxo completo. Os itens abaixo são verificações do executor, não perguntas individuais ao usuário.
+
+## 0. Preparação e autorização
+
+- [ ] Lote delimitado: arquivos, commits, exclusões do escopo e dependências revisados.
+- [ ] Migrações pendentes no destino, efeitos no banco, configurações e recuperação apresentados.
+- [ ] Validações seguras disponíveis executadas; resultados e bloqueios informados.
+- [ ] Acesso ao GitHub e deploys em andamento verificados.
+- [ ] Autorização de publicação obtida ou já identificada na conversa para o mesmo lote.
+
 ## 1. Antes da mesclagem
 
 - [ ] Alterações restritas ao escopo aprovado.
+- [ ] Branch atualizada com a base remota, sem conflitos; alterações alheias preservadas fora do lote.
 - [ ] Nenhum segredo ou arquivo `.env` incluído no commit.
-- [ ] TypeScript e build validados.
-- [ ] Migrações revisadas, quando existirem.
+- [ ] Auditoria de dependências, geração do Prisma Client, TypeScript e build aprovados.
+- [ ] Testes do backend, conhecimento do EIXO Suporte, schema Prisma e `git diff --check` aprovados.
+- [ ] Todas as migrações pendentes que serão aplicadas estão revisadas e autorizadas.
 - [ ] Pull request aberto para `main`.
 - [ ] CI do pull request aprovado.
 
@@ -17,7 +29,7 @@ Checklist rápido para o ambiente `https://eixo.agr.br`.
 - [ ] Abrir `GitHub → Actions → deploy`.
 - [ ] Confirmar que a execução corresponde ao commit mesclado.
 
-Não execute `deploy-local.sh` ou outro script manual junto com o GitHub Actions.
+Não execute deploy manual junto com o GitHub Actions. A VPS publica o SHA fixado pelo workflow (`github.sha`); confira a correspondência com o commit aprovado.
 
 ## 3. Acompanhar o workflow
 
@@ -26,6 +38,7 @@ Não execute `deploy-local.sh` ou outro script manual junto com o GitHub Actions
 - [ ] Migrações aplicadas sem erro.
 - [ ] PM2 reiniciado com sucesso.
 - [ ] Health check da API aprovado.
+- [ ] Versão do EIXO Suporte verificada e `releaseSha` publicado comparado ao commit esperado.
 - [ ] Verificação pública do site aprovada.
 
 ## 4. Verificação pós-deploy
@@ -35,6 +48,8 @@ Não execute `deploy-local.sh` ou outro script manual junto com o GitHub Actions
 - [ ] API responde em `https://eixo.agr.br/api/health`.
 - [ ] Tela alterada funciona conforme o pedido.
 - [ ] Logs do servidor não apresentam reinício contínuo.
+
+Registre evidências de PR, commit e execução do workflow no resultado final. Se não houver sessão para testar login/tela, informe essa pendência; disponibilidade pública não substitui validação autenticada.
 
 Comando de consulta na VPS:
 
@@ -47,7 +62,8 @@ pm2 logs eixo-server --lines 100 --nostream
 - [ ] Identificar a etapa exata no GitHub Actions.
 - [ ] Verificar os logs do PM2 e do Nginx.
 - [ ] Não executar novamente sem corrigir a causa.
-- [ ] Corrigir ou reverter por uma nova branch e pull request.
+- [ ] Apresentar correção ou reversão por branch e PR; obter autorização para o que exceder o plano aprovado.
+- [ ] Avaliar migrações separadamente: reverter código não restaura o banco.
 - [ ] Confirmar o novo deploy e repetir a verificação pós-deploy.
 
 ## Atenção
