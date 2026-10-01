@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-29.1';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-29';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-30.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-30';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -38,7 +38,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
     {
         id: 'fazendas-pastos',
         title: 'Cadastrar fazenda e pastos',
-        keywords: ['fazenda', 'fazendas', 'pasto', 'pastos', 'estrutura', 'cadastro fazenda', 'cidade', 'municipio', 'estado'],
+        keywords: ['fazenda', 'fazendas', 'pasto', 'pastos', 'estrutura', 'cadastro fazenda', 'cidade', 'municipio', 'estado', 'excluir fazenda', 'exclusão de fazenda'],
         href: 'eixo:view:Fazendas',
         guidance: [
             'Acesse Estrutura da Fazenda.',
@@ -47,6 +47,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Depois abra a fazenda e cadastre os pastos.',
             'Animais atuais mostra a quantidade de animais vivos em cabeças, igual ao total da Visão Geral e do Manejo do Rebanho.',
             'A capacidade soma somente pastos ativos de pastejo com UA informada ou com área e lotação válidas; área sozinha não vira UA. Quando faltarem dados, a tela informa capacidade não informada ou parcial.',
+            'No cartão da fazenda, Solicitar exclusão abre a confirmação para excluir a fazenda; é necessária a senha do proprietário da conta.',
+            'Uma fazenda com histórico registrado não pode ser excluída. Sem histórico, a exclusão é definitiva. Excluir uma fazenda não encerra o login nem a organização.',
         ],
     },
     {

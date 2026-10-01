@@ -70,8 +70,7 @@ const FARM_HISTORY_MODELS = [
     'selectionDecision',
     'semenBatch',
     'weighingSession',
-    'reproCheckupRecord',
-    'reproCheckupSession',
+    'reproDiagnosisSession',
 ];
 
 const findFarmByCoordinates = async ({ req, lat, lng, excludeFarmId = null }) => {
