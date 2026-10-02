@@ -1,5 +1,7 @@
 # EIXO — Setup do Servidor (primeira vez)
 
+Uso exclusivo na preparação inicial de servidor novo. Não executar durante deploy normal. Para publicar em infraestrutura existente, consultar apenas [DEPLOY.md](DEPLOY.md).
+
 Domínio: **eixo.agr.br**
 Servidor: Ubuntu 22.04
 
@@ -67,8 +69,8 @@ npm install -g pm2
 # Certbot (certificado HTTPS gratuito)
 apt-get install -y certbot python3-certbot-nginx
 
-# Git
-apt-get install -y git
+# Git, healthcheck e trava exclusiva de deploy
+apt-get install -y git curl util-linux
 ```
 
 ---
@@ -117,7 +119,7 @@ Preencha os valores:
 DATABASE_URL="postgresql://eixo_user:SENHA_DO_BANCO@localhost:5432/eixo_prod"
 SESSION_TOKEN_SALT="GERE_ABAIXO"
 NODE_ENV=production
-PORT=3001
+PORT=3000
 
 # Twilio (SMS de verificação)
 TWILIO_ACCOUNT_SID=seu_sid
@@ -133,7 +135,7 @@ ASAAS_API_KEY=sua_chave
 ASAAS_ENV=production
 
 # URL pública do sistema
-APP_URL=https://eixo.agr.br
+APP_BASE_URL=https://eixo.agr.br
 ```
 
 Para gerar o SESSION_TOKEN_SALT, rode:
@@ -151,10 +153,12 @@ Salvar no nano: `Ctrl+O`, Enter, `Ctrl+X`.
 cd /var/www/eixo
 
 # Instalar dependências do projeto
-npm install
+npm ci --include=dev --no-audit --no-fund
 
-# Aplicar estrutura do banco
-export $(grep -v '^#' server/.env.production | xargs)
+# Aplicar estrutura inicial somente no banco novo autorizado
+set -a
+source server/.env.production
+set +a
 npx prisma migrate deploy --schema server/prisma/schema.prisma
 npx prisma generate --schema server/prisma/schema.prisma
 ```
@@ -164,8 +168,7 @@ npx prisma generate --schema server/prisma/schema.prisma
 ## PASSO 8 — Build do frontend
 
 ```bash
-cd /var/www/eixo/frontend
-npm install
+cd /var/www/eixo
 npm run build
 ```
 
@@ -177,7 +180,8 @@ Vai criar a pasta `frontend/dist` com o site compilado.
 
 ```bash
 cd /var/www/eixo
-pm2 start server/index.js --name eixo-server
+export APP_RELEASE_SHA="$(git rev-parse HEAD)"
+pm2 start ecosystem.config.js
 pm2 save
 pm2 startup   # copie e cole o comando que ele mostrar
 ```
@@ -185,7 +189,7 @@ pm2 startup   # copie e cole o comando que ele mostrar
 Verificar se está rodando:
 ```bash
 pm2 status
-pm2 logs eixo-server --lines 20
+pm2 logs eixo-server --lines 20 --nostream
 ```
 
 ---
@@ -251,33 +255,6 @@ O sistema estará acessível em: **https://eixo.agr.br**
 
 ---
 
-## Deploys futuros
+## Após a preparação
 
-O fluxo oficial é automático: mescle um pull request na branch `main` e acompanhe o workflow `deploy` no GitHub Actions.
-
-Se o GitHub Actions estiver indisponível, use a contingência **no servidor**:
-
-```bash
-cd /var/www/eixo
-./deploy-manual.sh
-```
-
-Antes de executar, confirme que não existe outro deploy em andamento. O script faz backup, atualiza o código, instala dependências, aplica migrações, gera o build, reinicia o servidor e valida a disponibilidade.
-
----
-
-## Comandos úteis no dia a dia
-
-```bash
-# Ver logs do servidor em tempo real
-pm2 logs eixo-server
-
-# Reiniciar o servidor
-pm2 restart eixo-server
-
-# Ver status
-pm2 status
-
-# Ver logs do Nginx
-tail -f /var/log/nginx/eixo_error.log
-```
+Publicações posteriores seguem exclusivamente [DEPLOY.md](DEPLOY.md). Não repetir instalação do sistema, criação do banco, serviços, DNS ou certificados.

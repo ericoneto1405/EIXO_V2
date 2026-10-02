@@ -1,6 +1,6 @@
 # Checklist operacional — e-mail de recuperação de senha
 
-Use este checklist após deploy para confirmar entrega real de e-mails de redefinição.
+Use somente quando houver alteração em recuperação de senha, entrega, provedor, remetente ou DNS, ou investigação de falha de entrega. Não executar em todo deploy. A publicação comum segue [infra/DEPLOY.md](../../infra/DEPLOY.md). Os testes reais abaixo devem usar contas de teste autorizadas.
 
 ## 1) Configuração básica
 - Confirmar `RESEND_API_KEY` válido no ambiente ativo.
