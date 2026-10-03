@@ -46,9 +46,17 @@ Validar automaticamente o conhecimento não exige ler o plano inteiro.
 
 Na VPS, comparar com **a última publicação confirmada**, acumulando mudanças não publicadas. Primeiro uso sem histórico exige preparação completa e revisão de todas as migrações pendentes. Dependências/build ausentes obrigam reconstrução; mudança no ambiente detectada por hash privado força build/reinício. Não alterar manualmente banco, dependências ou artefatos sem plano próprio.
 
-Runners limpos precisam instalar dependências quando validam aplicação. Backend mantém testes integrais porque não há mapa seguro de dependências entre módulos. Conhecimento é validado para mudanças de aplicação, incluindo telas/permissões. Auditoria roda para dependências/seleção conservadora; alerta de segurança justifica nova auditoria.
+Runners limpos precisam instalar dependências quando validam aplicação. Backend mantém testes integrais porque não há mapa seguro de dependências entre módulos. Conhecimento é validado para mudanças de aplicação, incluindo telas/permissões. Durante a exceção abaixo, a auditoria roda em toda validação de aplicação para conferir o prazo e novos alertas; documentos isolados continuam sem build/auditoria.
 
-Build do CI valida código; build da VPS usa o ambiente de produção. Transferir artefatos exige comprovar equivalência antes. Node.js 20 permanece no CI até migração coordenada com a VPS. Não prometer redução de duração/tokens medida sem execução real.
+Build do CI valida código; build da VPS usa o ambiente de produção. Transferir artefatos exige comprovar equivalência antes. Node.js 20 permanece no CI; a VPS consultada em 03/10/2026 usa Node.js 22.23.3. Não alterar versões durante deploy; qualquer alinhamento exige revisão própria. Não prometer redução de duração/tokens medida sem execução real.
+
+## Exceção temporária de auditoria
+
+Aprovada em 03/10/2026, válida até **10/10/2026 às 14:18:26 UTC (11:18:26 na Bahia)**, sem renovação automática. Responsável: manutenção técnica do EIXO. Abrange somente `GHSA-vfj7-8cjw-p6xm`, em `braces`, e os efeitos exclusivamente derivados dele em chokidar, micromatch, fast-glob, nodemon e Tailwind. Não corrige a vulnerabilidade.
+
+`node infra/audit-dependencies.mjs` executa a auditoria completa e aplica `infra/audit-exception.json`. Mantém o limiar `moderate`: outros alertas moderados/altos/críticos, falhas de rede, saída inválida e causas desconhecidas bloqueiam. A exceção é exibida no resultado; não usar `--omit=dev` nem desligar a auditoria. Quando ela for necessária, vencimento ou mudança no hash do lockfile, manifests, configuração de build, execução, workflows ou código rastreado do servidor bloqueia seu uso. Não atualizar o hash/prazo para contornar falhas; exigir nova revisão e aprovação.
+
+Evidência: `braces` está na cadeia de desenvolvimento/build; o Tailwind usa padrões fixos, uploads ficam fora dessas pastas e o PM2 está configurado sem Nodemon/watch. Porém ferramentas de build são instaladas na VPS. **A aprovação desta exceção não autoriza publicação:** confirmar na VPS a correspondência do processo/configuração com o repositório, ausência de servidor de desenvolvimento exposto e controle dos arquivos de build antes de mesclar. Conferência somente de leitura em 03/10/2026: SHA ativo `769396a`, PM2 executando `server/index.js` com `watch=false`, sem listeners nas portas de desenvolvimento 5173/4173; hashes de Tailwind, Vite, lockfile e configuração versionada do PM2 iguais aos revisados. A API local/pública respondeu saudável na porta 3001 e as 85 migrações estavam aplicadas. A VPS ainda contém três arquivos não versionados (`ecosystem.config.cjs`, `frontend/package-lock.json`, `server/package-lock.json`): arquivamento reversível deve ser autorizado antes da primeira publicação pelo novo executor. Revalidar se houver mudança de contexto. Após correção oficial, remover a exceção em revisão própria; uma auditoria sem esse alerta passa sem utilizá-la.
 
 ## Executor e proteções
 
@@ -70,4 +78,4 @@ Antes de retomar, revisar causa, etapas concluídas, banco, checkout, artefatos 
 
 **Não há rollback automático nem troca atômica de releases:** build/reinício pode causar indisponibilidade. Preferir reversão por PR, autorizada quando fora do plano. Reverter código não desfaz migrações. Restauração exige backup + SHA compatível, prova em banco isolado e autorização explícita por ser destrutiva; manter manutenção quando aplicável.
 
-Endpoints: `https://eixo.agr.br`, `https://eixo.agr.br/api/health`, `http://127.0.0.1:3000/health`. Falha, versão divergente ou reinício contínuo impedem declarar sucesso.
+Endpoints: `https://eixo.agr.br`, `https://eixo.agr.br/api/health`, `http://127.0.0.1:<PORT>/health` (porta definida no ambiente; 3001 na VPS consultada em 03/10/2026). Falha, versão divergente ou reinício contínuo impedem declarar sucesso.

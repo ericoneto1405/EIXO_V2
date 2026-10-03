@@ -22,6 +22,7 @@ run() {
   stage="$1"; shift
   echo "▶ $stage"
   if "$@" >"$log" 2>&1; then
+    if [ "$stage" = auditoria ]; then cat "$log"; fi
     echo "OK: $stage"
   else
     local rc=$?
@@ -30,7 +31,9 @@ run() {
     exit "$rc"
   fi
 }
-if [ "$deps" = 1 ]; then run auditoria npm audit --audit-level=moderate; fi
+if [ "$deps" = 1 ] || [ "$frontend" = 1 ] || [ "$backend" = 1 ]; then
+  run auditoria node infra/audit-dependencies.mjs
+fi
 if [ "$schema" = 1 ] || [ "$backend" = 1 ]; then
   run prisma-generate npm run generate
   run prisma-validate npx --no-install prisma validate --schema server/prisma/schema.prisma
