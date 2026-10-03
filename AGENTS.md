@@ -21,9 +21,9 @@
 
 ## Deploy
 
-Siga integralmente `infra/DEPLOY.md`.
-
-- `Prepare o deploy do lote atual.`: revise o lote, execute as validações seguras disponíveis e apresente arquivos, alterações, migrações, resultados e riscos. Reúna pendências em uma única consulta e, com o lote pronto, solicite uma única autorização para publicar. Aguarde antes de commit, push, PR, mesclagem ou deploy.
-- `Autorizo o deploy completo do lote apresentado.` ou pedido equivalente de publicação de um escopo definido: execute o fluxo completo de `infra/DEPLOY.md`, sem exigir que o usuário enumere cada etapa nem reconfirmar ações já autorizadas.
-- Escolha branch, mensagem de commit e título/descrição do PR conforme as convenções do projeto. Preserve arquivos alheios fora do lote; consulte somente se houver dúvida ou dependência que impeça separá-los. Permissões técnicas da ferramenta continuam obrigatórias.
-- Pare por risco alto, teste/backup falhando, arquivos alheios no lote, ação destrutiva não autorizada ou mudança inesperada de banco/produção. Não repita deploy falho automaticamente.
+- A fonte canônica é [infra/DEPLOY.md](infra/DEPLOY.md); não procurar outros procedimentos salvo indicação explícita dela.
+- Não executar setup de servidor nem configuração de secrets em deploy normal.
+- Runbooks específicos só devem ser consultados quando o componente correspondente for afetado.
+- Não repetir comandos já executados com sucesso nesta execução, salvo exigência explícita de etapa posterior.
+- Preferir scripts determinísticos do repositório a sequências manuais.
+- Preservar segurança, migrações necessárias, backup, healthchecks e planejamento de rollback definidos na fonte canônica.

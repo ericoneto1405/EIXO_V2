@@ -1,5 +1,7 @@
 # Setup de Secrets para Deploy Automatizado
 
+Usar somente para configuração inicial, alteração ou rotação de secrets; nunca como etapa de deploy normal. Publicação: [fonte canônica](../infra/DEPLOY.md).
+
 ## O que é necessário
 
 O workflow `deploy.yml` usa o GitHub Actions para fazer SSH no servidor e rodar o deploy.
@@ -39,26 +41,13 @@ Também é possível cadastrar manualmente o conteúdo no secret `VPS_SSH_KEY`, 
 
 **IMPORTANTE:** Não commite a chave privada no repositório.
 
-## Verificar se funciona
+## Verificar a configuração
 
-Depois de configurar os secrets, faça um push no branch `main`:
+Confirmar os nomes com `gh secret list` (sem revelar valores) e testar a autenticação SSH com comando remoto somente de leitura, como `true`. Configurar secrets não autoriza publicação; não fazer push direto na `main` para testá-los. A próxima publicação autorizada segue [DEPLOY.md](../infra/DEPLOY.md).
 
-```bash
-git push origin main
-```
+## Rotação e diagnóstico de autenticação
 
-Ir em **Actions** no GitHub para acompanhar o progresso do deploy.
-
-## Troubleshooting
-
-### "Permission denied (publickey)"
-- Verificar se a chave pública foi copiada para o servidor
-- Testar manualmente: `ssh -i ~/.ssh/eixo-github-actions-deploy root@51.255.199.78`
-
-### Deploy não dispara
-- Verificar se o push foi para a branch `main`
-- Verificar se o workflow `deploy.yml` está ativo em **Actions → Workflows**
-
-### Health check falha
-- Verificar logs: `pm2 logs eixo-server --lines 50`
-- Verificar se o `.env.production` está atualizado no servidor
+- Adicionar a chave nova antes de revogar a anterior; confirmar o acesso novo e atualizar o secret sem exibir a chave.
+- Após uma publicação autorizada confirmar o novo acesso, revogar a chave antiga na VPS e remover cópias privadas obsoletas com autorização correspondente.
+- Em `Permission denied (publickey)`, conferir usuário, chave pública autorizada e correspondência do secret; nunca colar segredos em logs.
+- Falhas de workflow ou healthcheck pertencem ao diagnóstico de [DEPLOY.md](../infra/DEPLOY.md).

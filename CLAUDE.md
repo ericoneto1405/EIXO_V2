@@ -27,7 +27,7 @@ Só executar após "sim", "ok", "pode" ou similar.
 |--------|-----------|
 | Frontend | React + Vite + TypeScript + Tailwind CSS 3 |
 | Server | Node.js + Express (ESM) + Prisma 6 (PostgreSQL) |
-| Deploy | GitHub Actions → push em `main` → SSH no VPS → `prisma migrate deploy` + `npm run build` + `pm2 reload` |
+| Deploy | Fonte oficial: [infra/DEPLOY.md](infra/DEPLOY.md) |
 
 ## Comandos
 
@@ -40,7 +40,7 @@ npm run migrate      # prisma migrate dev
 npm run studio       # Prisma Studio
 ```
 
-CI roda `tsc --noEmit` no frontend **e** `vite build`. Erro de build é sempre no Vite, não no tsc isolado.
+As validações de publicação são definidas exclusivamente em [infra/DEPLOY.md](infra/DEPLOY.md).
 
 ---
 
@@ -117,6 +117,5 @@ frontend/
 
 ## Pontos de atenção
 
-- Health check no VPS: `http://127.0.0.1:3000/health` (nginx repassa de 443 para 3000).
 - `req.saas.farmId` é a fonte de verdade para isolamento de dados por fazenda — não aceitar `farmId` do body em operações sensíveis sem cruzar com o contexto da sessão.
 - Acasalamento e Nutrição ainda estão em arquivos soltos na raiz de `server/` (`acasalamentoModule.js`, `nutritionModule.js`), não extraídos para `modules/`.

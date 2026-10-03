@@ -16,26 +16,28 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - name: Selecionar validações
+        id: plan
+        env:
+          BASE_SHA: ${{ github.event.before }}
+        run: |
+          source infra/deploy-plan.sh
+          plan_changes "$BASE_SHA" HEAD
+          echo "runtime=$((frontend + backend + deps))" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
+        if: steps.plan.outputs.runtime != '0'
         with:
           node-version: 20
           cache: npm
-      - name: Install
-        run: npm ci --include=dev
-      - name: Audit dependencies
-        run: npm audit --audit-level=moderate
-      - name: Generate Prisma Client
-        run: npm run generate
-      - name: Testes do backend
-        run: npm test --workspace server
-      - name: Validar conhecimento do EIXO Suporte
-        run: npm run support:validate --workspace server
+      - name: Instalar no runner limpo
+        if: steps.plan.outputs.runtime != '0'
+        run: npm ci --include=dev --no-audit --no-fund
+      - name: Testar automação de deploy
+        run: python3 -B -m unittest discover -s infra/tests -p 'test_*.py'
+      - name: Validar escopo
         env:
-          SUPPORT_BASE_SHA: ${{ github.event.before }}
-      - name: TypeScript check (frontend)
-        run: npx tsc -p frontend/tsconfig.json --noEmit
-      - name: Build frontend
-        run: npm run build
+          BASE_SHA: ${{ github.event.before }}
+        run: bash infra/deploy-validate.sh "$BASE_SHA"
 
   deploy:
     name: Deploy → Produção
@@ -43,71 +45,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v6
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 30m
           script: |
             set -euo pipefail
-
             cd /var/www/eixo
-
-            echo "▶ Preservando server/.env.production..."
-            cp -f server/.env.production /tmp/.env.production.bak 2>/dev/null || true
-
-            echo "▶ Atualizando código..."
-            git fetch origin main
-            git reset --hard "${{ github.sha }}"
-
-            echo "▶ Restaurando server/.env.production..."
-            cp -f /tmp/.env.production.bak server/.env.production 2>/dev/null || true
-
-            echo "▶ Carregando variáveis de ambiente..."
-            set -a
-            source server/.env.production
-            set +a
-            export APP_RELEASE_SHA="$(git rev-parse HEAD)"
-
-            echo "▶ Instalando dependências (root workspace)..."
-            npm ci --include=dev
-
-            echo "▶ Criando backup do banco..."
-            bash server/backup.sh
-
-            echo "▶ Aplicando migrações do banco..."
-            npx prisma migrate deploy --schema server/prisma/schema.prisma
-            npx prisma generate --schema server/prisma/schema.prisma
-
-            echo "▶ Build do frontend..."
-            npm run build
-
-            echo "▶ Reiniciando servidor (delete + start para garantir reload do .env.production)..."
-            pm2 delete eixo-server >/dev/null 2>&1 || true
-            pm2 start ecosystem.config.js
-            pm2 save --force
-
-            echo "▶ Health check..."
-            sleep 3
-            if ! curl -fsS --max-time 10 "http://127.0.0.1:${PORT:-3000}/health" >/dev/null; then
-              echo "ERRO: Health check da API falhou — verifique pm2 logs"
-              exit 1
-            fi
-            echo "Health OK"
-
-            echo "▶ Conferindo versão do EIXO Suporte..."
-            SUPPORT_STATUS_URL="http://127.0.0.1:${PORT:-3000}/api/chat/knowledge-status" npm run support:verify-release --workspace server
-
-            echo "Deploy concluído."
-
-      - name: Verificar uptime
-        run: |
-          sleep 5
-          if ! curl -fsSL --max-time 15 https://eixo.agr.br >/dev/null; then
-            echo "ERRO: Site indisponível após o deploy"
-            exit 1
-          fi
-          echo "Site no ar: https://eixo.agr.br"
+            git fetch --quiet origin main
+            executor=$(mktemp)
+            trap 'rm -f "$executor"' EXIT
+            git show "${{ github.sha }}:infra/deploy.sh" > "$executor"
+            bash "$executor" "${{ github.sha }}"
