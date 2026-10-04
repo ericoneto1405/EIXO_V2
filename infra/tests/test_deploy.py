@@ -256,6 +256,29 @@ if [ -n "$FAIL_MATCH" ] && [[ "$(basename "$0") $*" == *"$FAIL_MATCH"* ]]; then 
         self.assertNotIn('npm run build', calls)
         self.assertNotIn('support:validate', calls)
 
+    def test_schema_validation_url_is_scoped_to_one_command(self):
+        self.write('server/index.js', '// changed')
+        self.commit()
+        for cmd in ['npm', 'npx']:
+            (self.bin / cmd).write_text('''#!/usr/bin/env bash
+echo "$(basename "$0") $* | ${DATABASE_URL-unset}" >> "$CALLS"
+''')
+        for supplied in [None, 'postgresql://test:test@127.0.0.1:1/provided']:
+            with self.subTest(supplied=supplied):
+                env = dict(self.env)
+                env.pop('DATABASE_URL', None)
+                if supplied is not None:
+                    env['DATABASE_URL'] = supplied
+                self.calls.write_text('')
+                result = subprocess.run(['bash', 'infra/deploy-validate.sh', self.initial],
+                                        cwd=self.repo, env=env, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                lines = self.calls.read_text().splitlines()
+                schema = next(line for line in lines if 'prisma validate' in line)
+                self.assertTrue(schema.endswith(supplied or 'postgresql://validation:validation@127.0.0.1:1/eixo_schema_validation'))
+                backend = next(line for line in lines if line.startswith('npm test'))
+                self.assertTrue(backend.endswith(supplied or 'unset'))
+
 
 if __name__ == '__main__':
     unittest.main()

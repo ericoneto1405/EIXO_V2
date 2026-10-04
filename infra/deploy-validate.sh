@@ -36,7 +36,10 @@ if [ "$deps" = 1 ] || [ "$frontend" = 1 ] || [ "$backend" = 1 ]; then
 fi
 if [ "$schema" = 1 ] || [ "$backend" = 1 ]; then
   run prisma-generate npm run generate
-  run prisma-validate npx --no-install prisma validate --schema server/prisma/schema.prisma
+  # A validação é estática; CI não recebe credenciais de banco. O fallback
+  # pertence somente a este comando e nunca é exportado para testes/migrações.
+  run prisma-validate env DATABASE_URL="${DATABASE_URL:-postgresql://validation:validation@127.0.0.1:1/eixo_schema_validation}" \
+    npx --no-install prisma validate --schema server/prisma/schema.prisma
 fi
 if [ "$backend" = 1 ]; then run testes-backend npm test --workspace server; fi
 if [ "$frontend" = 1 ] || [ "$backend" = 1 ]; then
