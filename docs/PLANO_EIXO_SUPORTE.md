@@ -1,5 +1,17 @@
 # Plano do EIXO Suporte
 
+Documento especializado: consultar somente para alterações no EIXO Suporte, seus provedores, conhecimento ou rollout. A publicação comum segue exclusivamente [infra/DEPLOY.md](../infra/DEPLOY.md).
+
+## Configuração do rollout
+
+Configure `SUPPORT_ROLLOUT_MODE` no `server/.env.production`:
+
+- `shadow`: gera a resposta candidata apenas para revisão no HQ e encaminha o cliente para a Equipe EIXO;
+- `pilot`: mostra a nova resposta somente às organizações listadas em `SUPPORT_PILOT_ORGANIZATION_IDS`;
+- `full`: libera o novo autoatendimento para todos.
+
+Use IDs de organização separados por vírgula no piloto. Avance de `shadow` para `pilot` e depois para `full` somente quando segurança, precisão, links e satisfação estiverem dentro das metas do plano.
+
 ## Objetivo
 
 Transformar o EIXO Suporte em um atendimento confiável, atualizado e resolutivo, capaz de solucionar sozinho pelo menos 99% das dúvidas elegíveis sobre o uso do sistema.
@@ -8,16 +20,16 @@ O atendimento deve ser cordial, positivo e direto. Quando o cliente estiver frus
 
 O canal humano continuará disponível para casos que realmente exigem decisão, acesso ou intervenção de uma pessoa. A meta de 1% não poderá ser atingida escondendo o canal humano ou classificando atendimentos de forma artificial.
 
-## Situação atual confirmada
+## Situação observada na elaboração do plano (histórico)
 
 - Existe chat no frontend, API de mensagens, integração com IA, histórico e painel de suporte no HQ.
 - As conversas são armazenadas como registros de `ActivityLog`.
 - O contexto da IA contém plano, módulos, permissões, fazenda selecionada e links internos.
 - Há fallback e alerta pelo Telegram quando a IA falha ou produz resposta considerada fraca.
 - A versão mais recente disponível em `origin/main` permite Groq, Gemini ou Vertex.
-- A `main` local está 14 commits atrás de `origin/main` e precisa ser atualizada antes da implementação.
+- Na elaboração do plano, a `main` local estava 14 commits atrás de `origin/main`; não usar esse retrato como estado atual.
 - Os arquivos locais de ambiente encontrados têm `GOOGLE_API_KEY`, mas não têm as novas configurações de provedor. A produção ainda precisa ser verificada sem expor os segredos.
-- Não existem testes dedicados ao EIXO Suporte.
+- Na elaboração do plano não existiam testes dedicados ao EIXO Suporte; o código e o CI atuais devem ser consultados ao alterar o módulo.
 - O cliente não possui mais o botão de especialista, mas a API e o HQ ainda mantêm o fluxo de atendimento humano.
 
 ## Definição da meta de 1%

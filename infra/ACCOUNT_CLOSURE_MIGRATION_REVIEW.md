@@ -1,5 +1,7 @@
 # Revisão das migrações do pedido de encerramento — 29/09/2026
 
+Evidência histórica para revisar migrações de encerramento/autoria. Não consultar em deploys sem relação com esse módulo nem tratar contagens e pendências abaixo como estado atual. Execução comum: [DEPLOY.md](DEPLOY.md); controles específicos: [runbook de encerramento](ACCOUNT_CLOSURE_DEPLOY_RUNBOOK.md).
+
 ## Estado observado
 
 - Produção consultada somente para leitura: 23 MB. As migrações `20260921120000` e `20260926120000` já constam como aplicadas. As três colunas e os três índices de idempotência existem.

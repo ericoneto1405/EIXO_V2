@@ -1,0 +1,31 @@
+{
+  "advisory": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+  "approvedAt": "2026-10-03T14:18:26Z",
+  "expiresAt": "2026-10-10T14:18:26Z",
+  "approvedBy": "Proprietário do EIXO, nesta tarefa",
+  "owner": "Manutenção técnica do EIXO",
+  "rationale": "Padrões fixos do Tailwind; sem caminho identificado de dados de usuários até braces. Exposição na VPS ainda deve ser confirmada antes da publicação.",
+  "reviewedCommit": "d19e71787f863cd1f43371cee1f42af677d14759",
+  "contextSha256": "86700d6e7488ec52764e47fba0a32cb1dc546eb60a3dca7e43724ba2dfc7c40d",
+  "nodes": {
+    "braces": [
+      "node_modules/braces"
+    ],
+    "chokidar": [
+      "node_modules/nodemon/node_modules/chokidar",
+      "node_modules/tailwindcss/node_modules/chokidar"
+    ],
+    "micromatch": [
+      "node_modules/micromatch"
+    ],
+    "fast-glob": [
+      "node_modules/fast-glob"
+    ],
+    "nodemon": [
+      "node_modules/nodemon"
+    ],
+    "tailwindcss": [
+      "node_modules/tailwindcss"
+    ]
+  }
+}

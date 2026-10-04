@@ -1,7 +1,5 @@
 name: ci
 
-# Roda so em pull request. Push na main e checado pelo job "CI - Build & Validate"
-# dentro do deploy.yml, que faz exatamente os mesmos passos.
 on:
   pull_request:
     branches: [main]
@@ -13,23 +11,25 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+      - name: Selecionar validações
+        id: plan
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          source infra/deploy-plan.sh
+          plan_changes "$BASE_SHA" HEAD
+          echo "runtime=$((frontend + backend + deps))" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v6
+        if: steps.plan.outputs.runtime != '0'
         with:
           node-version: 20
           cache: npm
-      - name: Install
-        run: npm ci
-      - name: Audit dependencies
-        run: npm audit --audit-level=moderate
-      - name: Generate Prisma Client
-        run: npm run generate
-      - name: Testes do backend
-        run: npm test --workspace server
-      - name: Validar conhecimento do EIXO Suporte
-        run: npm run support:validate --workspace server
+      - name: Instalar no runner limpo
+        if: steps.plan.outputs.runtime != '0'
+        run: npm ci --include=dev --no-audit --no-fund
+      - name: Testar automação de deploy
+        run: python3 -B -m unittest discover -s infra/tests -p 'test_*.py'
+      - name: Validar escopo
         env:
-          SUPPORT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-      - name: TypeScript check (frontend)
-        run: npx tsc -p frontend/tsconfig.json --noEmit
-      - name: Build frontend
-        run: npm run build
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: bash infra/deploy-validate.sh "$BASE_SHA"

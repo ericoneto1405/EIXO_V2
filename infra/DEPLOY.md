@@ -1,151 +1,81 @@
-# EIXO V2 — Guia de Deploy em Produção
+# Deploy do EIXO — fonte canônica
 
-## Fluxo oficial
+Único procedimento comum: **branch → PR → CI → main → GitHub Actions → VPS**. Leia este arquivo uma vez; não busque outros guias sem indicação abaixo. Nunca execute setup ou configuração de secrets em deploy normal.
 
-O deploy de produção é automático pelo GitHub Actions:
+## Fluxo em três passos
 
-```text
-branch de trabalho → pull request → main → validação → VPS → produção
-```
+1. **Preparar:** conferir branch, `git status --short`, diff, arquivos novos e commits do lote. Atualizar a referência remota uma vez (`git fetch origin main`). Delimitar inclusões/exclusões; revisar dependências, configuração, migrações pendentes no destino e recuperação. `bash infra/deploy-plan.sh <base-revisada> HEAD` mostra a seleção entre commits; alterações locais também precisam de revisão.
+2. **Validar e publicar:** `bash infra/deploy-validate.sh <base-revisada>` reúne as verificações locais ainda necessárias, sem instalar dependências ou aplicar migrações. Com autorização, usar branch `codex/`, atualizar a base preservando o escopo, selecionar arquivos, criar commit/push/PR. Mesclar somente com CI aprovado. O workflow `deploy` valida o SHA mesclado e chama o executor da VPS.
+3. **Conferir:** acompanhar `gh run watch <id> --exit-status`. Registrar PR, SHA, execução, backup e pendências. O executor já verifica API local/pública, site e versão: não repetir após sucesso. Conferir login, estabilidade do processo e fluxo alterado; se não houver sessão, registrar a pendência. HTTP saudável não comprova teste autenticado/visual.
 
-O arquivo responsável é `.github/workflows/deploy.yml`. O deploy começa somente após uma atualização da branch `main`.
+**Não repetir comandos já executados com sucesso nesta execução, salvo se uma etapa posterior exigir explicitamente sua repetição.** Reutilizar evidências da mesma versão, diff e ambiente; mudança relevante, conflito resolvido ou falha invalida apenas os checks afetados. PR e commit mesclado são versões distintas e mantêm seus controles obrigatórios.
 
-## Autorização do fluxo completo
+## Autorização e interrupção
 
-Uma autorização de publicação cobre o fluxo completo de um lote definido. Não é necessário que o usuário enumere commit, push, PR e mesclagem, nem use uma frase exata. A autorização vale para esse lote e ambiente, não para publicações futuras.
+- **“Prepare o deploy do lote atual”** autoriza revisão e validações seguras, sem instalação, migração, commit, push, PR, mesclagem ou publicação. Verificar acesso e deploys em andamento; apresentar lote, exclusões, efeitos das migrações, resultados, bloqueios, risco e recuperação. Reunir decisões pendentes numa consulta e pedir uma única autorização de publicação.
+- **Autorização de deploy completo de um lote definido** cobre branch, atualização/conflitos rotineiros, dependências travadas necessárias, validações, commit, push, PR, mesclagem e execução/pós-deploy. Não exigir frase exata nem reconfirmar etapas. Escolher nomes conforme convenções do projeto. A autorização não vale para futuros lotes.
+- Preservar arquivos alheios; nunca `git add -A` em árvore mista. Permissões técnicas, autenticação e aprovações do ambiente `production` continuam obrigatórias.
+- Parar por risco alto, teste/backup falhando, conflito com decisão de negócio, inclusão alheia, ação destrutiva não autorizada ou mudança inesperada de banco/configuração. Consultar somente a decisão nova; nunca repetir deploy falho automaticamente.
+- `prisma migrate deploy` aplica **todas** as migrações pendentes. Identificar e autorizar o conjunto antes da mesclagem, inclusive pendências antigas. Alterar schema não autoriza migração. A exclusão real de contas permanece bloqueada conforme `AGENTS.md`.
 
-### Preparar antes de pedir autorização
+## Documentação somente quando necessária
 
-`Prepare o deploy do lote atual.` autoriza revisar e preparar, sem commit, push, PR, mesclagem ou publicação:
+| Documento | Quando consultar |
+|---|---|
+| [SETUP_SERVIDOR.md](SETUP_SERVIDOR.md) | Servidor novo/infraestrutura inicial, com autorização própria. |
+| [SECRETS_SETUP.md](../.github/SECRETS_SETUP.md) | Configurar/rotacionar secrets ou diagnosticar autenticação. |
+| [ACCOUNT_CLOSURE_DEPLOY_RUNBOOK.md](ACCOUNT_CLOSURE_DEPLOY_RUNBOOK.md) | Alteração no encerramento de conta ou suas migrações. |
+| [ACCOUNT_CLOSURE_MIGRATION_REVIEW.md](ACCOUNT_CLOSURE_MIGRATION_REVIEW.md) | Revisão das migrações de encerramento/autoria; evidência histórica, não estado atual. |
+| [Checklist de e-mail](../server/docs/password-reset-email-delivery-checklist.md) | Recuperação de senha, entrega, provedor, remetente, DNS ou falha de entrega. |
+| [PLANO_EIXO_SUPORTE.md](../docs/PLANO_EIXO_SUPORTE.md) | Atendimento, conhecimento, provedor ou rollout do Suporte. |
 
-1. Conferir branch, diff, arquivos novos, commits ainda não publicados e a base remota atualizada. Delimitar o lote com o contexto da tarefa; não incluir automaticamente tudo que estiver alterado.
-2. Revisar migrações, dependências e configurações necessárias; executar as validações seguras disponíveis e verificar acesso ao GitHub e execuções de deploy em andamento. Não instalar dependências nem aplicar migrações sem autorização correspondente.
-3. Apresentar um resumo único com arquivos incluídos/excluídos, comportamento alterado, migrações e seus efeitos, resultados das validações, risco e recuperação prevista. Informar verificações bloqueadas ou pendentes, sem tratá-las como aprovadas.
+Validar automaticamente o conhecimento não exige ler o plano inteiro.
 
-Resolva por leitura tudo que puder antes de perguntar. Se faltar uma decisão necessária sobre escopo, acesso ou banco, reúna as pendências conhecidas em uma única consulta. Com o lote concreto e pronto, solicite uma única autorização: **“Autoriza o deploy completo do lote apresentado?”** Se o usuário já autorizou explicitamente esse mesmo escopo, prossiga sem repetir a pergunta.
+## Seleção incremental
 
-### Executar após a autorização
+`infra/deploy-plan.sh` concentra as regras. Arquivos desconhecidos recebem seleção conservadora; checkout local alterado recebe validação completa.
 
-`Autorizo o deploy completo do lote apresentado.` ou pedido equivalente autoriza, em conjunto:
+| Mudança | Validação | VPS |
+|---|---|---|
+| Documentos reconhecidos | Diff + testes leves da automação no CI | Checkout e saúde; mantém versão ativa |
+| Frontend | TypeScript, build, conhecimento | Backup, build e reinício da API para atualizar versão |
+| Backend | Prisma generate/validate, testes backend, conhecimento | Backup e reinício; mantém build |
+| Dependências/lock/vendor | Auditoria moderada e validação completa | Backup, instalação, Prisma, build e reinício |
+| Schema/migrações | Prisma, testes backend, conhecimento | Backup, Prisma e migrações novas |
+| Automação/desconhecido | Completa | Preparação conservadora; migrações somente se necessárias |
 
-1. criar ou usar uma branch `codex/`, atualizar a base e resolver conflitos rotineiros preservando o escopo;
-2. instalar as dependências travadas quando necessário, gerar o Prisma Client e concluir as validações;
-3. selecionar somente as alterações aprovadas, criar o commit, fazer push e abrir o PR;
-4. acompanhar o CI e mesclar na `main` somente com as verificações aprovadas;
-5. acompanhar o workflow, incluindo backup, migrações apresentadas e aprovadas, build e reinício do serviço;
-6. conferir a versão publicada, saúde da API, site e funcionamento do escopo alterado.
+Na VPS, comparar com **a última publicação confirmada**, acumulando mudanças não publicadas. Primeiro uso sem histórico exige preparação completa e revisão de todas as migrações pendentes. Dependências/build ausentes obrigam reconstrução; mudança no ambiente detectada por hash privado força build/reinício. Não alterar manualmente banco, dependências ou artefatos sem plano próprio.
 
-Escolha nome de branch, mensagem de commit e texto do PR conforme as convenções do projeto, sem consultas separadas. Use staging seletivo; nunca `git add -A` em árvore com escopos diferentes. A existência de arquivos alheios não exige nova pergunta quando eles podem ficar preservados e separados do lote aprovado.
+Runners limpos precisam instalar dependências quando validam aplicação. Backend mantém testes integrais porque não há mapa seguro de dependências entre módulos. Conhecimento é validado para mudanças de aplicação, incluindo telas/permissões. Durante a exceção abaixo, a auditoria roda em toda validação de aplicação para conferir o prazo e novos alertas; documentos isolados continuam sem build/auditoria.
 
-O `prisma migrate deploy` aplica **todas** as migrações pendentes no banco de destino. A revisão deve identificar esse conjunto antes da mesclagem, inclusive migrações anteriores ao lote. Uma migração inesperada exige revisão e autorização; editar o schema não autoriza aplicá-la. O bloqueio de exclusão real de contas definido em `AGENTS.md` continua válido.
+Build do CI valida código; build da VPS usa o ambiente de produção. Transferir artefatos exige comprovar equivalência antes. Node.js 20 permanece no CI; a VPS consultada em 03/10/2026 usa Node.js 22.23.3. Não alterar versões durante deploy; qualquer alinhamento exige revisão própria. Não prometer redução de duração/tokens medida sem execução real.
 
-### Quando interromper
+## Exceção temporária de auditoria
 
-Pare diante de risco alto, validação ou backup com falha, conflito que exija decisão de negócio, arquivos alheios incluídos no lote, ação destrutiva não autorizada ou mudança inesperada de banco/configuração de produção. Investigue com leituras seguras e informe o bloqueio concreto. Consulte apenas sobre a decisão nova, sem pedir novamente autorização para todo o fluxo. Não repita um deploy falho automaticamente.
+Aprovada em 03/10/2026, válida até **10/10/2026 às 14:18:26 UTC (11:18:26 na Bahia)**, sem renovação automática. Responsável: manutenção técnica do EIXO. Abrange somente `GHSA-vfj7-8cjw-p6xm`, em `braces`, e os efeitos exclusivamente derivados dele em chokidar, micromatch, fast-glob, nodemon e Tailwind. Não corrige a vulnerabilidade.
 
-Permissões técnicas da ferramenta, autenticação e eventuais aprovações do ambiente `production` no GitHub continuam obrigatórias quando aparecerem; a autorização na conversa não elimina esses controles. Explique a origem da solicitação, sem pedir confirmação adicional na conversa para a mesma ação.
+`node infra/audit-dependencies.mjs` executa a auditoria completa e aplica `infra/audit-exception.json`. Mantém o limiar `moderate`: outros alertas moderados/altos/críticos, falhas de rede, saída inválida e causas desconhecidas bloqueiam. A exceção é exibida no resultado; não usar `--omit=dev` nem desligar a auditoria. Quando ela for necessária, vencimento ou mudança no hash do lockfile, manifests, configuração de build, execução, workflows ou código rastreado do servidor bloqueia seu uso. Não atualizar o hash/prazo para contornar falhas; exigir nova revisão e aprovação.
 
-## Antes do deploy
+Evidência: `braces` está na cadeia de desenvolvimento/build; o Tailwind usa padrões fixos, uploads ficam fora dessas pastas e o PM2 está configurado sem Nodemon/watch. Porém ferramentas de build são instaladas na VPS. **A aprovação desta exceção não autoriza publicação:** confirmar na VPS a correspondência do processo/configuração com o repositório, ausência de servidor de desenvolvimento exposto e controle dos arquivos de build antes de mesclar. Conferência somente de leitura em 03/10/2026: SHA ativo `769396a`, PM2 executando `server/index.js` com `watch=false`, sem listeners nas portas de desenvolvimento 5173/4173; hashes de Tailwind, Vite, lockfile e configuração versionada do PM2 iguais aos revisados. A API local/pública respondeu saudável na porta 3001 e as 85 migrações estavam aplicadas. A VPS ainda contém três arquivos não versionados (`ecosystem.config.cjs`, `frontend/package-lock.json`, `server/package-lock.json`): arquivamento reversível deve ser autorizado antes da primeira publicação pelo novo executor. Revalidar se houver mudança de contexto. Após correção oficial, remover a exceção em revisão própria; uma auditoria sem esse alerta passa sem utilizá-la.
 
-- Trabalhar em uma branch separada.
-- Revisar o diff e verificar o escopo aprovado, incluindo commits já existentes na branch.
-- Gerar o Prisma Client (`npm run generate`), validar o TypeScript (`npx tsc -p frontend/tsconfig.json --noEmit`) e o build (`npm run build`).
-- Executar `npm audit --audit-level=moderate`, `npm test --workspace server` e `npm run support:validate --workspace server`. Para o Suporte, usar `SUPPORT_BASE_SHA` com o SHA da base revisada, como no CI.
-- Validar o schema com `npx prisma validate --schema server/prisma/schema.prisma`, sem aplicar migrações, e executar `git diff --check`.
-- Abrir um pull request para `main`.
-- Mesclar somente com o CI aprovado.
+## Executor e proteções
 
-Reutilize resultados locais da mesma versão e ambiente. Repita verificações afetadas por alterações, conflitos resolvidos ou falhas; os controles obrigatórios dos workflows de PR e produção sempre devem rodar. Não informe teste visual ou autenticado como aprovado sem executá-lo.
+O workflow busca o SHA validado e chama `infra/deploy.sh <SHA>` em `/var/www/eixo`. Contingência autorizada: `bash deploy-manual.sh <SHA>`, **somente na VPS**, após validar o SHA e confirmar ausência de deploy concorrente. Ambos usam o mesmo executor.
 
-Os secrets `VPS_HOST`, `VPS_USER` e `VPS_SSH_KEY` devem estar configurados no GitHub. Consulte `.github/SECRETS_SETUP.md`.
+- Trava `flock`; rejeita árvore alterada, SHA fora da `main`, publicação antiga/divergente, estado inválido ou execução incompleta.
+- Preserva `server/.env.production` no lugar; bloqueia ambiente versionado. Nunca versionar credenciais nem apontar produção ao banco de desenvolvimento.
+- Backup por `server/backup.sh` antes de instalação/migração/build/reinício; retenção de sete dias em `server/backups/`. Manter backup diário adicional. Migração existente alterada/removida bloqueia publicação.
+- Recria apenas `eixo-server` quando necessário, removendo variáveis antigas, e salva o PM2. Confere saúde local/pública, site e `releaseSha` do Suporte.
+- Grava sucesso atomicamente em `.git/eixo-deploy/success`. Mesmo SHA confirmado não repete publicação; verifica saúde. Documentação pode atualizar o checkout sem mudar a versão ativa.
 
-## O que o workflow executa
+Pré-requisitos existentes: Git, Node/npm, PM2, curl, PostgreSQL/pg_dump e `flock`. Ausência interrompe; não instalar ferramentas do sistema durante deploy.
 
-1. Instala as dependências com `npm ci`.
-2. Audita dependências e gera o Prisma Client.
-3. Executa os testes do backend e valida links, tópicos e atualização do EIXO Suporte.
-4. Valida o TypeScript e constrói o frontend.
-5. Conecta na VPS por SSH.
-6. Atualiza `/var/www/eixo` para o commit da `main` que iniciou o workflow.
-7. Preserva e recarrega `server/.env.production`.
-8. Instala as dependências na VPS e cria um backup do banco.
-9. Aplica as migrações pendentes do Prisma.
-10. Constrói o frontend na VPS.
-11. Reinicia `eixo-server` pelo PM2.
-12. Confirma a saúde da API, a versão ativa do EIXO Suporte e a disponibilidade do site.
+## Falha e recuperação
 
-Se a validação, o backup, a migração, o build ou um health check falhar, o workflow termina com erro.
+Falha retorna código não zero e etapa explícita. `.git/eixo-deploy/in-progress` bloqueia nova execução; `previous` registra o SHA anterior. Logs privados: `.git/eixo-deploy/<SHA>-<etapa>.log`, inclusive evidência do backup. Consultar `gh run view <id> --log-failed`; aprofundar somente nas últimas 40 linhas pertinentes de PM2/Nginx/log privado, revisando segredos antes de compartilhar. Nunca imprimir logs completos ou contínuos por padrão.
 
-**Versão publicada:** a VPS usa o SHA que iniciou o workflow (`github.sha`), fixando o deploy no commit validado. A concorrência configurada serializa as execuções. Confira se o `releaseSha` publicado corresponde ao commit esperado. Não há rollback automático.
+Antes de retomar, revisar causa, etapas concluídas, banco, checkout, artefatos e processo ativo. Apresentar recuperação; liberar o marcador/reconciliar estado apenas após revisão e autorização. Não apagar estado para forçar repetição.
 
-## Acompanhar o deploy
+**Não há rollback automático nem troca atômica de releases:** build/reinício pode causar indisponibilidade. Preferir reversão por PR, autorizada quando fora do plano. Reverter código não desfaz migrações. Restauração exige backup + SHA compatível, prova em banco isolado e autorização explícita por ser destrutiva; manter manutenção quando aplicável.
 
-No GitHub:
-
-```text
-Actions → deploy → execução mais recente
-```
-
-Na VPS:
-
-```bash
-pm2 status eixo-server
-pm2 logs eixo-server --lines 100 --nostream
-```
-
-Endereços de verificação:
-
-```text
-https://eixo.agr.br
-https://eixo.agr.br/api/health
-```
-
-## Configuração da VPS
-
-A preparação inicial do servidor, PostgreSQL, Nginx, SSL e PM2 está documentada em `infra/SETUP_SERVIDOR.md`.
-
-O arquivo `server/.env.production` existe somente na VPS e não deve ser versionado. Antes de qualquer deploy, ele precisa conter as credenciais e configurações reais de produção.
-
-O CI continua usando Node.js 20 até a migração coordenada do projeto e da VPS para Node.js 24.
-
-## Implantação gradual do EIXO Suporte
-
-Configure `SUPPORT_ROLLOUT_MODE` no `server/.env.production`:
-
-- `shadow`: gera a resposta candidata apenas para revisão no HQ e encaminha o cliente para a Equipe EIXO;
-- `pilot`: mostra a nova resposta somente às organizações listadas em `SUPPORT_PILOT_ORGANIZATION_IDS`;
-- `full`: libera o novo autoatendimento para todos.
-
-Use IDs de organização separados por vírgula no piloto. Avance de `shadow` para `pilot` e depois para `full` somente quando segurança, precisão, links e satisfação estiverem dentro das metas do plano.
-
-## Backup
-
-O workflow executa `server/backup.sh` antes das migrações. Os arquivos ficam em `server/backups/` na VPS, com retenção configurada no próprio script.
-
-O backup automático diário pode continuar ativo como proteção adicional.
-
-## Se o deploy falhar
-
-1. Não repita o deploy sem identificar a etapa que falhou.
-2. Leia os logs da execução no GitHub Actions.
-3. Confira os logs do PM2 e do Nginx na VPS.
-4. Corrija o problema em uma nova branch.
-5. Se for necessário desfazer código já publicado, apresente a reversão por PR e obtenha autorização quando ela ainda não estiver prevista no plano aprovado. A mesclagem iniciará outro deploy automático; reverter código não desfaz migrações nem restaura dados.
-
-Comandos úteis:
-
-```bash
-pm2 logs eixo-server --lines 150 --nostream
-sudo nginx -t
-sudo tail -n 150 /var/log/nginx/error.log
-```
-
-## Deploy manual
-
-O deploy manual deve ser usado somente como contingência e executado na VPS, dentro de `/var/www/eixo`:
-
-```bash
-./deploy-manual.sh
-```
-
-Antes de executar, confirme que não existe um deploy em andamento no GitHub Actions. O script exige a branch `main`, uma árvore Git limpa e executa backup, atualização, dependências, migrações, build, PM2 e health checks.
+Endpoints: `https://eixo.agr.br`, `https://eixo.agr.br/api/health`, `http://127.0.0.1:<PORT>/health` (porta definida no ambiente; 3001 na VPS consultada em 03/10/2026). Falha, versão divergente ou reinício contínuo impedem declarar sucesso.
