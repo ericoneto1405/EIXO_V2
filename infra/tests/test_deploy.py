@@ -165,6 +165,44 @@ if [ -n "$FAIL_MATCH" ] && [[ "$(basename "$0") $*" == *"$FAIL_MATCH"* ]]; then 
         self.assertNotIn('pm2 start', calls)
         self.assertFalse((self.repo / '.git/eixo-deploy/success').exists())
 
+    def test_build_is_public_but_logs_and_external_files_stay_private(self):
+        secret = self.root / 'private.txt'
+        secret.write_text('private fixture')
+        secret.chmod(0o600)
+        (self.repo / 'frontend/dist/external-link').symlink_to(secret)
+        (self.bin / 'npm').write_text('''#!/usr/bin/env bash
+echo "npm $*" >> "$CALLS"
+if [ "$1" = run ] && [ "$2" = build ]; then
+  mkdir -p frontend/dist/assets
+  printf 'fixture' > frontend/dist/assets/site.css
+  printf 'fixture' > frontend/dist/index.html
+  chmod 600 frontend/dist/index.html
+fi
+''')
+        self.deploy(self.initial)
+        for path in ['frontend/dist', 'frontend/dist/assets']:
+            self.assertEqual((self.repo / path).stat().st_mode & 0o777, 0o755)
+        for path in ['frontend/dist/index.html', 'frontend/dist/assets/site.css']:
+            self.assertEqual((self.repo / path).stat().st_mode & 0o777, 0o644)
+        self.assertEqual(secret.stat().st_mode & 0o777, 0o600)
+        for log in (self.repo / '.git/eixo-deploy').glob('*.log'):
+            self.assertEqual(log.stat().st_mode & 0o777, 0o600)
+
+    def test_symlink_build_directory_is_blocked(self):
+        (self.repo / 'frontend/dist/index.html').unlink()
+        (self.repo / 'frontend/dist').rmdir()
+        outside = self.root / 'outside'
+        outside.mkdir()
+        (self.repo / 'frontend/dist').symlink_to(outside, target_is_directory=True)
+        # A regra com barra final ignora diretórios, mas não symlinks.
+        # Ignorar explicitamente este fixture para exercitar a trava específica.
+        with (self.repo / '.git/info/exclude').open('a') as excludes:
+            excludes.write('\nfrontend/dist\n')
+        calls, result = self.deploy(self.initial, ok=False)
+        self.assertIn('link simbólico', result.stdout)
+        self.assertNotIn('npm run build', calls)
+        self.assertNotIn('pm2 start', calls)
+
     def test_version_failure_does_not_mark_success(self):
         calls, result = self.deploy(self.initial, fail='support:verify-release', ok=False)
         self.assertIn('versao', result.stderr)

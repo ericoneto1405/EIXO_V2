@@ -4,9 +4,9 @@
   "expiresAt": "2026-10-10T14:18:26Z",
   "approvedBy": "Proprietário do EIXO, nesta tarefa",
   "owner": "Manutenção técnica do EIXO",
-  "rationale": "Padrões fixos do Tailwind; sem caminho identificado de dados de usuários até braces. Exposição na VPS ainda deve ser confirmada antes da publicação.",
-  "reviewedCommit": "d19e71787f863cd1f43371cee1f42af677d14759",
-  "contextSha256": "86700d6e7488ec52764e47fba0a32cb1dc546eb60a3dca7e43724ba2dfc7c40d",
+  "rationale": "Padrões fixos do Tailwind; sem caminho identificado de dados de usuários até braces. VPS conferida: PM2 sem Nodemon/watch e sem servidor de desenvolvimento exposto. Revisão autorizada em 04/10/2026: somente permissões de leitura do build público e bloqueio de diretório simbólico; dependências e entradas do build preservadas.",
+  "reviewedCommit": "34bcb344e9f132d0cb179d10928e538e4e1148cd",
+  "contextSha256": "92f22bae7dc84ca7ddcae5726fa23a80d0ae81054e1e668c908075cf2d0555c1",
   "nodes": {
     "braces": [
       "node_modules/braces"

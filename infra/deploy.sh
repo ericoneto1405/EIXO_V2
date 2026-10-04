@@ -78,7 +78,14 @@ if [ "$runtime" = 1 ]; then
   if [ "$migrations" = 1 ]; then
     run migrations npx --no-install prisma migrate deploy --schema server/prisma/schema.prisma
   fi
-  if [ "$frontend" = 1 ]; then run build npm run build; fi
+  if [ "$frontend" = 1 ]; then
+    [ ! -L frontend/dist ] || { echo 'Build aponta para link simbólico; revisar antes de publicar'; exit 1; }
+    run build npm run build
+    # O umask privado protege logs/backup, mas o Nginx precisa ler o site.
+    # Normalizar também arquivos copiados pelo Vite; não seguir links simbólicos.
+    run diretorios-publicos find frontend/dist -type d -exec chmod 755 '{}' +
+    run arquivos-publicos find frontend/dist -type f -exec chmod 644 '{}' +
+  fi
   export APP_RELEASE_SHA="$target"
   # Frontend também muda a versão do produto/base de conhecimento exposta pela API.
   # Um reload mescla variáveis e pode preservar chaves removidas do ambiente.
