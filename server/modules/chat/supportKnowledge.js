@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-05.1';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-05.2';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-10-05';
 
 export const SUPPORT_TONE_RULES = [
@@ -149,7 +149,12 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         href: 'eixo:view:Financeiro',
         guidance: [
             'Acesse Financeiro e abra Contas a Pagar (despesas) ou Contas a Receber (receitas).',
-            'Use Nova conta, informe categoria, valor, data e vencimento.',
+            'Use Nova conta, informe categoria, valor, data de competência e vencimento. A competência indica quando a receita ou despesa pertence à operação; pagamento ou recebimento tem sua própria data.',
+            'Para baixar uma conta em aberto, use Registrar pagamento ou Registrar recebimento, informe a data e confirme. Isso também está disponível para contas geradas automaticamente.',
+            'Use Buscar contas por descrição, categoria ou grupo e confira o período. O filtro usa vencimento e, quando ausente, competência; vindo da Visão Geral, usa a competência do mês selecionado.',
+            'Em Editar lançamento, consulte a distribuição registrada e altere valores em reais ou destinos nos lançamentos manuais com reconhecimento imediato no resultado. O saldo sem distribuição permanece associado à fazenda.',
+            'Contas automáticas têm Consultar: seus valores e distribuição são mantidos pelo fluxo de origem. Distribuições de resultados indiretos também são somente para consulta.',
+            'Se a consulta da distribuição falhar, use Tentar novamente antes de salvar. Ao fechar um formulário alterado, confirme se deseja descartar as informações.',
             'Cada aba já mostra o histórico completo: o que está pago/recebido e o que ainda está em aberto.',
             'Venda ou compra de animal não se lança aqui: é feita em Manejo do Rebanho, que já atualiza o rebanho e cria o lançamento junto.',
         ],
@@ -163,6 +168,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'Use Fluxo de caixa para acompanhar quando o dinheiro entra ou sai.',
             'Use DRE para analisar receitas, custos e resultado do período por competência.',
             'Um saldo de caixa positivo não significa necessariamente lucro.',
+            'Confira a fazenda e o período antes de interpretar relatórios. Falhas de carregamento oferecem Tentar novamente; não representam valores zerados.',
+            'Na Visão Geral do Financeiro, abra um grupo para consultar suas contas no mesmo mês de competência. Totais de contas pagas ou recebidas não substituem o Fluxo de caixa pela data de liquidação.',
         ],
     },
     {
