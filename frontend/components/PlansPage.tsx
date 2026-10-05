@@ -17,7 +17,7 @@ interface Plan {
     priceNote: string;
     description: string;
     cta: string;
-    ctaVariant: 'outline' | 'primary' | 'dark';
+    ctaVariant: 'outline-solid' | 'primary' | 'dark';
     features: PlanFeature[];
 }
 
@@ -30,7 +30,7 @@ const PLANS: Plan[] = [
         priceNote: 'Para sempre, com o rebanho inteiro',
         description: 'Traga o rebanho todo, sem limite de animais. O plano gratuito mais completo do mercado, para quem entendeu que planilhas e cadernos já não dão conta de gerir sua fazenda.',
         cta: 'Comece agora!',
-        ctaVariant: 'outline',
+        ctaVariant: 'outline-solid',
         features: [
             { text: 'Animais ilimitados', included: true },
             { text: '1 fazenda', included: true },
@@ -108,13 +108,13 @@ const PLAN_ORDER: Record<Plan['code'], number> = {
 };
 
 const CheckIcon: React.FC = () => (
-    <svg className="h-4 w-4 flex-shrink-0 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 shrink-0 text-(--eixo-green)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
     </svg>
 );
 
 const XIcon: React.FC = () => (
-    <svg className="h-4 w-4 flex-shrink-0 text-[#a8a29e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="h-4 w-4 shrink-0 text-[#a8a29e]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
     </svg>
 );
@@ -192,21 +192,21 @@ const PlansPage: React.FC<PlansPageProps> = ({
     };
 
     return (
-        <div className="min-h-screen bg-[var(--eixo-surface-soft)]">
+        <div className="min-h-screen bg-(--eixo-surface-soft)">
             {/* Header */}
-            <header className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-4">
+            <header className="border-b border-(--eixo-border) bg-(--eixo-surface) px-6 py-4">
                 <div className="mx-auto flex max-w-5xl items-center justify-between">
                     <button
                         type="button"
                         onClick={handleBack}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
+                        className="inline-flex items-center gap-2 rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2 text-sm font-semibold text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text)"
                     >
                         <span aria-hidden="true">←</span>
                         Voltar
                     </button>
                     <div className="inline-flex flex-col items-center leading-none">
                         <img src="/logo_eixo_official.svg" alt="EIXO" className="h-7" />
-                        <span className="mt-[4px] text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-[var(--eixo-text)]/75">
+                        <span className="mt-[4px] text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-(--eixo-text)/75">
                             Gestão para Pecuária de Corte
                         </span>
                     </div>
@@ -216,13 +216,13 @@ const PlansPage: React.FC<PlansPageProps> = ({
 
             {/* Hero */}
             <div className="mx-auto max-w-5xl px-6 py-12 text-center">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-4 py-1 text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-graphite)] mb-4">
+                <div className="inline-flex items-center gap-2 rounded-full border border-(--eixo-green) bg-(--eixo-green-soft) px-4 py-1 text-xs font-bold uppercase tracking-[0.18em] text-(--eixo-graphite) mb-4">
                     ACESSO ANTECIPADO
                 </div>
-                <h1 className="font-brand text-3xl font-extrabold text-[var(--eixo-text)] md:text-4xl">
+                <h1 className="font-brand text-3xl font-extrabold text-(--eixo-text) md:text-4xl">
                     Comece gratuitamente no EIXO Essencial. Evolua quando precisar avançar!
                 </h1>
-                <p className="mt-3 text-base text-[var(--eixo-text-muted)] max-w-md mx-auto">
+                <p className="mt-3 text-base text-(--eixo-text-muted) max-w-md mx-auto">
                     O plano mais completo do mercado para quem quer sair das planilhas e cadernos, e elevar o nível de Gestão da sua Fazenda.
                 </p>
             </div>
@@ -236,7 +236,7 @@ const PlansPage: React.FC<PlansPageProps> = ({
                         className={`mb-6 rounded-xl border px-4 py-3 text-center text-sm ${
                             interestError
                                 ? 'border-[#c0644a]/40 bg-[#c0644a]/10 text-[#8c4d39]'
-                                : 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
+                                : 'border-(--eixo-green) bg-(--eixo-green-soft) text-(--eixo-graphite)'
                         }`}
                     >
                         {interestError || interestMessage}
@@ -250,16 +250,16 @@ const PlansPage: React.FC<PlansPageProps> = ({
                         return (
                             <div
                                 key={plan.id}
-                                className={`relative flex flex-col rounded-2xl border bg-[var(--eixo-surface)] p-6 transition-all duration-150 ease-in-out hover:-translate-y-1 hover:border-[var(--eixo-green)] hover:shadow-xl hover:shadow-[var(--eixo-green)]/15 ${
+                                className={`relative flex flex-col rounded-2xl border bg-(--eixo-surface) p-6 transition-all duration-150 ease-in-out hover:-translate-y-1 hover:border-(--eixo-green) hover:shadow-xl hover:shadow-(--eixo-green)/15 ${
                                     isCurrentPlan || plan.id === 'gestao'
-                                        ? 'border-[var(--eixo-green)] shadow-lg shadow-[var(--eixo-green)]/10'
-                                        : 'border-[var(--eixo-border)]'
+                                        ? 'border-(--eixo-green) shadow-lg shadow-(--eixo-green)/10'
+                                        : 'border-(--eixo-border)'
                                 }`}
                             >
                             {/* Badge */}
                             {badge && (
                                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                                    <span className="rounded-full bg-[var(--eixo-green)] px-3 py-1 text-xs font-semibold text-[#1a1a1a]">
+                                    <span className="rounded-full bg-(--eixo-green) px-3 py-1 text-xs font-semibold text-[#1a1a1a]">
                                         {badge}
                                     </span>
                                 </div>
@@ -267,16 +267,16 @@ const PlansPage: React.FC<PlansPageProps> = ({
 
                             {/* Nome e preço */}
                             <div className="mb-5">
-                                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--eixo-text-muted)]">
+                                <p className="text-xs font-semibold uppercase tracking-widest text-(--eixo-text-muted)">
                                     {plan.name}
                                 </p>
                                 <div className="mt-2 flex items-baseline gap-1">
-                                    <span className="font-brand text-3xl font-extrabold text-[var(--eixo-text)]">
+                                    <span className="font-brand text-3xl font-extrabold text-(--eixo-text)">
                                         {plan.price}
                                     </span>
                                 </div>
                                 <p className="mt-0.5 text-xs text-[#a8a29e]">{plan.priceNote}</p>
-                                <p className="mt-3 text-sm text-[var(--eixo-text-muted)]">{plan.description}</p>
+                                <p className="mt-3 text-sm text-(--eixo-text-muted)">{plan.description}</p>
                             </div>
 
                             {/* CTA — só aparece quando leva a algum lugar de verdade.
@@ -289,31 +289,31 @@ const PlansPage: React.FC<PlansPageProps> = ({
                                 disabled={ctaState.disabled}
                                 className={`mb-6 w-full rounded-xl py-2.5 text-sm font-semibold transition-colors disabled:cursor-default ${
                                     ctaState.disabled
-                                        ? 'border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'
+                                        ? 'border border-(--eixo-border) bg-(--eixo-surface-soft) text-(--eixo-text-muted)'
                                         : plan.ctaVariant === 'primary'
-                                        ? 'bg-[var(--eixo-green)] text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]'
+                                        ? 'bg-(--eixo-green) text-[#1a1a1a] hover:bg-(--eixo-green-dark)'
                                         : plan.ctaVariant === 'dark'
-                                        ? 'bg-[var(--eixo-text)] text-white hover:bg-[var(--eixo-graphite)]'
-                                        : 'border border-[var(--eixo-border)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]'
+                                        ? 'bg-(--eixo-text) text-white hover:bg-(--eixo-graphite)'
+                                        : 'border border-(--eixo-border) text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text)'
                                 }`}
                             >
                                 {ctaState.label}
                             </button>
                             ) : (
-                                <p className="mb-6 w-full rounded-xl border border-dashed border-[var(--eixo-border)] py-2.5 text-center text-sm text-[var(--eixo-text-muted)]">
+                                <p className="mb-6 w-full rounded-xl border border-dashed border-(--eixo-border) py-2.5 text-center text-sm text-(--eixo-text-muted)">
                                     Assinatura ainda não aberta
                                 </p>
                             )}
 
                             {/* Divider */}
-                            <div className="mb-4 border-t border-[var(--eixo-border)]" />
+                            <div className="mb-4 border-t border-(--eixo-border)" />
 
                             {/* Features */}
                             <ul className="flex-1 space-y-2.5">
                                 {plan.features.map((f) => (
                                     <li key={f.text} className="flex items-start gap-2.5">
                                         {f.included ? <CheckIcon /> : <XIcon />}
-                                        <span className={`text-sm ${f.included ? 'text-[var(--eixo-text)]' : 'text-[#a8a29e] line-through'}`}>
+                                        <span className={`text-sm ${f.included ? 'text-(--eixo-text)' : 'text-[#a8a29e] line-through'}`}>
                                             {f.text}
                                         </span>
                                     </li>

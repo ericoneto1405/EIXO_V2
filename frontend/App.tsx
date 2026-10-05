@@ -485,10 +485,10 @@ const AppContent: React.FC = () => {
         onAction?: () => void;
     }> = ({ title, actionLabel, onAction }) => (
         <div className="rounded-[14px] border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.04)] px-6 py-10 text-center">
-            <h2 className="text-[20px] font-bold leading-[24px] text-[var(--eixo-text)]">{title}</h2>
+            <h2 className="text-[20px] font-bold leading-[24px] text-(--eixo-text)">{title}</h2>
             {actionLabel && onAction && (
                 <button
-                    className="mt-6 inline-flex h-10 items-center rounded-[10px] bg-[var(--eixo-green)] px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-[var(--eixo-green-dark)]"
+                    className="mt-6 inline-flex h-10 items-center rounded-[10px] bg-(--eixo-green) px-[14px] font-bold text-[#1a1a1a] shadow-md transition-colors duration-200 hover:bg-(--eixo-green-dark)"
                     type="button"
                     onClick={onAction}
                 >
@@ -507,25 +507,25 @@ const AppContent: React.FC = () => {
     );
 
     const AppOnlyAccessPanel: React.FC = () => (
-        <div className="flex min-h-screen items-center justify-center bg-[var(--eixo-surface-soft)] px-6 py-10">
-            <div className="w-full max-w-xl rounded-[28px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-8 text-center shadow-sm">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--eixo-green-soft)] text-[var(--eixo-green)]">
+        <div className="flex min-h-screen items-center justify-center bg-(--eixo-surface-soft) px-6 py-10">
+            <div className="w-full max-w-xl rounded-[28px] border border-(--eixo-border) bg-(--eixo-surface) p-8 text-center shadow-xs">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-(--eixo-green-soft) text-(--eixo-green)">
                     <svg className="h-8 w-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M7 5h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7a2 2 0 012-2z" />
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10 8h4M9 17h6M11 20h2" />
                     </svg>
                 </div>
-                <h1 className="mt-6 text-2xl font-bold text-[var(--eixo-text)]">Acesso exclusivo do App EIXO Campo</h1>
-                <p className="mt-3 text-sm leading-6 text-[var(--eixo-text-muted)]">
+                <h1 className="mt-6 text-2xl font-bold text-(--eixo-text)">Acesso exclusivo do App EIXO Campo</h1>
+                <p className="mt-3 text-sm leading-6 text-(--eixo-text-muted)">
                     Este usuário foi criado para operação de campo e não possui acesso ao sistema desktop.
                 </p>
-                <div className="mt-6 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-4 text-sm text-[var(--eixo-text-muted)]">
+                <div className="mt-6 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-4 text-sm text-(--eixo-text-muted)">
                     Use este acesso apenas no App EIXO Campo, no celular do colaborador vinculado.
                 </div>
                 <button
                     type="button"
                     onClick={handleLogout}
-                    className="mt-8 inline-flex h-11 items-center justify-center rounded-xl bg-[var(--eixo-green)] px-6 font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
+                    className="mt-8 inline-flex h-11 items-center justify-center rounded-xl bg-(--eixo-green) px-6 font-bold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark)"
                 >
                     Sair
                 </button>
@@ -899,11 +899,12 @@ const AppContent: React.FC = () => {
     }, []);
 
     const handleOnboardingNavigate = React.useCallback((view: string, options?: { herdTab?: HerdNavigationTab; openAnimalForm?: boolean; openImportModal?: boolean }) => {
+        if (isGeneticsRoute) navigate('/');
         if (options?.herdTab) {
             setHerdTabRequest({ tab: options.herdTab, nonce: Date.now(), openAnimalForm: options.openAnimalForm, openImportModal: options.openImportModal });
         }
         setActiveView(view);
-    }, []);
+    }, [isGeneticsRoute, navigate]);
 
     const handleOpenExistingAnimal = React.useCallback((farmId: string, animalId: string) => {
         if (!farms.some((farm) => farm.id === farmId)) {
@@ -949,7 +950,7 @@ const AppContent: React.FC = () => {
 
     if (isAuthLoading) {
         return (
-            <div className="flex min-h-screen items-center justify-center bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]">
+            <div className="flex min-h-screen items-center justify-center bg-(--eixo-surface-soft) text-(--eixo-text-muted)">
                 Carregando...
             </div>
         );
@@ -1068,9 +1069,9 @@ const AppContent: React.FC = () => {
         if (isAcasalamentoView && (!hasRequiredPlan || !currentAllowedModules.includes('Eixo Genetics'))) {
             const canRequestPlanUpgrade = ['OWNER', 'ADMIN'].includes(currentUser?.membershipRole || '');
             return (
-                <section className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 lg:p-8">
-                    <h1 className="font-brand text-2xl font-extrabold text-[var(--eixo-graphite)]">Eixo Acasalamento</h1>
-                    <p className="mt-3 text-sm text-[var(--eixo-text-muted)]" role="status">
+                <section className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-6 lg:p-8">
+                    <h1 className="font-brand text-2xl font-extrabold text-(--eixo-graphite)">Eixo Acasalamento</h1>
+                    <p className="mt-3 text-sm text-(--eixo-text-muted)" role="status">
                         {hasRequiredPlan
                             ? 'Você não tem permissão para acessar o Acasalamento. Solicite acesso ao responsável pela organização.'
                             : 'O Acasalamento está disponível no EIXO Performance.'}
@@ -1079,12 +1080,12 @@ const AppContent: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => setUpgradeModal('Eixo Acasalamento')}
-                            className="mt-6 inline-flex items-center rounded-2xl bg-[var(--eixo-green)] px-5 py-3 text-sm font-semibold text-[#1a1a1a]"
+                            className="mt-6 inline-flex items-center rounded-2xl bg-(--eixo-green) px-5 py-3 text-sm font-semibold text-[#1a1a1a]"
                         >
                             Solicitar upgrade
                         </button>
                     ) : (
-                        <p className="mt-3 text-sm text-[var(--eixo-text-muted)]">
+                        <p className="mt-3 text-sm text-(--eixo-text-muted)">
                             Fale com o responsável pela organização sobre a mudança de plano.
                         </p>
                     ))}
@@ -1228,7 +1229,7 @@ const AppContent: React.FC = () => {
             case 'Eixo Genetics':
                 return <Navigate to="/genetics/acasalamento" replace />;
             case 'Financeiro':
-                return <FinanceModule farmId={selectedFarmId} farmName={selectedFarm?.name} isFreePlan={isFreePlan} onboardingAction={financeOnboardingAction} onUpgradeRequest={() => setUpgradeModal('Financeiro completo')} />;
+                return <FinanceModule userId={currentUser?.id || ''} farmId={selectedFarmId} farmName={selectedFarm?.name} isFreePlan={isFreePlan} onboardingAction={financeOnboardingAction} onUpgradeRequest={() => setUpgradeModal('Financeiro completo')} />;
             case 'Registro de Atividades':
                 return <ActivityModule farmId={selectedFarmId} farmName={selectedFarm?.name} />;
             case 'APP EIXO CAMPO':
@@ -1287,7 +1288,7 @@ const AppContent: React.FC = () => {
 
     return (
         <>
-            <div className="relative min-h-screen overflow-hidden bg-[var(--eixo-surface-soft)] font-sans text-[var(--eixo-text)]">
+            <div className="relative min-h-screen overflow-hidden bg-(--eixo-surface-soft) font-sans text-(--eixo-text)">
                 <div className="relative flex min-h-screen">
                     <Sidebar
                         activeItem={activeView}
@@ -1314,7 +1315,7 @@ const AppContent: React.FC = () => {
                             selectedFarmId={selectedFarmId}
                             onAlertAction={handleHeaderAlertAction}
                         />
-                        <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+                        <div className="mt-[10px] flex-1 overflow-hidden rounded-2xl border border-(--eixo-border) bg-(--eixo-surface)">
                             <div
                                 ref={contentScrollRef}
                                 className={
@@ -1324,11 +1325,17 @@ const AppContent: React.FC = () => {
                             }>
                                 {hasNoFarms && activeView !== 'Fazendas' && activeView !== 'EIXO HQ' ? <FirstFarmOnboarding /> : (
                                     <>
-                                        {currentUser && (
+                                        {currentUser && !getUpgradeModuleForView(activeView)
+                                            && (!(location.pathname.startsWith('/genetics/acasalamento') || ['Eixo Genetics', 'Eixo Acasalamento'].includes(activeView))
+                                                || ((isSuperAdmin || currentPlanCode === 'EIXO_DECISAO') && currentAllowedModules.includes('Eixo Genetics'))) && (
                                             <>
                                                 {(activeView === 'Visão Geral' || activeView === 'Rebanho Comercial' || activeView === 'Fazendas') ? (
                                                     <OnboardingChecklist
+                                                        key={currentUser.id}
                                                         userId={currentUser.id}
+                                                        canEditAnimals={currentAllowedModules.includes('Editar Animais')}
+                                                        canNavigateHerd={currentAllowedModules.includes('Rebanho Comercial')}
+                                                        canManageFarms={currentAllowedModules.includes('Fazendas')}
                                                         farmId={selectedFarmId}
                                                         farms={farms}
                                                         onNavigate={handleOnboardingNavigate}
@@ -1337,6 +1344,12 @@ const AppContent: React.FC = () => {
                                                 ) : (
                                                     <ModuleProgressCard
                                                         activeView={activeView}
+                                                        userId={currentUser.id}
+                                                        farmName={selectedFarm?.name}
+                                                        canViewFinancialResult={!isFreePlan}
+                                                        canEditAnimals={currentAllowedModules.includes('Editar Animais')}
+                                                        canNavigateHerd={currentAllowedModules.includes('Rebanho Comercial')}
+                                                        onNavigate={handleOnboardingNavigate}
                                                         farmId={selectedFarmId}
                                                         onFinanceAction={handleFinanceOnboardingAction}
                                                     />
@@ -1345,7 +1358,7 @@ const AppContent: React.FC = () => {
                                         )}
                                         <Suspense
                                             fallback={
-                                                <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-[var(--eixo-text-muted)]">
+                                                <div className="flex h-full min-h-[220px] items-center justify-center text-sm text-(--eixo-text-muted)">
                                                     Carregando módulo...
                                                 </div>
                                             }
@@ -1364,7 +1377,7 @@ const AppContent: React.FC = () => {
                     <button
                         type="button"
                         onClick={() => setActiveView('EIXO HQ')}
-                        className="rounded-xl bg-[#2F2F2F] px-3 py-2 text-xs font-bold text-[#B6E23A] shadow-lg hover:bg-[#1a1a1a]"
+                        className="rounded-xl bg-[#2F2F2F] px-3 py-2 text-xs font-bold text-primary shadow-lg hover:bg-[#1a1a1a]"
                         title="EIXO HQ — Painel do Fundador"
                     >
                         HQ
@@ -1398,39 +1411,39 @@ const AppContent: React.FC = () => {
             {upgradeModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
                     onClick={() => setUpgradeModal(null)}>
-                    <div className="w-full max-w-sm rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
+                    <div className="w-full max-w-sm rounded-2xl bg-(--eixo-surface) shadow-2xl"
                         onClick={e => e.stopPropagation()}>
                         <div className="p-6">
-                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--eixo-surface-soft)]">
-                                <svg className="h-6 w-6 text-[var(--eixo-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-(--eixo-surface-soft)">
+                                <svg className="h-6 w-6 text-(--eixo-text)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
                             </div>
-                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">
+                            <h3 className="font-brand text-lg font-bold text-(--eixo-text)">
                                 {upgradeModal} — plano pago
                             </h3>
-                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
+                            <p className="mt-2 text-sm text-(--eixo-text-muted)">
                                 Este módulo está disponível nos planos pagos do EIXO. Faça upgrade para desbloquear{' '}
-                                <span className="font-semibold text-[var(--eixo-text)]">{upgradeModal}</span> e muito mais.
+                                <span className="font-semibold text-(--eixo-text)">{upgradeModal}</span> e muito mais.
                             </p>
-                            <div className="mt-5 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4 text-sm text-[var(--eixo-text-muted)]">
-                                <p className="mb-2 font-semibold text-[var(--eixo-text)]">Seu plano atual inclui:</p>
+                            <div className="mt-5 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-4 text-sm text-(--eixo-text-muted)">
+                                <p className="mb-2 font-semibold text-(--eixo-text)">Seu plano atual inclui:</p>
                                 <ul className="space-y-1">
-                                    <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Animais ilimitados</li>
-                                    <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Manejo do Rebanho</li>
-                                    <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Financeiro completo</li>
-                                    <li className="flex items-center gap-2"><span className="text-[var(--eixo-success)]">✓</span> Estrutura da Fazenda</li>
+                                    <li className="flex items-center gap-2"><span className="text-(--eixo-success)">✓</span> Animais ilimitados</li>
+                                    <li className="flex items-center gap-2"><span className="text-(--eixo-success)">✓</span> Manejo do Rebanho</li>
+                                    <li className="flex items-center gap-2"><span className="text-(--eixo-success)">✓</span> Financeiro completo</li>
+                                    <li className="flex items-center gap-2"><span className="text-(--eixo-success)">✓</span> Estrutura da Fazenda</li>
                                 </ul>
                             </div>
                             <div className="mt-5 flex gap-3">
                                 <button type="button" onClick={() => setUpgradeModal(null)}
-                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                                    className="flex-1 rounded-xl border border-(--eixo-border) py-2 text-sm font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft)">
                                     Fechar
                                 </button>
                                 <button type="button"
                                     onClick={() => { setUpgradeModal(null); window.location.href = '/planos'; }}
-                                    className="flex-1 rounded-xl bg-[var(--eixo-green)] py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]">
+                                    className="flex-1 rounded-xl bg-(--eixo-green) py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-(--eixo-green-dark)">
                                     Ver planos
                                 </button>
                             </div>
@@ -1445,13 +1458,13 @@ const AppContent: React.FC = () => {
             {deleteFarmTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
                     onClick={() => { if (!isDeletingFarm) { setDeleteFarmTarget(null); setDeletePassword(''); setDeleteError(null); } }}>
-                    <div className="w-full max-w-sm rounded-2xl bg-[var(--eixo-surface)] shadow-2xl"
+                    <div className="w-full max-w-sm rounded-2xl bg-(--eixo-surface) shadow-2xl"
                         onClick={e => e.stopPropagation()}>
                         <div className="p-6">
-                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">
+                            <h3 className="font-brand text-lg font-bold text-(--eixo-text)">
                                 Excluir fazenda "{deleteFarmTarget.name}"
                             </h3>
-                            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
+                            <p className="mt-2 text-sm text-(--eixo-text-muted)">
                                 Essa ação não pode ser desfeita. Digite a senha do proprietário da conta para confirmar.
                             </p>
                             <input
@@ -1460,22 +1473,22 @@ const AppContent: React.FC = () => {
                                 onChange={(e) => setDeletePassword(e.target.value)}
                                 placeholder="Senha do proprietário"
                                 autoFocus
-                                className="mt-4 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]"
+                                className="mt-4 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)"
                             />
                             {deleteError && (
-                                <p className="mt-2 text-sm text-[var(--eixo-danger)]">{deleteError}</p>
+                                <p className="mt-2 text-sm text-(--eixo-danger)">{deleteError}</p>
                             )}
                             <div className="mt-5 flex gap-3">
                                 <button type="button"
                                     disabled={isDeletingFarm}
                                     onClick={() => { setDeleteFarmTarget(null); setDeletePassword(''); setDeleteError(null); }}
-                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50">
+                                    className="flex-1 rounded-xl border border-(--eixo-border) py-2 text-sm font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft) disabled:opacity-50">
                                     Cancelar
                                 </button>
                                 <button type="button"
                                     disabled={isDeletingFarm || !deletePassword}
                                     onClick={handleConfirmFarmDeletion}
-                                    className="flex-1 rounded-xl bg-[var(--eixo-danger)] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                                    className="flex-1 rounded-xl bg-(--eixo-danger) py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
                                     {isDeletingFarm ? 'Excluindo...' : 'Excluir fazenda'}
                                 </button>
                             </div>
@@ -1505,20 +1518,20 @@ const AppContent: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => { setSupportDraft(null); setIsSupportOpen(prev => !prev); }}
-                            className="relative flex flex-col items-center justify-center rounded-[16px] bg-[var(--eixo-text)] px-4 py-2.5 shadow-xl transition-all duration-200 hover:bg-[var(--eixo-graphite)] active:scale-95"
+                            className="relative flex flex-col items-center justify-center rounded-[16px] bg-(--eixo-text) px-4 py-2.5 shadow-xl transition-all duration-200 hover:bg-(--eixo-graphite) active:scale-95"
                             aria-label="Abrir Eixo Suporte"
                             style={{ minWidth: '88px' }}
                         >
                             {/* Logo eixo */}
                             <img src="/logo_eixo_negative.svg" alt="EIXO" className="h-4 w-auto" />
-                            <span className="mt-1 border-t border-white/10 pt-1 text-[10px] font-bold uppercase leading-none tracking-[0.1em] text-[var(--eixo-green-soft)]">
+                            <span className="mt-1 border-t border-white/10 pt-1 text-[10px] font-bold uppercase leading-none tracking-widest text-(--eixo-green-soft)">
                                 suporte
                             </span>
 
                             {/* Ponto verde — ativo */}
                             <span className="absolute right-2 top-1.5 flex h-2.5 w-2.5 items-center justify-center">
-                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--eixo-success)] opacity-50" />
-                                <span className="relative h-1.5 w-1.5 rounded-full bg-[var(--eixo-success)] ring-2 ring-[var(--eixo-graphite)]" />
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-(--eixo-success) opacity-50" />
+                                <span className="relative h-1.5 w-1.5 rounded-full bg-(--eixo-success) ring-2 ring-(--eixo-graphite)" />
                             </span>
                         </button>
 

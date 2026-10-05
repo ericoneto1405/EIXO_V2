@@ -6,11 +6,11 @@ interface SanidadeCasesProps {
     onChanged?: () => void;
 }
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]';
-const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
-const cardClass = 'rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5';
-const primaryButton = 'rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50';
-const secondaryButton = 'rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-xs font-semibold text-[var(--eixo-text)] transition hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)';
+const labelClass = 'block text-xs font-semibold text-(--eixo-text-muted)';
+const cardClass = 'rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5';
+const primaryButton = 'rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-50';
+const secondaryButton = 'rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-xs font-semibold text-(--eixo-text) transition hover:bg-(--eixo-surface-soft) disabled:opacity-50';
 
 const hoje = () => {
     const now = new Date();
@@ -20,9 +20,9 @@ const formatDate = (value: string | null) => (value ? value.slice(0, 10).split('
 
 const STATUS_LABEL: Record<CasoSanitario['status'], { label: string; className: string }> = {
     EM_TRATAMENTO: { label: 'Em tratamento', className: 'bg-amber-100 text-amber-800' },
-    CURADO: { label: 'Curado', className: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    MORTO: { label: 'Morreu', className: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
-    DESCARTADO: { label: 'Descartado', className: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    CURADO: { label: 'Curado', className: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    MORTO: { label: 'Morreu', className: 'bg-[#fff2ef] text-(--eixo-danger)' },
+    DESCARTADO: { label: 'Descartado', className: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
 };
 
 const vazio = (kind: NovoCaso['kind']): NovoCaso => ({ kind, brinco: '', disease: '', otherDisease: '', startedAt: hoje(), symptoms: '', diagnosedBy: '', necropsy: false, notes: '' });
@@ -93,26 +93,26 @@ const SanidadeCases: React.FC<SanidadeCasesProps> = ({ farmId, onChanged }) => {
     };
 
     if (!dados) {
-        return <div className={`${cardClass} text-center text-sm text-[var(--eixo-text-muted)]`}>{erro || 'Carregando casos...'}</div>;
+        return <div className={`${cardClass} text-center text-sm text-(--eixo-text-muted)`}>{erro || 'Carregando casos...'}</div>;
     }
     const ind = dados.indicadores;
 
     return (
         <div className="space-y-5">
             <div className="grid gap-3 sm:grid-cols-4">
-                <div className={cardClass}><p className={labelClass}>Em tratamento</p><p className="mt-1 text-2xl font-extrabold text-[var(--eixo-text)]">{ind.emTratamento}</p></div>
-                <div className={cardClass}><p className={labelClass}>Casos em 12 meses</p><p className="mt-1 text-2xl font-extrabold text-[var(--eixo-text)]">{ind.casos12m}</p></div>
-                <div className={cardClass}><p className={labelClass}>Mortes em 12 meses</p><p className="mt-1 text-2xl font-extrabold text-[var(--eixo-text)]">{ind.mortes12m}</p></div>
+                <div className={cardClass}><p className={labelClass}>Em tratamento</p><p className="mt-1 text-2xl font-extrabold text-(--eixo-text)">{ind.emTratamento}</p></div>
+                <div className={cardClass}><p className={labelClass}>Casos em 12 meses</p><p className="mt-1 text-2xl font-extrabold text-(--eixo-text)">{ind.casos12m}</p></div>
+                <div className={cardClass}><p className={labelClass}>Mortes em 12 meses</p><p className="mt-1 text-2xl font-extrabold text-(--eixo-text)">{ind.mortes12m}</p></div>
                 <div className={`${cardClass} ${ind.mortalidade12m > 2 ? 'border-[#efc2ba]' : ''}`}>
                     <p className={labelClass}>Mortalidade em 12 meses</p>
-                    <p className="mt-1 text-2xl font-extrabold text-[var(--eixo-text)]">{ind.mortalidade12m.toLocaleString('pt-BR')}%</p>
-                    <p className="text-xs text-[var(--eixo-text-muted)]">Referência usada: até 2% ao ano em animais adultos.</p>
+                    <p className="mt-1 text-2xl font-extrabold text-(--eixo-text)">{ind.mortalidade12m.toLocaleString('pt-BR')}%</p>
+                    <p className="text-xs text-(--eixo-text-muted)">Referência usada: até 2% ao ano em animais adultos.</p>
                 </div>
             </div>
 
-            {sucesso && <div role="status" className="rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-4 py-3 text-sm font-semibold text-[var(--eixo-success)]">{sucesso}</div>}
-            {avisoNotificacao && <div role="alert" className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-bold text-[var(--eixo-danger)]">{avisoNotificacao}</div>}
-            {erro && <div role="alert" className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-[var(--eixo-danger)]">{erro}</div>}
+            {sucesso && <div role="status" className="rounded-xl border border-[#b6d4b0] bg-(--eixo-green-soft) px-4 py-3 text-sm font-semibold text-(--eixo-success)">{sucesso}</div>}
+            {avisoNotificacao && <div role="alert" className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-bold text-(--eixo-danger)">{avisoNotificacao}</div>}
+            {erro && <div role="alert" className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-(--eixo-danger)">{erro}</div>}
 
             <section className={cardClass}>
                 <div className="flex gap-2">
@@ -150,7 +150,7 @@ const SanidadeCases: React.FC<SanidadeCasesProps> = ({ farmId, onChanged }) => {
                         <input className={inputClass} value={form.diagnosedBy} onChange={(event) => setForm({ ...form, diagnosedBy: event.target.value })} />
                     </label>
                     {form.kind === 'MORTE' && (
-                        <label className="flex items-center gap-2 text-sm font-semibold text-[var(--eixo-text)]">
+                        <label className="flex items-center gap-2 text-sm font-semibold text-(--eixo-text)">
                             <input type="checkbox" checked={Boolean(form.necropsy)} onChange={(event) => setForm({ ...form, necropsy: event.target.checked })} />
                             Foi feita necropsia
                         </label>
@@ -160,7 +160,7 @@ const SanidadeCases: React.FC<SanidadeCasesProps> = ({ farmId, onChanged }) => {
                         <input className={inputClass} value={form.notes} onChange={(event) => setForm({ ...form, notes: event.target.value })} />
                     </label>
                     {escolhida?.notificavel && (
-                        <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-3 py-2 text-xs font-bold text-[var(--eixo-danger)] md:col-span-3">
+                        <div className="rounded-xl border border-[#efc2ba] bg-[#fff2ef] px-3 py-2 text-xs font-bold text-(--eixo-danger) md:col-span-3">
                             Doença de notificação obrigatória: comunique o {dados.orgao} em até 24 horas e não mexa na carcaça sem orientação.
                         </div>
                     )}
@@ -172,18 +172,18 @@ const SanidadeCases: React.FC<SanidadeCasesProps> = ({ farmId, onChanged }) => {
 
             <section className={cardClass}>
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 className="text-base font-bold text-[var(--eixo-text)]">Casos</h2>
+                    <h2 className="text-base font-bold text-(--eixo-text)">Casos</h2>
                     <div className="flex gap-2">
                         <button type="button" className={filtro === 'ABERTOS' ? primaryButton : secondaryButton} onClick={() => setFiltro('ABERTOS')}>Em tratamento</button>
                         <button type="button" className={filtro === 'TODOS' ? primaryButton : secondaryButton} onClick={() => setFiltro('TODOS')}>Todos</button>
                     </div>
                 </div>
                 {lista.length === 0 ? (
-                    <p className="mt-3 text-sm text-[var(--eixo-text-muted)]">Nenhum caso {filtro === 'ABERTOS' ? 'em tratamento' : 'registrado'}.</p>
+                    <p className="mt-3 text-sm text-(--eixo-text-muted)">Nenhum caso {filtro === 'ABERTOS' ? 'em tratamento' : 'registrado'}.</p>
                 ) : (
                     <div className="mt-3 overflow-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="text-xs text-[var(--eixo-text-muted)]">
+                            <thead className="text-xs text-(--eixo-text-muted)">
                                 <tr>
                                     <th className="py-2 pr-3">Data</th>
                                     <th className="py-2 pr-3">Animal</th>
@@ -194,24 +194,24 @@ const SanidadeCases: React.FC<SanidadeCasesProps> = ({ farmId, onChanged }) => {
                             </thead>
                             <tbody>
                                 {lista.map((caso) => (
-                                    <tr key={caso.id} className="border-t border-[var(--eixo-border)] align-top">
+                                    <tr key={caso.id} className="border-t border-(--eixo-border) align-top">
                                         <td className="py-2 pr-3">{formatDate(caso.startedAt)}</td>
-                                        <td className="py-2 pr-3 font-semibold text-[var(--eixo-text)]">{caso.brinco}{caso.lote && <span className="block text-xs font-normal text-[var(--eixo-text-muted)]">{caso.lote}</span>}</td>
+                                        <td className="py-2 pr-3 font-semibold text-(--eixo-text)">{caso.brinco}{caso.lote && <span className="block text-xs font-normal text-(--eixo-text-muted)">{caso.lote}</span>}</td>
                                         <td className="py-2 pr-3">
                                             {caso.diseaseLabel}
-                                            {caso.notifiable && <span className="ml-1 rounded bg-[#fff2ef] px-1 text-[10px] font-bold text-[var(--eixo-danger)]">NOTIFICAR</span>}
-                                            {caso.symptoms && <span className="block text-xs text-[var(--eixo-text-muted)]">{caso.symptoms}</span>}
+                                            {caso.notifiable && <span className="ml-1 rounded-sm bg-[#fff2ef] px-1 text-[10px] font-bold text-(--eixo-danger)">NOTIFICAR</span>}
+                                            {caso.symptoms && <span className="block text-xs text-(--eixo-text-muted)">{caso.symptoms}</span>}
                                         </td>
                                         <td className="py-2 pr-3">
                                             <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_LABEL[caso.status].className}`}>{STATUS_LABEL[caso.status].label}</span>
-                                            {caso.closedAt && caso.kind === 'DOENCA' && <span className="block text-xs text-[var(--eixo-text-muted)]">em {formatDate(caso.closedAt)}</span>}
+                                            {caso.closedAt && caso.kind === 'DOENCA' && <span className="block text-xs text-(--eixo-text-muted)">em {formatDate(caso.closedAt)}</span>}
                                         </td>
                                         <td className="py-2">
                                             {caso.status === 'EM_TRATAMENTO' && (
                                                 <div className="flex flex-wrap gap-1">
                                                     <button type="button" className={secondaryButton} onClick={() => void encerrar(caso, 'CURADO')}>Curado</button>
                                                     <button type="button" className={secondaryButton} onClick={() => void encerrar(caso, 'DESCARTADO')}>Descarte</button>
-                                                    <button type="button" className={`${secondaryButton} text-[var(--eixo-danger)]`} onClick={() => void encerrar(caso, 'MORTO')}>Morreu</button>
+                                                    <button type="button" className={`${secondaryButton} text-(--eixo-danger)`} onClick={() => void encerrar(caso, 'MORTO')}>Morreu</button>
                                                 </div>
                                             )}
                                         </td>
@@ -225,13 +225,13 @@ const SanidadeCases: React.FC<SanidadeCasesProps> = ({ farmId, onChanged }) => {
 
             {ind.porCausa.length > 0 && (
                 <section className={cardClass}>
-                    <h2 className="text-base font-bold text-[var(--eixo-text)]">Principais causas nos últimos 12 meses</h2>
+                    <h2 className="text-base font-bold text-(--eixo-text)">Principais causas nos últimos 12 meses</h2>
                     <table className="mt-3 w-full text-left text-sm">
-                        <thead className="text-xs text-[var(--eixo-text-muted)]"><tr><th className="py-2 pr-3">Doença / causa</th><th className="py-2 pr-3">Casos</th><th className="py-2">Mortes</th></tr></thead>
+                        <thead className="text-xs text-(--eixo-text-muted)"><tr><th className="py-2 pr-3">Doença / causa</th><th className="py-2 pr-3">Casos</th><th className="py-2">Mortes</th></tr></thead>
                         <tbody>
                             {ind.porCausa.map((item) => (
-                                <tr key={item.causa} className="border-t border-[var(--eixo-border)]">
-                                    <td className="py-2 pr-3 text-[var(--eixo-text)]">{item.causa}</td>
+                                <tr key={item.causa} className="border-t border-(--eixo-border)">
+                                    <td className="py-2 pr-3 text-(--eixo-text)">{item.causa}</td>
                                     <td className="py-2 pr-3">{item.casos}</td>
                                     <td className="py-2">{item.mortes}</td>
                                 </tr>

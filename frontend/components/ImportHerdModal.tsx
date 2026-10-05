@@ -399,7 +399,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
             onClick={() => { if (status !== 'uploading') handleClose(); }}
         >
             <div
@@ -407,18 +407,18 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 aria-modal="true"
                 aria-labelledby="import-herd-title"
                 aria-busy={status === 'uploading'}
-                className={`relative max-h-[calc(100vh-2rem)] w-full overflow-y-auto rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl ${
+                className={`relative max-h-[calc(100vh-2rem)] w-full overflow-y-auto rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) shadow-2xl ${
                     status === 'preview' || status === 'saving' ? 'max-w-6xl' : 'max-w-xl'
                 }`}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
+                <div className="flex items-center justify-between border-b border-(--eixo-border) px-6 py-4">
                     <div>
-                        <h3 id="import-herd-title" className="text-base font-bold text-[var(--eixo-text)]">
+                        <h3 id="import-herd-title" className="text-base font-bold text-(--eixo-text)">
                             {status === 'preview' || status === 'saving' ? 'Conferir antes de importar' : 'Importar rebanho (via planilha)'}
                         </h3>
-                        <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">
+                        <p className="mt-0.5 text-xs text-(--eixo-text-muted)">
                             {status === 'done'
                                 ? !result?.erros
                                     ? 'Importação concluída.'
@@ -438,7 +438,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                         type="button"
                         onClick={handleClose}
                         disabled={status === 'uploading' || status === 'saving'}
-                        className="rounded-lg p-1 text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-green)] disabled:cursor-not-allowed disabled:opacity-40"
+                        className="rounded-lg p-1 text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-green) disabled:cursor-not-allowed disabled:opacity-40"
                         aria-label="Fechar"
                     >
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -459,8 +459,8 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 {/* IDLE — 2 cards */}
                 {status === 'idle' && (
                     <div className="grid gap-3 px-6 py-5 sm:grid-cols-2">
-                        <div className="sm:col-span-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
-                            <p className="text-sm font-semibold text-[var(--eixo-text)]">De onde vieram esses animais?</p>
+                        <div className="sm:col-span-2 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-4">
+                            <p className="text-sm font-semibold text-(--eixo-text)">De onde vieram esses animais?</p>
                             <div className="mt-3 grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Origem dos animais">
                                 {([
                                     { valor: 'PROPRIO', titulo: 'Rebanho que já era meu', texto: 'Animais que você já tinha e está trazendo de outro sistema ou caderno.' },
@@ -472,82 +472,82 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                         role="radio"
                                         aria-checked={origem === opcao.valor}
                                         onClick={() => { setOrigem(opcao.valor); setAvisoCompra(''); }}
-                                        className={`rounded-xl border-2 p-3 text-left transition-colors ${origem === opcao.valor ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)]/10' : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:border-[var(--eixo-green)]/60'}`}
+                                        className={`rounded-xl border-2 p-3 text-left transition-colors ${origem === opcao.valor ? 'border-(--eixo-green) bg-(--eixo-green)/10' : 'border-(--eixo-border) bg-(--eixo-surface) hover:border-(--eixo-green)/60'}`}
                                     >
-                                        <span className="block text-sm font-semibold text-[var(--eixo-text)]">{opcao.titulo}</span>
-                                        <span className="mt-1 block text-xs text-[var(--eixo-text-muted)]">{opcao.texto}</span>
+                                        <span className="block text-sm font-semibold text-(--eixo-text)">{opcao.titulo}</span>
+                                        <span className="mt-1 block text-xs text-(--eixo-text-muted)">{opcao.texto}</span>
                                     </button>
                                 ))}
                             </div>
-                            <p className="mt-2 text-xs text-[var(--eixo-text-soft)]">
+                            <p className="mt-2 text-xs text-(--eixo-text-soft)">
                                 Bezerro nascido na fazenda não entra por aqui: é lançado no parto da mãe, em Reprodução.
                             </p>
 
                             {origem === 'COMPRA' && (
-                                <div className="mt-4 border-t border-[var(--eixo-border)] pt-4">
-                                    <p className="text-sm font-semibold text-[var(--eixo-text)]">Dados da compra</p>
-                                    <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Valem para todos os animais da planilha.</p>
+                                <div className="mt-4 border-t border-(--eixo-border) pt-4">
+                                    <p className="text-sm font-semibold text-(--eixo-text)">Dados da compra</p>
+                                    <p className="mt-1 text-xs text-(--eixo-text-muted)">Valem para todos os animais da planilha.</p>
                                     <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                        <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                             Fornecedor
-                                            <input id="import-compra-fornecedor" type="text" value={compra.fornecedor} onChange={(e) => atualizarCompra('fornecedor', e.target.value)} placeholder="Nome do vendedor ou leilão" className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                            <input id="import-compra-fornecedor" type="text" value={compra.fornecedor} onChange={(e) => atualizarCompra('fornecedor', e.target.value)} placeholder="Nome do vendedor ou leilão" className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)" />
                                         </label>
-                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                        <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                             Nº da GTA (opcional)
-                                            <input id="import-compra-gta" type="text" value={compra.gta} onChange={(e) => atualizarCompra('gta', e.target.value)} placeholder="Ex.: BA-123456" className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                            <input id="import-compra-gta" type="text" value={compra.gta} onChange={(e) => atualizarCompra('gta', e.target.value)} placeholder="Ex.: BA-123456" className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)" />
                                         </label>
-                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                        <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                             Data da compra
-                                            <input id="import-compra-data" type="date" max={new Date().toISOString().slice(0, 10)} value={compra.dataCompra} onChange={(e) => atualizarCompra('dataCompra', e.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                            <input id="import-compra-data" type="date" max={new Date().toISOString().slice(0, 10)} value={compra.dataCompra} onChange={(e) => atualizarCompra('dataCompra', e.target.value)} className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)" />
                                         </label>
-                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                        <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                             Valor total da compra (R$)
-                                            <input id="import-compra-valor" type="text" inputMode="decimal" value={compra.valorTotal} onChange={(e) => atualizarCompra('valorTotal', e.target.value)} placeholder="0,00" className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                            <input id="import-compra-valor" type="text" inputMode="decimal" value={compra.valorTotal} onChange={(e) => atualizarCompra('valorTotal', e.target.value)} placeholder="0,00" className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)" />
                                         </label>
-                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                        <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                             Finalidade
-                                            <select id="import-compra-finalidade" value={compra.finalidade} onChange={(e) => atualizarCompra('finalidade', e.target.value as DadosCompra['finalidade'])} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]">
+                                            <select id="import-compra-finalidade" value={compra.finalidade} onChange={(e) => atualizarCompra('finalidade', e.target.value as DadosCompra['finalidade'])} className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)">
                                                 <option value="PRODUCTION">Engorda / produção</option>
                                                 <option value="BREEDING">Reprodução (matrizes e touros)</option>
                                             </select>
                                         </label>
-                                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                        <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                             Pagamento
-                                            <select id="import-compra-pagamento" value={compra.condicaoPagamento} onChange={(e) => atualizarCompra('condicaoPagamento', e.target.value as CondicaoPagamento)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]">
+                                            <select id="import-compra-pagamento" value={compra.condicaoPagamento} onChange={(e) => atualizarCompra('condicaoPagamento', e.target.value as CondicaoPagamento)} className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)">
                                                 <option value="PAGO">À vista</option>
                                                 <option value="ENTRADA_PARCELADO">Entrada + parcelado</option>
                                                 <option value="PARCELADO">Parcelado</option>
                                             </select>
                                         </label>
                                         {compra.condicaoPagamento === 'ENTRADA_PARCELADO' && (
-                                            <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                            <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                                 Valor da entrada (R$)
-                                                <input id="import-compra-entrada" type="text" inputMode="decimal" value={compra.valorEntrada} onChange={(e) => atualizarCompra('valorEntrada', e.target.value)} placeholder="0,00" className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
-                                                <span className="mt-1 block font-normal text-[var(--eixo-text-soft)]">Entra como paga na data da compra.</span>
+                                                <input id="import-compra-entrada" type="text" inputMode="decimal" value={compra.valorEntrada} onChange={(e) => atualizarCompra('valorEntrada', e.target.value)} placeholder="0,00" className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)" />
+                                                <span className="mt-1 block font-normal text-(--eixo-text-soft)">Entra como paga na data da compra.</span>
                                             </label>
                                         )}
                                         {compra.condicaoPagamento !== 'PAGO' && (
-                                            <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                            <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                                 Primeiro vencimento
-                                                <input id="import-compra-vencimento" type="date" value={compra.vencimento} onChange={(e) => atualizarCompra('vencimento', e.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
+                                                <input id="import-compra-vencimento" type="date" value={compra.vencimento} onChange={(e) => atualizarCompra('vencimento', e.target.value)} className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)" />
                                             </label>
                                         )}
                                         {compra.condicaoPagamento !== 'PAGO' && (
-                                            <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                            <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                                 Parcelas
-                                                <input id="import-compra-parcelas" type="number" min={1} max={60} value={compra.parcelas} onChange={(e) => atualizarCompra('parcelas', e.target.value)} className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]" />
-                                                <span className="mt-1 block font-normal text-[var(--eixo-text-soft)]">1 parcela = pagamento único com prazo.</span>
+                                                <input id="import-compra-parcelas" type="number" min={1} max={60} value={compra.parcelas} onChange={(e) => atualizarCompra('parcelas', e.target.value)} className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)" />
+                                                <span className="mt-1 block font-normal text-(--eixo-text-soft)">1 parcela = pagamento único com prazo.</span>
                                             </label>
                                         )}
                                     </div>
                                     {avisoCompra && (
-                                        <p className="mt-3 text-xs font-semibold text-[var(--eixo-danger)]" role="alert">{avisoCompra}</p>
+                                        <p className="mt-3 text-xs font-semibold text-(--eixo-danger)" role="alert">{avisoCompra}</p>
                                     )}
                                 </div>
                             )}
                         </div>
                         {!faseLiberada && (
-                            <p className="sm:col-span-2 rounded-xl border border-dashed border-[var(--eixo-border)] px-4 py-3 text-xs font-semibold text-[var(--eixo-text-muted)]" role="status" aria-live="polite">
+                            <p className="sm:col-span-2 rounded-xl border border-dashed border-(--eixo-border) px-4 py-3 text-xs font-semibold text-(--eixo-text-muted)" role="status" aria-live="polite">
                                 {origem === null
                                     ? 'Escolha de onde vieram os animais para liberar os próximos passos.'
                                     : `Para continuar: ${faltaNaCompra?.replace(/^Informe /, 'informe ')}`}
@@ -558,18 +558,18 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             aria-disabled={!faseLiberada}
                             className={`sm:col-span-2 m-0 grid min-w-0 gap-3 border-0 p-0 transition-opacity sm:grid-cols-2 ${faseLiberada ? '' : 'cursor-not-allowed opacity-40'}`}
                         >
-                        <div className="sm:col-span-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
-                                <p className="text-sm font-semibold text-[var(--eixo-text)]">Destino no EIXO</p>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                        <div className="sm:col-span-2 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-4">
+                                <p className="text-sm font-semibold text-(--eixo-text)">Destino no EIXO</p>
+                                <p className="mt-1 text-xs text-(--eixo-text-muted)">
                                     Use como padrão nas linhas sem destino. Cada linha da planilha pode escolher outro pasto ou lote.
                                 </p>
                                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                                    <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                    <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                         Pasto padrão (opcional)
                                         <select
                                             value={paddockId}
                                             onChange={(event) => setPaddockId(event.target.value)}
-                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]"
+                                            className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)"
                                         >
                                             <option value="">Selecione o pasto</option>
                                             {paddocks.map((paddock) => (
@@ -577,12 +577,12 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                             ))}
                                         </select>
                                     </label>
-                                    <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                    <label className="text-xs font-semibold text-(--eixo-text-muted)">
                                         Lote padrão (opcional)
                                         <select
                                             value={lotId}
                                             onChange={(event) => setLotId(event.target.value)}
-                                            className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]"
+                                            className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)"
                                         >
                                             <option value="">Sem lote</option>
                                             {lots.map((lot) => (
@@ -591,22 +591,22 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                         </select>
                                     </label>
                                 </div>
-                                <label className="mt-3 block text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                <label className="mt-3 block text-xs font-semibold text-(--eixo-text-muted)">
                                     Raça padrão do rebanho (opcional)
                                     <input
                                         type="text"
                                         value={racaPadrao}
                                         onChange={(event) => setRacaPadrao(event.target.value)}
                                         placeholder="Nelore, Anelorado, Angus…"
-                                        className="mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-normal text-[var(--eixo-text)]"
+                                        className="mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-normal text-(--eixo-text)"
                                     />
-                                    <span className="mt-1 block font-normal text-[var(--eixo-text-soft)]">
+                                    <span className="mt-1 block font-normal text-(--eixo-text-soft)">
                                         Em fazenda comercial a raça costuma ser a mesma do lote inteiro. Preencha aqui
                                         e deixe a coluna da planilha em branco — só as exceções precisam ser digitadas.
                                     </span>
                                 </label>
                                 {paddocks.length === 0 && (
-                                    <p className="mt-2 text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                    <p className="mt-2 text-xs font-semibold text-(--eixo-text-muted)">
                                         Nenhum pasto cadastrado nesta fazenda.
                                     </p>
                                 )}
@@ -614,17 +614,17 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                         <button
                             type="button"
                             onClick={handleDownload}
-                            className="group relative flex flex-col items-start gap-3 rounded-2xl border-2 border-[var(--eixo-green)] bg-[var(--eixo-surface)] p-4 text-left transition-all hover:bg-[var(--eixo-green)]/5"
+                            className="group relative flex flex-col items-start gap-3 rounded-2xl border-2 border-(--eixo-green) bg-(--eixo-surface) p-4 text-left transition-all hover:bg-(--eixo-green)/5"
                         >
-                            <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--eixo-green)] text-[10px] font-bold text-white">1</span>
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--eixo-green)]/10 text-[var(--eixo-green)]">
+                            <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-(--eixo-green) text-[10px] font-bold text-white">1</span>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--eixo-green)/10 text-(--eixo-green)">
                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
                                 </svg>
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-[var(--eixo-text)]">Baixar modelo</p>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                                <p className="text-sm font-semibold text-(--eixo-text)">Baixar modelo</p>
+                                <p className="mt-1 text-xs text-(--eixo-text-muted)">
                                     Planilha pronta para você preencher com os dados do rebanho.
                                 </p>
                             </div>
@@ -633,17 +633,17 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                         <button
                             type="button"
                             onClick={handlePickFile}
-                            className="group relative flex flex-col items-start gap-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4 text-left transition-all hover:border-[var(--eixo-green)] hover:bg-[var(--eixo-surface)]"
+                            className="group relative flex flex-col items-start gap-3 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-4 text-left transition-all hover:border-(--eixo-green) hover:bg-(--eixo-surface)"
                         >
-                            <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-[var(--eixo-border)] text-[10px] font-bold text-[var(--eixo-text-muted)]">2</span>
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--eixo-green)]/10 text-[var(--eixo-green)] transition-colors group-hover:bg-[var(--eixo-green)]/20">
+                            <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-(--eixo-border) text-[10px] font-bold text-(--eixo-text-muted)">2</span>
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-(--eixo-green)/10 text-(--eixo-green) transition-colors group-hover:bg-(--eixo-green)/20">
                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 8l-5-5-5 5M12 3v12" />
                                 </svg>
                             </div>
                             <div>
-                                <p className="text-sm font-semibold text-[var(--eixo-text)]">Enviar planilha preenchida</p>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                                <p className="text-sm font-semibold text-(--eixo-text)">Enviar planilha preenchida</p>
+                                <p className="mt-1 text-xs text-(--eixo-text-muted)">
                                     Selecione a planilha modelo preenchida (.xlsx, .xls ou .csv).
                                 </p>
                             </div>
@@ -656,8 +656,8 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 {(status === 'preview' || status === 'saving') && catalogos && (
                     <div className="px-6 py-5">
                         {origem === 'COMPRA' && (
-                            <div className="mb-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-xs text-[var(--eixo-text-muted)]">
-                                <span className="font-semibold text-[var(--eixo-text)]">Compra de {compra.fornecedor.trim()}</span>
+                            <div className="mb-3 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 text-xs text-(--eixo-text-muted)">
+                                <span className="font-semibold text-(--eixo-text)">Compra de {compra.fornecedor.trim()}</span>
                                 {compra.gta.trim() && <> · GTA {compra.gta.trim()}</>}
                                 {' · '}{formatarReais(lerValor(compra.valorTotal) ?? 0)}
                                 {contagem.total > 0 && <> · {formatarReais((lerValor(compra.valorTotal) ?? 0) / contagem.total)} por animal</>}
@@ -677,18 +677,18 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 {/* UPLOADING */}
                 {status === 'uploading' && (
                     <div className="px-6 py-12 text-center" role="status" aria-live="polite">
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--eixo-green)]/10 text-[var(--eixo-green)]">
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-(--eixo-green)/10 text-(--eixo-green)">
                             <svg className="h-7 w-7 animate-spin" fill="none" viewBox="0 0 24 24">
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                             </svg>
                         </div>
-                        <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">
+                        <p className="mt-4 text-sm font-semibold text-(--eixo-text)">
                             {'Conferindo a planilha…'}
                         </p>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">{fileName}</p>
+                        <p className="mt-1 text-xs text-(--eixo-text-muted)">{fileName}</p>
                         {(
-                            <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Nenhum animal é criado nesta etapa.</p>
+                            <p className="mt-1 text-xs text-(--eixo-text-soft)">Nenhum animal é criado nesta etapa.</p>
                         )}
                     </div>
                 )}
@@ -696,17 +696,17 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 {/* ERROR (antes mesmo de processar) */}
                 {status === 'error' && (
                     <div className="px-6 py-10 text-center" role="alert">
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--eixo-danger)]/10 text-[var(--eixo-danger)]">
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-(--eixo-danger)/10 text-(--eixo-danger)">
                             <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                         </div>
-                        <p className="mt-4 text-sm font-semibold text-[var(--eixo-text)]">Não foi possível importar</p>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">{errorMessage}</p>
+                        <p className="mt-4 text-sm font-semibold text-(--eixo-text)">Não foi possível importar</p>
+                        <p className="mt-1 text-xs text-(--eixo-text-muted)">{errorMessage}</p>
                         <button
                             type="button"
                             onClick={handleTryAgain}
-                            className="mt-4 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-medium text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                            className="mt-4 rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2 text-sm font-medium text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface-soft)"
                         >
                             Tentar novamente
                         </button>
@@ -718,10 +718,10 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                     const isFullFailure = result.criados === 0 && result.erros > 0;
                     const isPartial = result.criados > 0 && result.erros > 0;
                     const toneClass = isFullFailure
-                        ? 'bg-[var(--eixo-danger)]/10 text-[var(--eixo-danger)]'
+                        ? 'bg-(--eixo-danger)/10 text-(--eixo-danger)'
                         : isPartial
-                        ? 'bg-[var(--eixo-warning)]/10 text-[var(--eixo-warning)]'
-                        : 'bg-[var(--eixo-green)]/10 text-[var(--eixo-green)]';
+                        ? 'bg-(--eixo-warning)/10 text-(--eixo-warning)'
+                        : 'bg-(--eixo-green)/10 text-(--eixo-green)';
                     const title = isFullFailure
                         ? 'Importação não realizada'
                         : isPartial
@@ -735,53 +735,53 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={isFullFailure ? 'M6 18L18 6M6 6l12 12' : 'M5 13l4 4L19 7'} />
                                 </svg>
                             </div>
-                            <p className="mt-3 text-base font-semibold text-[var(--eixo-text)]">
+                            <p className="mt-3 text-base font-semibold text-(--eixo-text)">
                                 {title}
                             </p>
-                            <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                            <p className="mt-1 text-xs text-(--eixo-text-muted)">
                                 {fileName} · {result.total} linhas validadas
                             </p>
                             {isFullFailure && (
-                                <p className="mt-2 text-xs font-semibold text-[var(--eixo-danger)]">
+                                <p className="mt-2 text-xs font-semibold text-(--eixo-danger)">
                                     {origem === 'COMPRA'
                                         ? 'Nenhum animal nem lançamento da compra foi gravado. Na compra, todas as linhas precisam estar certas. Corrija as indicadas e envie novamente.'
                                         : 'Nenhum animal foi criado. Corrija as linhas indicadas e envie novamente.'}
                                 </p>
                             )}
                             {isPartial && (
-                                <p className="mt-2 text-xs font-semibold text-[var(--eixo-warning)]">As linhas sem erro já foram cadastradas. Corrija as linhas indicadas para completar o restante.</p>
+                                <p className="mt-2 text-xs font-semibold text-(--eixo-warning)">As linhas sem erro já foram cadastradas. Corrija as linhas indicadas para completar o restante.</p>
                             )}
                         </div>
 
                         <div className={`mt-5 grid gap-2 ${result.erros > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                            <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-3 text-center">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Cadastrados</p>
-                                <p className="mt-1 text-2xl font-bold text-[var(--eixo-green)]">{result.criados}</p>
+                            <div className="rounded-xl bg-(--eixo-surface-soft) p-3 text-center">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-(--eixo-text-muted)">Cadastrados</p>
+                                <p className="mt-1 text-2xl font-bold text-(--eixo-green)">{result.criados}</p>
                             </div>
                             {result.erros > 0 && (
-                                <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-3 text-center">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Linhas com erro</p>
-                                    <p className="mt-1 text-2xl font-bold text-[var(--eixo-danger)]">{result.erros}</p>
+                                <div className="rounded-xl bg-(--eixo-surface-soft) p-3 text-center">
+                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-(--eixo-text-muted)">Linhas com erro</p>
+                                    <p className="mt-1 text-2xl font-bold text-(--eixo-danger)">{result.erros}</p>
                                 </div>
                             )}
                         </div>
 
                         {result.detalhes?.erros && result.detalhes.erros.length > 0 && (
                             <div className="mt-5">
-                                <p className="mb-2 text-xs font-semibold text-[var(--eixo-text-muted)]">Linhas com erro</p>
-                                <div className="max-h-48 overflow-y-auto rounded-xl border border-[var(--eixo-border)]">
+                                <p className="mb-2 text-xs font-semibold text-(--eixo-text-muted)">Linhas com erro</p>
+                                <div className="max-h-48 overflow-y-auto rounded-xl border border-(--eixo-border)">
                                     {result.detalhes.erros.map((row, idx) => (
                                         <div
                                             key={idx}
-                                            className="flex items-start justify-between gap-3 border-b border-[var(--eixo-border)] px-3 py-2 last:border-b-0"
+                                            className="flex items-start justify-between gap-3 border-b border-(--eixo-border) px-3 py-2 last:border-b-0"
                                         >
                                             <div className="text-xs">
-                                                <span className="text-[var(--eixo-text-muted)]">Linha {row.line}</span>
+                                                <span className="text-(--eixo-text-muted)">Linha {row.line}</span>
                                                 {row.identificacao && (
-                                                    <span className="text-[var(--eixo-text)]"> · {row.identificacao}</span>
+                                                    <span className="text-(--eixo-text)"> · {row.identificacao}</span>
                                                 )}
                                             </div>
-                                            <span className="text-right text-xs text-[var(--eixo-danger)]">
+                                            <span className="text-right text-xs text-(--eixo-danger)">
                                                 {(row.motivos || []).join(' · ')}
                                             </span>
                                         </div>
@@ -790,7 +790,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             </div>
                         )}
                         {downloadMessage && (
-                            <p className={`mt-3 text-center text-xs font-semibold ${downloadMessage.startsWith('Não') ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-text-muted)]'}`} role="status" aria-live="polite">
+                            <p className={`mt-3 text-center text-xs font-semibold ${downloadMessage.startsWith('Não') ? 'text-(--eixo-danger)' : 'text-(--eixo-text-muted)'}`} role="status" aria-live="polite">
                                 {downloadMessage}
                             </p>
                         )}
@@ -799,9 +799,9 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                 })()}
 
                 {/* Footer */}
-                <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--eixo-border)] px-6 py-4">
+                <div className="flex flex-wrap items-center justify-end gap-2 border-t border-(--eixo-border) px-6 py-4">
                     {status === 'preview' && contagem.erro > 0 && (
-                        <p className={`mr-auto text-xs ${origem === 'COMPRA' ? 'font-semibold text-[var(--eixo-danger)]' : 'text-[var(--eixo-text-muted)]'}`}>
+                        <p className={`mr-auto text-xs ${origem === 'COMPRA' ? 'font-semibold text-(--eixo-danger)' : 'text-(--eixo-text-muted)'}`}>
                             {origem === 'COMPRA'
                                 ? `Corrija ${contagem.erro === 1 ? 'a linha com erro' : `as ${contagem.erro} linhas com erro`} para gravar a compra.`
                                 : contagem.erro === 1
@@ -813,11 +813,11 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                         type="button"
                         onClick={status === 'preview' ? handleVoltarParaArquivo : handleClose}
                         disabled={status === 'uploading' || status === 'saving'}
-                        className="flex flex-col items-center rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm font-medium text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:cursor-not-allowed disabled:opacity-40"
+                        className="flex flex-col items-center rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2 text-sm font-medium text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface-soft) disabled:cursor-not-allowed disabled:opacity-40"
                     >
                         <span>{status === 'preview' ? 'Trocar arquivo' : 'Fechar'}</span>
                         {status === 'preview' && (
-                            <span className="text-[10px] font-normal leading-tight text-[var(--eixo-text-muted)]/70">
+                            <span className="text-[10px] font-normal leading-tight text-(--eixo-text-muted)/70">
                                 descarta esta planilha
                             </span>
                         )}
@@ -827,7 +827,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             type="button"
                             onClick={handleConfirmarImportacao}
                             disabled={status === 'saving' || contagem.prontos + contagem.revisao === 0 || (origem === 'COMPRA' && contagem.erro > 0)}
-                            className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-40"
+                            className="rounded-xl bg-(--eixo-green) px-4 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) disabled:cursor-not-allowed disabled:opacity-40"
                         >
                             {status === 'saving'
                                 ? 'Gravando…'
@@ -841,7 +841,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             type="button"
                             onClick={handleDownloadErrors}
                             disabled={isDownloadingErrors}
-                            className="flex items-center gap-2 rounded-xl border border-[var(--eixo-danger)]/40 bg-[var(--eixo-danger)]/10 px-4 py-2 text-sm font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[var(--eixo-danger)]/20 disabled:cursor-wait disabled:opacity-60"
+                            className="flex items-center gap-2 rounded-xl border border-(--eixo-danger)/40 bg-(--eixo-danger)/10 px-4 py-2 text-sm font-semibold text-(--eixo-danger) transition-colors hover:bg-(--eixo-danger)/20 disabled:cursor-wait disabled:opacity-60"
                         >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
@@ -853,7 +853,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                         <button
                             type="button"
                             onClick={handlePickCorrectedFile}
-                            className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
+                            className="rounded-xl bg-(--eixo-green) px-4 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark)"
                         >
                             Selecionar planilha corrigida
                         </button>
@@ -862,7 +862,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                         <button
                             type="button"
                             onClick={handleSeeAnimals}
-                            className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
+                            className="rounded-xl bg-(--eixo-green) px-4 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark)"
                         >
                             Ver animais cadastrados
                         </button>

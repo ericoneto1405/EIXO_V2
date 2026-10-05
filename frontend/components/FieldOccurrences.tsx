@@ -27,8 +27,8 @@ const STATUS_LABEL: Record<FieldOccurrenceStatus, string> = {
 
 const STATUS_CLASS: Record<FieldOccurrenceStatus, string> = {
     PENDENTE: 'bg-[#fff6dc] text-[#8a5f00] border-[#eed99b]',
-    CONFIRMADO: 'bg-[var(--eixo-green-soft)] text-[#2f6b2f] border-[#cfe5c4]',
-    CANCELADO: 'bg-[#fff2ef] text-[var(--eixo-danger)] border-[#f1d1ca]',
+    CONFIRMADO: 'bg-(--eixo-green-soft) text-[#2f6b2f] border-[#cfe5c4]',
+    CANCELADO: 'bg-[#fff2ef] text-(--eixo-danger) border-[#f1d1ca]',
 };
 
 const formatDate = (value?: string | null) => {
@@ -73,28 +73,28 @@ const FieldOccurrences: React.FC<FieldOccurrencesProps> = ({ farmId = null }) =>
 
     return (
         <div>
-            <p className="mb-6 text-[var(--eixo-text-muted)]">
+            <p className="mb-6 text-(--eixo-text-muted)">
                 Registros enviados pelo EIXO Campo para análise da base.
             </p>
 
-            <div className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
-                <div className="flex flex-wrap items-end justify-between gap-4 border-b border-[var(--eixo-border)] px-6 py-5">
+            <div className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) shadow-xs">
+                <div className="flex flex-wrap items-end justify-between gap-4 border-b border-(--eixo-border) px-6 py-5">
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--eixo-text-muted)]">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-(--eixo-text-muted)">
                             Ocorrências do EIXO Campo
                         </p>
-                        <h2 className="mt-2 text-2xl font-semibold text-[var(--eixo-text)]">
+                        <h2 className="mt-2 text-2xl font-semibold text-(--eixo-text)">
                             Central de análise do supervisor
                         </h2>
                     </div>
 
                     <div className="flex flex-wrap gap-3">
                         <label className="block">
-                            <span className="text-xs font-semibold text-[var(--eixo-text-muted)]">Status</span>
+                            <span className="text-xs font-semibold text-(--eixo-text-muted)">Status</span>
                             <select
                                 value={statusFilter}
                                 onChange={(event) => setStatusFilter(event.target.value as FieldOccurrenceStatus | '')}
-                                className="mt-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] outline-none"
+                                className="mt-1 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2 text-sm text-(--eixo-text) outline-hidden"
                             >
                                 <option value="">Todos</option>
                                 <option value="PENDENTE">Pendentes</option>
@@ -104,11 +104,11 @@ const FieldOccurrences: React.FC<FieldOccurrencesProps> = ({ farmId = null }) =>
                         </label>
 
                         <label className="block">
-                            <span className="text-xs font-semibold text-[var(--eixo-text-muted)]">Tipo</span>
+                            <span className="text-xs font-semibold text-(--eixo-text-muted)">Tipo</span>
                             <select
                                 value={typeFilter}
                                 onChange={(event) => setTypeFilter(event.target.value as FieldOccurrenceType | '')}
-                                className="mt-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] outline-none"
+                                className="mt-1 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2 text-sm text-(--eixo-text) outline-hidden"
                             >
                                 <option value="">Todos</option>
                                 {Object.entries(TYPE_LABEL).map(([value, label]) => (
@@ -120,7 +120,7 @@ const FieldOccurrences: React.FC<FieldOccurrencesProps> = ({ farmId = null }) =>
                         <button
                             type="button"
                             onClick={() => void loadOccurrences()}
-                            className="self-end rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)]"
+                            className="self-end rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2 text-sm font-semibold text-(--eixo-text)"
                         >
                             Atualizar
                         </button>
@@ -128,24 +128,24 @@ const FieldOccurrences: React.FC<FieldOccurrencesProps> = ({ farmId = null }) =>
                 </div>
 
                 {error && (
-                    <div className="mx-6 mt-5 rounded-2xl border border-[#f1d1ca] bg-[#fff2ef] px-4 py-3 text-sm text-[var(--eixo-danger)]">
+                    <div className="mx-6 mt-5 rounded-2xl border border-[#f1d1ca] bg-[#fff2ef] px-4 py-3 text-sm text-(--eixo-danger)">
                         {error}
                     </div>
                 )}
 
                 <div className="p-6">
                     {isLoading ? (
-                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-8 text-sm text-[var(--eixo-text-muted)]">
+                        <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-5 py-8 text-sm text-(--eixo-text-muted)">
                             Carregando ocorrências...
                         </div>
                     ) : items.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-8 text-sm text-[var(--eixo-text-muted)]">
+                        <div className="rounded-2xl border border-dashed border-(--eixo-border) bg-(--eixo-surface-soft) px-5 py-8 text-sm text-(--eixo-text-muted)">
                             Nenhuma ocorrência encontrada para os filtros selecionados.
                         </div>
                     ) : (
-                        <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)]">
+                        <div className="overflow-hidden rounded-2xl border border-(--eixo-border)">
                             <table className="w-full text-left text-sm">
-                                <thead className="bg-[var(--eixo-surface-soft)] text-xs font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
+                                <thead className="bg-(--eixo-surface-soft) text-xs font-bold uppercase tracking-[0.12em] text-(--eixo-text-muted)">
                                     <tr>
                                         <th className="px-4 py-3">Ocorrência</th>
                                         <th className="px-4 py-3">Local</th>
@@ -157,17 +157,17 @@ const FieldOccurrences: React.FC<FieldOccurrencesProps> = ({ farmId = null }) =>
                                 </thead>
                                 <tbody>
                                     {items.map((occurrence) => (
-                                        <tr key={occurrence.id} className="border-t border-[var(--eixo-border)] align-top">
+                                        <tr key={occurrence.id} className="border-t border-(--eixo-border) align-top">
                                             <td className="px-4 py-4">
-                                                <div className="font-semibold text-[var(--eixo-text)]">{TYPE_LABEL[occurrence.type]}</div>
-                                                <div className="mt-1 text-xs text-[var(--eixo-text-muted)]">{formatDate(occurrence.occurredAt || occurrence.createdAt)}</div>
+                                                <div className="font-semibold text-(--eixo-text)">{TYPE_LABEL[occurrence.type]}</div>
+                                                <div className="mt-1 text-xs text-(--eixo-text-muted)">{formatDate(occurrence.occurredAt || occurrence.createdAt)}</div>
                                                 {occurrence.description && (
-                                                    <div className="mt-2 max-w-xs text-xs leading-5 text-[var(--eixo-text-muted)]">
+                                                    <div className="mt-2 max-w-xs text-xs leading-5 text-(--eixo-text-muted)">
                                                         {occurrence.description}
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-4 text-[var(--eixo-text-muted)]">
+                                            <td className="px-4 py-4 text-(--eixo-text-muted)">
                                                 {occurrence.paddock?.name || 'Sem pasto'}
                                                 {occurrence.lat !== null && occurrence.lat !== undefined && occurrence.lng !== null && occurrence.lng !== undefined && (
                                                     <div className="mt-1 text-xs">
@@ -175,9 +175,9 @@ const FieldOccurrences: React.FC<FieldOccurrencesProps> = ({ farmId = null }) =>
                                                     </div>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-4 text-[var(--eixo-text-muted)]">{getAnimalLabel(occurrence)}</td>
-                                            <td className="px-4 py-4 text-[var(--eixo-text-muted)]">{occurrence.createdByName || 'Não informado'}</td>
-                                            <td className="px-4 py-4 text-[var(--eixo-text-muted)]">{occurrence.attachments.length}</td>
+                                            <td className="px-4 py-4 text-(--eixo-text-muted)">{getAnimalLabel(occurrence)}</td>
+                                            <td className="px-4 py-4 text-(--eixo-text-muted)">{occurrence.createdByName || 'Não informado'}</td>
+                                            <td className="px-4 py-4 text-(--eixo-text-muted)">{occurrence.attachments.length}</td>
                                             <td className="px-4 py-4">
                                                 <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${STATUS_CLASS[occurrence.status]}`}>
                                                     {STATUS_LABEL[occurrence.status]}

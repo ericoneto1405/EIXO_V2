@@ -60,15 +60,15 @@ const formatNumber = (value: number, digits = 1) =>
 const formatDate = (date: Date) => date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
 const inputClass =
-    'h-11 w-full rounded-xl border border-[var(--eixo-border-strong)] bg-[var(--eixo-surface)] px-3 text-sm font-semibold text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/20';
-const labelClass = 'mb-1.5 block text-[13px] font-bold text-[var(--eixo-text)]';
+    'h-11 w-full rounded-xl border border-(--eixo-border-strong) bg-(--eixo-surface) px-3 text-sm font-semibold text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)/20';
+const labelClass = 'mb-1.5 block text-[13px] font-bold text-(--eixo-text)';
 
 const Step: React.FC<{ n: number; title: string; right?: React.ReactNode; children: React.ReactNode }> = ({ n, title, right, children }) => (
-    <section className="space-y-4 rounded-2xl bg-[var(--eixo-surface)] p-5">
+    <section className="space-y-4 rounded-2xl bg-(--eixo-surface) p-5">
         <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2F2F2F] text-[13px] font-extrabold text-[var(--eixo-green)]">{n}</span>
-                <h4 className="text-base font-extrabold text-[var(--eixo-text)]">{title}</h4>
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2F2F2F] text-[13px] font-extrabold text-(--eixo-green)">{n}</span>
+                <h4 className="text-base font-extrabold text-(--eixo-text)">{title}</h4>
             </div>
             {right}
         </div>
@@ -79,14 +79,14 @@ const Step: React.FC<{ n: number; title: string; right?: React.ReactNode; childr
 const NumberField: React.FC<{ label: string; unit: string; value: string; onChange: (v: string) => void; suggested?: boolean }> = ({ label, unit, value, onChange, suggested }) => (
     <div>
         <label className={labelClass}>{label}</label>
-        <div className={`flex h-11 items-center rounded-xl border px-3 ${suggested ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)]' : 'border-[var(--eixo-border-strong)] bg-[var(--eixo-surface)]'}`}>
+        <div className={`flex h-11 items-center rounded-xl border px-3 ${suggested ? 'border-(--eixo-green) bg-(--eixo-green-soft)' : 'border-(--eixo-border-strong) bg-(--eixo-surface)'}`}>
             <input
                 inputMode="decimal"
                 value={value}
                 onChange={(event) => onChange(event.target.value)}
-                className="w-full bg-transparent text-sm font-bold text-[var(--eixo-text)] focus:outline-none"
+                className="w-full bg-transparent text-sm font-bold text-(--eixo-text) focus:outline-hidden"
             />
-            <span className="ml-2 shrink-0 text-sm text-[var(--eixo-text-muted)]">{unit}</span>
+            <span className="ml-2 shrink-0 text-sm text-(--eixo-text-muted)">{unit}</span>
         </div>
     </div>
 );
@@ -220,20 +220,20 @@ const NewLotForm: React.FC<NewLotFormProps> = ({ farmId, herdType, animals, lots
             <form onSubmit={handleSubmit} className="mx-auto max-w-6xl space-y-6 px-6 py-7">
                 <header className="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <p className="text-[13px] font-semibold text-[var(--eixo-text-muted)]">Lotes / Novo lote</p>
-                        <h3 className="text-[28px] font-extrabold tracking-tight text-[var(--eixo-text)]">Novo lote</h3>
+                        <p className="text-[13px] font-semibold text-(--eixo-text-muted)">Lotes / Novo lote</p>
+                        <h3 className="text-[28px] font-extrabold tracking-tight text-(--eixo-text)">Novo lote</h3>
                     </div>
                     <div className="flex gap-2.5">
-                        <button type="button" onClick={onClose} className="h-11 rounded-xl border border-[var(--eixo-border-strong)] px-5 text-sm font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface)]">
+                        <button type="button" onClick={onClose} className="h-11 rounded-xl border border-(--eixo-border-strong) px-5 text-sm font-bold text-(--eixo-text) hover:bg-(--eixo-surface)">
                             Cancelar
                         </button>
-                        <button type="submit" disabled={saving} className="h-11 rounded-xl bg-[var(--eixo-green)] px-6 text-sm font-extrabold text-[#2F2F2F] hover:bg-[var(--eixo-green-dark)] disabled:opacity-60">
+                        <button type="submit" disabled={saving} className="h-11 rounded-xl bg-(--eixo-green) px-6 text-sm font-extrabold text-[#2F2F2F] hover:bg-(--eixo-green-dark) disabled:opacity-60">
                             {saving ? 'Criando...' : 'Criar lote'}
                         </button>
                     </div>
                 </header>
 
-                {error && <p className="rounded-xl bg-[var(--eixo-surface)] px-4 py-3 text-sm font-semibold text-[var(--eixo-danger)]">{error}</p>}
+                {error && <p className="rounded-xl bg-(--eixo-surface) px-4 py-3 text-sm font-semibold text-(--eixo-danger)">{error}</p>}
 
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
                     <div className="min-w-0 flex-1 space-y-4">
@@ -261,7 +261,7 @@ const NewLotForm: React.FC<NewLotFormProps> = ({ farmId, herdType, animals, lots
                                             key={option.value}
                                             type="button"
                                             onClick={() => { setPhase(option.value); applySuggestion(option.value, startDate); }}
-                                            className={`h-11 rounded-xl text-sm font-bold ${phase === option.value ? 'bg-[#2F2F2F] text-white' : 'border border-[var(--eixo-border-strong)] text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]'}`}
+                                            className={`h-11 rounded-xl text-sm font-bold ${phase === option.value ? 'bg-[#2F2F2F] text-white' : 'border border-(--eixo-border-strong) text-(--eixo-text) hover:bg-(--eixo-surface-soft)'}`}
                                         >
                                             {option.label}
                                         </button>
@@ -291,13 +291,13 @@ const NewLotForm: React.FC<NewLotFormProps> = ({ farmId, herdType, animals, lots
                         </Step>
 
                         <Step n={2} title="Animais e peso de entrada">
-                            <div className="inline-flex gap-1 rounded-xl bg-[var(--eixo-surface-soft)] p-1">
+                            <div className="inline-flex gap-1 rounded-xl bg-(--eixo-surface-soft) p-1">
                                 {([['ANIMAIS', 'Escolher animais'], ['QUANTIDADE', 'Só quantidade']] as const).map(([value, label]) => (
                                     <button
                                         key={value}
                                         type="button"
                                         onClick={() => setMode(value)}
-                                        className={`rounded-lg px-4 py-2 text-[13px] font-bold ${mode === value ? 'bg-[var(--eixo-surface)] text-[var(--eixo-text)] shadow-sm' : 'text-[var(--eixo-text-muted)]'}`}
+                                        className={`rounded-lg px-4 py-2 text-[13px] font-bold ${mode === value ? 'bg-(--eixo-surface) text-(--eixo-text) shadow-xs' : 'text-(--eixo-text-muted)'}`}
                                     >
                                         {label}
                                     </button>
@@ -317,32 +317,32 @@ const NewLotForm: React.FC<NewLotFormProps> = ({ farmId, herdType, animals, lots
                                         placeholder="Buscar por brinco, nome ou categoria"
                                         className={inputClass}
                                     />
-                                    <div className="max-h-72 divide-y divide-[var(--eixo-border)] overflow-y-auto rounded-xl border border-[var(--eixo-border)]">
+                                    <div className="max-h-72 divide-y divide-(--eixo-border) overflow-y-auto rounded-xl border border-(--eixo-border)">
                                         {filteredAnimals.length === 0 && (
-                                            <p className="p-4 text-sm text-[var(--eixo-text-muted)]">Nenhum animal encontrado.</p>
+                                            <p className="p-4 text-sm text-(--eixo-text-muted)">Nenhum animal encontrado.</p>
                                         )}
                                         {filteredAnimals.map((animal) => {
                                             const checked = animal.id in selected;
                                             const currentLot = animal.lotId ? lotNameById.get(animal.lotId) : null;
                                             return (
-                                                <div key={animal.id} className={`flex min-h-[48px] items-center gap-3 px-3 py-2 ${checked ? 'bg-[var(--eixo-green-soft)]' : ''}`}>
+                                                <div key={animal.id} className={`flex min-h-[48px] items-center gap-3 px-3 py-2 ${checked ? 'bg-(--eixo-green-soft)' : ''}`}>
                                                     <input type="checkbox" checked={checked} onChange={() => toggleAnimal(animal)} className="h-5 w-5 accent-[#2F2F2F]" />
                                                     <button type="button" onClick={() => toggleAnimal(animal)} className="min-w-0 flex-1 text-left">
-                                                        <span className="block truncate text-sm font-bold text-[var(--eixo-text)]">{animal.identificacao}</span>
-                                                        <span className="block truncate text-xs text-[var(--eixo-text-muted)]">
+                                                        <span className="block truncate text-sm font-bold text-(--eixo-text)">{animal.identificacao}</span>
+                                                        <span className="block truncate text-xs text-(--eixo-text-muted)">
                                                             {[animal.categoria, animal.ultimoPeso ? `${formatNumber(animal.ultimoPeso, 0)} kg` : null, currentLot ? `sai do lote ${currentLot}` : null].filter(Boolean).join(' · ')}
                                                         </span>
                                                     </button>
                                                     {checked && (
-                                                        <div className="flex h-9 w-28 items-center rounded-lg border border-[var(--eixo-border-strong)] bg-[var(--eixo-surface)] px-2">
+                                                        <div className="flex h-9 w-28 items-center rounded-lg border border-(--eixo-border-strong) bg-(--eixo-surface) px-2">
                                                             <input
                                                                 inputMode="decimal"
                                                                 value={selected[animal.id]}
                                                                 onChange={(e) => setSelected((prev) => ({ ...prev, [animal.id]: e.target.value }))}
                                                                 placeholder="Peso"
-                                                                className="w-full bg-transparent text-sm font-semibold focus:outline-none"
+                                                                className="w-full bg-transparent text-sm font-semibold focus:outline-hidden"
                                                             />
-                                                            <span className="text-xs text-[var(--eixo-text-muted)]">kg</span>
+                                                            <span className="text-xs text-(--eixo-text-muted)">kg</span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -350,12 +350,12 @@ const NewLotForm: React.FC<NewLotFormProps> = ({ farmId, herdType, animals, lots
                                         })}
                                     </div>
                                     <div className="grid items-end gap-4 sm:grid-cols-2">
-                                        <div className="flex h-11 items-center rounded-xl bg-[var(--eixo-surface-soft)] px-3 text-sm font-bold text-[var(--eixo-text)]">
+                                        <div className="flex h-11 items-center rounded-xl bg-(--eixo-surface-soft) px-3 text-sm font-bold text-(--eixo-text)">
                                             {selectedIds.length} {selectedIds.length === 1 ? 'animal escolhido' : 'animais escolhidos'}
                                             {typedWeights.length > 0 && ` · ${typedWeights.length} com peso`}
                                         </div>
                                         {weightsAvg ? (
-                                            <div className="flex h-11 items-center rounded-xl bg-[var(--eixo-surface-soft)] px-3 text-sm font-bold text-[var(--eixo-text)]">
+                                            <div className="flex h-11 items-center rounded-xl bg-(--eixo-surface-soft) px-3 text-sm font-bold text-(--eixo-text)">
                                                 Peso médio: {formatNumber(weightsAvg)} kg
                                             </div>
                                         ) : (
@@ -370,7 +370,7 @@ const NewLotForm: React.FC<NewLotFormProps> = ({ farmId, herdType, animals, lots
                             n={3}
                             title="Metas do lote"
                             right={suggestion && !targetsTouched ? (
-                                <span className="rounded-full bg-[var(--eixo-green-soft)] px-3 py-1 text-xs font-extrabold text-[#4d6b0a]">Sugerido para {suggestion.label}</span>
+                                <span className="rounded-full bg-(--eixo-green-soft) px-3 py-1 text-xs font-extrabold text-[#4d6b0a]">Sugerido para {suggestion.label}</span>
                             ) : null}
                         >
                             <div className="grid gap-4 sm:grid-cols-3">
@@ -380,13 +380,13 @@ const NewLotForm: React.FC<NewLotFormProps> = ({ farmId, herdType, animals, lots
                             </div>
                         </Step>
 
-                        <section className="rounded-2xl bg-[var(--eixo-surface)]">
+                        <section className="rounded-2xl bg-(--eixo-surface)">
                             <button type="button" onClick={() => setDetailsOpen((open) => !open)} className="flex w-full items-center justify-between px-5 py-4 text-left">
                                 <span>
-                                    <span className="block text-[15px] font-extrabold text-[var(--eixo-text)]">Mais detalhes</span>
-                                    <span className="block text-[13px] text-[var(--eixo-text-muted)]">Finalidade e observações — pode preencher depois</span>
+                                    <span className="block text-[15px] font-extrabold text-(--eixo-text)">Mais detalhes</span>
+                                    <span className="block text-[13px] text-(--eixo-text-muted)">Finalidade e observações — pode preencher depois</span>
                                 </span>
-                                <span className="text-xl font-bold text-[var(--eixo-text-muted)]">{detailsOpen ? '−' : '+'}</span>
+                                <span className="text-xl font-bold text-(--eixo-text-muted)">{detailsOpen ? '−' : '+'}</span>
                             </button>
                             {detailsOpen && (
                                 <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
@@ -399,7 +399,7 @@ const NewLotForm: React.FC<NewLotFormProps> = ({ farmId, herdType, animals, lots
                                     </div>
                                     <div>
                                         <label className={labelClass}>Observações</label>
-                                        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full rounded-xl border border-[var(--eixo-border-strong)] px-3 py-2 text-sm focus:border-[var(--eixo-green)] focus:outline-none" />
+                                        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full rounded-xl border border-(--eixo-border-strong) px-3 py-2 text-sm focus:border-(--eixo-green) focus:outline-hidden" />
                                     </div>
                                 </div>
                             )}
@@ -424,7 +424,7 @@ const NewLotForm: React.FC<NewLotFormProps> = ({ farmId, herdType, animals, lots
                                 ].map(([label, value, highlight]) => (
                                     <div key={String(label)} className="rounded-xl bg-white/10 p-3">
                                         <p className="text-xs text-white/60">{label}</p>
-                                        <p className={`text-lg font-extrabold ${highlight ? 'text-[var(--eixo-green)]' : ''}`}>{value}</p>
+                                        <p className={`text-lg font-extrabold ${highlight ? 'text-(--eixo-green)' : ''}`}>{value}</p>
                                     </div>
                                 ))}
                             </div>
@@ -439,9 +439,9 @@ const NewLotForm: React.FC<NewLotFormProps> = ({ farmId, herdType, animals, lots
                                 </div>
                             )}
                         </div>
-                        <div className="space-y-2 rounded-2xl bg-[var(--eixo-surface)] p-5">
-                            <p className="text-sm font-extrabold text-[var(--eixo-text)]">Por que pedimos isso?</p>
-                            <p className="text-[13px] leading-relaxed text-[var(--eixo-text-muted)]">
+                        <div className="space-y-2 rounded-2xl bg-(--eixo-surface) p-5">
+                            <p className="text-sm font-extrabold text-(--eixo-text)">Por que pedimos isso?</p>
+                            <p className="text-[13px] leading-relaxed text-(--eixo-text-muted)">
                                 Com fase, peso de entrada e meta, o ganho de peso sai certo por lote — sem média falsa do rebanho inteiro.
                             </p>
                         </div>

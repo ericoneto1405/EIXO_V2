@@ -1,304 +1,84 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { buildApiUrl } from '../api';
 import type { Farm } from '../types';
-
-// ─── Tipos ────────────────────────────────────────────────────────────────────
+import { listAnimals } from '../adapters/herdApi';
+import ProgressGuide, { guideButtonClass } from './ProgressGuide';
+import { GuideNavigation, hasFarmWeighings, initialDoneKey, readFlag, writeFlag, useGuideCollapsed, useGuideData } from './progressGuideState';
 
 interface OnboardingChecklistProps {
     userId: string;
     farmId: string | null;
     farms: Farm[];
-    onNavigate: (view: string, options?: { herdTab?: 'animals' | 'weighings'; openAnimalForm?: boolean; openImportModal?: boolean }) => void;
+    onNavigate: GuideNavigation;
     onboardingCompletedAt?: string | null;
+    canEditAnimals: boolean;
+    canNavigateHerd: boolean;
+    canManageFarms: boolean;
 }
 
-interface StepState {
-    farm: boolean;
-    paddocks: boolean;
-    animals: boolean;
-    weighings: boolean;
-}
-
-const STEP_KEYS: (keyof StepState)[] = ['farm', 'paddocks', 'animals', 'weighings'];
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const dismissedKey = (userId: string) => `eixo_onboarding_dismissed_${userId}`;
-const permanentDoneKey = (userId: string) => `eixo_onboarding_done_${userId}`;
-const DISMISS_TTL_MS = 24 * 60 * 60 * 1000; // 24h
-
-const isDismissedTemporarily = (userId: string) => {
-    try {
-        const raw = localStorage.getItem(dismissedKey(userId));
-        if (!raw) return false;
-        const dismissedAt = Number(raw);
-        if (!Number.isFinite(dismissedAt)) return false;
-        if (Date.now() - dismissedAt > DISMISS_TTL_MS) {
-            localStorage.removeItem(dismissedKey(userId));
-            return false;
+const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ userId, farmId, farms, onNavigate, onboardingCompletedAt, canEditAnimals, canNavigateHerd, canManageFarms }) => {
+    const selectedFarm = farms.find((farm) => farm.id === farmId);
+    const [collapsed, setCollapsed] = useGuideCollapsed(userId, farmId, 'initial');
+    const [confirmedUser, setConfirmedUser] = useState<string | null>(null);
+    const [saving, setSaving] = useState(false);
+    const [saveError, setSaveError] = useState(false);
+    const context = JSON.stringify([userId, farmId]);
+    const currentContext = useRef(context);
+    currentContext.current = context;
+    const mounted = useRef(true);
+    const savingRef = useRef(false);
+    useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+    useEffect(() => { setSaveError(false); }, [context]);
+    const completed = Boolean(onboardingCompletedAt) || confirmedUser === userId || readFlag(initialDoneKey(userId));
+    const load = useCallback(async () => {
+        if (completed || !farmId) return { animals: false, weighings: false };
+        const [animals, weighings] = await Promise.all([listAnimals(farmId, 'COMMERCIAL'), hasFarmWeighings(farmId)]);
+        return { animals: animals.length > 0, weighings };
+    }, [farmId, completed]);
+    const { data, loading, error, retry } = useGuideData(context, load, ['eixo:herd-onboarding-progress-changed']);
+    const steps = [
+        { title: 'Cadastre a fazenda', description: 'Registre o nome, localização e tamanho da propriedade.', done: Boolean(selectedFarm) },
+        { title: 'Cadastre os pastos', description: 'Organize a lotação e o manejo da fazenda selecionada.', done: (selectedFarm?.paddocks?.length ?? 0) > 0 },
+        { title: 'Cadastre ou importe os animais', description: 'Monte o rebanho inicial da fazenda selecionada.', done: Boolean(data?.animals) },
+        { title: 'Registre a primeira pesagem', description: 'Comece a acompanhar o desempenho do rebanho.', done: Boolean(data?.weighings) },
+    ];
+    const allDone = Boolean(data) && steps.every((step) => step.done);
+    const pending = steps.findIndex((step) => !step.done);
+    const confirm = async () => {
+        if (savingRef.current || !allDone || loading || error) return;
+        savingRef.current = true;
+        setSaving(true);
+        setSaveError(false);
+        const requestContext = context;
+        try {
+            const response = await fetch(buildApiUrl('/auth/me/onboarding'), { method: 'PATCH', credentials: 'include' });
+            if (!response.ok) throw new Error('Falha ao concluir.');
+            // Só persistir uma confirmação que ainda pertence ao usuário/contexto ativo.
+            if (mounted.current && currentContext.current === requestContext) {
+                writeFlag(initialDoneKey(userId), true);
+                setConfirmedUser(userId);
+            }
+        } catch {
+            if (mounted.current && currentContext.current === requestContext) setSaveError(true);
+        } finally {
+            savingRef.current = false;
+            if (mounted.current) setSaving(false);
         }
-        return true;
-    } catch {
-        return false;
-    }
-};
-
-const isPermanentlyDone = (userId: string) => {
-    try { return localStorage.getItem(permanentDoneKey(userId)) === '1'; } catch { return false; }
-};
-
-const markPermanentlyDone = (userId: string) => {
-    try { localStorage.setItem(permanentDoneKey(userId), '1'); } catch { /* silencioso */ }
-};
-
-const dismissTemporarily = (userId: string) => {
-    try {
-        localStorage.setItem(dismissedKey(userId), String(Date.now()));
-    } catch { /* silencioso */ }
-};
-
-// ─── Componente ───────────────────────────────────────────────────────────────
-
-const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({
-    userId,
-    farmId,
-    farms,
-    onNavigate,
-    onboardingCompletedAt,
-}) => {
-    const [steps, setSteps] = useState<StepState>({ farm: false, paddocks: false, animals: false, weighings: false });
-    const [loading, setLoading] = useState(true);
-    const [visible, setVisible] = useState(true);
-    const [allDone, setAllDone] = useState(false);
-    const [refreshKey, setRefreshKey] = useState(0);
-    const [justCompleted, setJustCompleted] = useState<Set<keyof StepState>>(new Set());
-    const prevStepsRef = useRef<StepState | null>(null);
-
-    useEffect(() => {
-        const refreshProgress = () => setRefreshKey((current) => current + 1);
-        window.addEventListener('eixo:herd-onboarding-progress-changed', refreshProgress);
-        return () => window.removeEventListener('eixo:herd-onboarding-progress-changed', refreshProgress);
-    }, []);
-
-    useEffect(() => {
-        // Guards dentro do effect — hooks sempre chamados, early return só no callback
-        if (!visible || !!onboardingCompletedAt || isPermanentlyDone(userId)) return;
-        if (isDismissedTemporarily(userId)) { setVisible(false); return; }
-
-        const check = async () => {
-            setLoading(true);
-            const hasFarm = farms.length > 0;
-            const selectedFarm = farms.find((farm) => farm.id === farmId);
-            const hasPaddocks = (selectedFarm?.paddocks?.length ?? 0) > 0;
-            const farmDone = hasFarm;
-            const paddocksDone = hasPaddocks;
-            let animalsDone = false;
-            let weighingsDone = false;
-
-            if (farmId) {
-                try {
-                    const [aRes, wRes] = await Promise.all([
-                        fetch(buildApiUrl(`/animals?farmId=${farmId}&limit=1`), { credentials: 'include' }),
-                        fetch(buildApiUrl(`/farms/${farmId}/weighings?limit=1`), { credentials: 'include' }),
-                    ]);
-                    const [aData, wData] = await Promise.all([
-                        aRes.json().catch(() => ({})),
-                        wRes.json().catch(() => ({})),
-                    ]);
-                    animalsDone = (aData?.total ?? aData?.animals?.length ?? 0) > 0;
-                    weighingsDone = (wData?.total ?? wData?.weighings?.length ?? 0) > 0;
-                } catch { /* silencioso */ }
-            }
-
-            const next = { farm: farmDone, paddocks: paddocksDone, animals: animalsDone, weighings: weighingsDone };
-            const prev = prevStepsRef.current;
-            if (prev) {
-                const newlyDone = STEP_KEYS.filter((key) => !prev[key] && next[key]);
-                if (newlyDone.length > 0) {
-                    setJustCompleted((current) => new Set([...current, ...newlyDone]));
-                    newlyDone.forEach((key) => {
-                        setTimeout(() => {
-                            setJustCompleted((current) => {
-                                const copy = new Set(current);
-                                copy.delete(key);
-                                return copy;
-                            });
-                        }, 1200);
-                    });
-                }
-            }
-            prevStepsRef.current = next;
-            setSteps(next);
-            setLoading(false);
-
-            if (next.farm && next.paddocks && next.animals && next.weighings) {
-                setAllDone(true);
-                setTimeout(() => setVisible(false), 2500);
-                markPermanentlyDone(userId);
-                fetch(buildApiUrl('/auth/me/onboarding'), {
-                    method: 'PATCH',
-                    credentials: 'include',
-                }).catch(() => { /* silencioso */ });
-            }
-        };
-
-        check();
-    }, [userId, farmId, farms, visible, onboardingCompletedAt, refreshKey]);
-
-    if (!visible || !!onboardingCompletedAt || isPermanentlyDone(userId)) return null;
-
-    const handleDismiss = () => {
-        dismissTemporarily(userId);
-        setVisible(false);
     };
-
-    const completedCount = Object.values(steps).filter(Boolean).length;
-
-    const nextAction = !steps.farm
-        ? { label: 'Cadastrar fazenda', onClick: () => onNavigate('Fazendas') }
-        : !steps.paddocks
-            ? { label: 'Cadastrar pastos', onClick: () => onNavigate('Fazendas') }
-            : !steps.animals
-                ? { label: 'Importar Rebanho para o EIXO', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'animals', openImportModal: true }) }
-                : { label: 'Registrar pesagem', onClick: () => onNavigate('Rebanho Comercial', { herdTab: 'weighings' }) };
-
-    return (
-        <div className="mb-6 rounded-2xl border-2 border-[#B6E23A] bg-[var(--eixo-surface)] shadow-sm transition-all duration-200 hover:shadow-md">
-            {/* Cabeçalho */}
-            <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-4">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--eixo-green-soft)]">
-                        <svg className="h-5 w-5 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                        </svg>
-                    </div>
-                    <div>
-                        {allDone ? (
-                            <div className="flex items-center gap-2">
-                                <svg className="h-5 w-5 flex-shrink-0 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4.5 12.75l4 4 7-7M9 12.75l2 2 4-4" />
-                                </svg>
-                                <p className="text-sm font-semibold text-[var(--eixo-text)]">
-                                    Base inicial configurada. Agora você já pode operar o rebanho e acompanhar o desempenho.
-                                </p>
-                            </div>
-                        ) : (
-                            <>
-                                <p className="text-sm font-semibold text-[var(--eixo-text)]">
-                                    Primeiros passos — {completedCount} de 4 concluídos
-                                </p>
-                                <p className="text-xs text-[var(--eixo-text-muted)]">
-                                    Conclua a estrutura e a base do manejo da fazenda selecionada.
-                                </p>
-                            </>
-                        )}
-                    </div>
-                </div>
-                <button
-                    onClick={handleDismiss}
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#a8a29e] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text-muted)]"
-                    aria-label="Dispensar guia"
-                >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-
-            {/* Barra de progresso */}
-            <div className="grid grid-cols-4 gap-1.5 border-b border-[var(--eixo-border)] px-5 py-3">
-                {STEP_KEYS.map((key, index) => {
-                    const done = steps[key];
-                    const isCurrent = !done && STEP_KEYS.slice(0, index).every((k) => steps[k]);
-                    const glow = justCompleted.has(key);
-                    return (
-                        <div key={key} className="flex flex-col items-center gap-1">
-                            <span
-                                className={`text-[10px] font-bold ${
-                                    done || isCurrent ? 'text-[var(--eixo-green-dark)]' : 'text-[var(--eixo-text-soft)]'
-                                }`}
-                            >
-                                {index + 1}
-                            </span>
-                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--eixo-surface-soft)]">
-                                <div
-                                    className={`h-full rounded-full transition-all duration-500 ease-out ${
-                                        done
-                                            ? `w-full bg-[var(--eixo-green)] ${glow ? 'shadow-[0_0_8px_rgba(182,226,58,0.7)]' : ''}`
-                                            : isCurrent
-                                                ? 'w-full animate-pulse bg-[var(--eixo-green)] opacity-40'
-                                                : 'w-0'
-                                    }`}
-                                />
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Passos */}
-            {loading ? (
-                <div className="px-5 py-4 text-sm text-[#a8a29e]">Verificando seu progresso…</div>
-            ) : (
-                <div className="divide-y divide-[var(--eixo-surface-soft)] px-5">
-                    <>
-                        <StepRow done={steps.farm} number={1} title="Cadastre a fazenda" description="Registre o nome, localização e tamanho da propriedade." />
-                        <StepRow done={steps.paddocks} number={2} title="Cadastre os pastos" description="Divida a fazenda selecionada em áreas para organizar lotação e manejo." />
-                        <StepRow done={steps.animals} number={3} title="Cadastre ou importe os animais" description="Monte o rebanho inicial da fazenda selecionada." />
-                        <StepRow done={steps.weighings} number={4} title="Registre a primeira pesagem" description="Comece a acompanhar o desempenho do rebanho." />
-                    </>
-                </div>
-            )}
-            {!loading && !allDone && nextAction.onClick && (
-                <div className="border-t border-[var(--eixo-border)] px-5 py-4">
-                    <button
-                        type="button"
-                        onClick={nextAction.onClick}
-                        className="rounded-xl border-2 border-[#5a8c00] bg-[#B6E23A] px-3.5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130]"
-                    >
-                        {nextAction.label}
-                    </button>
-                </div>
-            )}
-        </div>
-    );
+    if (completed) return null;
+    return <ProgressGuide key={context} requiresConfirmation title="Primeiros passos" description="Aprenda o fluxo usando a fazenda selecionada. Este guia é concluído uma vez por usuário." farmName={selectedFarm?.name} steps={steps} loading={loading} error={error} hasData={Boolean(data)} collapsed={collapsed} onCollapse={setCollapsed} onRetry={retry}>
+        {allDone ? <>
+            {saveError && <p role="alert" className="mb-3 text-sm text-(--eixo-danger)">Não foi possível salvar a conclusão. Seus passos foram preservados.</p>}
+            <button type="button" disabled={saving} onClick={confirm} className={guideButtonClass}>{saving ? 'Salvando conclusão…' : saveError ? 'Tentar salvar conclusão novamente' : 'Concluir primeiros passos'}</button>
+        </> : farmId ? <div className="flex flex-wrap items-center gap-3">
+            {(pending === 0 || pending === 1) && canManageFarms && <button type="button" className={guideButtonClass} onClick={() => onNavigate('Fazendas')}>{pending === 0 ? 'Cadastrar fazenda' : 'Cadastrar pastos'}</button>}
+            {pending === 2 && canNavigateHerd && canEditAnimals && <>
+                <button type="button" className={guideButtonClass} onClick={() => onNavigate('Rebanho Comercial', { herdTab: 'animals', openAnimalForm: true })}>Cadastrar animais</button>
+                <button type="button" className="rounded-xl border border-(--eixo-border) px-3.5 py-2 text-sm font-semibold focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-(--eixo-green-dark)" onClick={() => onNavigate('Rebanho Comercial', { herdTab: 'animals', openImportModal: true })}>Importar animais</button>
+            </>}
+            {pending === 3 && canNavigateHerd && canEditAnimals && <button type="button" className={guideButtonClass} onClick={() => onNavigate('Rebanho Comercial', { herdTab: 'weighings' })}>Registrar pesagem</button>}
+            {((pending < 2 && !canManageFarms) || (pending === 2 && (!canNavigateHerd || !canEditAnimals)) || (pending === 3 && (!canNavigateHerd || !canEditAnimals))) && <p className="text-sm text-(--eixo-text-muted)">Peça a um responsável com acesso para concluir este passo.</p>}
+        </div> : null}
+    </ProgressGuide>;
 };
-
-// ─── StepRow ──────────────────────────────────────────────────────────────────
-
-interface StepRowProps {
-    done: boolean;
-    number: number;
-    title: string;
-    description: string;
-}
-
-const StepRow: React.FC<StepRowProps> = ({ done, number, title, description }) => (
-    <div className="flex items-center gap-4 py-4">
-        {/* Ícone de status */}
-        <div className="flex-shrink-0">
-            {done ? (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--eixo-green)]">
-                    <svg className="h-4 w-4 text-[#1a1a1a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                </div>
-            ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-xs font-bold text-[var(--eixo-text-muted)]">
-                    {number}
-                </div>
-            )}
-        </div>
-
-        {/* Texto */}
-        <div className="flex-1 min-w-0">
-            <p className={`text-sm font-semibold ${done ? 'text-[#a8a29e]' : 'text-[var(--eixo-text)]'}`}>
-                {title}
-            </p>
-            <p className="mt-0.5 text-xs text-[#a8a29e]">{description}</p>
-        </div>
-    </div>
-);
-
 export default OnboardingChecklist;

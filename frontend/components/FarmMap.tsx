@@ -517,12 +517,12 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
     // ── Render ─────────────────────────────────────────────────────────────────
 
     return (
-        <div className={asPage ? 'flex h-full flex-col bg-[var(--eixo-surface-soft)]' : 'fixed inset-0 z-50 flex flex-col bg-[var(--eixo-surface-soft)]'}>
+        <div className={asPage ? 'flex h-full flex-col bg-(--eixo-surface-soft)' : 'fixed inset-0 z-50 flex flex-col bg-(--eixo-surface-soft)'}>
             {/* Header */}
-            <div className="flex items-center justify-between gap-4 border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-3">
+            <div className="flex items-center justify-between gap-4 border-b border-(--eixo-border) bg-(--eixo-surface-soft) px-5 py-3">
                 <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Mapa da Fazenda</p>
-                    <h2 className="text-lg font-bold text-[var(--eixo-text)]">{farm.name}</h2>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-text-muted)">Mapa da Fazenda</p>
+                    <h2 className="text-lg font-bold text-(--eixo-text)">{farm.name}</h2>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -531,7 +531,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                             <button
                                 type="button"
                                 onClick={() => setShowImport(true)}
-                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
+                                className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2 text-xs font-semibold text-(--eixo-text) transition-colors hover:bg-[#ece9e6]"
                             >
                                 Tenho o arquivo do mapa
                             </button>
@@ -539,7 +539,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                 type="button"
                                 onClick={handleSave}
                                 disabled={isSaving}
-                                className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:bg-[var(--eixo-border-strong)]"
+                                className="rounded-xl bg-(--eixo-green) px-4 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) disabled:bg-(--eixo-border-strong)"
                             >
                                 {isSaving ? 'Salvando...' : 'Salvar geometrias'}
                             </button>
@@ -551,8 +551,8 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                         onClick={() => { setEditMode((v) => !v); setSaveError(null); setSaveSuccess(null); }}
                         className={`rounded-xl border px-4 py-2 text-xs font-semibold transition-colors ${
                             editMode
-                                ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)] text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]'
-                                : 'border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] hover:bg-[#ece9e6]'
+                                ? 'border-(--eixo-green) bg-(--eixo-green) text-[#1a1a1a] hover:bg-(--eixo-green-dark)'
+                                : 'border-(--eixo-border) bg-(--eixo-surface-soft) text-(--eixo-text) hover:bg-[#ece9e6]'
                         }`}
                     >
                         {editMode ? 'Modo Edição Ativo' : 'Editar Geometrias'}
@@ -563,7 +563,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                             type="button"
                             onClick={onClose}
                             aria-label="Fechar mapa"
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-2 text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6]"
+                            className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-2 text-(--eixo-text) transition-colors hover:bg-[#ece9e6]"
                         >
                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -575,40 +575,40 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
 
             {/* Status messages */}
             {(saveError || saveSuccess) && (
-                <div className={`px-5 py-2 text-sm font-medium ${saveError ? 'bg-[#fff2ef] text-[var(--eixo-danger)]' : 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]'}`}>
+                <div className={`px-5 py-2 text-sm font-medium ${saveError ? 'bg-[#fff2ef] text-(--eixo-danger)' : 'bg-(--eixo-green-soft) text-(--eixo-success)'}`}>
                     {saveError ?? saveSuccess}
                 </div>
             )}
 
             {/* Buscar cidade / endereço */}
-            <div className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-3">
+            <div className="border-b border-(--eixo-border) bg-(--eixo-surface-soft) px-5 py-3">
                 <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2">
                     <input
                         type="text"
                         value={searchTerm}
                         onChange={(e) => { setSearchTerm(e.target.value); setSearchError(null); }}
                         placeholder="Buscar cidade ou endereço — ex.: Feira de Santana, BA"
-                        className="min-w-[260px] flex-1 rounded-xl border border-[var(--eixo-border)] bg-[#ffffff] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                        className="min-w-[260px] flex-1 rounded-xl border border-(--eixo-border) bg-surface px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden"
                     />
                     <button
                         type="submit"
                         disabled={searching || searchCooldown || searchTerm.trim().length < 3}
-                        className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-xs font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[#ece9e6] disabled:opacity-50"
+                        className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2 text-xs font-semibold text-(--eixo-text) transition-colors hover:bg-[#ece9e6] disabled:opacity-50"
                     >
                         {searching ? 'Buscando...' : searchCooldown ? 'Aguarde...' : 'Buscar no mapa'}
                     </button>
                 </form>
 
-                {searchError && <p className="mt-2 text-xs text-[var(--eixo-danger)]">{searchError}</p>}
+                {searchError && <p className="mt-2 text-xs text-(--eixo-danger)">{searchError}</p>}
 
                 {searchResults.length > 0 && (
-                    <ul className="mt-2 divide-y divide-[var(--eixo-border)] overflow-hidden rounded-xl border border-[var(--eixo-border)] bg-[#ffffff]">
+                    <ul className="mt-2 divide-y divide-(--eixo-border) overflow-hidden rounded-xl border border-(--eixo-border) bg-surface">
                         {searchResults.map((result) => (
                             <li key={`${result.lat}-${result.lng}`}>
                                 <button
                                     type="button"
                                     onClick={() => goToResult(result)}
-                                    className="w-full px-3 py-2 text-left text-xs text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-green-soft)]"
+                                    className="w-full px-3 py-2 text-left text-xs text-(--eixo-text) transition-colors hover:bg-(--eixo-green-soft)"
                                 >
                                     {result.label}
                                 </button>
@@ -620,7 +620,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
 
             {/* Barra de ferramentas em português + instrução */}
             {editMode && (
-                <div className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-3">
+                <div className="border-b border-(--eixo-border) bg-(--eixo-surface-soft) px-5 py-3">
                     <div className="flex flex-wrap items-center gap-2">
                         {([
                             { id: 'draw', label: 'Desenhar contorno' },
@@ -635,8 +635,8 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                 disabled={!hasPaddocks}
                                 className={`rounded-xl border px-3 py-2 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                                     activeTool === tool.id
-                                        ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)] text-[#1a1a1a]'
-                                        : 'border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] hover:bg-[#ece9e6]'
+                                        ? 'border-(--eixo-green) bg-(--eixo-green) text-[#1a1a1a]'
+                                        : 'border-(--eixo-border) bg-(--eixo-surface-soft) text-(--eixo-text) hover:bg-[#ece9e6]'
                                 }`}
                             >
                                 {tool.label}
@@ -646,16 +646,16 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                             <button
                                 type="button"
                                 onClick={() => applyTool('none')}
-                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[#ece9e6]"
+                                className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2 text-xs font-semibold text-(--eixo-text-muted) transition-colors hover:bg-[#ece9e6]"
                             >
                                 Parar
                             </button>
                         )}
                     </div>
-                    <p className={`mt-2 text-xs ${hasPaddocks ? 'text-[var(--eixo-text-muted)]' : 'font-semibold text-[var(--eixo-danger)]'}`}>
+                    <p className={`mt-2 text-xs ${hasPaddocks ? 'text-(--eixo-text-muted)' : 'font-semibold text-(--eixo-danger)'}`}>
                         {hasPaddocks ? toolHint[activeTool] : noPaddockWarning}
                         {activeTool === 'draw' && liveAreaHa !== null && (
-                            <span className="ml-2 font-semibold text-[var(--eixo-text)]">Área até aqui: {formatHa(liveAreaHa)}</span>
+                            <span className="ml-2 font-semibold text-(--eixo-text)">Área até aqui: {formatHa(liveAreaHa)}</span>
                         )}
                     </p>
                 </div>
@@ -738,13 +738,13 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
 
                 {/* Paddock info sidebar */}
                 {selectedPaddock && (
-                    <div className="absolute right-0 top-0 z-[1000] h-full w-72 overflow-y-auto border-l border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] shadow-lg">
-                        <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-4 py-3">
-                            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Divisão</span>
+                    <div className="absolute right-0 top-0 z-1000 h-full w-72 overflow-y-auto border-l border-(--eixo-border) bg-(--eixo-surface-soft) shadow-lg">
+                        <div className="flex items-center justify-between border-b border-(--eixo-border) px-4 py-3">
+                            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-text-muted)">Divisão</span>
                             <button
                                 type="button"
                                 onClick={() => setSelectedPaddock(null)}
-                                className="rounded-lg p-1 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                                className="rounded-lg p-1 text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft)"
                             >
                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -754,11 +754,11 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
 
                         <div className="space-y-4 p-4">
                             <div>
-                                <h3 className="text-base font-bold text-[var(--eixo-text)]">{selectedPaddock.name}</h3>
-                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)] capitalize">{selectedPaddock.divisionType ?? 'Pasto'}</p>
+                                <h3 className="text-base font-bold text-(--eixo-text)">{selectedPaddock.name}</h3>
+                                <p className="mt-0.5 text-xs text-(--eixo-text-muted) capitalize">{selectedPaddock.divisionType ?? 'Pasto'}</p>
                             </div>
 
-                            <div className="space-y-2 rounded-[16px] border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
+                            <div className="space-y-2 rounded-[16px] border border-(--eixo-border) bg-(--eixo-surface-soft) p-3">
                                 <InfoRow label="Área" value={selectedPaddock.areaHa != null ? `${selectedPaddock.areaHa.toFixed(2)} ha` : '—'} />
                                 <InfoRow label="Capacidade" value={selectedPaddock.capacity != null ? `${selectedPaddock.capacity} UA` : '—'} />
                             </div>
@@ -766,11 +766,11 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                             {(() => {
                                 const s = getSummary(selectedPaddock.id);
                                 if (!s) return (
-                                    <p className="text-xs text-[var(--eixo-text-muted)]">Carregando dados de lotação...</p>
+                                    <p className="text-xs text-(--eixo-text-muted)">Carregando dados de lotação...</p>
                                 );
                                 return (
-                                    <div className="space-y-2 rounded-[16px] border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-                                        <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">Lotação atual</p>
+                                    <div className="space-y-2 rounded-[16px] border border-(--eixo-border) bg-(--eixo-surface-soft) p-3">
+                                        <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-(--eixo-text-muted)">Lotação atual</p>
                                         <InfoRow label="Animais comerciais" value={String(s.animalCount)} />
                                         <InfoRow label="Animais P.O." value={String(s.poAnimalCount)} />
                                         <InfoRow label="Total de animais" value={String(s.totalAnimals)} />
@@ -788,7 +788,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                             })()}
 
                             {!paddockGeometries[selectedPaddock.id] && editMode && (
-                                <p className="rounded-xl border border-[var(--eixo-border)] bg-[#ffffff] p-3 text-xs text-[var(--eixo-text-muted)]">
+                                <p className="rounded-xl border border-(--eixo-border) bg-surface p-3 text-xs text-(--eixo-text-muted)">
                                     Nenhum polígono desenhado para esta divisão. Use as ferramentas do mapa para criar um.
                                 </p>
                             )}
@@ -798,16 +798,16 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
 
                 {/* Pending layer assignment dialog */}
                 {pendingLayer && (
-                    <div className="absolute inset-0 z-[2000] flex items-center justify-center bg-black/30">
-                        <div className="w-80 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-6 shadow-2xl">
-                            <h3 className="mb-1 text-base font-bold text-[var(--eixo-text)]">Associar polígono</h3>
-                            <p className="mb-2 text-sm text-[var(--eixo-text-muted)]">
+                    <div className="absolute inset-0 z-2000 flex items-center justify-center bg-black/30">
+                        <div className="w-80 rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface-soft) p-6 shadow-2xl">
+                            <h3 className="mb-1 text-base font-bold text-(--eixo-text)">Associar polígono</h3>
+                            <p className="mb-2 text-sm text-(--eixo-text-muted)">
                                 {hasPaddocks ? 'A qual divisão este polígono pertence?' : noPaddockWarning}
                             </p>
                             {(() => {
                                 const ha = geometryAreaHa(pendingLayer.geojson.geometry as Geometry);
                                 return ha === null ? null : (
-                                    <p className="mb-4 rounded-xl bg-[var(--eixo-green-soft)] px-3 py-2 text-sm font-semibold text-[var(--eixo-text)]">
+                                    <p className="mb-4 rounded-xl bg-(--eixo-green-soft) px-3 py-2 text-sm font-semibold text-(--eixo-text)">
                                         Área desenhada: {formatHa(ha)}
                                     </p>
                                 );
@@ -816,7 +816,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                             <select
                                 value={pendingAssignPaddockId}
                                 onChange={(e) => setPendingAssignPaddockId(e.target.value)}
-                                className="mb-4 mt-1 block w-full rounded-xl border border-[var(--eixo-border)] bg-[#ffffff] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                className="mb-4 mt-1 block w-full rounded-xl border border-(--eixo-border) bg-surface px-3 py-2.5 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden"
                             >
                                 {activePaddocks.map((p) => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
@@ -827,7 +827,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                 <button
                                     type="button"
                                     onClick={cancelPendingLayer}
-                                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[#ece9e6]"
+                                    className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2 text-sm font-semibold text-(--eixo-text) hover:bg-[#ece9e6]"
                                 >
                                     {hasPaddocks ? 'Cancelar' : 'Entendi'}
                                 </button>
@@ -835,7 +835,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                     type="button"
                                     onClick={confirmPendingLayer}
                                     disabled={!hasPaddocks || !pendingAssignPaddockId}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-border-strong)]"
+                                    className="rounded-xl bg-(--eixo-green) px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-(--eixo-green-dark) disabled:cursor-not-allowed disabled:bg-(--eixo-border-strong)"
                                 >
                                     Confirmar
                                 </button>
@@ -846,13 +846,13 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
             </div>
 
             {/* Legend */}
-            <div className="flex items-center gap-4 border-t border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-5 py-2">
-                <span className="text-xs font-semibold text-[var(--eixo-text-muted)]">Legenda:</span>
+            <div className="flex items-center gap-4 border-t border-(--eixo-border) bg-(--eixo-surface-soft) px-5 py-2">
+                <span className="text-xs font-semibold text-(--eixo-text-muted)">Legenda:</span>
                 <LegendItem color="var(--eixo-green)" label="Pasto" />
                 <LegendItem color="#d97706" label="Curral de manejo" />
                 <LegendItem color="var(--eixo-success)" label="Área de preservação" />
                 {!hasPaddocksWithGeometry && (
-                    <span className="ml-auto text-xs text-[var(--eixo-text-muted)]">
+                    <span className="ml-auto text-xs text-(--eixo-text-muted)">
                         {editMode
                             ? 'Use os botões acima do mapa para desenhar as áreas.'
                             : 'Nenhum polígono cadastrado. Ative "Editar Geometrias" para começar.'}
@@ -862,19 +862,19 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
 
             {/* Import modal */}
             {showImport && (
-                <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/40 p-4">
-                    <div className="w-full max-w-lg rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-6 shadow-2xl">
-                        <h3 className="mb-1 text-lg font-bold text-[var(--eixo-text)]">Importar geometrias</h3>
-                        <p className="mb-4 text-sm text-[var(--eixo-text-muted)]">
+                <div className="fixed inset-0 z-3000 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-lg rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface-soft) p-6 shadow-2xl">
+                        <h3 className="mb-1 text-lg font-bold text-(--eixo-text)">Importar geometrias</h3>
+                        <p className="mb-4 text-sm text-(--eixo-text-muted)">
                             Selecione um arquivo <strong>.kml</strong>, <strong>.kmz</strong> ou <strong>.geojson</strong> com os polígonos das divisões da fazenda (ex.: exportado do CAR).
                         </p>
 
-                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-[16px] border-2 border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] py-8 transition-colors hover:bg-[#ece9e6]">
-                            <svg className="mb-2 h-8 w-8 text-[var(--eixo-text)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <label className="flex cursor-pointer flex-col items-center justify-center rounded-[16px] border-2 border-dashed border-(--eixo-border) bg-(--eixo-surface-soft) py-8 transition-colors hover:bg-[#ece9e6]">
+                            <svg className="mb-2 h-8 w-8 text-(--eixo-text)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                             </svg>
-                            <span className="text-sm font-semibold text-[var(--eixo-text)]">Clique para selecionar o arquivo</span>
-                            <span className="mt-1 text-xs text-[var(--eixo-text-muted)]">KML, KMZ ou GeoJSON</span>
+                            <span className="text-sm font-semibold text-(--eixo-text)">Clique para selecionar o arquivo</span>
+                            <span className="mt-1 text-xs text-(--eixo-text-muted)">KML, KMZ ou GeoJSON</span>
                             <input
                                 ref={fileInputRef}
                                 type="file"
@@ -885,18 +885,18 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                         </label>
 
                         {importError && (
-                            <p className="mt-3 text-sm text-[var(--eixo-danger)]">{importError}</p>
+                            <p className="mt-3 text-sm text-(--eixo-danger)">{importError}</p>
                         )}
 
                         {importedFeatures.length > 0 && (
                             <div className="mt-4 space-y-3">
-                                <p className="text-sm font-semibold text-[var(--eixo-text)]">
+                                <p className="text-sm font-semibold text-(--eixo-text)">
                                     {importedFeatures.length} polígono(s) encontrado(s). Associe cada um a uma divisão:
                                 </p>
                                 <div className="max-h-48 space-y-2 overflow-y-auto">
                                     {importedFeatures.map((item, i) => (
-                                        <div key={i} className="flex items-center gap-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2">
-                                            <span className="min-w-0 flex-1 truncate text-xs text-[var(--eixo-text)]">
+                                        <div key={i} className="flex items-center gap-3 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2">
+                                            <span className="min-w-0 flex-1 truncate text-xs text-(--eixo-text)">
                                                 {(item.feature.properties?.name as string) ?? `Polígono ${i + 1}`}
                                             </span>
                                             <select
@@ -906,7 +906,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                                     updated[i] = { ...item, assignedPaddockId: e.target.value };
                                                     setImportedFeatures(updated);
                                                 }}
-                                                className="block w-36 rounded-xl border border-[var(--eixo-border)] bg-[#ffffff] px-2 py-1.5 text-xs text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none"
+                                                className="block w-36 rounded-xl border border-(--eixo-border) bg-surface px-2 py-1.5 text-xs text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden"
                                             >
                                                 <option value="">— ignorar —</option>
                                                 {activePaddocks.map((p) => (
@@ -923,7 +923,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                             <button
                                 type="button"
                                 onClick={() => { setShowImport(false); setImportedFeatures([]); setImportError(null); }}
-                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[#ece9e6]"
+                                className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2 text-sm font-semibold text-(--eixo-text) hover:bg-[#ece9e6]"
                             >
                                 Cancelar
                             </button>
@@ -931,7 +931,7 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
                                 <button
                                     type="button"
                                     onClick={confirmImport}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]"
+                                    className="rounded-xl bg-(--eixo-green) px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-(--eixo-green-dark)"
                                 >
                                     Aplicar geometrias
                                 </button>
@@ -948,15 +948,15 @@ const FarmMap: React.FC<FarmMapProps> = ({ farm, onClose, onGeometrySaved, asPag
 
 const InfoRow: React.FC<{ label: string; value: string; highlight?: boolean }> = ({ label, value, highlight }) => (
     <div className="flex items-center justify-between text-sm">
-        <span className="text-[var(--eixo-text-muted)]">{label}</span>
-        <span className={`font-semibold ${highlight ? 'text-[var(--eixo-text)]' : 'text-[var(--eixo-text)]'}`}>{value}</span>
+        <span className="text-(--eixo-text-muted)">{label}</span>
+        <span className={`font-semibold ${highlight ? 'text-(--eixo-text)' : 'text-(--eixo-text)'}`}>{value}</span>
     </div>
 );
 
 const LegendItem: React.FC<{ color: string; label: string }> = ({ color, label }) => (
     <div className="flex items-center gap-1.5">
-        <span className="h-3 w-4 rounded-sm border opacity-80" style={{ backgroundColor: color, borderColor: color }} />
-        <span className="text-xs text-[var(--eixo-text-muted)]">{label}</span>
+        <span className="h-3 w-4 rounded-xs border opacity-80" style={{ backgroundColor: color, borderColor: color }} />
+        <span className="text-xs text-(--eixo-text-muted)">{label}</span>
     </div>
 );
 

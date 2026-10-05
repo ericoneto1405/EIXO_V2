@@ -7,33 +7,33 @@ interface SanidadeStatusProps {
 }
 
 const COR: Record<Semaforo, { dot: string; texto: string; label: string }> = {
-    VERDE: { dot: 'bg-[var(--eixo-success)]', texto: 'text-[var(--eixo-success)]', label: 'Em dia' },
+    VERDE: { dot: 'bg-(--eixo-success)', texto: 'text-(--eixo-success)', label: 'Em dia' },
     AMARELO: { dot: 'bg-amber-400', texto: 'text-amber-700', label: 'Atenção' },
-    VERMELHO: { dot: 'bg-[var(--eixo-danger)]', texto: 'text-[var(--eixo-danger)]', label: 'Pendente' },
-    CINZA: { dot: 'bg-[var(--eixo-text-muted)]', texto: 'text-[var(--eixo-text-muted)]', label: 'Não se aplica' },
+    VERMELHO: { dot: 'bg-(--eixo-danger)', texto: 'text-(--eixo-danger)', label: 'Pendente' },
+    CINZA: { dot: 'bg-(--eixo-text-muted)', texto: 'text-(--eixo-text-muted)', label: 'Não se aplica' },
 };
 
 const BORDA: Record<Semaforo, string> = {
     VERDE: 'border-[#b6d4b0]',
     AMARELO: 'border-amber-300',
     VERMELHO: 'border-[#efc2ba]',
-    CINZA: 'border-[var(--eixo-border)]',
+    CINZA: 'border-(--eixo-border)',
 };
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)';
 const hoje = () => {
     const now = new Date();
     return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
 
 const Linha: React.FC<{ titulo: string; status: Semaforo; motivos: string[] }> = ({ titulo, status, motivos }) => (
-    <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-3">
+    <div className="rounded-xl bg-(--eixo-surface-soft) p-3">
         <div className="flex items-center gap-2">
             <span className={`h-3 w-3 rounded-full ${COR[status].dot}`} aria-hidden="true" />
-            <span className="text-sm font-bold text-[var(--eixo-text)]">{titulo}</span>
+            <span className="text-sm font-bold text-(--eixo-text)">{titulo}</span>
             <span className={`text-xs font-semibold ${COR[status].texto}`}>{COR[status].label}</span>
         </div>
-        <ul className="mt-1 space-y-0.5 pl-5 text-xs text-[var(--eixo-text-muted)]">
+        <ul className="mt-1 space-y-0.5 pl-5 text-xs text-(--eixo-text-muted)">
             {motivos.map((motivo) => <li key={motivo} className="list-disc">{motivo}</li>)}
         </ul>
     </div>
@@ -77,16 +77,16 @@ const SanidadeStatus: React.FC<SanidadeStatusProps> = ({ farmId, refreshKey = 0 
     const periodos = [situacao.ultimoPeriodoVencido, situacao.periodoAtual];
 
     return (
-        <section className={`rounded-2xl border bg-[var(--eixo-surface)] p-4 ${BORDA[situacao.geral]}`}>
+        <section className={`rounded-2xl border bg-(--eixo-surface) p-4 ${BORDA[situacao.geral]}`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                     <span className={`h-5 w-5 rounded-full ${COR[situacao.geral].dot}`} aria-hidden="true" />
                     <div>
-                        <p className="text-sm font-bold text-[var(--eixo-text)]">Situação sanitária da fazenda: <span className={COR[situacao.geral].texto}>{COR[situacao.geral].label}</span></p>
-                        <p className="text-xs text-[var(--eixo-text-muted)]">{situacao.mensagem}</p>
+                        <p className="text-sm font-bold text-(--eixo-text)">Situação sanitária da fazenda: <span className={COR[situacao.geral].texto}>{COR[situacao.geral].label}</span></p>
+                        <p className="text-xs text-(--eixo-text-muted)">{situacao.mensagem}</p>
                     </div>
                 </div>
-                <button type="button" onClick={() => setAberto(!aberto)} className="rounded-xl border border-[var(--eixo-border)] px-3 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                <button type="button" onClick={() => setAberto(!aberto)} className="rounded-xl border border-(--eixo-border) px-3 py-2 text-sm font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft)">
                     {aberto ? 'Fechar' : 'Registrar comprovação de brucelose'}
                 </button>
             </div>
@@ -95,8 +95,8 @@ const SanidadeStatus: React.FC<SanidadeStatusProps> = ({ farmId, refreshKey = 0 
                 <Linha titulo="Raiva" status={situacao.raiva.status} motivos={situacao.raiva.motivos} />
             </div>
             {aberto && (
-                <form onSubmit={salvar} className="mt-3 grid gap-3 rounded-xl border border-[var(--eixo-border)] p-3 md:grid-cols-4">
-                    <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                <form onSubmit={salvar} className="mt-3 grid gap-3 rounded-xl border border-(--eixo-border) p-3 md:grid-cols-4">
+                    <label className="text-xs font-semibold text-(--eixo-text-muted)">
                         Semestre
                         <select className={inputClass} value={form.period} onChange={(event) => setForm({ ...form, period: event.target.value })}>
                             {periodos.map((item) => (
@@ -106,19 +106,19 @@ const SanidadeStatus: React.FC<SanidadeStatusProps> = ({ farmId, refreshKey = 0 
                             ))}
                         </select>
                     </label>
-                    <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                    <label className="text-xs font-semibold text-(--eixo-text-muted)">
                         Data da entrega
                         <input type="date" max={hoje()} required className={inputClass} value={form.deliveredAt} onChange={(event) => setForm({ ...form, deliveredAt: event.target.value })} />
                     </label>
-                    <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">
+                    <label className="text-xs font-semibold text-(--eixo-text-muted)">
                         Protocolo no {situacao.estado.orgao} (opcional)
                         <input className={inputClass} value={form.protocol} onChange={(event) => setForm({ ...form, protocol: event.target.value })} />
                     </label>
                     <div className="flex items-end">
-                        <button type="submit" disabled={saving} className="w-full rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-sm font-bold text-white disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar'}</button>
+                        <button type="submit" disabled={saving} className="w-full rounded-xl bg-(--eixo-green) px-3 py-2 text-sm font-bold text-white disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar'}</button>
                     </div>
-                    {erro && <p className="text-sm font-semibold text-[var(--eixo-danger)] md:col-span-4">{erro}</p>}
-                    <p className="text-xs text-[var(--eixo-text-muted)] md:col-span-4">O EIXO não envia nada ao órgão: registre aqui depois de entregar a comprovação. Prazos de referência nacional (10/07 e 10/01); confira o calendário do seu estado.</p>
+                    {erro && <p className="text-sm font-semibold text-(--eixo-danger) md:col-span-4">{erro}</p>}
+                    <p className="text-xs text-(--eixo-text-muted) md:col-span-4">O EIXO não envia nada ao órgão: registre aqui depois de entregar a comprovação. Prazos de referência nacional (10/07 e 10/01); confira o calendário do seu estado.</p>
                 </form>
             )}
         </section>

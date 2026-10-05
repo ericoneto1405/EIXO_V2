@@ -75,16 +75,16 @@ const LegalModal: React.FC<LegalModalProps> = ({ doc, onClose }) => {
             onClick={onClose}
         >
             <div
-                className="relative w-full max-w-lg rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
+                className="relative w-full max-w-lg rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
-                    <h3 className="text-base font-bold text-[var(--eixo-text)]">{content.title}</h3>
+                <div className="flex items-center justify-between border-b border-(--eixo-border) px-6 py-4">
+                    <h3 className="text-base font-bold text-(--eixo-text)">{content.title}</h3>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="rounded-lg p-1 text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-green)]"
+                        className="rounded-lg p-1 text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-green)"
                         aria-label="Fechar"
                     >
                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -97,9 +97,9 @@ const LegalModal: React.FC<LegalModalProps> = ({ doc, onClose }) => {
                     {content.body.split('\n\n').map((paragraph, i) => (
                         <p
                             key={i}
-                            className={`text-sm leading-relaxed text-[var(--eixo-text-muted)] ${i > 0 ? 'mt-4' : ''} ${
+                            className={`text-sm leading-relaxed text-(--eixo-text-muted) ${i > 0 ? 'mt-4' : ''} ${
                                 paragraph === paragraph.toUpperCase() && paragraph.length < 40
-                                    ? 'font-semibold text-[var(--eixo-text)]'
+                                    ? 'font-semibold text-(--eixo-text)'
                                     : ''
                             }`}
                         >
@@ -108,11 +108,11 @@ const LegalModal: React.FC<LegalModalProps> = ({ doc, onClose }) => {
                     ))}
                 </div>
                 {/* Footer */}
-                <div className="border-t border-[var(--eixo-border)] px-6 py-4">
+                <div className="border-t border-(--eixo-border) px-6 py-4">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="w-full rounded-2xl bg-[var(--eixo-green)] py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
+                        className="w-full rounded-2xl bg-(--eixo-green) py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark)"
                     >
                         Entendido
                     </button>

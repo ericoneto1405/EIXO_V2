@@ -153,10 +153,10 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
         <>
             <div className="space-y-5">
                 {catLoading ? (
-                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-10 text-center text-sm text-[var(--eixo-text-muted)]">Carregando categorias...</div>
+                    <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-10 text-center text-sm text-(--eixo-text-muted)">Carregando categorias...</div>
                 ) : (
                     <>
-                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-sm">
+                        <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5 shadow-xs">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                                 <div className="w-full max-w-xl">
                                     <label className={labelCls}>Buscar no plano de contas</label>
@@ -167,7 +167,7 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                         placeholder="Busque por tipo, grupo ou categoria"
                                         className={inputCls}
                                     />
-                                    <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
+                                    <p className="mt-2 text-sm text-(--eixo-text-muted)">
                                         {planCategories.length} {planCategories.length === 1 ? 'item encontrado' : 'itens encontrados'} na lista.
                                     </p>
                                 </div>
@@ -175,14 +175,14 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                     <button
                                         type="button"
                                         onClick={() => openCategoryModal('SAIDA', true)}
-                                        className="flex h-10 items-center justify-center rounded-[10px] border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                        className="flex h-10 items-center justify-center rounded-[10px] border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 text-sm font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft)"
                                     >
                                         Novo grupo de despesa
                                     </button>
                                     <button
                                         type="button"
                                         onClick={() => openCategoryModal('SAIDA')}
-                                        className="flex h-10 items-center justify-center rounded-[10px] bg-[var(--eixo-green)] px-4 text-sm font-semibold text-[#1a1a1a] shadow-md transition-colors hover:bg-[var(--eixo-green-dark)]"
+                                        className="flex h-10 items-center justify-center rounded-[10px] bg-(--eixo-green) px-4 text-sm font-semibold text-[#1a1a1a] shadow-md transition-colors hover:bg-(--eixo-green-dark)"
                                     >
                                         <PlusIcon className="h-4 w-4" />
                                         <span className="ml-2">Nova categoria</span>
@@ -191,26 +191,26 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                             </div>
                         </div>
 
-                        <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
-                            <div className="grid grid-cols-[110px_160px_minmax(0,1fr)_110px] gap-3 border-b border-[var(--eixo-border)] bg-[#f1e7d8] px-5 py-3 text-xs font-bold uppercase tracking-[0.14em] text-[#74644e]">
+                        <div className="overflow-hidden rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) shadow-xs">
+                            <div className="grid grid-cols-[110px_160px_minmax(0,1fr)_110px] gap-3 border-b border-(--eixo-border) bg-[#f1e7d8] px-5 py-3 text-xs font-bold uppercase tracking-[0.14em] text-[#74644e]">
                                 <span>Tipo</span>
                                 <span>Grupo</span>
                                 <span>Categoria</span>
                                 <span className="text-right">Origem</span>
                             </div>
                             {planCategories.length === 0 ? (
-                                <div className="px-5 py-8 text-center text-sm text-[var(--eixo-text-muted)]">
+                                <div className="px-5 py-8 text-center text-sm text-(--eixo-text-muted)">
                                     Nenhuma categoria encontrada para a busca informada.
                                 </div>
                             ) : (
                                 planCategories.map((cat, idx) => (
                                     <div
                                         key={cat.id}
-                                        className={`px-5 py-4 ${idx < planCategories.length - 1 ? 'border-b border-[var(--eixo-border)]' : ''}`}
+                                        className={`px-5 py-4 ${idx < planCategories.length - 1 ? 'border-b border-(--eixo-border)' : ''}`}
                                     >
                                         {editingCatId === cat.id ? (
                                             <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-                                                <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-semibold ${cat.type === 'ENTRADA' ? 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' : 'bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]'}`}>
+                                                <span className={`inline-flex w-fit rounded-full px-2.5 py-1 text-[11px] font-semibold ${cat.type === 'ENTRADA' ? 'bg-(--eixo-green-soft) text-(--eixo-success)' : 'bg-[rgba(184,66,50,0.08)] text-(--eixo-danger)'}`}>
                                                     {cat.type === 'ENTRADA' ? 'Entrada' : 'Saída'}
                                                 </span>
                                                 <input
@@ -218,30 +218,30 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                                     value={editingCatGroup}
                                                     onChange={e => setEditingCatGroup(e.target.value)}
                                                     placeholder="Grupo"
-                                                    className="w-full rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:outline-none lg:w-48"
+                                                    className="w-full rounded-lg border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm focus:outline-hidden lg:w-48"
                                                 />
-                                                <select value={editingCashFlowClass} onChange={(e) => setEditingCashFlowClass(e.target.value as CashFlowClass)} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="OPERATING">Operação</option><option value="INVESTING">Investimento</option><option value="FINANCING">Financiamento</option></select>
-                                                <select value={editingResultClass} onChange={(e) => setEditingResultClass(e.target.value as ResultClass | '')} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="">Fora da DRE</option><option value="OPERATING_REVENUE">Receita</option><option value="PRODUCTION_COST">Custo</option><option value="OPERATING_EXPENSE">Despesa</option><option value="FINANCIAL_RESULT">Financeiro</option><option value="OTHER_RESULT">Outros</option></select>
-                                                <select value={editingRecognitionRule} onChange={(e) => setEditingRecognitionRule(e.target.value as RecognitionRule)} className="rounded-lg border border-[var(--eixo-border)] px-2 py-2 text-xs"><option value="IMMEDIATE">Competência</option><option value="ON_NUTRITION_CONSUMPTION">Consumo</option><option value="ON_ANIMAL_SALE">Venda animal</option><option value="NOT_IN_RESULT">Fora da DRE</option></select>
+                                                <select value={editingCashFlowClass} onChange={(e) => setEditingCashFlowClass(e.target.value as CashFlowClass)} className="rounded-lg border border-(--eixo-border) px-2 py-2 text-xs"><option value="OPERATING">Operação</option><option value="INVESTING">Investimento</option><option value="FINANCING">Financiamento</option></select>
+                                                <select value={editingResultClass} onChange={(e) => setEditingResultClass(e.target.value as ResultClass | '')} className="rounded-lg border border-(--eixo-border) px-2 py-2 text-xs"><option value="">Fora da DRE</option><option value="OPERATING_REVENUE">Receita</option><option value="PRODUCTION_COST">Custo</option><option value="OPERATING_EXPENSE">Despesa</option><option value="FINANCIAL_RESULT">Financeiro</option><option value="OTHER_RESULT">Outros</option></select>
+                                                <select value={editingRecognitionRule} onChange={(e) => setEditingRecognitionRule(e.target.value as RecognitionRule)} className="rounded-lg border border-(--eixo-border) px-2 py-2 text-xs"><option value="IMMEDIATE">Competência</option><option value="ON_NUTRITION_CONSUMPTION">Consumo</option><option value="ON_ANIMAL_SALE">Venda animal</option><option value="NOT_IN_RESULT">Fora da DRE</option></select>
                                                 <input
                                                     type="text"
                                                     value={editingCatName}
                                                     onChange={e => setEditingCatName(e.target.value)}
-                                                    className="w-full rounded-lg border border-[var(--eixo-green)] bg-[var(--eixo-surface)] px-3 py-2 text-sm focus:outline-none"
+                                                    className="w-full rounded-lg border border-(--eixo-green) bg-(--eixo-surface) px-3 py-2 text-sm focus:outline-hidden"
                                                 />
                                                 <div className="flex items-center gap-2 lg:ml-auto">
                                                     <button
                                                         type="button"
                                                         disabled={editCatSaving}
                                                         onClick={() => saveEditCat(cat)}
-                                                        className="rounded-lg bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:opacity-50"
+                                                        className="rounded-lg bg-(--eixo-green) px-3 py-2 text-xs font-semibold text-[#1a1a1a] hover:bg-(--eixo-green-dark) disabled:opacity-50"
                                                     >
                                                         {editCatSaving ? 'Salvando...' : 'Salvar'}
                                                     </button>
                                                     <button
                                                         type="button"
                                                         onClick={cancelEditCat}
-                                                        className="rounded-lg border border-[var(--eixo-border)] px-3 py-2 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                        className="rounded-lg border border-(--eixo-border) px-3 py-2 text-xs font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft)"
                                                     >
                                                         Cancelar
                                                     </button>
@@ -249,26 +249,26 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                             </div>
                                         ) : (
                                             <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[110px_160px_minmax(0,1fr)_110px_auto] lg:items-center lg:gap-3">
-                                                <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${cat.type === 'ENTRADA' ? 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' : 'bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]'}`}>
+                                                <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${cat.type === 'ENTRADA' ? 'bg-(--eixo-green-soft) text-(--eixo-success)' : 'bg-[rgba(184,66,50,0.08)] text-(--eixo-danger)'}`}>
                                                     {cat.type === 'ENTRADA' ? 'Entrada' : 'Saída'}
                                                 </span>
-                                                <span className="text-sm text-[var(--eixo-text-muted)]">{cat.group}</span>
+                                                <span className="text-sm text-(--eixo-text-muted)">{cat.group}</span>
                                                 <div className="flex min-w-0 items-center gap-2">
                                                     {cat.isSystem ? (
-                                                        <span className="flex-shrink-0 text-[var(--eixo-text-muted)]"><LockIcon /></span>
+                                                        <span className="shrink-0 text-(--eixo-text-muted)"><LockIcon /></span>
                                                     ) : (
-                                                        <span className="flex h-3.5 w-3.5 flex-shrink-0 rounded-full bg-[var(--eixo-green-soft)]" />
+                                                        <span className="flex h-3.5 w-3.5 shrink-0 rounded-full bg-(--eixo-green-soft)" />
                                                     )}
-                                                    <span className="truncate text-sm font-medium text-[var(--eixo-text)]">{cat.name}</span>
+                                                    <span className="truncate text-sm font-medium text-(--eixo-text)">{cat.name}</span>
                                                     {!cat.isActive && (
-                                                        <span className="flex-shrink-0 rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">
+                                                        <span className="shrink-0 rounded-full bg-(--eixo-surface-soft) px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-(--eixo-text-muted)">
                                                             Inativa
                                                         </span>
                                                     )}
-                                                    {cat.deprecatedAt && <span className="rounded-full bg-[rgba(197,138,32,0.10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--eixo-warning)]">Histórico</span>}
-                                                    {!cat.isConfigured && !cat.deprecatedAt && <span className="rounded-full bg-[rgba(197,138,32,0.10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--eixo-warning)]">Configuração pendente</span>}
+                                                    {cat.deprecatedAt && <span className="rounded-full bg-[rgba(197,138,32,0.10)] px-2 py-0.5 text-[10px] font-semibold text-(--eixo-warning)">Histórico</span>}
+                                                    {!cat.isConfigured && !cat.deprecatedAt && <span className="rounded-full bg-[rgba(197,138,32,0.10)] px-2 py-0.5 text-[10px] font-semibold text-(--eixo-warning)">Configuração pendente</span>}
                                                 </div>
-                                                <span className="text-right text-[10px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">
+                                                <span className="text-right text-[10px] font-semibold uppercase tracking-wide text-(--eixo-text-muted)">
                                                     {cat.isSystem ? 'Sistema' : 'Cliente'}
                                                 </span>
                                                 {!cat.isSystem && (
@@ -276,14 +276,14 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                                         <button
                                                             type="button"
                                                             onClick={() => startEditCat(cat)}
-                                                            className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                            className="rounded-lg border border-(--eixo-border) px-3 py-1 text-xs font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft)"
                                                         >
                                                             Editar
                                                         </button>
                                                         <button
                                                             type="button"
                                                             onClick={() => toggleCatActive(cat)}
-                                                            className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                            className="rounded-lg border border-(--eixo-border) px-3 py-1 text-xs font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft)"
                                                         >
                                                             {cat.isActive ? 'Desativar' : 'Ativar'}
                                                         </button>
@@ -302,10 +302,10 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
             {/* ── Modal: Nova categoria ───────────────────────── */}
             {pcModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPcModalOpen(false)}>
-                    <div className="w-full max-w-md rounded-2xl bg-[var(--eixo-surface)] shadow-2xl" onClick={e => e.stopPropagation()}>
-                        <header className="flex items-center justify-between border-b border-[var(--eixo-border)] p-5">
-                            <h3 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Nova categoria</h3>
-                            <button type="button" aria-label="Fechar" onClick={() => setPcModalOpen(false)} className="rounded-full p-2 text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--eixo-green)]">✕</button>
+                    <div className="w-full max-w-md rounded-2xl bg-(--eixo-surface) shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <header className="flex items-center justify-between border-b border-(--eixo-border) p-5">
+                            <h3 className="font-brand text-lg font-bold text-(--eixo-text)">Nova categoria</h3>
+                            <button type="button" aria-label="Fechar" onClick={() => setPcModalOpen(false)} className="rounded-full p-2 text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft) focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--eixo-green)">✕</button>
                         </header>
                         <form onSubmit={handleCreateCategory} className="space-y-4 p-6">
                             <div>
@@ -326,7 +326,7 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                     <input type="text" value={pcFormNewGroup} onChange={e => setPcFormNewGroup(e.target.value)}
                                         placeholder="Nome do novo grupo" className={`${inputCls} mt-2`} autoFocus required />
                                 )}
-                                <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">
+                                <p className="mt-2 text-xs text-(--eixo-text-muted)">
                                     Para criar um grupo de despesa novo, escolha <strong>+ Novo grupo...</strong> e informe o primeiro item dessa lista.
                                 </p>
                             </div>
@@ -353,14 +353,14 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                     <option value="IMMEDIATE">Na competência informada</option><option value="ON_NUTRITION_CONSUMPTION">No consumo da Nutrição</option><option value="ON_ANIMAL_SALE">Na venda do animal</option><option value="NOT_IN_RESULT">Não entra na DRE</option>
                                 </select>
                             </div>
-                            {pcFormError && <p className="text-sm text-[var(--eixo-danger)]">{pcFormError}</p>}
+                            {pcFormError && <p className="text-sm text-(--eixo-danger)">{pcFormError}</p>}
                             <div className="flex justify-end gap-3">
                                 <button type="button" onClick={() => setPcModalOpen(false)}
-                                    className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]">
+                                    className="rounded-xl border border-(--eixo-border) px-4 py-2 text-sm font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft)">
                                     Cancelar
                                 </button>
                                 <button type="submit" disabled={pcIsSaving}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">
+                                    className="rounded-xl bg-(--eixo-green) px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-(--eixo-green-dark) disabled:opacity-50">
                                     {pcIsSaving ? 'Salvando...' : 'Criar categoria'}
                                 </button>
                             </div>

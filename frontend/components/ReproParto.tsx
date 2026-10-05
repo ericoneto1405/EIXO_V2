@@ -19,11 +19,11 @@ import {
     listarPartos,
 } from '../adapters/reproApi';
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] disabled:opacity-60';
-const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
-const cardClass = 'rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5';
-const primaryButton = 'rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryButton = 'rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--eixo-text)] transition hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) disabled:opacity-60';
+const labelClass = 'block text-xs font-semibold text-(--eixo-text-muted)';
+const cardClass = 'rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5';
+const primaryButton = 'rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryButton = 'rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2.5 text-sm font-semibold text-(--eixo-text) transition hover:bg-(--eixo-surface-soft) disabled:opacity-50';
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const fmtData = (v?: string | null) => (v ? new Date(v).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—');
@@ -222,7 +222,7 @@ export const PartosAba: React.FC<{
                 </div>
 
                 {crias.map((c, i) => (
-                    <div key={i} className="grid gap-3 rounded-xl bg-[var(--eixo-surface-soft)] p-3 sm:grid-cols-4">
+                    <div key={i} className="grid gap-3 rounded-xl bg-(--eixo-surface-soft) p-3 sm:grid-cols-4">
                         <p className="text-xs font-bold sm:col-span-4">{crias.length > 1 ? `Cria ${i + 1}` : 'Cria'}</p>
                         <div>
                             <span className={labelClass}>Sexo</span>
@@ -265,8 +265,8 @@ export const PartosAba: React.FC<{
 
             <div className={`${cardClass} space-y-2`}>
                 <h3 className="font-bold">Partos previstos (próximos 30 dias e atrasados)</h3>
-                {!previstos.length && <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum parto previsto para os próximos 30 dias.</p>}
-                <ul className="divide-y divide-[var(--eixo-border)] text-sm">
+                {!previstos.length && <p className="text-sm text-(--eixo-text-muted)">Nenhum parto previsto para os próximos 30 dias.</p>}
+                <ul className="divide-y divide-(--eixo-border) text-sm">
                     {previstos.map((p) => (
                         <li key={p.id} className="flex items-center justify-between py-2">
                             <button type="button" className="font-semibold underline" onClick={() => onAbrirFicha(p.id)}>{p.brinco}</button>
@@ -276,13 +276,13 @@ export const PartosAba: React.FC<{
                         </li>
                     ))}
                 </ul>
-                {semPrevisao > 0 && <p className="text-xs text-[var(--eixo-text-muted)]">{semPrevisao} vaca(s) prenhe(s) sem previsão (falta dias de gestação, cobertura ou tempo de gestação nos Critérios).</p>}
+                {semPrevisao > 0 && <p className="text-xs text-(--eixo-text-muted)">{semPrevisao} vaca(s) prenhe(s) sem previsão (falta dias de gestação, cobertura ou tempo de gestação nos Critérios).</p>}
             </div>
 
             {recentes.length > 0 && (
                 <div className={`${cardClass} space-y-2`}>
                     <h3 className="font-bold">Partos dos últimos 90 dias</h3>
-                    <ul className="divide-y divide-[var(--eixo-border)] text-sm">
+                    <ul className="divide-y divide-(--eixo-border) text-sm">
                         {recentes.map((p) => (
                             <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                                 <span>
@@ -408,7 +408,7 @@ export const DesmamaAba: React.FC<{
                 </div>
             )}
             {resultado.length > 0 && (
-                <div className="rounded-xl bg-[var(--eixo-surface-soft)] px-4 py-3 text-sm">
+                <div className="rounded-xl bg-(--eixo-surface-soft) px-4 py-3 text-sm">
                     {resultado.map((r) => <p key={r} className={r.startsWith('NÃO') ? 'text-red-700' : ''}>{r}</p>)}
                 </div>
             )}
@@ -465,7 +465,7 @@ export const DesmamaAba: React.FC<{
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[520px] text-sm">
                         <thead>
-                            <tr className="text-left text-xs text-[var(--eixo-text-muted)]">
+                            <tr className="text-left text-xs text-(--eixo-text-muted)">
                                 <th className="py-2">Bezerro</th>
                                 <th>Mãe</th>
                                 <th>Idade</th>
@@ -474,17 +474,17 @@ export const DesmamaAba: React.FC<{
                             </tr>
                         </thead>
                         <tbody>
-                            {!lista.length && <tr><td colSpan={5} className="py-6 text-center text-[var(--eixo-text-muted)]">Nenhum bezerro para desmamar.</td></tr>}
+                            {!lista.length && <tr><td colSpan={5} className="py-6 text-center text-(--eixo-text-muted)">Nenhum bezerro para desmamar.</td></tr>}
                             {lista.map((b) => (
-                                <tr key={b.id} className="border-t border-[var(--eixo-border)]">
-                                    <td className="py-2 font-semibold">{b.brinco}<span className="block text-xs font-normal text-[var(--eixo-text-muted)]">{b.sexo === 'FEMEA' ? 'Fêmea' : 'Macho'}</span></td>
+                                <tr key={b.id} className="border-t border-(--eixo-border)">
+                                    <td className="py-2 font-semibold">{b.brinco}<span className="block text-xs font-normal text-(--eixo-text-muted)">{b.sexo === 'FEMEA' ? 'Fêmea' : 'Macho'}</span></td>
                                     <td>{b.mae || '—'}</td>
                                     <td className={b.idadeDias != null && b.idadeDias < 90 ? 'text-amber-700' : ''}>
                                         {b.idadeDias == null ? '—' : `${Math.floor(b.idadeDias / 30.4375)} meses`}
                                     </td>
                                     <td>{b.peso != null ? `${b.peso} kg` : '—'}</td>
                                     <td>
-                                        <input type="number" inputMode="decimal" min={1} className="w-28 rounded-lg border border-[var(--eixo-border)] px-2 py-1.5"
+                                        <input type="number" inputMode="decimal" min={1} className="w-28 rounded-lg border border-(--eixo-border) px-2 py-1.5"
                                             aria-label={`Peso de ${b.brinco}`} value={pesos[b.id] || ''} onChange={(e) => setPesos((p) => ({ ...p, [b.id]: e.target.value }))} />
                                     </td>
                                 </tr>
@@ -500,7 +500,7 @@ export const DesmamaAba: React.FC<{
             {info.recentes.length > 0 && (
                 <div className={`${cardClass} space-y-2`}>
                     <h3 className="font-bold">Desmamas dos últimos 90 dias</h3>
-                    <ul className="divide-y divide-[var(--eixo-border)] text-sm">
+                    <ul className="divide-y divide-(--eixo-border) text-sm">
                         {info.recentes.map((d) => (
                             <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                                 <span>

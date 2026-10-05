@@ -22,6 +22,7 @@ import { calculateSupportMetrics } from '../chat/supportMetrics.js';
 import { SUPPORT_KNOWLEDGE_QUALITY, SUPPORT_KNOWLEDGE_VERSION } from '../chat/supportKnowledge.js';
 import { normalizeSupportConversationId } from '../chat/supportRules.js';
 import { logActivity } from '../utils/activityLog.js';
+import { registerHQAccountClosureReadRoutes } from './accountClosureReadRoutes.js';
 const prisma = new PrismaClient();
 
 const findSupportOwner = (conversationId, db = prisma) => db.activityLog.findFirst({
@@ -35,6 +36,7 @@ const findSupportOwner = (conversationId, db = prisma) => db.activityLog.findFir
 });
 
 export function registerHQRoutes(app) {
+    registerHQAccountClosureReadRoutes(app, prisma);
     app.get('/api/hq/clientes', requireAuth, requireSuperAdmin, async (req, res) => {
         try {
             const orgs = await prisma.organization.findMany({

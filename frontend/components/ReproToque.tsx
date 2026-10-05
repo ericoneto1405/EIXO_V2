@@ -18,11 +18,11 @@ import {
     salvarDecisao,
 } from '../adapters/reproApi';
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] disabled:opacity-60';
-const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
-const cardClass = 'rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5';
-const primaryButton = 'rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryButton = 'rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--eixo-text)] transition hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) disabled:opacity-60';
+const labelClass = 'block text-xs font-semibold text-(--eixo-text-muted)';
+const cardClass = 'rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5';
+const primaryButton = 'rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryButton = 'rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2.5 text-sm font-semibold text-(--eixo-text) transition hover:bg-(--eixo-surface-soft) disabled:opacity-50';
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const fmtData = (v?: string | null) => (v ? new Date(v).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—');
@@ -196,7 +196,7 @@ export const ToqueCurral: React.FC<{
             <div className={`${cardClass} flex flex-wrap items-center justify-between gap-3`}>
                 <div className="text-sm">
                     <p className="font-semibold">Vacas no celular: {cache.vacas.length}</p>
-                    <p className="text-xs text-[var(--eixo-text-muted)]">
+                    <p className="text-xs text-(--eixo-text-muted)">
                         {cache.baixadoEm ? `Baixadas em ${new Date(cache.baixadoEm).toLocaleString('pt-BR')}` : 'Baixe antes de ir ao curral.'}
                     </p>
                 </div>
@@ -265,12 +265,12 @@ export const ToqueCurral: React.FC<{
                     </label>
                 </div>
 
-                <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-4">
+                <div className="rounded-xl bg-(--eixo-surface-soft) p-4">
                     <div className="flex items-baseline justify-between">
                         <p className="text-sm font-semibold">
                             Lançadas: {rascunho.linhas.length}{rascunho.lotId ? ` / ${esperadas.length} do lote` : ''}
                         </p>
-                        <p className="text-xs text-[var(--eixo-text-muted)]">{prenhes} cheias · {rascunho.linhas.length - prenhes} falhadas</p>
+                        <p className="text-xs text-(--eixo-text-muted)">{prenhes} cheias · {rascunho.linhas.length - prenhes} falhadas</p>
                     </div>
                     <label className="mt-3 block">
                         <span className={labelClass}>Identificação</span>
@@ -320,7 +320,7 @@ export const ToqueCurral: React.FC<{
 
                 {rascunho.linhas.length > 0 && (
                     <>
-                        <ul className="max-h-64 divide-y divide-[var(--eixo-border)] overflow-y-auto text-sm">
+                        <ul className="max-h-64 divide-y divide-(--eixo-border) overflow-y-auto text-sm">
                             {rascunho.linhas.map((l) => (
                                 <li key={l.brinco} className="flex items-center justify-between py-2">
                                     <span>
@@ -339,7 +339,7 @@ export const ToqueCurral: React.FC<{
                         {!conferindo ? (
                             <button type="button" className={primaryButton} onClick={() => setConferindo(true)}>Fechar toque</button>
                         ) : (
-                            <div className="space-y-2 rounded-xl border border-[var(--eixo-border)] p-4 text-sm">
+                            <div className="space-y-2 rounded-xl border border-(--eixo-border) p-4 text-sm">
                                 <p className="font-bold">Conferir antes de salvar</p>
                                 <p>{prenhes} cheias · {rascunho.linhas.length - prenhes} falhadas · {rascunho.linhas.filter((l) => !porIdent.has(norm(l.brinco))).length} para conferir</p>
                                 {rascunho.lotId && naoPassaram.length > 0 && (
@@ -405,12 +405,12 @@ const ToquesAnteriores: React.FC<{
         <div className={`${cardClass} space-y-3`}>
             <h3 className="font-bold">Toques anteriores</h3>
             {sessoes.map((s) => (
-                <div key={s.id} className="rounded-xl border border-[var(--eixo-border)] p-3 text-sm">
+                <div key={s.id} className="rounded-xl border border-(--eixo-border) p-3 text-sm">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                         <div>
                             <p className="font-semibold">{fmtData(s.date)} · {s.metodo === 'TOQUE' ? 'Toque' : 'Ultrassom'}{s.vetName ? ` · ${s.vetName}` : ''}{s.lote ? ` · ${s.lote}` : ''}</p>
                             {s.resumo && (
-                                <p className="text-xs text-[var(--eixo-text-muted)]">
+                                <p className="text-xs text-(--eixo-text-muted)">
                                     {s.resumo.prenhes} cheias · {s.resumo.vazias} falhadas · {s.resumo.perdas} perdas
                                     {s.resumo.naoPassaram?.length ? ` · ${s.resumo.naoPassaram.length} do lote não passaram` : ''}
                                 </p>
@@ -433,7 +433,7 @@ const ToquesAnteriores: React.FC<{
                                 return (
                                     <div key={chave} className="flex flex-wrap items-end gap-2 rounded-lg bg-amber-50 p-2 text-xs">
                                         <span className="min-w-[160px]"><b>{p.brinco}</b> · {p.resultado === 'PRENHE' ? 'cheia' : 'falhada'} — {p.motivo}</span>
-                                        <input className="rounded-lg border border-[var(--eixo-border)] px-2 py-1" placeholder="Era a vaca…" list={`vacas-${chave}`}
+                                        <input className="rounded-lg border border-(--eixo-border) px-2 py-1" placeholder="Era a vaca…" list={`vacas-${chave}`}
                                             value={escolha[chave] || ''} onChange={(e) => setEscolha((x) => ({ ...x, [chave]: e.target.value }))} />
                                         <datalist id={`vacas-${chave}`}>
                                             {vacas.slice(0, 500).map((v) => <option key={v.id} value={v.brinco} />)}
@@ -499,13 +499,13 @@ export const DecidirVazias: React.FC<{
 
     return (
         <div className={`${cardClass} space-y-3`}>
-            <p className="text-sm text-[var(--eixo-text-muted)]">Vacas que falharam no último toque, esperando sua decisão. O sistema não decide por você.</p>
+            <p className="text-sm text-(--eixo-text-muted)">Vacas que falharam no último toque, esperando sua decisão. O sistema não decide por você.</p>
             {!vacas.length && <p className="text-sm">Nenhuma vaca falhada esperando decisão.</p>}
             {vacas.length > 0 && (
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[560px] text-sm">
                         <thead>
-                            <tr className="text-left text-xs text-[var(--eixo-text-muted)]">
+                            <tr className="text-left text-xs text-(--eixo-text-muted)">
                                 <th className="py-2">
                                     <input type="checkbox" aria-label="Selecionar todas" checked={sel.size === vacas.length}
                                         onChange={(e) => setSel(e.target.checked ? new Set(vacas.map((v) => v.id)) : new Set())} />
@@ -518,14 +518,14 @@ export const DecidirVazias: React.FC<{
                         </thead>
                         <tbody>
                             {vacas.map((v) => (
-                                <tr key={v.id} className="border-t border-[var(--eixo-border)]">
+                                <tr key={v.id} className="border-t border-(--eixo-border)">
                                     <td className="py-2">
                                         <input type="checkbox" aria-label={`Selecionar ${v.brinco}`} checked={sel.has(v.id)}
                                             onChange={() => setSel((s) => { const n = new Set(s); if (n.has(v.id)) n.delete(v.id); else n.add(v.id); return n; })} />
                                     </td>
                                     <td>
                                         <button type="button" className="font-semibold underline" onClick={() => onAbrirFicha(v.id)}>{v.brinco}</button>
-                                        {v.lote && <span className="block text-xs text-[var(--eixo-text-muted)]">{v.lote}</span>}
+                                        {v.lote && <span className="block text-xs text-(--eixo-text-muted)">{v.lote}</span>}
                                     </td>
                                     <td>{v.categoria}</td>
                                     <td>{fmtData(v.vaziaEm)}</td>
@@ -539,7 +539,7 @@ export const DecidirVazias: React.FC<{
                 </div>
             )}
             {sel.size > 0 && (
-                <div className="flex flex-wrap items-end gap-2 border-t border-[var(--eixo-border)] pt-3">
+                <div className="flex flex-wrap items-end gap-2 border-t border-(--eixo-border) pt-3">
                     <span className="text-sm font-semibold">{sel.size} selecionada(s):</span>
                     <button type="button" className={secondaryButton} disabled={salvando} onClick={() => decidir('NOVA_COBERTURA')}>Nova cobertura</button>
                     <button type="button" className={secondaryButton} disabled={salvando} onClick={() => decidir('REPASSE')}>Repasse com touro</button>

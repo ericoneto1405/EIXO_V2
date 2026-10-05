@@ -999,12 +999,12 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
             {/* Modal de sessão */}
             {showSessionModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
-                    <div className="w-full max-w-lg rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 shadow-2xl">
+                    <div className="w-full max-w-lg rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-6 shadow-2xl">
                         <div className="mb-5 flex items-start justify-between">
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)]">Pesagens</p>
-                                <h3 className="mt-1 text-xl font-black text-[var(--eixo-text)]">Nova sessão de pesagem</h3>
-                                <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">
+                                <p className="text-xs font-bold uppercase tracking-[0.16em] text-(--eixo-text-muted)">Pesagens</p>
+                                <h3 className="mt-1 text-xl font-black text-(--eixo-text)">Nova sessão de pesagem</h3>
+                                <p className="mt-2 text-sm text-(--eixo-text-muted)">
                                     Esse nome vai agrupar todas as pesagens lançadas agora.
                                 </p>
                             </div>
@@ -1014,7 +1014,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                     setShowSessionModal(false);
                                     setSessionTypePromptOpen(false);
                                 }}
-                                className="flex h-8 w-8 items-center justify-center rounded-full border border-[var(--eixo-border)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                                className="flex h-8 w-8 items-center justify-center rounded-full border border-(--eixo-border) text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft)"
                                 aria-label="Fechar"
                             >
                                 ✕
@@ -1023,22 +1023,22 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
 
                         <form onSubmit={handleStartSession} className="space-y-4">
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase text-[var(--eixo-text-muted)]">Nome da sessão</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase text-(--eixo-text-muted)">Nome da sessão</label>
                                 <input
                                     value={sessionName}
                                     onChange={(event) => setSessionName(event.target.value)}
                                     placeholder="Ex: Pesagem abril 2026"
-                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/20"
+                                    className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-3 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) focus:ring-2 focus:ring-(--eixo-green)/20"
                                     autoFocus
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase text-[var(--eixo-text-muted)]">Responsável</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase text-(--eixo-text-muted)">Responsável</label>
                                 <input
                                     value={sessionResponsibleName}
                                     onChange={(event) => setSessionResponsibleName(event.target.value)}
                                     placeholder="Ex: João Silva"
-                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/20"
+                                    className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-3 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) focus:ring-2 focus:ring-(--eixo-green)/20"
                                 />
                             </div>
                             {sessionError && (
@@ -1051,7 +1051,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                         type="button"
                                         onClick={handleOpenHistoryToday}
                                         disabled={sessionSaving}
-                                        className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                                        className="rounded-xl border border-(--eixo-border) px-4 py-2 text-sm font-semibold text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface-soft)"
                                     >
                                         Ver histórico
                                     </button>
@@ -1059,7 +1059,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                 <button
                                     type="submit"
                                     disabled={sessionSaving}
-                                    className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-50"
+                                    className="rounded-xl bg-(--eixo-green) px-5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) disabled:opacity-50"
                                 >
                                     {sessionSaving ? 'Iniciando...' : 'Iniciar sessão'}
                                 </button>
@@ -1068,21 +1068,21 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
 
                         {/* Sessões recentes para continuar */}
                         {!managementMode && sessions.length > 0 && (
-                            <div className="mt-5 border-t border-[var(--eixo-border)] pt-4">
-                                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Ou continue uma sessão recente</p>
+                            <div className="mt-5 border-t border-(--eixo-border) pt-4">
+                                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">Ou continue uma sessão recente</p>
                                 <div className="space-y-2">
                                     {sessions.slice(0, 5).map((session) => (
-                                        <div key={session.id} className="flex items-center justify-between rounded-xl border border-[var(--eixo-border)] px-4 py-2.5">
+                                        <div key={session.id} className="flex items-center justify-between rounded-xl border border-(--eixo-border) px-4 py-2.5">
                                             <div>
-                                                <p className="text-sm font-semibold text-[var(--eixo-text)]">{session.name}</p>
+                                                <p className="text-sm font-semibold text-(--eixo-text)">{session.name}</p>
                                                 {typeof session.weighingsCount === 'number' && (
-                                                    <p className="text-xs text-[var(--eixo-text-muted)]">{session.weighingsCount} pesagem(ns)</p>
+                                                    <p className="text-xs text-(--eixo-text-muted)">{session.weighingsCount} pesagem(ns)</p>
                                                 )}
                                             </div>
                                             <button
                                                 type="button"
                                                 onClick={() => handleContinueSession(session)}
-                                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1.5 text-xs font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                                                className="rounded-lg border border-(--eixo-border) px-3 py-1.5 text-xs font-bold text-(--eixo-text) hover:bg-(--eixo-surface-soft)"
                                             >
                                                 Continuar
                                             </button>
@@ -1096,11 +1096,11 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
             )}
 
             {showSessionModal && sessionTypePromptOpen && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
-                    <div className="w-full max-w-md rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 shadow-2xl">
-                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)]">Nova sessão</p>
-                        <h4 className="mt-1 text-xl font-black text-[var(--eixo-text)]">Como deseja pesar?</h4>
-                        <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Escolha uma opção para continuar.</p>
+                <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                    <div className="w-full max-w-md rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-6 shadow-2xl">
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-(--eixo-text-muted)">Nova sessão</p>
+                        <h4 className="mt-1 text-xl font-black text-(--eixo-text)">Como deseja pesar?</h4>
+                        <p className="mt-2 text-sm text-(--eixo-text-muted)">Escolha uma opção para continuar.</p>
                         <div className="mt-5 flex flex-col gap-2">
                             <button
                                 type="button"
@@ -1126,7 +1126,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                 type="button"
                                 disabled={sessionSaving}
                                 onClick={() => setSessionTypePromptOpen(false)}
-                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                                className="rounded-xl border border-(--eixo-border) px-4 py-2 text-sm font-semibold text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft)"
                             >
                                 Voltar
                             </button>
@@ -1136,16 +1136,16 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
             )}
 
             {editWeighingOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
-                    <div className="w-full max-w-md rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 shadow-2xl">
-                        <h4 className="text-lg font-black text-[var(--eixo-text)]">Editar pesagem</h4>
+                <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                    <div className="w-full max-w-md rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-6 shadow-2xl">
+                        <h4 className="text-lg font-black text-(--eixo-text)">Editar pesagem</h4>
                         <div className="mt-4 space-y-3">
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase text-[var(--eixo-text-muted)]">Animal</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase text-(--eixo-text-muted)">Animal</label>
                                 <select
                                     value={editWeighingAnimalId}
                                     onChange={(event) => setEditWeighingAnimalId(event.target.value)}
-                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]"
+                                    className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)"
                                 >
                                     <option value="">Selecione</option>
                                     {animals.map((animal) => (
@@ -1157,31 +1157,31 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                             </div>
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                    <label className="mb-1 block text-xs font-semibold uppercase text-[var(--eixo-text-muted)]">Data</label>
+                                    <label className="mb-1 block text-xs font-semibold uppercase text-(--eixo-text-muted)">Data</label>
                                     <input
                                         type="date"
                                         value={editWeighingDate}
                                         onChange={(event) => setEditWeighingDate(event.target.value)}
-                                        className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]"
+                                        className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)"
                                     />
                                 </div>
                                 <div>
-                                    <label className="mb-1 block text-xs font-semibold uppercase text-[var(--eixo-text-muted)]">Peso (kg)</label>
+                                    <label className="mb-1 block text-xs font-semibold uppercase text-(--eixo-text-muted)">Peso (kg)</label>
                                     <input
                                         value={editWeighingWeight}
                                         onChange={(event) => setEditWeighingWeight(event.target.value)}
-                                        className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]"
+                                        className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)"
                                     />
                                 </div>
                             </div>
-                            {editWeighingError && <p className="text-sm text-[var(--eixo-danger)]">{editWeighingError}</p>}
+                            {editWeighingError && <p className="text-sm text-(--eixo-danger)">{editWeighingError}</p>}
                         </div>
                         <div className="mt-5 flex justify-end gap-2">
                             <button
                                 type="button"
                                 disabled={editWeighingSaving}
                                 onClick={() => setEditWeighingOpen(false)}
-                                className="rounded-xl border border-[var(--eixo-border)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                                className="rounded-xl border border-(--eixo-border) px-4 py-2 text-sm font-semibold text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft)"
                             >
                                 Cancelar
                             </button>
@@ -1199,7 +1199,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
             )}
 
             {deleteWeighingOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
                     <div className="w-full max-w-md rounded-2xl border border-[#d7cab3] bg-[#fffaf1] p-6 shadow-2xl">
                         <h4 className="text-lg font-black text-[#2f3a2d]">Excluir pesagem</h4>
                         <p className="mt-2 text-sm text-[#6d6558]">
@@ -1211,7 +1211,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                 type="password"
                                 value={masterPassword}
                                 onChange={(event) => setMasterPassword(event.target.value)}
-                                className="w-full rounded-xl border border-[#e6c7bc] bg-[#fffaf1] px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#8c4d39]"
+                                className="w-full rounded-xl border border-[#e6c7bc] bg-[#fffaf1] px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#8c4d39]"
                             />
                         </div>
                         {deleteWeighingError && <p className="mt-2 text-sm text-[#8c4d39]">{deleteWeighingError}</p>}
@@ -1238,7 +1238,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
             )}
 
             {deleteSessionOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
                     <div className="w-full max-w-md rounded-2xl border border-[#d7cab3] bg-[#fffaf1] p-6 shadow-2xl">
                         <h4 className="text-lg font-black text-[#2f3a2d]">Excluir sessão de pesagem</h4>
                         <p className="mt-2 text-sm text-[#6d6558]">
@@ -1253,7 +1253,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                 type="password"
                                 value={deleteSessionPassword}
                                 onChange={(event) => setDeleteSessionPassword(event.target.value)}
-                                className="w-full rounded-xl border border-[#e6c7bc] bg-[#fffaf1] px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#8c4d39]"
+                                className="w-full rounded-xl border border-[#e6c7bc] bg-[#fffaf1] px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#8c4d39]"
                             />
                         </div>
                         {deleteSessionError && <p className="mt-2 text-sm text-[#8c4d39]">{deleteSessionError}</p>}
@@ -1279,10 +1279,10 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                 </div>
             )}
 
-            <div className="flex items-center justify-between rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
+            <div className="flex items-center justify-between rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
                 <div>
-                    <h3 className="text-base font-semibold text-[var(--eixo-text)]">Pesagem manual</h3>
-                    <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Abra o painel de curral para lançar ID do animal e peso em kg.</p>
+                    <h3 className="text-base font-semibold text-(--eixo-text)">Pesagem manual</h3>
+                    <p className="mt-1 text-sm text-(--eixo-text-muted)">Abra o painel de curral para lançar ID do animal e peso em kg.</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <input
@@ -1295,7 +1295,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                     <button
                         type="button"
                         onClick={handleDownloadTemplate}
-                        className="flex h-10 items-center justify-center rounded-[10px] border border-dashed border-[var(--eixo-border)] bg-transparent px-[10px] text-[13px] font-semibold text-[var(--eixo-text-muted)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
+                        className="flex h-10 items-center justify-center rounded-[10px] border border-dashed border-(--eixo-border) bg-transparent px-[10px] text-[13px] font-semibold text-(--eixo-text-muted) transition-colors duration-200 hover:bg-(--eixo-surface-soft)"
                     >
                         <DownloadIcon className="h-4 w-4" />
                         <span className="ml-1.5 hidden sm:block">Baixar modelo</span>
@@ -1303,7 +1303,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                     <button
                         type="button"
                         onClick={handleImportClick}
-                        className="flex h-10 items-center rounded-[10px] border border-[var(--eixo-border)] bg-white px-[14px] text-sm font-semibold text-[var(--eixo-text)] transition-colors duration-200 hover:bg-[var(--eixo-surface-soft)]"
+                        className="flex h-10 items-center rounded-[10px] border border-(--eixo-border) bg-white px-[14px] text-sm font-semibold text-(--eixo-text) transition-colors duration-200 hover:bg-(--eixo-surface-soft)"
                     >
                         <UploadIcon className="h-[18px] w-[18px]" />
                         <span className="ml-2 hidden sm:block">Importar planilha</span>
@@ -1319,7 +1319,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                 setManualModalOpen(true);
                             }
                         }}
-                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30"
+                        className="rounded-xl bg-(--eixo-green) px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)/30"
                     >
                         Nova pesagem
                     </button>
@@ -1337,7 +1337,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
             )}
 
             {importModalOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
+                <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
                     <div className="w-full max-w-lg rounded-2xl border border-[#d7cab3] bg-[#fffaf1] p-6 shadow-2xl">
                         <h4 className="text-lg font-black text-[#2f3a2d]">Importar pesagens</h4>
                         <p className="mt-2 text-sm text-[#6d6558]">
@@ -1373,8 +1373,8 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
             )}
 
             {activeSession && (
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] px-5 py-3">
-                    <p className="text-sm font-semibold text-[var(--eixo-text)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-(--eixo-green) bg-(--eixo-green-soft) px-5 py-3">
+                    <p className="text-sm font-semibold text-(--eixo-text)">
                         📋 Sessão: "{activeSession.name}"
                     </p>
                     <button
@@ -1383,7 +1383,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                             setActiveSession(null);
                             setPage(0);
                         }}
-                        className="rounded-xl border border-[var(--eixo-border-strong)] bg-[var(--eixo-surface)] px-3 py-1.5 text-xs font-bold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]"
+                        className="rounded-xl border border-(--eixo-border-strong) bg-(--eixo-surface) px-3 py-1.5 text-xs font-bold text-(--eixo-text) hover:bg-(--eixo-surface-soft)"
                     >
                         Encerrar sessão
                     </button>
@@ -1442,7 +1442,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                             min={1}
                                             value={groupAnimalsCount}
                                             onChange={(event) => setGroupAnimalsCount(event.target.value)}
-                                            className="w-full rounded-[14px] border-2 border-[#d7cab3] bg-[#fffaf1] px-4 py-4 text-2xl font-black text-[#2f3a2d] outline-none focus:border-[#9d7d4d]"
+                                            className="w-full rounded-[14px] border-2 border-[#d7cab3] bg-[#fffaf1] px-4 py-4 text-2xl font-black text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]"
                                         />
                                     </div>
                                     <div>
@@ -1452,7 +1452,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                             inputMode="decimal"
                                             value={groupTotalWeight}
                                             onChange={(event) => setGroupTotalWeight(event.target.value)}
-                                            className="w-full rounded-[14px] border-2 border-[#d7cab3] bg-[#fffaf1] px-4 py-4 text-2xl font-black text-[#2f3a2d] outline-none focus:border-[#9d7d4d]"
+                                            className="w-full rounded-[14px] border-2 border-[#d7cab3] bg-[#fffaf1] px-4 py-4 text-2xl font-black text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]"
                                         />
                                     </div>
                                 </div>
@@ -1479,7 +1479,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                                 weightInputRef.current?.focus();
                                             }}
                                             placeholder="Identificação, ID ou registro"
-                                            className="w-full rounded-[14px] border-2 border-[#d7cab3] bg-[#fffaf1] px-4 py-4 text-2xl font-black uppercase text-[#2f3a2d] outline-none focus:border-[#9d7d4d]"
+                                            className="w-full rounded-[14px] border-2 border-[#d7cab3] bg-[#fffaf1] px-4 py-4 text-2xl font-black uppercase text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]"
                                         />
                                         <datalist id="weighing-animal-options">
                                             {manualAnimals.map((animal) => (
@@ -1514,7 +1514,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                                 }
                                             }}
                                             placeholder="Ex: 425"
-                                            className="w-full rounded-[14px] border-2 border-[#d7cab3] bg-[#fffaf1] px-4 py-4 text-2xl font-black text-[#2f3a2d] outline-none focus:border-[#9d7d4d]"
+                                            className="w-full rounded-[14px] border-2 border-[#d7cab3] bg-[#fffaf1] px-4 py-4 text-2xl font-black text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]"
                                         />
                                     </div>
                                 </div>
@@ -1531,7 +1531,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                             setGroupSelectedAnimalIds([]);
                                             setGroupAnimalSearch('');
                                         }}
-                                        className="w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]"
+                                        className="w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]"
                                     >
                                         <option value="">Todos os lotes</option>
                                         {lots.map((lot) => (
@@ -1549,7 +1549,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                             setFormDate(event.target.value);
                                             setPendingReplace(null);
                                         }}
-                                        className="w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]"
+                                        className="w-full rounded-xl border border-[#d7cab3] bg-[#fffaf1] px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]"
                                     />
                                 </div>
                             </div>
@@ -1573,7 +1573,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                             value={groupAnimalSearch}
                                             onChange={(event) => setGroupAnimalSearch(event.target.value)}
                                             placeholder="Buscar animal"
-                                            className="w-40 rounded-lg border border-[#d7cab3] bg-[#fffaf1] px-2 py-1 text-xs text-[#2f3a2d] outline-none focus:border-[#9d7d4d]"
+                                            className="w-40 rounded-lg border border-[#d7cab3] bg-[#fffaf1] px-2 py-1 text-xs text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]"
                                         />
                                     </div>
                                 )}
@@ -1740,11 +1740,11 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
 
             {!managementMode && (detailLoading || detailError || detailData) && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true">
-                    <div className="w-full max-w-5xl rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-4">
+                    <div className="w-full max-w-5xl rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) shadow-2xl">
+                        <div className="flex items-center justify-between border-b border-(--eixo-border) px-5 py-4">
                             <div>
-                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">Sessão de pesagem</p>
-                                <h3 className="text-lg font-black text-[var(--eixo-text)]">
+                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-(--eixo-text-muted)">Sessão de pesagem</p>
+                                <h3 className="text-lg font-black text-(--eixo-text)">
                                     {detailData?.session.sessionName || 'Detalhes da sessão'}
                                 </h3>
                             </div>
@@ -1755,26 +1755,26 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                     setDetailError(null);
                                     setDetailLoading(false);
                                 }}
-                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1.5 text-sm text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                                className="rounded-lg border border-(--eixo-border) px-3 py-1.5 text-sm text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft)"
                             >
                                 Fechar
                             </button>
                         </div>
                         <div className="px-5 py-4">
-                            {detailLoading && <p className="text-sm text-[var(--eixo-text-muted)]">Carregando detalhes…</p>}
+                            {detailLoading && <p className="text-sm text-(--eixo-text-muted)">Carregando detalhes…</p>}
                             {!detailLoading && detailError && <p className="text-sm text-red-600">{detailError}</p>}
                             {!detailLoading && !detailError && detailData && (
                                 <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-3 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3 text-sm sm:grid-cols-4">
-                                        <p className="text-[var(--eixo-text-muted)]">Tipo: <span className="font-semibold text-[var(--eixo-text)]">{detailData.session.sessionType === 'GROUP' ? 'Grupo' : 'Individual'}</span></p>
-                                        <p className="text-[var(--eixo-text-muted)]">Data/hora: <span className="font-semibold text-[var(--eixo-text)]">{new Date(detailData.session.sessionDateTime).toLocaleString('pt-BR')}</span></p>
-                                        <p className="text-[var(--eixo-text-muted)]">Qtd.: <span className="font-semibold text-[var(--eixo-text)]">{detailData.session.animalsCount}</span></p>
-                                        <p className="text-[var(--eixo-text-muted)]">Peso médio: <span className="font-semibold text-[var(--eixo-text)]">{fmtKg(detailData.session.averageWeightKg)}</span></p>
+                                    <div className="grid grid-cols-2 gap-3 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-3 text-sm sm:grid-cols-4">
+                                        <p className="text-(--eixo-text-muted)">Tipo: <span className="font-semibold text-(--eixo-text)">{detailData.session.sessionType === 'GROUP' ? 'Grupo' : 'Individual'}</span></p>
+                                        <p className="text-(--eixo-text-muted)">Data/hora: <span className="font-semibold text-(--eixo-text)">{new Date(detailData.session.sessionDateTime).toLocaleString('pt-BR')}</span></p>
+                                        <p className="text-(--eixo-text-muted)">Qtd.: <span className="font-semibold text-(--eixo-text)">{detailData.session.animalsCount}</span></p>
+                                        <p className="text-(--eixo-text-muted)">Peso médio: <span className="font-semibold text-(--eixo-text)">{fmtKg(detailData.session.averageWeightKg)}</span></p>
                                     </div>
-                                    <div className="max-h-[360px] overflow-auto rounded-xl border border-[var(--eixo-border)]">
+                                    <div className="max-h-[360px] overflow-auto rounded-xl border border-(--eixo-border)">
                                         <table className="w-full text-sm">
                                             <thead>
-                                                <tr className="bg-[var(--eixo-surface-soft)] text-left text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">
+                                                <tr className="bg-(--eixo-surface-soft) text-left text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">
                                                     <th className="px-3 py-2">Animal</th>
                                                     <th className="px-3 py-2">Categoria</th>
                                                     <th className="px-3 py-2 text-right">Peso anterior</th>
@@ -1786,13 +1786,13 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                             </thead>
                                             <tbody>
                                                 {detailData.items.map((item) => (
-                                                    <tr key={item.weighingId} className="border-t border-[var(--eixo-border)]">
-                                                        <td className="px-3 py-2 text-[var(--eixo-text)]">{item.animalCode || item.animalName || '—'}</td>
-                                                        <td className="px-3 py-2 text-[var(--eixo-text-muted)]">{item.category || '—'}</td>
-                                                        <td className="px-3 py-2 text-right text-[var(--eixo-text-muted)]">{fmtKg(item.previousWeightKg)}</td>
-                                                        <td className="px-3 py-2 text-right font-semibold text-[var(--eixo-text)]">{fmtKg(item.weightKg)}</td>
-                                                        <td className="px-3 py-2 text-right text-[var(--eixo-text-muted)]">{item.gainKg == null ? '—' : `${item.gainKg >= 0 ? '+' : ''}${item.gainKg.toFixed(1)} kg`}</td>
-                                                        <td className={`px-3 py-2 text-right ${item.gmd != null && item.gmd < 0 ? 'font-bold text-[var(--eixo-danger)]' : 'text-[var(--eixo-text-muted)]'}`}>
+                                                    <tr key={item.weighingId} className="border-t border-(--eixo-border)">
+                                                        <td className="px-3 py-2 text-(--eixo-text)">{item.animalCode || item.animalName || '—'}</td>
+                                                        <td className="px-3 py-2 text-(--eixo-text-muted)">{item.category || '—'}</td>
+                                                        <td className="px-3 py-2 text-right text-(--eixo-text-muted)">{fmtKg(item.previousWeightKg)}</td>
+                                                        <td className="px-3 py-2 text-right font-semibold text-(--eixo-text)">{fmtKg(item.weightKg)}</td>
+                                                        <td className="px-3 py-2 text-right text-(--eixo-text-muted)">{item.gainKg == null ? '—' : `${item.gainKg >= 0 ? '+' : ''}${item.gainKg.toFixed(1)} kg`}</td>
+                                                        <td className={`px-3 py-2 text-right ${item.gmd != null && item.gmd < 0 ? 'font-bold text-(--eixo-danger)' : 'text-(--eixo-text-muted)'}`}>
                                                             {fmtGmd(item.gmd)}
                                                         </td>
                                                         <td className="px-3 py-2">
@@ -1827,25 +1827,25 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
 
             {/* Filtros + tabela */}
             {!managementMode && (
-            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface)">
                 {/* Filtros */}
-                <div className="flex flex-wrap items-end gap-3 border-b border-[var(--eixo-border)] px-6 py-4">
+                <div className="flex flex-wrap items-end gap-3 border-b border-(--eixo-border) px-6 py-4">
                     <div className="min-w-[180px] flex-1">
-                        <label className="mb-1 block text-xs font-medium text-[var(--eixo-text-muted)]">Sessão</label>
+                        <label className="mb-1 block text-xs font-medium text-(--eixo-text-muted)">Sessão</label>
                         <input
                             type="text"
                             value={filterSearch}
                             onChange={(e) => { setFilterSearch(e.target.value); setPage(0); }}
                             placeholder="Buscar sessão…"
-                            className="block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
+                            className="block w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden focus:ring-1 focus:ring-(--eixo-green)/10 transition-colors"
                         />
                     </div>
                     <div className="min-w-[180px] flex-1">
-                        <label className="mb-1 block text-xs font-medium text-[var(--eixo-text-muted)]">Lote</label>
+                        <label className="mb-1 block text-xs font-medium text-(--eixo-text-muted)">Lote</label>
                         <select
                             value={filterLot}
                             onChange={e => { setFilterLot(e.target.value); setPage(0); }}
-                            className="block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
+                            className="block w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden focus:ring-1 focus:ring-(--eixo-green)/10 transition-colors"
                         >
                             <option value="">Todos os lotes</option>
                             {lots.map(lot => (
@@ -1854,21 +1854,21 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                         </select>
                     </div>
                     <div className="w-36">
-                        <label className="mb-1 block text-xs font-medium text-[var(--eixo-text-muted)]">De</label>
+                        <label className="mb-1 block text-xs font-medium text-(--eixo-text-muted)">De</label>
                         <input
                             type="date"
                             value={filterStart}
                             onChange={e => { setFilterStart(e.target.value); setPage(0); }}
-                            className="block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
+                            className="block w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden focus:ring-1 focus:ring-(--eixo-green)/10 transition-colors"
                         />
                     </div>
                     <div className="w-36">
-                        <label className="mb-1 block text-xs font-medium text-[var(--eixo-text-muted)]">Até</label>
+                        <label className="mb-1 block text-xs font-medium text-(--eixo-text-muted)">Até</label>
                         <input
                             type="date"
                             value={filterEnd}
                             onChange={e => { setFilterEnd(e.target.value); setPage(0); }}
-                            className="block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
+                            className="block w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden focus:ring-1 focus:ring-(--eixo-green)/10 transition-colors"
                         />
                     </div>
                     {(filterSearch || filterLot || filterStart || filterEnd) && (
@@ -1880,7 +1880,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                 setFilterEnd('');
                                 setPage(0);
                             }}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2 text-sm text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                            className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2 text-sm text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface-soft)"
                         >
                             Limpar filtros
                         </button>
@@ -1900,7 +1900,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-left text-xs font-medium uppercase tracking-wide text-[var(--eixo-text-muted)]">
+                                <tr className="border-b border-(--eixo-border) bg-(--eixo-surface-soft) text-left text-xs font-medium uppercase tracking-wide text-(--eixo-text-muted)">
                                     <th className="px-3 py-3">Sessão</th>
                                     <th className="px-3 py-3">Tipo</th>
                                     <th className="px-3 py-3">Data e hora</th>
@@ -1917,11 +1917,11 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                 {sessionRows.map((row, idx) => (
                                     <tr
                                         key={row.sessionId}
-                                        className={`border-b border-[var(--eixo-border)] transition-colors hover:bg-[var(--eixo-surface-soft)] ${
-                                            idx % 2 === 0 ? 'bg-[var(--eixo-surface)]' : 'bg-[#fafaf9]'
+                                        className={`border-b border-(--eixo-border) transition-colors hover:bg-(--eixo-surface-soft) ${
+                                            idx % 2 === 0 ? 'bg-(--eixo-surface)' : 'bg-[#fafaf9]'
                                         }`}
                                     >
-                                        <td className="px-3 py-3 font-semibold text-[var(--eixo-text)]">
+                                        <td className="px-3 py-3 font-semibold text-(--eixo-text)">
                                             <button
                                                 type="button"
                                                 className="text-left underline decoration-[#9d7d4d] underline-offset-2 hover:text-[#8f7144]"
@@ -1942,14 +1942,14 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                                                 {row.sessionName}
                                             </button>
                                         </td>
-                                        <td className="px-3 py-3 text-[var(--eixo-text-muted)]">{row.sessionType === 'GROUP' ? 'Grupo' : 'Individual'}</td>
-                                        <td className="px-3 py-3 text-[var(--eixo-text-muted)]">{new Date(row.sessionDateTime).toLocaleString('pt-BR')}</td>
-                                        <td className="px-3 py-3 text-[var(--eixo-text-muted)]">{row.farmName}</td>
-                                        <td className="px-3 py-3 text-[var(--eixo-text-muted)]">{row.lotName ?? '—'}</td>
-                                        <td className="px-3 py-3 text-right text-[var(--eixo-text-muted)]">{row.animalsCount}</td>
-                                        <td className="px-3 py-3 text-right text-[var(--eixo-text-muted)]">{fmtKg(row.totalWeightKg)}</td>
-                                        <td className="px-3 py-3 text-right text-[var(--eixo-text-muted)]">{fmtKg(row.averageWeightKg)}</td>
-                                        <td className="px-3 py-3 text-[var(--eixo-text-muted)]">{row.responsibleUserName || '—'}</td>
+                                        <td className="px-3 py-3 text-(--eixo-text-muted)">{row.sessionType === 'GROUP' ? 'Grupo' : 'Individual'}</td>
+                                        <td className="px-3 py-3 text-(--eixo-text-muted)">{new Date(row.sessionDateTime).toLocaleString('pt-BR')}</td>
+                                        <td className="px-3 py-3 text-(--eixo-text-muted)">{row.farmName}</td>
+                                        <td className="px-3 py-3 text-(--eixo-text-muted)">{row.lotName ?? '—'}</td>
+                                        <td className="px-3 py-3 text-right text-(--eixo-text-muted)">{row.animalsCount}</td>
+                                        <td className="px-3 py-3 text-right text-(--eixo-text-muted)">{fmtKg(row.totalWeightKg)}</td>
+                                        <td className="px-3 py-3 text-right text-(--eixo-text-muted)">{fmtKg(row.averageWeightKg)}</td>
+                                        <td className="px-3 py-3 text-(--eixo-text-muted)">{row.responsibleUserName || '—'}</td>
                                         <td className="px-3 py-3">
                                             <div className="flex items-center justify-center gap-2">
                                                 <button
@@ -1989,7 +1989,7 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
 
                 {/* Paginação */}
                 {!loading && !loadError && totalPages > 1 && (
-                    <div className="flex items-center justify-between border-t border-[var(--eixo-border)] px-6 py-3 text-sm text-[var(--eixo-text-muted)]">
+                    <div className="flex items-center justify-between border-t border-(--eixo-border) px-6 py-3 text-sm text-(--eixo-text-muted)">
                         <span>
                             {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, total)} de {total}
                         </span>
@@ -1997,14 +1997,14 @@ const WeighingsTab: React.FC<WeighingsTabProps> = ({
                             <button
                                 onClick={() => setPage(p => Math.max(0, p - 1))}
                                 disabled={page === 0}
-                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:opacity-40"
+                                className="rounded-lg border border-(--eixo-border) px-3 py-1 text-xs transition-colors hover:bg-(--eixo-surface-soft) disabled:opacity-40"
                             >
                                 ← Anterior
                             </button>
                             <button
                                 onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
                                 disabled={page >= totalPages - 1}
-                                className="rounded-lg border border-[var(--eixo-border)] px-3 py-1 text-xs transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:opacity-40"
+                                className="rounded-lg border border-(--eixo-border) px-3 py-1 text-xs transition-colors hover:bg-(--eixo-surface-soft) disabled:opacity-40"
                             >
                                 Próxima →
                             </button>

@@ -41,7 +41,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
     return (
         <>
             {openModal && <LegalModal doc={openModal} onClose={() => setOpenModal(null)} />}
-            <div className="min-h-screen bg-[var(--eixo-bg)] text-[var(--eixo-text)]">
+            <div className="min-h-screen bg-(--eixo-bg) text-(--eixo-text)">
                 <div className="relative overflow-hidden min-h-screen">
                     <div
                         className="absolute inset-0 opacity-40"
@@ -51,16 +51,16 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                             backgroundSize: 'cover',
                         }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[var(--eixo-surface)] via-[var(--eixo-bg)]/82 to-[var(--eixo-bg)]/60" />
+                    <div className="absolute inset-0 bg-linear-to-t from-(--eixo-surface) via-(--eixo-bg)/82 to-(--eixo-bg)/60" />
 
                     <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-6 pt-4 sm:pb-10 sm:pt-8 lg:px-8">
                         <div className="mb-4 sm:mb-10">
                             <img src="/logo_eixo_official.svg" alt="EIXO" className="h-10 w-auto" />
-                            <div className="text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-[var(--eixo-text)]/72">Gestão para Pecuária de Corte</div>
+                            <div className="text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-(--eixo-text)/72">Gestão para Pecuária de Corte</div>
                         </div>
 
                         <div className="flex flex-1 items-center justify-center">
-                            <div className="w-full max-w-xl rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]/95 shadow-xl backdrop-blur">
+                            <div className="w-full max-w-xl rounded-3xl border border-(--eixo-border) bg-(--eixo-surface)/95 shadow-xl backdrop-blur-sm">
                                 <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-10">
                                     <div className="max-w-md mx-auto w-full">
                                         {onBack && (
@@ -68,15 +68,15 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                 type="button"
                                                 onClick={onBack}
                                                 disabled={isLoading}
-                                                className="mb-2 inline-flex min-h-11 items-center px-1 text-sm font-medium text-[var(--eixo-text)] transition-colors hover:text-[var(--eixo-text)] disabled:cursor-not-allowed disabled:opacity-50 sm:mb-4"
+                                                className="mb-2 inline-flex min-h-11 items-center px-1 text-sm font-medium text-(--eixo-text) transition-colors hover:text-(--eixo-text) disabled:cursor-not-allowed disabled:opacity-50 sm:mb-4"
                                             >
                                                 ← VOLTAR
                                             </button>
                                         )}
                                         <div className="mb-4 sm:mb-6">
                                             <div>
-                                                <h2 className="text-2xl font-black text-[var(--eixo-text)] sm:text-3xl">Entrar na conta</h2>
-                                                <p className="mt-2 text-sm leading-relaxed text-[var(--eixo-text)]/72 sm:mt-3">
+                                                <h2 className="text-2xl font-black text-(--eixo-text) sm:text-3xl">Entrar na conta</h2>
+                                                <p className="mt-2 text-sm leading-relaxed text-(--eixo-text)/72 sm:mt-3">
                                                     Acesse sua fazenda e continue de onde parou.
                                                 </p>
                                             </div>
@@ -86,7 +86,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                 {isLoading ? 'Preparando sua fazenda. Carregando suas informações.' : ''}
                                             </span>
                                             <div>
-                                                <label htmlFor="email" className="block text-sm font-medium text-[var(--eixo-text)]">
+                                                <label htmlFor="email" className="block text-sm font-medium text-(--eixo-text)">
                                                     E-mail
                                                 </label>
                                                 <input
@@ -102,10 +102,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                     disabled={isLoading}
                                                     aria-invalid={hasError}
                                                     aria-describedby={hasError ? 'login-error' : undefined}
-                                                    className={`mt-1 w-full rounded-2xl border bg-[var(--eixo-surface-soft)] px-4 py-3 text-[var(--eixo-text)] focus:outline-none focus:ring-2 disabled:cursor-wait disabled:opacity-65 ${
+                                                    className={`mt-1 w-full rounded-2xl border bg-(--eixo-surface-soft) px-4 py-3 text-(--eixo-text) focus:outline-hidden focus:ring-2 disabled:cursor-wait disabled:opacity-65 ${
                                                         hasError
-                                                            ? 'border-[var(--eixo-danger)] focus:ring-[var(--eixo-danger)]/35'
-                                                            : 'border-[var(--eixo-border)] focus:ring-[var(--eixo-green)]'
+                                                            ? 'border-(--eixo-danger) focus:ring-(--eixo-danger)/35'
+                                                            : 'border-(--eixo-border) focus:ring-(--eixo-green)'
                                                     }`}
                                                     placeholder="nome@fazenda.com"
                                                     required
@@ -114,7 +114,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                             <div>
                                                 <label
                                                     htmlFor="password"
-                                                    className="block text-sm font-medium text-[var(--eixo-text)]"
+                                                    className="block text-sm font-medium text-(--eixo-text)"
                                                 >
                                                     Senha
                                                 </label>
@@ -129,10 +129,10 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                         disabled={isLoading}
                                                         aria-invalid={hasError}
                                                         aria-describedby={hasError ? 'login-error' : undefined}
-                                                        className={`w-full rounded-2xl border bg-[var(--eixo-surface-soft)] px-4 py-3 pr-12 text-[var(--eixo-text)] focus:outline-none focus:ring-2 disabled:cursor-wait disabled:opacity-65 ${
+                                                        className={`w-full rounded-2xl border bg-(--eixo-surface-soft) px-4 py-3 pr-12 text-(--eixo-text) focus:outline-hidden focus:ring-2 disabled:cursor-wait disabled:opacity-65 ${
                                                             hasError
-                                                                ? 'border-[var(--eixo-danger)] focus:ring-[var(--eixo-danger)]/35'
-                                                                : 'border-[var(--eixo-border)] focus:ring-[var(--eixo-green)]'
+                                                                ? 'border-(--eixo-danger) focus:ring-(--eixo-danger)/35'
+                                                                : 'border-(--eixo-border) focus:ring-(--eixo-green)'
                                                         }`}
                                                         placeholder="••••••••"
                                                         required
@@ -141,7 +141,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                         type="button"
                                                         onClick={() => setShowPassword((v) => !v)}
                                                         disabled={isLoading}
-                                                        className="absolute right-1 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-border)]/70 disabled:cursor-wait disabled:opacity-50"
+                                                        className="absolute right-1 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-border)/70 disabled:cursor-wait disabled:opacity-50"
                                                         aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                                                     >
                                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -153,7 +153,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                         type="button"
                                                         onClick={onForgotPassword}
                                                         disabled={isLoading}
-                                                        className="inline-flex min-h-11 items-center justify-center rounded-xl px-2 text-center text-sm font-medium leading-tight text-[var(--eixo-text)]/72 transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)] hover:underline disabled:cursor-wait disabled:opacity-50"
+                                                        className="inline-flex min-h-11 items-center justify-center rounded-xl px-2 text-center text-sm font-medium leading-tight text-(--eixo-text)/72 transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text) hover:underline disabled:cursor-wait disabled:opacity-50"
                                                     >
                                                         Esqueci a senha
                                                     </button>
@@ -162,7 +162,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                             type="button"
                                                             onClick={onRecoverEmail}
                                                             disabled={isLoading}
-                                                            className="inline-flex min-h-11 items-center justify-center rounded-xl px-2 text-center text-sm font-medium leading-tight text-[var(--eixo-text)]/72 transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)] hover:underline disabled:cursor-wait disabled:opacity-50"
+                                                            className="inline-flex min-h-11 items-center justify-center rounded-xl px-2 text-center text-sm font-medium leading-tight text-(--eixo-text)/72 transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text) hover:underline disabled:cursor-wait disabled:opacity-50"
                                                         >
                                                             Não lembro meu e-mail
                                                         </button>
@@ -170,7 +170,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                             </div>
 
                                             {success && (
-                                                <div className="rounded-2xl bg-[var(--eixo-green-soft)] px-4 py-3 text-sm text-[var(--eixo-success)]">
+                                                <div className="rounded-2xl bg-(--eixo-green-soft) px-4 py-3 text-sm text-(--eixo-success)">
                                                     {success}
                                                 </div>
                                             )}
@@ -180,7 +180,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                     role="alert"
                                                     aria-live="assertive"
                                                     aria-atomic="true"
-                                                    className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]"
+                                                    className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-(--eixo-danger)"
                                                 >
                                                     {error}
                                                 </div>
@@ -190,8 +190,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                 disabled={isLoading}
                                                 className={`flex min-h-12 w-full items-center justify-center rounded-2xl px-4 font-semibold transition-all duration-300 ${
                                                     isLoading
-                                                        ? 'min-h-16 scale-[1.02] cursor-wait bg-[var(--eixo-graphite)] text-white shadow-[0_14px_30px_rgba(47,47,47,0.28)] ring-4 ring-[rgba(182,226,58,0.28)]'
-                                                        : 'bg-[var(--eixo-green)] py-3 text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]'
+                                                        ? 'min-h-16 scale-[1.02] cursor-wait bg-(--eixo-graphite) text-white shadow-[0_14px_30px_rgba(47,47,47,0.28)] ring-4 ring-[rgba(182,226,58,0.28)]'
+                                                        : 'bg-(--eixo-green) py-3 text-[#1a1a1a] hover:bg-(--eixo-green-dark)'
                                                 }`}
                                             >
                                                 {isLoading ? (
@@ -216,22 +216,22 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                     type="button"
                                                     onClick={onRegister}
                                                     disabled={isLoading}
-                                                    className="inline-flex min-h-11 w-full items-center justify-center rounded-xl px-2 text-center text-sm text-[var(--eixo-text)]/72 transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]/78 disabled:cursor-wait disabled:opacity-50"
+                                                    className="inline-flex min-h-11 w-full items-center justify-center rounded-xl px-2 text-center text-sm text-(--eixo-text)/72 transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text)/78 disabled:cursor-wait disabled:opacity-50"
                                                 >
                                                     <span>Ainda não tem conta? </span>
-                                                    <span className="ml-1 font-semibold text-[var(--eixo-green-dark)] underline decoration-[var(--eixo-green)]/45 underline-offset-2">
+                                                    <span className="ml-1 font-semibold text-(--eixo-green-dark) underline decoration-(--eixo-green)/45 underline-offset-2">
                                                         Criar conta grátis
                                                     </span>
                                                 </button>
                                             )}
 
-                                            <p className="text-center text-[11px] leading-relaxed text-[var(--eixo-text)]/58">
+                                            <p className="text-center text-[11px] leading-relaxed text-(--eixo-text)/58">
                                                 Ao continuar, você concorda com os{' '}
                                                 <button
                                                     type="button"
                                                     onClick={() => setOpenModal('terms')}
                                                     disabled={isLoading}
-                                                    className="inline-flex min-h-11 items-center rounded-lg px-1 align-middle font-medium text-[var(--eixo-text)]/72 underline decoration-[var(--eixo-border-strong)]/70 underline-offset-2 hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)] disabled:cursor-wait disabled:opacity-50"
+                                                    className="inline-flex min-h-11 items-center rounded-lg px-1 align-middle font-medium text-(--eixo-text)/72 underline decoration-(--eixo-border-strong)/70 underline-offset-2 hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text) disabled:cursor-wait disabled:opacity-50"
                                                 >
                                                     Termos de Uso
                                                 </button>{' '}
@@ -240,7 +240,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, isLoading = false, error, succes
                                                     type="button"
                                                     onClick={() => setOpenModal('privacy')}
                                                     disabled={isLoading}
-                                                    className="inline-flex min-h-11 items-center rounded-lg px-1 align-middle font-medium text-[var(--eixo-text)]/72 underline decoration-[var(--eixo-border-strong)]/70 underline-offset-2 hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)] disabled:cursor-wait disabled:opacity-50"
+                                                    className="inline-flex min-h-11 items-center rounded-lg px-1 align-middle font-medium text-(--eixo-text)/72 underline decoration-(--eixo-border-strong)/70 underline-offset-2 hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text) disabled:cursor-wait disabled:opacity-50"
                                                 >
                                                     Política de Privacidade
                                                 </button>.

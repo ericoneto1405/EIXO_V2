@@ -44,10 +44,10 @@ const targetModes: Array<{ value: AcasalamentoTargetMode; label: string; helper:
 
 const statusLabel: Record<string, string> = { OK: 'OK', PARTIAL: 'Parcial', FAILED: 'Falhou', PENDING: 'Pendente' };
 const statusClass: Record<string, string> = {
-  OK: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)] border-[#c8ddc4]',
-  PARTIAL: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] border-[var(--eixo-border)]',
+  OK: 'bg-(--eixo-green-soft) text-(--eixo-success) border-[#c8ddc4]',
+  PARTIAL: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted) border-(--eixo-border)',
   FAILED: 'bg-[#fbede8] text-[#8c4d39] border-[#e5c4b7]',
-  PENDING: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] border-[var(--eixo-border)]',
+  PENDING: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted) border-(--eixo-border)',
 };
 
 const formatDate = (value: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : 'Nunca');
@@ -89,9 +89,9 @@ const SignalPills: React.FC<{ signals?: AcasalamentoReviewSignals }> = ({ signal
   const active = signalLabels.filter((item) => Boolean(signals[item.key]));
   return (
     <div className="mt-2 flex flex-wrap gap-2">
-      {active.map((item) => <span key={item.key} className="rounded-full bg-[var(--eixo-surface-soft)] px-2 py-1 text-[10px] font-bold uppercase text-[var(--eixo-text-muted)]">{item.label}</span>)}
-      {signals.progenyCount ? <span className="rounded-full bg-[var(--eixo-surface-soft)] px-2 py-1 text-[10px] font-bold uppercase text-[var(--eixo-text-muted)]">{signals.progenyCount} filhos</span> : null}
-      {signals.centersCount && signals.centersCount > 1 ? <span className="rounded-full bg-[var(--eixo-surface-soft)] px-2 py-1 text-[10px] font-bold uppercase text-[var(--eixo-text-muted)]">{signals.centersCount} centrais</span> : null}
+      {active.map((item) => <span key={item.key} className="rounded-full bg-(--eixo-surface-soft) px-2 py-1 text-[10px] font-bold uppercase text-(--eixo-text-muted)">{item.label}</span>)}
+      {signals.progenyCount ? <span className="rounded-full bg-(--eixo-surface-soft) px-2 py-1 text-[10px] font-bold uppercase text-(--eixo-text-muted)">{signals.progenyCount} filhos</span> : null}
+      {signals.centersCount && signals.centersCount > 1 ? <span className="rounded-full bg-(--eixo-surface-soft) px-2 py-1 text-[10px] font-bold uppercase text-(--eixo-text-muted)">{signals.centersCount} centrais</span> : null}
     </div>
   );
 };
@@ -234,24 +234,24 @@ const EixoAcasalamento: React.FC<EixoAcasalamentoProps> = ({ farmId }) => {
   };
 
   if (!farmId) {
-    return <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 text-[var(--eixo-text-muted)]">Selecione uma fazenda para acessar o Eixo Acasalamento.</div>;
+    return <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-6 text-(--eixo-text-muted)">Selecione uma fazenda para acessar o Eixo Acasalamento.</div>;
   }
 
   return (
-    <div className="space-y-5 text-[var(--eixo-text)]">
-      <header className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 shadow-sm">
+    <div className="space-y-5 text-(--eixo-text)">
+      <header className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-6 shadow-xs">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-[var(--eixo-text-muted)]">Eixo Acasalamento</p>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-(--eixo-text-muted)">Eixo Acasalamento</p>
             <h2 className="mt-2 text-3xl font-black leading-tight">Recomendação de touros</h2>
-            <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Plantel, objetivo e prova oficial.</p>
+            <p className="mt-2 text-sm text-(--eixo-text-muted)">Plantel, objetivo e prova oficial.</p>
           </div>
-          <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-xs text-[var(--eixo-text-muted)]">
-            <strong className="block text-[var(--eixo-text)]">Base</strong>
+          <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 text-xs text-(--eixo-text-muted)">
+            <strong className="block text-(--eixo-text)">Base</strong>
             {formatDate(lastSourceSync)}
           </div>
         </div>
-        {(message || error) && <div className={`mt-4 rounded-2xl border p-3 text-sm ${error ? 'border-[#e5c4b7] bg-[#fbede8] text-[#8c4d39]' : 'border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>{error || message}</div>}
+        {(message || error) && <div className={`mt-4 rounded-2xl border p-3 text-sm ${error ? 'border-[#e5c4b7] bg-[#fbede8] text-[#8c4d39]' : 'border-(--eixo-border) bg-(--eixo-surface-soft) text-(--eixo-text-muted)'}`}>{error || message}</div>}
       </header>
 
       <section className="grid gap-3 lg:grid-cols-4">
@@ -261,8 +261,8 @@ const EixoAcasalamento: React.FC<EixoAcasalamentoProps> = ({ farmId }) => {
           { label: 'Prova oficial', value: verifiedBulls },
           { label: 'Pendências', value: issues.length },
         ].map((card) => (
-          <div key={card.label} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
-            <p className="text-xs font-bold uppercase tracking-wide text-[var(--eixo-text-muted)]">{card.label}</p>
+          <div key={card.label} className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-(--eixo-text-muted)">{card.label}</p>
             <p className="mt-1 text-2xl font-black">{formatNumber(card.value)}</p>
           </div>
         ))}
@@ -270,25 +270,25 @@ const EixoAcasalamento: React.FC<EixoAcasalamentoProps> = ({ farmId }) => {
 
       <section className="grid gap-5 xl:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-5">
-          <div className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+          <div className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-5">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--eixo-text-muted)]">1. Plantel</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-(--eixo-text-muted)">1. Plantel</p>
                 <h3 className="mt-1 text-xl font-black">Entrada da análise</h3>
               </div>
-              <span className="rounded-full bg-[var(--eixo-surface-soft)] px-3 py-1 text-xs font-bold text-[var(--eixo-text-muted)]">{plantelSummary.selectedHeads} cabeça(s)</span>
+              <span className="rounded-full bg-(--eixo-surface-soft) px-3 py-1 text-xs font-bold text-(--eixo-text-muted)">{plantelSummary.selectedHeads} cabeça(s)</span>
             </div>
 
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <label className="block">
-                <span className="text-sm font-semibold text-[var(--eixo-text-muted)]">Tipo</span>
-                <select value={targetMode} onChange={(event) => setTargetMode(event.target.value as AcasalamentoTargetMode)} className="mt-2 w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm outline-none focus:border-[var(--eixo-green)]">
+                <span className="text-sm font-semibold text-(--eixo-text-muted)">Tipo</span>
+                <select value={targetMode} onChange={(event) => setTargetMode(event.target.value as AcasalamentoTargetMode)} className="mt-2 w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-3 text-sm outline-hidden focus:border-(--eixo-green)">
                   {targetModes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                 </select>
               </label>
               <label className="block">
-                <span className="text-sm font-semibold text-[var(--eixo-text-muted)]">Sêmen</span>
-                <select value={availabilityMode} onChange={(event) => setAvailabilityMode(event.target.value as AcasalamentoAvailabilityMode)} className="mt-2 w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm outline-none focus:border-[var(--eixo-green)]">
+                <span className="text-sm font-semibold text-(--eixo-text-muted)">Sêmen</span>
+                <select value={availabilityMode} onChange={(event) => setAvailabilityMode(event.target.value as AcasalamentoAvailabilityMode)} className="mt-2 w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-3 text-sm outline-hidden focus:border-(--eixo-green)">
                   <option value="MARKET_AND_FARM">Mercado + botijão</option>
                   <option value="FARM_INVENTORY_ONLY">Só botijão</option>
                 </select>
@@ -301,29 +301,29 @@ const EixoAcasalamento: React.FC<EixoAcasalamentoProps> = ({ farmId }) => {
               <MiniStat label="Doses" value={formatNumber(plantelSummary.estimatedDoses)} />
             </div>
 
-            {targetMode === 'LOT' && <div className="mt-4 grid gap-2 md:grid-cols-2">{lots.filter((lot) => lot.animalsCount > 0).map((lot) => <label key={lot.id} className="flex items-center gap-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3 text-sm"><input type="checkbox" checked={selectedLotIds.includes(lot.id)} onChange={(event) => setSelectedLotIds((current) => event.target.checked ? [...current, lot.id] : current.filter((id) => id !== lot.id))} /><span><strong>{lot.name}</strong> · {lot.animalsCount}</span></label>)}{!lots.some((lot) => lot.animalsCount > 0) && <p className="rounded-2xl bg-[var(--eixo-surface-soft)] p-4 text-sm text-[var(--eixo-text-muted)]">Nenhum lote apto.</p>}</div>}
+            {targetMode === 'LOT' && <div className="mt-4 grid gap-2 md:grid-cols-2">{lots.filter((lot) => lot.animalsCount > 0).map((lot) => <label key={lot.id} className="flex items-center gap-3 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-3 text-sm"><input type="checkbox" checked={selectedLotIds.includes(lot.id)} onChange={(event) => setSelectedLotIds((current) => event.target.checked ? [...current, lot.id] : current.filter((id) => id !== lot.id))} /><span><strong>{lot.name}</strong> · {lot.animalsCount}</span></label>)}{!lots.some((lot) => lot.animalsCount > 0) && <p className="rounded-2xl bg-(--eixo-surface-soft) p-4 text-sm text-(--eixo-text-muted)">Nenhum lote apto.</p>}</div>}
 
-            {(targetMode === 'GROUP' || targetMode === 'INDIVIDUAL') && <div className="mt-4 max-h-64 space-y-2 overflow-auto rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">{animals.map((animal) => { const weight = typeof animal.ultimoPeso === 'number' ? animal.ultimoPeso : null; const hasWeight = weight !== null; const isLight = typeof weight === 'number' && weight < 350; return <label key={animal.id} className="flex items-center justify-between gap-3 rounded-xl p-2 text-sm hover:bg-[var(--eixo-surface)]"><span className="flex items-center gap-3"><input type={targetMode === 'INDIVIDUAL' ? 'radio' : 'checkbox'} name="mating-animal" checked={selectedAnimalIds.includes(animal.id)} onChange={(event) => setSelectedAnimalIds((current) => targetMode === 'INDIVIDUAL' ? [animal.id] : event.target.checked ? [...current, animal.id] : current.filter((id) => id !== animal.id))} /><span><strong>{animal.brinco}</strong> · {hasWeight ? `${weight} kg` : 'sem peso'}</span></span><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${isLight || !hasWeight ? 'bg-[#fbede8] text-[#8c4d39]' : 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]'}`}>{isLight ? 'atenção' : hasWeight ? 'apta' : 'sem peso'}</span></label>; })}{!animals.length && <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma matriz disponível.</p>}</div>}
+            {(targetMode === 'GROUP' || targetMode === 'INDIVIDUAL') && <div className="mt-4 max-h-64 space-y-2 overflow-auto rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-3">{animals.map((animal) => { const weight = typeof animal.ultimoPeso === 'number' ? animal.ultimoPeso : null; const hasWeight = weight !== null; const isLight = typeof weight === 'number' && weight < 350; return <label key={animal.id} className="flex items-center justify-between gap-3 rounded-xl p-2 text-sm hover:bg-(--eixo-surface)"><span className="flex items-center gap-3"><input type={targetMode === 'INDIVIDUAL' ? 'radio' : 'checkbox'} name="mating-animal" checked={selectedAnimalIds.includes(animal.id)} onChange={(event) => setSelectedAnimalIds((current) => targetMode === 'INDIVIDUAL' ? [animal.id] : event.target.checked ? [...current, animal.id] : current.filter((id) => id !== animal.id))} /><span><strong>{animal.brinco}</strong> · {hasWeight ? `${weight} kg` : 'sem peso'}</span></span><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${isLight || !hasWeight ? 'bg-[#fbede8] text-[#8c4d39]' : 'bg-(--eixo-green-soft) text-(--eixo-success)'}`}>{isLight ? 'atenção' : hasWeight ? 'apta' : 'sem peso'}</span></label>; })}{!animals.length && <p className="text-sm text-(--eixo-text-muted)">Nenhuma matriz disponível.</p>}</div>}
 
-            {targetMode === 'UPLOAD' && <div className="mt-4 rounded-2xl border border-dashed border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4"><input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="text-sm" />{uploadedLots.length > 0 && <p className="mt-2 text-sm font-semibold">{uploadedLots.length} lote(s) carregado(s).</p>}</div>}
+            {targetMode === 'UPLOAD' && <div className="mt-4 rounded-2xl border border-dashed border-(--eixo-border) bg-(--eixo-surface-soft) p-4"><input type="file" accept=".xlsx,.xls,.csv" onChange={handleFile} className="text-sm" />{uploadedLots.length > 0 && <p className="mt-2 text-sm font-semibold">{uploadedLots.length} lote(s) carregado(s).</p>}</div>}
           </div>
 
-          <div className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--eixo-text-muted)]">2. Objetivo</p>
+          <div className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-5">
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-(--eixo-text-muted)">2. Objetivo</p>
             <div className="mt-4 grid gap-2">
-              {objectives.map((item) => <button key={item.value} type="button" onClick={() => setObjective(item.value)} className={`rounded-2xl border p-4 text-left transition ${objective === item.value ? 'border-[var(--eixo-green)] bg-[var(--eixo-surface-soft)]' : 'border-[var(--eixo-border)] hover:bg-[var(--eixo-surface-soft)]'}`}><div className="flex items-center justify-between gap-3"><div><p className="font-black">{item.title}</p><p className="mt-1 text-xs font-bold uppercase text-[var(--eixo-text-muted)]">{item.label}</p></div><span className="rounded-full bg-[var(--eixo-surface-soft)] px-3 py-1 text-[10px] font-bold text-[var(--eixo-text-muted)]">{item.formula}</span></div></button>)}
+              {objectives.map((item) => <button key={item.value} type="button" onClick={() => setObjective(item.value)} className={`rounded-2xl border p-4 text-left transition ${objective === item.value ? 'border-(--eixo-green) bg-(--eixo-surface-soft)' : 'border-(--eixo-border) hover:bg-(--eixo-surface-soft)'}`}><div className="flex items-center justify-between gap-3"><div><p className="font-black">{item.title}</p><p className="mt-1 text-xs font-bold uppercase text-(--eixo-text-muted)">{item.label}</p></div><span className="rounded-full bg-(--eixo-surface-soft) px-3 py-1 text-[10px] font-bold text-(--eixo-text-muted)">{item.formula}</span></div></button>)}
             </div>
-            <button type="button" onClick={handleRun} disabled={running || loading} className="mt-5 w-full rounded-2xl bg-[var(--eixo-green)] px-5 py-3 text-sm font-bold text-[#1a1a1a] transition hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-60">{running ? 'Processando...' : 'Gerar recomendação'}</button>
+            <button type="button" onClick={handleRun} disabled={running || loading} className="mt-5 w-full rounded-2xl bg-(--eixo-green) px-5 py-3 text-sm font-bold text-[#1a1a1a] transition hover:bg-(--eixo-green-dark) disabled:cursor-not-allowed disabled:opacity-60">{running ? 'Processando...' : 'Gerar recomendação'}</button>
           </div>
         </div>
 
-        <div className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+        <div className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-5">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--eixo-text-muted)]">3. Resultado</p>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-(--eixo-text-muted)">3. Resultado</p>
               <h3 className="mt-1 text-xl font-black">Top touros</h3>
             </div>
-            <span className="rounded-full bg-[var(--eixo-surface-soft)] px-3 py-1 text-xs font-bold text-[var(--eixo-text-muted)]">{selectedObjective.label}</span>
+            <span className="rounded-full bg-(--eixo-surface-soft) px-3 py-1 text-xs font-bold text-(--eixo-text-muted)">{selectedObjective.label}</span>
           </div>
 
           {!baseHasBulls && <EmptyState text="Base ainda não sincronizada." />}
@@ -331,29 +331,29 @@ const EixoAcasalamento: React.FC<EixoAcasalamentoProps> = ({ farmId }) => {
           {selectedSession && selectedSession.results.length === 0 && <EmptyState tone="danger" text="Nenhum touro aprovado." />}
           {!selectedSession && baseHasBulls && <EmptyState text="Gere uma recomendação para ver o ranking." />}
 
-          {selectedSession && selectedSession.results.length > 0 && <div className="mt-4 space-y-3">{selectedSession.results.slice(0, 3).map((result) => { const accuracy = result.proofSnapshot?.accuracy; const availability = (result.commercialSnapshot as any)?.availability; return <div key={result.id} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-[var(--eixo-text-muted)]">Top {result.rank} · Score {result.score.toFixed(2)}</p><h4 className="mt-1 text-lg font-black">{result.bull?.name || 'Touro'}</h4><p className="text-sm text-[var(--eixo-text-muted)]">{result.bull?.central} · {availability?.label || 'disponível'}</p></div><span className="rounded-full bg-[var(--eixo-green-soft)] px-3 py-1 text-xs font-bold text-[var(--eixo-success)]">Aprovado</span></div><div className="mt-3 grid gap-2 text-xs md:grid-cols-4"><span className="rounded-xl bg-[var(--eixo-surface)] p-2">DEP <strong>{result.proofSnapshot?.dep ?? 'n/i'}</strong></span><span className="rounded-xl bg-[var(--eixo-surface)] p-2">DECA <strong>{result.proofSnapshot?.deca ?? 'n/i'}</strong></span><span className="rounded-xl bg-[var(--eixo-surface)] p-2">ACC <strong>{accuracy !== null && accuracy !== undefined ? `${Math.round(accuracy * 100)}%` : 'n/i'}</strong></span><span className="rounded-xl bg-[var(--eixo-surface)] p-2">Filhos <strong>{result.proofSnapshot?.progenyCount ?? 'n/i'}</strong></span></div>{availability?.farmDosesAvailable ? <p className="mt-3 text-xs font-bold text-[var(--eixo-text-muted)]">Botijão: {availability.farmDosesAvailable} dose(s)</p> : null}</div>; })}</div>}
+          {selectedSession && selectedSession.results.length > 0 && <div className="mt-4 space-y-3">{selectedSession.results.slice(0, 3).map((result) => { const accuracy = result.proofSnapshot?.accuracy; const availability = (result.commercialSnapshot as any)?.availability; return <div key={result.id} className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-4"><div className="flex items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-wide text-(--eixo-text-muted)">Top {result.rank} · Score {result.score.toFixed(2)}</p><h4 className="mt-1 text-lg font-black">{result.bull?.name || 'Touro'}</h4><p className="text-sm text-(--eixo-text-muted)">{result.bull?.central} · {availability?.label || 'disponível'}</p></div><span className="rounded-full bg-(--eixo-green-soft) px-3 py-1 text-xs font-bold text-(--eixo-success)">Aprovado</span></div><div className="mt-3 grid gap-2 text-xs md:grid-cols-4"><span className="rounded-xl bg-(--eixo-surface) p-2">DEP <strong>{result.proofSnapshot?.dep ?? 'n/i'}</strong></span><span className="rounded-xl bg-(--eixo-surface) p-2">DECA <strong>{result.proofSnapshot?.deca ?? 'n/i'}</strong></span><span className="rounded-xl bg-(--eixo-surface) p-2">ACC <strong>{accuracy !== null && accuracy !== undefined ? `${Math.round(accuracy * 100)}%` : 'n/i'}</strong></span><span className="rounded-xl bg-(--eixo-surface) p-2">Filhos <strong>{result.proofSnapshot?.progenyCount ?? 'n/i'}</strong></span></div>{availability?.farmDosesAvailable ? <p className="mt-3 text-xs font-bold text-(--eixo-text-muted)">Botijão: {availability.farmDosesAvailable} dose(s)</p> : null}</div>; })}</div>}
 
-          {blocked.length > 0 && <details className="mt-5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4"><summary className="cursor-pointer text-sm font-black">Bloqueados ({blocked.length})</summary><div className="mt-3 max-h-72 space-y-2 overflow-auto">{blocked.map((item) => <div key={`${item.bull.id}-${item.reason}`} className="rounded-xl bg-[#fbede8] p-3 text-sm text-[#8c4d39]"><strong>{item.bull.name}</strong><p className="mt-1 text-xs">{item.reason}</p><SignalPills signals={item.reviewSignals} /></div>)}</div></details>}
+          {blocked.length > 0 && <details className="mt-5 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-4"><summary className="cursor-pointer text-sm font-black">Bloqueados ({blocked.length})</summary><div className="mt-3 max-h-72 space-y-2 overflow-auto">{blocked.map((item) => <div key={`${item.bull.id}-${item.reason}`} className="rounded-xl bg-[#fbede8] p-3 text-sm text-[#8c4d39]"><strong>{item.bull.name}</strong><p className="mt-1 text-xs">{item.reason}</p><SignalPills signals={item.reviewSignals} /></div>)}</div></details>}
         </div>
       </section>
 
-      <details className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+      <details className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-5">
         <summary className="cursor-pointer text-lg font-black">Auditoria e prateleira</summary>
         <div className="mt-5 grid gap-5 xl:grid-cols-[0.75fr_1.25fr]">
           <div className="space-y-3">
-            {sources.map((source) => <div key={source.id} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3"><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-bold">{source.name}</p><p className="text-xs text-[var(--eixo-text-muted)]">{formatDate(source.lastSyncAt)}</p></div><span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusClass[source.status] || statusClass.PENDING}`}>{statusLabel[source.status] || source.status}</span></div></div>)}
+            {sources.map((source) => <div key={source.id} className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-3"><div className="flex items-center justify-between gap-3"><div><p className="text-sm font-bold">{source.name}</p><p className="text-xs text-(--eixo-text-muted)">{formatDate(source.lastSyncAt)}</p></div><span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusClass[source.status] || statusClass.PENDING}`}>{statusLabel[source.status] || source.status}</span></div></div>)}
             {relevantIdentityIssues.length > 0 && <div className="rounded-2xl border border-[#e5c4b7] bg-[#fbede8] p-4 text-sm text-[#8c4d39]"><strong>Revisão de identidade</strong><p className="mt-1 text-xs">{relevantIdentityIssues.length} touro(s) relevantes pendentes.</p></div>}
           </div>
           <div>
-            <div className="grid gap-3 md:grid-cols-3"><input value={bullSearch} onChange={(event) => setBullSearch(event.target.value)} placeholder="Buscar touro" className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm outline-none focus:border-[var(--eixo-green)]" /><select value={centralFilter} onChange={(event) => setCentralFilter(event.target.value)} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm outline-none focus:border-[var(--eixo-green)]"><option value="ALL">Todas</option>{centralOptions.map((central) => <option key={central} value={central}>{central}</option>)}</select><select value={bullFilter} onChange={(event) => setBullFilter(event.target.value as BullFilter)} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 text-sm outline-none focus:border-[var(--eixo-green)]"><option value="ALL">Todos</option><option value="READY_ABCZ">Série/RGN</option><option value="VERIFIED">Prova oficial</option><option value="BLOCKED_KEY">Sem chave</option></select></div>
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">{filteredBulls.slice(0, 12).map((bull) => <div key={bull.id} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4"><div className="flex items-start justify-between gap-3"><div><h4 className="font-black">{bull.name}</h4><p className="mt-1 text-xs text-[var(--eixo-text-muted)]">{bull.central} · {bull.registration || 'sem registro'}</p></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${hasVerifiedProof(bull) ? 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' : 'bg-[var(--eixo-surface)] text-[var(--eixo-text-muted)]'}`}>{hasVerifiedProof(bull) ? 'Oficial' : 'Pendente'}</span></div></div>)}</div>
+            <div className="grid gap-3 md:grid-cols-3"><input value={bullSearch} onChange={(event) => setBullSearch(event.target.value)} placeholder="Buscar touro" className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-3 text-sm outline-hidden focus:border-(--eixo-green)" /><select value={centralFilter} onChange={(event) => setCentralFilter(event.target.value)} className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-3 text-sm outline-hidden focus:border-(--eixo-green)"><option value="ALL">Todas</option>{centralOptions.map((central) => <option key={central} value={central}>{central}</option>)}</select><select value={bullFilter} onChange={(event) => setBullFilter(event.target.value as BullFilter)} className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-3 text-sm outline-hidden focus:border-(--eixo-green)"><option value="ALL">Todos</option><option value="READY_ABCZ">Série/RGN</option><option value="VERIFIED">Prova oficial</option><option value="BLOCKED_KEY">Sem chave</option></select></div>
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">{filteredBulls.slice(0, 12).map((bull) => <div key={bull.id} className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-4"><div className="flex items-start justify-between gap-3"><div><h4 className="font-black">{bull.name}</h4><p className="mt-1 text-xs text-(--eixo-text-muted)">{bull.central} · {bull.registration || 'sem registro'}</p></div><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${hasVerifiedProof(bull) ? 'bg-(--eixo-green-soft) text-(--eixo-success)' : 'bg-(--eixo-surface) text-(--eixo-text-muted)'}`}>{hasVerifiedProof(bull) ? 'Oficial' : 'Pendente'}</span></div></div>)}</div>
           </div>
         </div>
       </details>
 
-      <details className="rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+      <details className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-5">
         <summary className="cursor-pointer text-lg font-black">Histórico</summary>
-        <div className="mt-3 grid gap-2 md:grid-cols-2">{sessions.slice(0, 6).map((session) => <button key={session.id} type="button" onClick={() => setSelectedSession(session)} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3 text-left text-xs hover:bg-[var(--eixo-surface)]"><strong>{session.objective}</strong> · {formatDate(session.createdAt)} · {session.results.length} aprovado(s)</button>)}{!sessions.length && <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma consultoria ainda.</p>}</div>
+        <div className="mt-3 grid gap-2 md:grid-cols-2">{sessions.slice(0, 6).map((session) => <button key={session.id} type="button" onClick={() => setSelectedSession(session)} className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-3 text-left text-xs hover:bg-(--eixo-surface)"><strong>{session.objective}</strong> · {formatDate(session.createdAt)} · {session.results.length} aprovado(s)</button>)}{!sessions.length && <p className="text-sm text-(--eixo-text-muted)">Nenhuma consultoria ainda.</p>}</div>
       </details>
     </div>
   );
@@ -361,14 +361,14 @@ const EixoAcasalamento: React.FC<EixoAcasalamentoProps> = ({ farmId }) => {
 
 
 const MiniStat: React.FC<{ label: string; value: React.ReactNode }> = ({ label, value }) => (
-  <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-    <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--eixo-text-muted)]">{label}</p>
-    <p className="mt-1 text-sm font-black text-[var(--eixo-text)]">{value}</p>
+  <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-3">
+    <p className="text-[10px] font-bold uppercase tracking-wide text-(--eixo-text-muted)">{label}</p>
+    <p className="mt-1 text-sm font-black text-(--eixo-text)">{value}</p>
   </div>
 );
 
 const EmptyState: React.FC<{ text: string; tone?: 'default' | 'danger' }> = ({ text, tone = 'default' }) => (
-  <p className={`mt-4 rounded-2xl p-4 text-sm ${tone === 'danger' ? 'bg-[#fbede8] text-[#8c4d39]' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]'}`}>{text}</p>
+  <p className={`mt-4 rounded-2xl p-4 text-sm ${tone === 'danger' ? 'bg-[#fbede8] text-[#8c4d39]' : 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)'}`}>{text}</p>
 );
 
 export default EixoAcasalamento;

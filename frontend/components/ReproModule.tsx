@@ -48,11 +48,11 @@ const GRUPOS: { grupo: Grupo; label: string; abas: [Aba, string][] }[] = [
 ];
 const grupoDaAba = (aba: Aba): Grupo => GRUPOS.find((g) => g.abas.some(([v]) => v === aba))?.grupo || 'HOJE';
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] disabled:opacity-60';
-const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
-const cardClass = 'rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5';
-const primaryButton = 'rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryButton = 'rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--eixo-text)] transition hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) disabled:opacity-60';
+const labelClass = 'block text-xs font-semibold text-(--eixo-text-muted)';
+const cardClass = 'rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5';
+const primaryButton = 'rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryButton = 'rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2.5 text-sm font-semibold text-(--eixo-text) transition hover:bg-(--eixo-surface-soft) disabled:opacity-50';
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const fmtData = (v?: string | null) => (v ? new Date(v).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—');
@@ -150,8 +150,8 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName, currentUser
     return (
         <div className="space-y-5 p-4 md:p-6">
             <div>
-                <h1 className="text-2xl font-bold text-[var(--eixo-text)]">Reprodução</h1>
-                <p className="text-sm text-[var(--eixo-text-muted)]">{farmName || 'Fazenda'} · o sistema sugere, o produtor decide.</p>
+                <h1 className="text-2xl font-bold text-(--eixo-text)">Reprodução</h1>
+                <p className="text-sm text-(--eixo-text-muted)">{farmName || 'Fazenda'} · o sistema sugere, o produtor decide.</p>
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -172,8 +172,8 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName, currentUser
                     {g.abas.map(([valor, label]) => (
                         <button key={valor} type="button" onClick={() => setAba(valor)}
                             className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${aba === valor
-                                ? 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)]'
-                                : 'text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'}`}>
+                                ? 'bg-(--eixo-surface-soft) text-(--eixo-text)'
+                                : 'text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft)'}`}>
                             {label}
                         </button>
                     ))}
@@ -201,7 +201,7 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName, currentUser
             {aba === 'DESMAMA' && <DesmamaAba farmId={farmId} currentUserId={currentUserId} onErro={setErro} onAviso={setAviso} irParaCriterios={() => setAba('CRITERIOS')} />}
             {aba === 'FICHA' && meta && <FichaVaca farmId={farmId} meta={meta} vacaId={fichaId} onSelecionar={setFichaId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'CRITERIOS' && meta && <Criterios farmId={farmId} meta={meta} onSalvo={carregarMeta} onErro={setErro} />}
-            <p className="text-xs text-[var(--eixo-text-muted)]">
+            <p className="text-xs text-(--eixo-text-muted)">
                 O EIXO ajuda a organizar o manejo. Diagnóstico, exame de touro e receita de hormônio são do veterinário responsável da fazenda.
             </p>
         </div>
@@ -296,7 +296,7 @@ const Candidatas: React.FC<{
                 </div>
             )}
             {!performance && (
-                <div className="rounded-xl bg-[var(--eixo-surface-soft)] px-4 py-3 text-xs text-[var(--eixo-text-muted)]">
+                <div className="rounded-xl bg-(--eixo-surface-soft) px-4 py-3 text-xs text-(--eixo-text-muted)">
                     O farol (apta, falta X kg) faz parte do EIXO Performance.
                 </div>
             )}
@@ -316,7 +316,7 @@ const Candidatas: React.FC<{
                 <div className="mt-4 overflow-x-auto">
                     <table className="w-full min-w-[720px] text-sm">
                         <thead>
-                            <tr className="text-left text-xs text-[var(--eixo-text-muted)]">
+                            <tr className="text-left text-xs text-(--eixo-text-muted)">
                                 <th className="py-2" />
                                 <th>Identificação</th>
                                 <th>Idade</th>
@@ -328,25 +328,25 @@ const Candidatas: React.FC<{
                             </tr>
                         </thead>
                         <tbody>
-                            {carregando && <tr><td colSpan={8} className="py-6 text-center text-[var(--eixo-text-muted)]">Carregando…</td></tr>}
-                            {!carregando && !filtradas.length && <tr><td colSpan={8} className="py-6 text-center text-[var(--eixo-text-muted)]">Nenhuma fêmea aguardando liberação.</td></tr>}
+                            {carregando && <tr><td colSpan={8} className="py-6 text-center text-(--eixo-text-muted)">Carregando…</td></tr>}
+                            {!carregando && !filtradas.length && <tr><td colSpan={8} className="py-6 text-center text-(--eixo-text-muted)">Nenhuma fêmea aguardando liberação.</td></tr>}
                             {filtradas.map((c) => {
                                 const meses = idadeMeses(c.dataNascimento);
                                 const bloqueada = c.bloqueios.length > 0;
                                 return (
-                                    <tr key={c.id} className="border-t border-[var(--eixo-border)]">
+                                    <tr key={c.id} className="border-t border-(--eixo-border)">
                                         <td className="py-2 pr-2">
                                             <input type="checkbox" disabled={bloqueada} checked={selecionadas.has(c.id)} onChange={() => alternar(c.id)}
                                                 aria-label={`Selecionar ${c.brinco}`} />
                                         </td>
                                         <td className="font-semibold">
                                             {c.brinco}
-                                            {c.lote && <span className="block text-xs font-normal text-[var(--eixo-text-muted)]">{c.lote}</span>}
+                                            {c.lote && <span className="block text-xs font-normal text-(--eixo-text-muted)">{c.lote}</span>}
                                         </td>
                                         <td>{meses === null ? '—' : `${meses} meses${c.dataNascimentoEstimada ? ' (estimada)' : ''}`}</td>
                                         <td>
                                             {c.peso != null ? `${c.peso} kg` : '—'}
-                                            {c.pesadoEm && <span className="block text-xs text-[var(--eixo-text-muted)]">{fmtData(c.pesadoEm)}</span>}
+                                            {c.pesadoEm && <span className="block text-xs text-(--eixo-text-muted)">{fmtData(c.pesadoEm)}</span>}
                                         </td>
                                         <td>{c.ecc ?? '—'}</td>
                                         <td>
@@ -363,7 +363,7 @@ const Candidatas: React.FC<{
                                             <td>
                                                 {c.farol?.cor ? (
                                                     <span className={`rounded-full px-2 py-1 text-xs font-bold ${COR_CLASS[c.farol.cor]}`}>{c.farol.motivos.join(' · ')}</span>
-                                                ) : <span className="text-xs text-[var(--eixo-text-muted)]">{c.farol?.motivos?.[0] || '—'}</span>}
+                                                ) : <span className="text-xs text-(--eixo-text-muted)">{c.farol?.motivos?.[0] || '—'}</span>}
                                             </td>
                                         )}
                                         <td className="text-xs text-red-700">{c.bloqueios.filter((m) => m !== 'Sem registro de brucelose').join(', ')}</td>
@@ -447,7 +447,7 @@ const BruceloseAnterior: React.FC<{
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true">
             <div className={`${cardClass} w-full max-w-sm space-y-3`}>
                 <h2 className="text-lg font-bold">Vacina de brucelose anterior — {candidata.brinco}</h2>
-                <p className="text-xs text-[var(--eixo-text-muted)]">Use só para vacina aplicada antes da fazenda usar o EIXO. As novas são registradas na Sanidade.</p>
+                <p className="text-xs text-(--eixo-text-muted)">Use só para vacina aplicada antes da fazenda usar o EIXO. As novas são registradas na Sanidade.</p>
                 <label className="block">
                     <span className={labelClass}>Data da vacina</span>
                     <input type="date" className={inputClass} value={data} max={hoje()} onChange={(e) => setData(e.target.value)} />
@@ -527,13 +527,13 @@ const FichaVaca: React.FC<{
                     <input className={inputClass} value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Identificação" />
                 </label>
                 <ul className="max-h-[420px] space-y-1 overflow-y-auto">
-                    {!vacas.length && <li className="text-sm text-[var(--eixo-text-muted)]">Nenhuma vaca liberada ainda.</li>}
+                    {!vacas.length && <li className="text-sm text-(--eixo-text-muted)">Nenhuma vaca liberada ainda.</li>}
                     {vacas.map((v) => (
                         <li key={v.id}>
                             <button type="button" onClick={() => onSelecionar(v.id)}
-                                className={`w-full rounded-lg px-3 py-2 text-left text-sm ${v.id === vacaId ? 'bg-[var(--eixo-surface-soft)] font-bold' : 'hover:bg-[var(--eixo-surface-soft)]'}`}>
+                                className={`w-full rounded-lg px-3 py-2 text-left text-sm ${v.id === vacaId ? 'bg-(--eixo-surface-soft) font-bold' : 'hover:bg-(--eixo-surface-soft)'}`}>
                                 {v.brinco}
-                                <span className="block text-xs text-[var(--eixo-text-muted)]">{situacaoTexto(v.situacao)}{v.status !== 'VIVO' ? ' · fora do rebanho' : ''}</span>
+                                <span className="block text-xs text-(--eixo-text-muted)">{situacaoTexto(v.situacao)}{v.status !== 'VIVO' ? ' · fora do rebanho' : ''}</span>
                             </button>
                         </li>
                     ))}
@@ -541,14 +541,14 @@ const FichaVaca: React.FC<{
             </div>
 
             {!ficha ? (
-                <div className={`${cardClass} text-sm text-[var(--eixo-text-muted)]`}>Escolha uma vaca para ver a ficha.</div>
+                <div className={`${cardClass} text-sm text-(--eixo-text-muted)`}>Escolha uma vaca para ver a ficha.</div>
             ) : (
                 <div className="space-y-4">
                     <div className={cardClass}>
                         <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                                 <h2 className="text-xl font-bold">{ficha.vaca.brinco}</h2>
-                                <p className="text-sm text-[var(--eixo-text-muted)]">
+                                <p className="text-sm text-(--eixo-text-muted)">
                                     {ficha.vaca.categoria} · {ficha.vaca.raca || 'raça não informada'} · {idadeMeses(ficha.vaca.dataNascimento) ?? '—'} meses
                                     {ficha.vaca.lote ? ` · ${ficha.vaca.lote}` : ''}
                                 </p>
@@ -573,7 +573,7 @@ const FichaVaca: React.FC<{
                                 <Numero label="Vazias seguidas" valor={ficha.numeros.vaziasSeguidas} />
                             </div>
                         ) : (
-                            <p className="mt-3 text-xs text-[var(--eixo-text-muted)]">Números da vaca (partos, intervalo entre partos, desmama) no EIXO Performance.</p>
+                            <p className="mt-3 text-xs text-(--eixo-text-muted)">Números da vaca (partos, intervalo entre partos, desmama) no EIXO Performance.</p>
                         )}
                     </div>
 
@@ -588,10 +588,10 @@ const FichaVaca: React.FC<{
                             {ficha.eventos.map((e) => {
                                 const manual = meta.tiposManuais.includes(e.type);
                                 return (
-                                    <li key={e.id} className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-[var(--eixo-border)] px-3 py-2">
+                                    <li key={e.id} className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-(--eixo-border) px-3 py-2">
                                         <div>
                                             <p className="text-sm font-semibold">{fmtData(e.date)} · {TIPO_LABEL[e.type] || e.type}</p>
-                                            <p className="text-xs text-[var(--eixo-text-muted)]">{[resumoEvento(e), e.notes].filter(Boolean).join(' — ')}</p>
+                                            <p className="text-xs text-(--eixo-text-muted)">{[resumoEvento(e), e.notes].filter(Boolean).join(' — ')}</p>
                                         </div>
                                         <div className="flex gap-2 text-xs">
                                             {manual && <button type="button" className="underline" onClick={() => setEditando(e)}>Editar</button>}
@@ -633,8 +633,8 @@ const FichaVaca: React.FC<{
 };
 
 const Numero: React.FC<{ label: string; valor: React.ReactNode }> = ({ label, valor }) => (
-    <div className="rounded-xl bg-[var(--eixo-surface-soft)] px-3 py-2">
-        <p className="text-xs text-[var(--eixo-text-muted)]">{label}</p>
+    <div className="rounded-xl bg-(--eixo-surface-soft) px-3 py-2">
+        <p className="text-xs text-(--eixo-text-muted)">{label}</p>
         <p className="text-sm font-bold">{valor}</p>
     </div>
 );
@@ -831,7 +831,7 @@ const Criterios: React.FC<{
 
     return (
         <div className={`${cardClass} space-y-4`}>
-            <p className="text-sm text-[var(--eixo-text-muted)]">
+            <p className="text-sm text-(--eixo-text-muted)">
                 Os critérios são decisão sua. O EIXO não preenche nada; as referências servem só de apoio.
             </p>
             <div className="grid gap-4 md:grid-cols-2">
@@ -840,7 +840,7 @@ const Criterios: React.FC<{
                         <span className={labelClass}>{c.label}</span>
                         <input type="number" min={0} step={c.step || 1} className={inputClass} value={valores[c.campo]}
                             onChange={(e) => setValores((v) => ({ ...v, [c.campo]: e.target.value }))} />
-                        <span className="mt-1 block text-xs text-[var(--eixo-text-muted)]">{c.ref}</span>
+                        <span className="mt-1 block text-xs text-(--eixo-text-muted)">{c.ref}</span>
                     </label>
                 ))}
             </div>
@@ -853,7 +853,7 @@ const Criterios: React.FC<{
                                 <span className={labelClass}>{c.label}</span>
                                 <input type="number" min={0} step={c.step || 1} className={inputClass} value={valores[c.campo]}
                                     onChange={(e) => setValores((v) => ({ ...v, [c.campo]: e.target.value }))} />
-                                <span className="mt-1 block text-xs text-[var(--eixo-text-muted)]">{c.ref}</span>
+                                <span className="mt-1 block text-xs text-(--eixo-text-muted)">{c.ref}</span>
                             </label>
                         ))}
                     </div>

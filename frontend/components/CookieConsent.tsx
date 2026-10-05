@@ -34,11 +34,11 @@ interface CookieConsentProps {
 }
 
 const primaryBtn =
-  'w-full rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors duration-150 hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]';
+  'w-full rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-semibold text-[#1a1a1a] transition-colors duration-150 hover:bg-(--eixo-green-dark) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)';
 const policyLinkBtn =
-  'text-sm font-bold text-[var(--eixo-text-muted)] underline-offset-2 transition-colors duration-150 hover:text-[var(--eixo-text)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] rounded';
+  'text-sm font-bold text-(--eixo-text-muted) underline-offset-2 transition-colors duration-150 hover:text-(--eixo-text) hover:underline focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green) rounded-sm';
 const textBtn =
-  'text-xs font-medium text-[var(--eixo-text-muted)] underline-offset-2 transition-colors duration-150 hover:text-[var(--eixo-text)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] rounded';
+  'text-xs font-medium text-(--eixo-text-muted) underline-offset-2 transition-colors duration-150 hover:text-(--eixo-text) hover:underline focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green) rounded-sm';
 
 const ToggleRow: React.FC<{
   title: string;
@@ -49,8 +49,8 @@ const ToggleRow: React.FC<{
 }> = ({ title, desc, checked, disabled, onChange }) => (
   <div className="flex items-center justify-between gap-3 py-2">
     <div>
-      <p className="text-sm font-semibold text-[var(--eixo-text)]">{title}</p>
-      <p className="text-xs text-[var(--eixo-text-muted)]">{desc}</p>
+      <p className="text-sm font-semibold text-(--eixo-text)">{title}</p>
+      <p className="text-xs text-(--eixo-text-muted)">{desc}</p>
     </div>
     <button
       type="button"
@@ -59,8 +59,8 @@ const ToggleRow: React.FC<{
       aria-label={title}
       disabled={disabled}
       onClick={() => onChange?.(!checked)}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] focus:ring-offset-2 ${
-        checked ? 'bg-[var(--eixo-green)]' : 'bg-[var(--eixo-border)]'
+      className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-150 focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green) focus:ring-offset-2 ${
+        checked ? 'bg-(--eixo-green)' : 'bg-(--eixo-border)'
       } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
     >
       <span
@@ -102,10 +102,10 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onVisibilityChange }) => 
   return (
     <>
       <div className="fixed inset-x-4 bottom-4 z-50 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:w-full sm:max-w-sm">
-        <div className="rounded-3xl border-2 border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-xl shadow-black/10">
+        <div className="rounded-3xl border-2 border-(--eixo-border) bg-(--eixo-surface) p-5 shadow-xl shadow-black/10">
           {!expanded ? (
             <>
-              <p className="text-sm text-[var(--eixo-text)]">
+              <p className="text-sm text-(--eixo-text)">
                 Usamos cookies para melhorar sua experiência e navegação no site.{' '}
                 <button type="button" onClick={() => setShowPolicy(true)} className={policyLinkBtn}>
                   Política de Cookies
@@ -127,14 +127,14 @@ const CookieConsent: React.FC<CookieConsentProps> = ({ onVisibilityChange }) => 
             </>
           ) : (
             <>
-              <p className="text-sm font-semibold text-[var(--eixo-text)]">Preferências de cookies</p>
-              <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+              <p className="text-sm font-semibold text-(--eixo-text)">Preferências de cookies</p>
+              <p className="mt-1 text-xs text-(--eixo-text-muted)">
                 Saiba mais na{' '}
                 <button type="button" onClick={() => setShowPolicy(true)} className={policyLinkBtn}>
                   Política de Cookies
                 </button>.
               </p>
-              <div className="mt-2 divide-y divide-[var(--eixo-border)]">
+              <div className="mt-2 divide-y divide-(--eixo-border)">
                 <ToggleRow
                   title="Essenciais"
                   desc="Mantêm o site funcionando. Não podem ser desativados."

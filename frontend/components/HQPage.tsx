@@ -1,7 +1,8 @@
 import React from 'react';
 import { buildApiUrl } from '../api';
+import HQClosures from './HQClosures';
 
-type TabKey = 'clientes' | 'metricas' | 'pipeline' | 'suporte' | 'cadastro';
+type TabKey = 'clientes' | 'metricas' | 'pipeline' | 'suporte' | 'cadastro' | 'encerramentos';
 
 interface HQCliente {
     id: string;
@@ -155,6 +156,7 @@ const TAB_LABELS: Array<{ key: TabKey; label: string }> = [
     { key: 'pipeline', label: 'Pipeline' },
     { key: 'suporte', label: 'Suporte' },
     { key: 'cadastro', label: 'Cadastro' },
+    { key: 'encerramentos', label: 'Encerramentos' },
 ];
 
 const formatDate = (value: string | Date | null | undefined) => {
@@ -176,6 +178,7 @@ const getSuporteContent = (item: HQSuporteItem) => {
 
 const HQPage: React.FC = () => {
     const [activeTab, setActiveTab] = React.useState<TabKey>('clientes');
+    const [closureRefreshKey, setClosureRefreshKey] = React.useState(0);
     const [clientes, setClientes] = React.useState<HQCliente[]>([]);
     const [metricas, setMetricas] = React.useState<HQMetricas | null>(null);
     const [pipeline, setPipeline] = React.useState<HQPipelineItem[]>([]);
@@ -211,6 +214,7 @@ const HQPage: React.FC = () => {
         pipeline: false,
         suporte: false,
         cadastro: false,
+        encerramentos: false,
     });
     const [loadedByTab, setLoadedByTab] = React.useState<Record<TabKey, boolean>>({
         clientes: false,
@@ -218,6 +222,7 @@ const HQPage: React.FC = () => {
         pipeline: false,
         suporte: false,
         cadastro: false,
+        encerramentos: false,
     });
     const [errorByTab, setErrorByTab] = React.useState<Record<TabKey, string | null>>({
         clientes: null,
@@ -225,6 +230,7 @@ const HQPage: React.FC = () => {
         pipeline: null,
         suporte: null,
         cadastro: null,
+        encerramentos: null,
     });
     const [planModalOrg, setPlanModalOrg] = React.useState<HQCliente | null>(null);
     const [planForm, setPlanForm] = React.useState<{ planCode: string; billingStatus: string }>({
@@ -235,6 +241,10 @@ const HQPage: React.FC = () => {
     const [planError, setPlanError] = React.useState<string | null>(null);
 
     const loadTab = React.useCallback(async (tab: TabKey, force = false) => {
+        if (tab === 'encerramentos') {
+            if (force) setClosureRefreshKey((value) => value + 1);
+            return;
+        }
         if (loadingByTab[tab]) {
             return;
         }
@@ -754,7 +764,7 @@ const HQPage: React.FC = () => {
                                                 }
                                             }}
                                             disabled={supportActionLoading}
-                                            className="rounded-xl bg-[#B6E23A] px-3 py-1.5 text-xs font-bold text-[#1a1a1a] hover:bg-[#a6d233] disabled:opacity-60"
+                                            className="rounded-xl bg-primary px-3 py-1.5 text-xs font-bold text-[#1a1a1a] hover:bg-[#a6d233] disabled:opacity-60"
                                         >
                                             Assumir conversa
                                         </button>
@@ -924,7 +934,7 @@ const HQPage: React.FC = () => {
                                     value={supportReply}
                                     onChange={(event) => setSupportReply(event.target.value)}
                                     placeholder="Responder como SUPER ADMIN..."
-                                    className="w-full rounded-xl border border-[#D7D7D7] bg-white px-3 py-2 text-sm outline-none focus:border-[#B6E23A]"
+                                    className="w-full rounded-xl border border-[#D7D7D7] bg-white px-3 py-2 text-sm outline-hidden focus:border-primary"
                                 />
                                 <button
                                     type="button"
@@ -977,7 +987,7 @@ const HQPage: React.FC = () => {
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Ex.: João ou joao@empresa.com"
-                    className="w-full rounded-2xl border border-[#CFCFCF] bg-white px-4 py-2.5 text-sm text-[#2F2F2F] outline-none focus:border-[#B6E23A]"
+                    className="w-full rounded-2xl border border-[#CFCFCF] bg-white px-4 py-2.5 text-sm text-[#2F2F2F] outline-hidden focus:border-primary"
                 />
             </div>
 
@@ -1016,6 +1026,7 @@ const HQPage: React.FC = () => {
     );
 
     const renderActiveContent = () => {
+        if (activeTab === 'encerramentos') return <HQClosures refreshKey={closureRefreshKey} />;
         if (loadingByTab[activeTab]) {
             return (
                 <div className="rounded-2xl border border-[#D7D7D7] bg-white p-6 text-sm text-[#5E5E5E]">
@@ -1031,7 +1042,7 @@ const HQPage: React.FC = () => {
                     <button
                         type="button"
                         onClick={() => loadTab(activeTab, true)}
-                        className="mt-3 rounded-2xl bg-[#B6E23A] px-4 py-2 text-xs font-bold text-[#1a1a1a]"
+                        className="mt-3 rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-[#1a1a1a]"
                     >
                         Tentar novamente
                     </button>
@@ -1056,7 +1067,7 @@ const HQPage: React.FC = () => {
                 <button
                     type="button"
                     onClick={() => loadTab(activeTab, true)}
-                    className="self-start rounded-2xl bg-[#B6E23A] px-4 py-2 text-xs font-bold text-[#1a1a1a]"
+                    className="self-start rounded-2xl bg-primary px-4 py-2 text-xs font-bold text-[#1a1a1a]"
                 >
                     Atualizar aba
                 </button>
@@ -1070,7 +1081,7 @@ const HQPage: React.FC = () => {
                             key={tab.key}
                             type="button"
                             onClick={() => setActiveTab(tab.key)}
-                            className={`rounded-2xl px-4 py-2 text-sm font-bold transition ${active ? 'bg-[#B6E23A] text-[#1a1a1a]' : 'bg-[#EDEDED] text-[#5E5E5E]'}`}
+                            className={`rounded-2xl px-4 py-2 text-sm font-bold transition ${active ? 'bg-primary text-[#1a1a1a]' : 'bg-[#EDEDED] text-[#5E5E5E]'}`}
                         >
                             {tab.label}
                         </button>

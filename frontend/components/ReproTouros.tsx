@@ -13,11 +13,11 @@ import {
     tirarTouroDoLote,
 } from '../adapters/reproApi';
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]';
-const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
-const cardClass = 'rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5';
-const primaryButton = 'rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryButton = 'rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-semibold text-[var(--eixo-text)] transition hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)';
+const labelClass = 'block text-xs font-semibold text-(--eixo-text-muted)';
+const cardClass = 'rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5';
+const primaryButton = 'rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryButton = 'rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-semibold text-(--eixo-text) transition hover:bg-(--eixo-surface-soft) disabled:opacity-50';
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const fmtData = (v?: string | null) => (v ? new Date(v).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—');
@@ -63,7 +63,7 @@ export const EstacaoAba: React.FC<{
 
     return (
         <div className="space-y-4">
-            <p className="text-sm text-[var(--eixo-text-muted)]">
+            <p className="text-sm text-(--eixo-text-muted)">
                 A estação de monta é opcional. Quem cobre o ano todo não precisa cadastrar nada: o EIXO usa os últimos 12 meses.
             </p>
 
@@ -75,7 +75,7 @@ export const EstacaoAba: React.FC<{
                                 {e.name} · {fmtData(e.startAt)} a {fmtData(e.endAt)}
                                 {e.tipo ? ` · ${TIPO_ESTACAO[e.tipo]}` : ''}
                             </h3>
-                            <p className="text-xs text-[var(--eixo-text-muted)]">
+                            <p className="text-xs text-(--eixo-text-muted)">
                                 {e.duracaoDias} dias{e.emAndamento ? ` · em andamento, faltam ${e.diasRestantes} dia(s)` : ' · encerrada'}
                             </p>
                         </div>
@@ -98,8 +98,8 @@ export const EstacaoAba: React.FC<{
                             ['Diagnosticadas', e.painel.diagnosticadas],
                             ['Prenhes', e.painel.prenhes],
                         ].map(([titulo, valor]) => (
-                            <div key={String(titulo)} className="rounded-xl bg-[var(--eixo-surface-soft)] px-3 py-2">
-                                <p className="text-xs text-[var(--eixo-text-muted)]">{titulo}</p>
+                            <div key={String(titulo)} className="rounded-xl bg-(--eixo-surface-soft) px-3 py-2">
+                                <p className="text-xs text-(--eixo-text-muted)">{titulo}</p>
                                 <p className="text-xl font-bold">{valor}</p>
                             </div>
                         ))}
@@ -194,9 +194,9 @@ export const TourosAba: React.FC<{
 
             <div className={`${cardClass} space-y-3`}>
                 <h3 className="font-bold">Touros</h3>
-                {!touros.length && <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum touro ainda. Lance o exame de fertilidade de um macho do rebanho para ele aparecer aqui.</p>}
+                {!touros.length && <p className="text-sm text-(--eixo-text-muted)">Nenhum touro ainda. Lance o exame de fertilidade de um macho do rebanho para ele aparecer aqui.</p>}
                 {touros.map((t) => (
-                    <div key={t.id} className="space-y-2 rounded-xl border border-[var(--eixo-border)] p-3 text-sm">
+                    <div key={t.id} className="space-y-2 rounded-xl border border-(--eixo-border) p-3 text-sm">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
                                 <p className="font-semibold">
@@ -228,7 +228,7 @@ export const TourosAba: React.FC<{
                         </div>
 
                         {exameDe?.id === t.id && (
-                            <div className="grid gap-2 rounded-xl bg-[var(--eixo-surface-soft)] p-3 sm:grid-cols-5">
+                            <div className="grid gap-2 rounded-xl bg-(--eixo-surface-soft) p-3 sm:grid-cols-5">
                                 <label>
                                     <span className={labelClass}>Data</span>
                                     <input type="date" className={inputClass} value={exame.date} max={hoje()} onChange={(e) => setExame({ ...exame, date: e.target.value })} />
@@ -274,7 +274,7 @@ export const TourosAba: React.FC<{
                         )}
 
                         {loteDe?.id === t.id && (
-                            <div className="grid gap-2 rounded-xl bg-[var(--eixo-surface-soft)] p-3 sm:grid-cols-4">
+                            <div className="grid gap-2 rounded-xl bg-(--eixo-surface-soft) p-3 sm:grid-cols-4">
                                 <label>
                                     <span className={labelClass}>Lote</span>
                                     <select className={inputClass} value={aloc.lotId} onChange={(e) => setAloc({ ...aloc, lotId: e.target.value })}>
@@ -308,7 +308,7 @@ export const TourosAba: React.FC<{
                         )}
 
                         {t.historico.length > 0 && (
-                            <p className="text-xs text-[var(--eixo-text-muted)]">
+                            <p className="text-xs text-(--eixo-text-muted)">
                                 Histórico: {t.historico.map((h) => `${h.lote} (${fmtData(h.startAt)}${h.endAt ? ` a ${fmtData(h.endAt)}` : ' até hoje'})`).join(', ')}
                             </p>
                         )}

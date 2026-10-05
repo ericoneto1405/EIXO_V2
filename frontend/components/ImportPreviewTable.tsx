@@ -125,23 +125,23 @@ function paraInputDate(valor: unknown): string | null {
 const ESTILO_STATUS: Record<StatusLinha, { rotulo: string; classe: string; ponto: string }> = {
     pronto: {
         rotulo: 'Pronto',
-        classe: 'bg-[var(--eixo-green)]/10 text-[var(--eixo-green-dark)]',
-        ponto: 'bg-[var(--eixo-green)]',
+        classe: 'bg-(--eixo-green)/10 text-(--eixo-green-dark)',
+        ponto: 'bg-(--eixo-green)',
     },
     revisao: {
         rotulo: 'Em revisão',
-        classe: 'bg-[var(--eixo-warning)]/10 text-[var(--eixo-warning)]',
-        ponto: 'bg-[var(--eixo-warning)]',
+        classe: 'bg-(--eixo-warning)/10 text-(--eixo-warning)',
+        ponto: 'bg-(--eixo-warning)',
     },
     erro: {
         rotulo: 'Com erro',
-        classe: 'bg-[var(--eixo-danger)]/10 text-[var(--eixo-danger)]',
-        ponto: 'bg-[var(--eixo-danger)]',
+        classe: 'bg-(--eixo-danger)/10 text-(--eixo-danger)',
+        ponto: 'bg-(--eixo-danger)',
     },
 };
 
 const CLASSE_CELULA =
-    'w-full rounded-lg border bg-[var(--eixo-surface)] px-2 py-1.5 text-xs text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/20 disabled:cursor-not-allowed disabled:opacity-50';
+    'w-full rounded-lg border bg-(--eixo-surface) px-2 py-1.5 text-xs text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden focus:ring-1 focus:ring-(--eixo-green)/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
     linhas,
@@ -285,27 +285,27 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
             {/* Contadores + filtro */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-                    <span className="rounded-full bg-[var(--eixo-green)]/10 px-3 py-1 text-[var(--eixo-green-dark)]">
+                    <span className="rounded-full bg-(--eixo-green)/10 px-3 py-1 text-(--eixo-green-dark)">
                         {contagem.prontos} {contagem.prontos === 1 ? 'pronto' : 'prontos'}
                     </span>
                     {contagem.revisao > 0 && (
-                        <span className="rounded-full bg-[var(--eixo-warning)]/10 px-3 py-1 text-[var(--eixo-warning)]">
+                        <span className="rounded-full bg-(--eixo-warning)/10 px-3 py-1 text-(--eixo-warning)">
                             {contagem.revisao} em revisão
                         </span>
                     )}
                     {contagem.erro > 0 && (
-                        <span className="rounded-full bg-[var(--eixo-danger)]/10 px-3 py-1 text-[var(--eixo-danger)]">
+                        <span className="rounded-full bg-(--eixo-danger)/10 px-3 py-1 text-(--eixo-danger)">
                             {contagem.erro} com erro
                         </span>
                     )}
                 </div>
                 {contagem.erro + contagem.revisao > 0 && (
-                    <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[var(--eixo-text-muted)]">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-(--eixo-text-muted)">
                         <input
                             type="checkbox"
                             checked={soComProblema}
                             onChange={(event) => setSoComProblema(event.target.checked)}
-                            className="h-4 w-4 cursor-pointer rounded border-[var(--eixo-border)] accent-[#B6E23A]"
+                            className="h-4 w-4 cursor-pointer rounded-sm border-(--eixo-border) accent-primary"
                         />
                         Mostrar só as linhas com problema
                     </label>
@@ -313,24 +313,24 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
             </div>
 
             {contagem.revisao > 0 && (
-                <p className="rounded-xl bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs text-[var(--eixo-text-muted)]">
+                <p className="rounded-xl bg-(--eixo-surface-soft) px-3 py-2 text-xs text-(--eixo-text-muted)">
                     As linhas em revisão só são conferidas ao confirmar. Se algo continuar errado,
                     elas voltam para cá com o motivo atualizado.
                 </p>
             )}
 
             {/* Tabela */}
-            <div className="max-h-[55vh] overflow-auto rounded-2xl border border-[var(--eixo-border)]">
+            <div className="max-h-[55vh] overflow-auto rounded-2xl border border-(--eixo-border)">
                 <table className="min-w-full border-collapse text-left">
-                    <thead className="sticky top-0 z-10 bg-[var(--eixo-surface-soft)]">
-                        <tr className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--eixo-text-muted)]">
+                    <thead className="sticky top-0 z-10 bg-(--eixo-surface-soft)">
+                        <tr className="text-[11px] font-semibold uppercase tracking-[0.06em] text-(--eixo-text-muted)">
                             <th scope="col" className="whitespace-nowrap px-3 py-2.5">Linha</th>
                             <th scope="col" className="whitespace-nowrap px-3 py-2.5">Situação</th>
                             {colunasVisiveis.map((coluna) => (
                                 <th key={coluna.key} scope="col" className="whitespace-nowrap px-3 py-2.5">
                                     {coluna.label}
                                     {(coluna.tier === 'required' || coluna.tier === 'conditional') && (
-                                        <span className="ml-1 text-[var(--eixo-danger)]">*</span>
+                                        <span className="ml-1 text-(--eixo-danger)">*</span>
                                     )}
                                 </th>
                             ))}
@@ -342,7 +342,7 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                             <tr>
                                 <td
                                     colSpan={colunasVisiveis.length + 3}
-                                    className="px-4 py-10 text-center text-sm text-[var(--eixo-text-muted)]"
+                                    className="px-4 py-10 text-center text-sm text-(--eixo-text-muted)"
                                 >
                                     Nenhuma linha para mostrar.
                                 </td>
@@ -355,11 +355,11 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                                 return (
                                     <tr
                                         key={linha.line}
-                                        className={`border-t border-[var(--eixo-border)] align-top ${
-                                            status === 'erro' ? 'bg-[var(--eixo-danger)]/5' : 'bg-[var(--eixo-surface)]'
+                                        className={`border-t border-(--eixo-border) align-top ${
+                                            status === 'erro' ? 'bg-(--eixo-danger)/5' : 'bg-(--eixo-surface)'
                                         }`}
                                     >
-                                        <td className="whitespace-nowrap px-3 py-2 text-xs font-semibold text-[var(--eixo-text-muted)]">
+                                        <td className="whitespace-nowrap px-3 py-2 text-xs font-semibold text-(--eixo-text-muted)">
                                             {linha.line}
                                         </td>
                                         <td className="whitespace-nowrap px-3 py-2">
@@ -373,11 +373,11 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                                                 key={coluna.key}
                                                 className={`px-2 py-2 ${
                                                     problemas.has(coluna.key)
-                                                        ? '[&_input]:border-[var(--eixo-danger)] [&_select]:border-[var(--eixo-danger)]'
-                                                        : '[&_input]:border-[var(--eixo-border)] [&_select]:border-[var(--eixo-border)]'
+                                                        ? '[&_input]:border-(--eixo-danger) [&_select]:border-(--eixo-danger)'
+                                                        : '[&_input]:border-(--eixo-border) [&_select]:border-(--eixo-border)'
                                                 }`}
                                             >
-                                                <div className="min-w-[9rem]">
+                                                <div className="min-w-36">
                                                     {renderCelula(
                                                         linha,
                                                         indice,
@@ -389,8 +389,8 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                                         ))}
                                         <td className="px-3 py-2 text-xs">
                                             {linha.motivos.length > 0 ? (
-                                                <ul className={`min-w-[12rem] space-y-0.5 ${
-                                                    status === 'revisao' ? 'text-[var(--eixo-text-muted)] line-through' : 'text-[var(--eixo-danger)]'
+                                                <ul className={`min-w-48 space-y-0.5 ${
+                                                    status === 'revisao' ? 'text-(--eixo-text-muted) line-through' : 'text-(--eixo-danger)'
                                                 }`}>
                                                     {linha.motivos.map((motivo, i) => (
                                                         <li key={i}>{motivo}</li>
@@ -399,7 +399,7 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                                                         <li className="pt-1">
                                                             <button
                                                                 type="button"
-                                                                className="font-semibold text-[var(--eixo-green-dark)] underline underline-offset-2"
+                                                                className="font-semibold text-(--eixo-green-dark) underline underline-offset-2"
                                                                 onClick={() => onOpenExistingAnimal(linha.conflito!.farmId, linha.conflito!.animalId)}
                                                             >
                                                                 Acessar animal na {linha.conflito.farmName || 'fazenda informada'}
@@ -408,13 +408,13 @@ const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                                                     )}
                                                 </ul>
                                             ) : linha.avisos && linha.avisos.length > 0 ? (
-                                                <ul className="min-w-[12rem] space-y-0.5 text-[var(--eixo-text-muted)]">
+                                                <ul className="min-w-48 space-y-0.5 text-(--eixo-text-muted)">
                                                     {linha.avisos.map((aviso, i) => (
                                                         <li key={i}>{aviso}</li>
                                                     ))}
                                                 </ul>
                                             ) : (
-                                                <span className="text-[var(--eixo-text-soft)]">—</span>
+                                                <span className="text-(--eixo-text-soft)">—</span>
                                             )}
                                         </td>
                                     </tr>

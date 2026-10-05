@@ -15,8 +15,8 @@ interface Situacao {
     alertas: { tipo: 'FORA_DA_FAIXA' | 'SEM_LEITURA'; location: string | null; texto: string }[];
 }
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]';
-const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)';
+const labelClass = 'block text-xs font-semibold text-(--eixo-text-muted)';
 
 const agoraLocal = () => {
     const now = new Date();
@@ -63,15 +63,15 @@ const PharmacyTemperature: React.FC<{ farmId: string }> = ({ farmId }) => {
     };
 
     const tones = {
-        ok: 'border-[#b6d4b0] bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]',
-        erro: 'border-[#efc2ba] bg-[#fff2ef] text-[var(--eixo-danger)]',
-        alerta: 'border-[#efc2ba] bg-[#fff2ef] text-[var(--eixo-danger)]',
+        ok: 'border-[#b6d4b0] bg-(--eixo-green-soft) text-(--eixo-success)',
+        erro: 'border-[#efc2ba] bg-[#fff2ef] text-(--eixo-danger)',
+        alerta: 'border-[#efc2ba] bg-[#fff2ef] text-(--eixo-danger)',
     };
 
     return (
-        <section className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
-            <h3 className="font-bold text-[var(--eixo-text)]">Temperatura da geladeira</h3>
-            <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Vacinas ficam entre 2 e 8 °C. Anote pelo menos uma leitura por semana de cada geladeira ou caixa térmica.</p>
+        <section className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5">
+            <h3 className="font-bold text-(--eixo-text)">Temperatura da geladeira</h3>
+            <p className="mt-1 text-xs text-(--eixo-text-muted)">Vacinas ficam entre 2 e 8 °C. Anote pelo menos uma leitura por semana de cada geladeira ou caixa térmica.</p>
             {dados?.alertas.map((alerta) => (
                 <div key={alerta.texto} role="alert" className={`mt-3 rounded-xl border px-3 py-2 text-sm font-semibold ${alerta.tipo === 'FORA_DA_FAIXA' ? tones.erro : 'border-amber-200 bg-amber-50 text-amber-800'}`}>{alerta.texto}</div>
             ))}
@@ -93,21 +93,21 @@ const PharmacyTemperature: React.FC<{ farmId: string }> = ({ farmId }) => {
                     <input required type="datetime-local" max={agoraLocal()} className={inputClass} value={form.measuredAt} onChange={(event) => setForm({ ...form, measuredAt: event.target.value })} />
                 </label>
                 <div className="flex items-end">
-                    <button type="submit" disabled={saving} className="w-full rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:opacity-50">{saving ? 'Salvando...' : 'Registrar leitura'}</button>
+                    <button type="submit" disabled={saving} className="w-full rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-(--eixo-green-dark) disabled:opacity-50">{saving ? 'Salvando...' : 'Registrar leitura'}</button>
                 </div>
             </form>
             {dados && dados.leituras.length > 0 && (
                 <div className="mt-4 max-h-56 overflow-auto">
                     <table className="w-full text-left text-sm">
-                        <thead className="text-xs text-[var(--eixo-text-muted)]"><tr><th className="py-2 pr-3">Data</th><th className="py-2 pr-3">Local</th><th className="py-2 pr-3">Temperatura</th><th className="py-2">Anotado por</th></tr></thead>
+                        <thead className="text-xs text-(--eixo-text-muted)"><tr><th className="py-2 pr-3">Data</th><th className="py-2 pr-3">Local</th><th className="py-2 pr-3">Temperatura</th><th className="py-2">Anotado por</th></tr></thead>
                         <tbody>
                             {dados.leituras.map((leitura) => {
                                 const fora = leitura.tempC < 2 || leitura.tempC > 8;
                                 return (
-                                    <tr key={leitura.id} className="border-t border-[var(--eixo-border)]">
+                                    <tr key={leitura.id} className="border-t border-(--eixo-border)">
                                         <td className="py-2 pr-3">{new Date(leitura.measuredAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}</td>
                                         <td className="py-2 pr-3">{leitura.location}</td>
-                                        <td className={`py-2 pr-3 font-bold ${fora ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-success)]'}`}>{leitura.tempC.toLocaleString('pt-BR')} °C{fora ? ' · fora' : ''}</td>
+                                        <td className={`py-2 pr-3 font-bold ${fora ? 'text-(--eixo-danger)' : 'text-(--eixo-success)'}`}>{leitura.tempC.toLocaleString('pt-BR')} °C{fora ? ' · fora' : ''}</td>
                                         <td className="py-2">{leitura.measuredByName || '—'}</td>
                                     </tr>
                                 );

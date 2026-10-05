@@ -54,13 +54,13 @@ const CategoryPicker: React.FC<CategoryPickerProps> = ({ categories, value, onCh
                 }}
             />
             {open && (
-                <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-lg">
+                <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-(--eixo-border) bg-(--eixo-surface) shadow-lg">
                     {grouped.length === 0 ? (
-                        <p className="px-3 py-2 text-sm text-[var(--eixo-text-muted)]">Nenhuma categoria encontrada.</p>
+                        <p className="px-3 py-2 text-sm text-(--eixo-text-muted)">Nenhuma categoria encontrada.</p>
                     ) : (
                         grouped.map(([grp, cats]) => (
                             <div key={grp}>
-                                <p className="px-3 pt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
+                                <p className="px-3 pt-2 text-[10px] font-bold uppercase tracking-[0.12em] text-(--eixo-text-muted)">
                                     {grp}
                                 </p>
                                 {cats.map((c) => (
@@ -68,8 +68,8 @@ const CategoryPicker: React.FC<CategoryPickerProps> = ({ categories, value, onCh
                                         key={c.id}
                                         type="button"
                                         onClick={() => onChange(c.id)}
-                                        className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-[var(--eixo-surface-soft)] ${
-                                            c.id === value ? 'font-semibold text-[var(--eixo-green)]' : 'text-[var(--eixo-text)]'
+                                        className={`block w-full px-3 py-1.5 text-left text-sm hover:bg-(--eixo-surface-soft) ${
+                                            c.id === value ? 'font-semibold text-(--eixo-green)' : 'text-(--eixo-text)'
                                         }`}
                                     >
                                         {c.name}

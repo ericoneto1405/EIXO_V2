@@ -27,78 +27,78 @@ interface ActivityModuleProps {
 // reconhecimento por palavra-chave logo abaixo (getActionIcon), pra nunca
 // mais ficar "desatualizado" quando uma ação nova for registrada.
 const ACTION_ICON: Record<string, { icon: string; color: string }> = {
-    ANIMAL_CRIADO:              { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    ANIMAL_NASCIMENTO:          { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    ANIMAL_COMPRA:              { icon: '💰', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    ANIMAL_VENDA:               { icon: '💵', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    ANIMAL_MORTE:               { icon: '📋', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
-    ANIMAL_LOTE_ALTERADO:       { icon: '🔀', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    NASCIMENTO_REGISTRADO:      { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    IDENTIFICACAO_DEFINITIVA:   { icon: '🏷️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    DESMAMA_REGISTRADA:         { icon: '🐮', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    LOTE_CRIADO:                { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    FAZENDA_CRIADA:             { icon: '🏡', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    HERD_IMPORT:                { icon: '📥', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    TRANSACAO_CRIADA:           { icon: '📊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    TRANSACAO_EDITADA:          { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    TRANSACAO_PAGA:             { icon: '✅', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    USUARIO_CRIADO:             { icon: '👤', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    USUARIO_EDITADO:            { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    USUARIO_EXCLUIDO:           { icon: '🗑️', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
-    COLABORADOR_APP_EDITADO:    { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    OCORRENCIA_CAMPO_CRIADA:    { icon: '📍', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    PESAGEM_REGISTRADA:         { icon: '⚖️', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    PESAGEM_LOTE_REGISTRADA:    { icon: '⚖️', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    PESAGEM_PO_REGISTRADA:      { icon: '⚖️', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    PESAGEM_PO_LOTE_REGISTRADA: { icon: '⚖️', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    AVALIACAO_REPRODUTIVA_REGISTRADA: { icon: '🩺', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    PARTO_REGISTRADO:           { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    PARTO_EXCLUIDO:             { icon: '🗑️', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
-    DESMAMA_REPRO_REGISTRADA:   { icon: '🐮', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    TRANSFERENCIA_EMBRIAO_REGISTRADA: { icon: '🧬', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    PLANO_NUTRICAO_CRIADO:      { icon: '🌾', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' },
-    PLANO_NUTRICAO_EDITADO:     { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
-    PLANO_NUTRICAO_EXCLUIDO:    { icon: '🗑️', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' },
-    PLANO_NUTRICAO_ATRIBUIDO:  { icon: '🌾', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' },
-    HQ_ORG_PLAN_UPDATED:        { icon: '⚙️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' },
+    ANIMAL_CRIADO:              { icon: '🐄', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    ANIMAL_NASCIMENTO:          { icon: '🌱', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    ANIMAL_COMPRA:              { icon: '💰', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' },
+    ANIMAL_VENDA:               { icon: '💵', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    ANIMAL_MORTE:               { icon: '📋', color: 'bg-[#fff2ef] text-(--eixo-danger)' },
+    ANIMAL_LOTE_ALTERADO:       { icon: '🔀', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
+    NASCIMENTO_REGISTRADO:      { icon: '🌱', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    IDENTIFICACAO_DEFINITIVA:   { icon: '🏷️', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
+    DESMAMA_REGISTRADA:         { icon: '🐮', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    LOTE_CRIADO:                { icon: '🐄', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    FAZENDA_CRIADA:             { icon: '🏡', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
+    HERD_IMPORT:                { icon: '📥', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
+    TRANSACAO_CRIADA:           { icon: '📊', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' },
+    TRANSACAO_EDITADA:          { icon: '✏️', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
+    TRANSACAO_PAGA:             { icon: '✅', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    USUARIO_CRIADO:             { icon: '👤', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
+    USUARIO_EDITADO:            { icon: '✏️', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
+    USUARIO_EXCLUIDO:           { icon: '🗑️', color: 'bg-[#fff2ef] text-(--eixo-danger)' },
+    COLABORADOR_APP_EDITADO:    { icon: '✏️', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
+    OCORRENCIA_CAMPO_CRIADA:    { icon: '📍', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
+    PESAGEM_REGISTRADA:         { icon: '⚖️', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' },
+    PESAGEM_LOTE_REGISTRADA:    { icon: '⚖️', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' },
+    PESAGEM_PO_REGISTRADA:      { icon: '⚖️', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' },
+    PESAGEM_PO_LOTE_REGISTRADA: { icon: '⚖️', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' },
+    AVALIACAO_REPRODUTIVA_REGISTRADA: { icon: '🩺', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' },
+    PARTO_REGISTRADO:           { icon: '🌱', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    PARTO_EXCLUIDO:             { icon: '🗑️', color: 'bg-[#fff2ef] text-(--eixo-danger)' },
+    DESMAMA_REPRO_REGISTRADA:   { icon: '🐮', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    TRANSFERENCIA_EMBRIAO_REGISTRADA: { icon: '🧬', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' },
+    PLANO_NUTRICAO_CRIADO:      { icon: '🌾', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' },
+    PLANO_NUTRICAO_EDITADO:     { icon: '✏️', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
+    PLANO_NUTRICAO_EXCLUIDO:    { icon: '🗑️', color: 'bg-[#fff2ef] text-(--eixo-danger)' },
+    PLANO_NUTRICAO_ATRIBUIDO:  { icon: '🌾', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' },
+    HQ_ORG_PLAN_UPDATED:        { icon: '⚙️', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' },
 };
 
-const DEFAULT_ICON = { icon: '📝', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' };
+const DEFAULT_ICON = { icon: '📝', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' };
 
 // Palavras-chave em ordem de prioridade — cobre ações dinâmicas (que têm um
 // pedaço variável no nome, tipo `SANITARIO_${tipo}` ou `REPRO_${evento}`)
 // sem precisar listar cada combinação possível uma por uma.
 const KEYWORD_ICON: [string, { icon: string; color: string }][] = [
-    ['EXCLU', { icon: '🗑️', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' }],
-    ['MORTE', { icon: '📋', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' }],
-    ['BLOQUE', { icon: '🚫', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' }],
-    ['SENHA', { icon: '🔒', color: 'bg-[#fff2ef] text-[var(--eixo-danger)]' }],
-    ['VACINA', { icon: '💉', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
-    ['VERMIFUGO', { icon: '💊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
-    ['TRATAMENTO', { icon: '🩹', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
-    ['SANITARIO', { icon: '💉', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
-    ['PESAGEM', { icon: '⚖️', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
-    ['NUTRICAO', { icon: '🌾', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
-    ['REPRO', { icon: '🩺', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
-    ['PARTO', { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
-    ['NASCIMENTO', { icon: '🌱', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
-    ['DESMAMA', { icon: '🐮', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
-    ['VENDA', { icon: '💵', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
-    ['COMPRA', { icon: '💰', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
-    ['PAG', { icon: '✅', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
-    ['TRANSACAO', { icon: '📊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
-    ['FINANCEIR', { icon: '📊', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
-    ['FARMACIA', { icon: '🧴', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]' }],
-    ['USUARIO', { icon: '👤', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' }],
-    ['COLABORADOR', { icon: '👤', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' }],
-    ['FAZENDA', { icon: '🏡', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' }],
-    ['LOTE', { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
-    ['ANIMAL', { icon: '🐄', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
-    ['EDITAD', { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' }],
-    ['ALTERAD', { icon: '✏️', color: 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)]' }],
-    ['CRIAD', { icon: '➕', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
-    ['REGISTRAD', { icon: '➕', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
-    ['ATRIBUID', { icon: '➕', color: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }],
+    ['EXCLU', { icon: '🗑️', color: 'bg-[#fff2ef] text-(--eixo-danger)' }],
+    ['MORTE', { icon: '📋', color: 'bg-[#fff2ef] text-(--eixo-danger)' }],
+    ['BLOQUE', { icon: '🚫', color: 'bg-[#fff2ef] text-(--eixo-danger)' }],
+    ['SENHA', { icon: '🔒', color: 'bg-[#fff2ef] text-(--eixo-danger)' }],
+    ['VACINA', { icon: '💉', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' }],
+    ['VERMIFUGO', { icon: '💊', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' }],
+    ['TRATAMENTO', { icon: '🩹', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' }],
+    ['SANITARIO', { icon: '💉', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' }],
+    ['PESAGEM', { icon: '⚖️', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' }],
+    ['NUTRICAO', { icon: '🌾', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
+    ['REPRO', { icon: '🩺', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' }],
+    ['PARTO', { icon: '🌱', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
+    ['NASCIMENTO', { icon: '🌱', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
+    ['DESMAMA', { icon: '🐮', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
+    ['VENDA', { icon: '💵', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
+    ['COMPRA', { icon: '💰', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' }],
+    ['PAG', { icon: '✅', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
+    ['TRANSACAO', { icon: '📊', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' }],
+    ['FINANCEIR', { icon: '📊', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' }],
+    ['FARMACIA', { icon: '🧴', color: 'bg-(--eixo-green-soft) text-(--eixo-graphite)' }],
+    ['USUARIO', { icon: '👤', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' }],
+    ['COLABORADOR', { icon: '👤', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' }],
+    ['FAZENDA', { icon: '🏡', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' }],
+    ['LOTE', { icon: '🐄', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
+    ['ANIMAL', { icon: '🐄', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
+    ['EDITAD', { icon: '✏️', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' }],
+    ['ALTERAD', { icon: '✏️', color: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' }],
+    ['CRIAD', { icon: '➕', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
+    ['REGISTRAD', { icon: '➕', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
+    ['ATRIBUID', { icon: '➕', color: 'bg-(--eixo-green-soft) text-(--eixo-success)' }],
 ];
 
 function getActionIcon(action: string | null): { icon: string; color: string } {
@@ -196,19 +196,19 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
     return (
         <div className="space-y-4">
             {/* Header */}
-            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
+            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
                 <div className="flex items-center justify-between">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-[var(--eixo-green-soft)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
+                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-(--eixo-green-soft) px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
                             {farmName || 'Todas as fazendas'}
                         </div>
-                        <h2 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Registro de Atividades</h2>
-                        <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">Tudo que aconteceu no sistema, do mais novo ao mais antigo.</p>
+                        <h2 className="font-brand text-2xl font-extrabold leading-tight text-(--eixo-text)">Registro de Atividades</h2>
+                        <p className="mt-1 text-sm text-(--eixo-text-muted)">Tudo que aconteceu no sistema, do mais novo ao mais antigo.</p>
                     </div>
                     <button
                         type="button"
                         onClick={() => { setPage(0); setLogs([]); loadLogs(true); }}
-                        className="flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                        className="flex items-center gap-2 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2 text-sm font-semibold text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft)"
                     >
                         <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -219,14 +219,14 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
             </div>
 
             {/* Filtros */}
-            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-4">
+            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-4">
                 <div className="flex flex-wrap items-end gap-3">
                     <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">Módulo</label>
+                        <label className="text-xs font-semibold text-(--eixo-text-muted)">Módulo</label>
                         <select
                             value={filterModulo}
                             onChange={(e) => setFilterModulo(e.target.value)}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                            className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text)"
                         >
                             <option value="">Todos</option>
                             {meta.modules.map((m) => (
@@ -236,32 +236,32 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">De</label>
+                        <label className="text-xs font-semibold text-(--eixo-text-muted)">De</label>
                         <input
                             type="date"
                             value={filterDe}
                             onChange={(e) => setFilterDe(e.target.value)}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                            className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text)"
                         />
                     </div>
 
                     <div className="flex flex-col gap-1">
-                        <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">Até</label>
+                        <label className="text-xs font-semibold text-(--eixo-text-muted)">Até</label>
                         <input
                             type="date"
                             value={filterAte}
                             onChange={(e) => setFilterAte(e.target.value)}
-                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                            className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text)"
                         />
                     </div>
 
                     {meta.canSeeAll && (
                         <div className="flex flex-col gap-1">
-                            <label className="text-xs font-semibold text-[var(--eixo-text-muted)]">Usuário</label>
+                            <label className="text-xs font-semibold text-(--eixo-text-muted)">Usuário</label>
                             <select
                                 value={filterUserId}
                                 onChange={(e) => setFilterUserId(e.target.value)}
-                                className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)]"
+                                className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text)"
                             >
                                 <option value="">Todos</option>
                                 {meta.users.map((u) => (
@@ -275,57 +275,57 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
                         <button
                             type="button"
                             onClick={() => { setFilterModulo(''); setFilterDe(''); setFilterAte(''); setFilterUserId(''); }}
-                            className="rounded-xl px-3 py-2 text-sm font-semibold text-[var(--eixo-text-muted)] hover:underline"
+                            className="rounded-xl px-3 py-2 text-sm font-semibold text-(--eixo-text-muted) hover:underline"
                         >
                             Limpar filtros
                         </button>
                     )}
                 </div>
                 {!meta.canSeeAll && (
-                    <p className="mt-3 text-xs text-[var(--eixo-text-muted)]">Você está vendo somente as suas próprias atividades.</p>
+                    <p className="mt-3 text-xs text-(--eixo-text-muted)">Você está vendo somente as suas próprias atividades.</p>
                 )}
             </div>
 
             {/* Lista */}
-            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] overflow-hidden">
+            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) overflow-hidden">
                 {error && (
-                    <div className="px-6 py-4 text-sm text-[var(--eixo-danger)]">{error}</div>
+                    <div className="px-6 py-4 text-sm text-(--eixo-danger)">{error}</div>
                 )}
 
                 {!error && logs.length === 0 && !loading && (
                     <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--eixo-surface-soft)]">
-                            <svg className="h-7 w-7 text-[var(--eixo-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-(--eixo-surface-soft)">
+                            <svg className="h-7 w-7 text-(--eixo-text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
                         </div>
-                        <p className="text-sm font-semibold text-[var(--eixo-text)]">Nenhuma atividade registrada ainda.</p>
-                        <p className="text-xs text-[var(--eixo-text-muted)]">As ações aparecerão aqui conforme o sistema for utilizado.</p>
+                        <p className="text-sm font-semibold text-(--eixo-text)">Nenhuma atividade registrada ainda.</p>
+                        <p className="text-xs text-(--eixo-text-muted)">As ações aparecerão aqui conforme o sistema for utilizado.</p>
                     </div>
                 )}
 
                 {logs.length > 0 && (
-                    <ul className="divide-y divide-[var(--eixo-border)]">
+                    <ul className="divide-y divide-(--eixo-border)">
                         {logs.map((log) => {
                             const iconData = getActionIcon(log.action);
                             return (
-                                <li key={log.id} className="flex items-start gap-4 px-6 py-4 hover:bg-[var(--eixo-surface-soft)]">
+                                <li key={log.id} className="flex items-start gap-4 px-6 py-4 hover:bg-(--eixo-surface-soft)">
                                     {/* Ícone da ação */}
-                                    <div className={`mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-base ${iconData.color}`}>
+                                    <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-base ${iconData.color}`}>
                                         {iconData.icon}
                                     </div>
 
                                     {/* Conteúdo */}
                                     <div className="min-w-0 flex-1">
-                                        <p className="text-sm text-[var(--eixo-text)]">{log.description}</p>
+                                        <p className="text-sm text-(--eixo-text)">{log.description}</p>
                                         <div className="mt-1 flex items-center gap-2">
                                             {/* Avatar */}
-                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--eixo-text)] text-[9px] font-bold text-white">
+                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-(--eixo-text) text-[9px] font-bold text-white">
                                                 {getInitials(log.userName)}
                                             </span>
-                                            <span className="text-xs text-[var(--eixo-text-muted)]">{log.userName}</span>
-                                            <span className="text-xs text-[var(--eixo-text-soft)]">·</span>
-                                            <span className="text-xs text-[var(--eixo-text-muted)]">{formatRelativeDate(log.createdAt)}</span>
+                                            <span className="text-xs text-(--eixo-text-muted)">{log.userName}</span>
+                                            <span className="text-xs text-(--eixo-text-soft)">·</span>
+                                            <span className="text-xs text-(--eixo-text-muted)">{formatRelativeDate(log.createdAt)}</span>
                                         </div>
                                     </div>
                                 </li>
@@ -335,7 +335,7 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
                 )}
 
                 {loading && (
-                    <div className="flex items-center justify-center gap-2 px-6 py-6 text-sm text-[var(--eixo-text-muted)]">
+                    <div className="flex items-center justify-center gap-2 px-6 py-6 text-sm text-(--eixo-text-muted)">
                         <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
                             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
@@ -345,11 +345,11 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
                 )}
 
                 {!loading && hasMore && logs.length > 0 && (
-                    <div className="border-t border-[var(--eixo-border)] px-6 py-4 text-center">
+                    <div className="border-t border-(--eixo-border) px-6 py-4 text-center">
                         <button
                             type="button"
                             onClick={() => loadLogs()}
-                            className="text-sm font-semibold text-[var(--eixo-green)] hover:underline"
+                            className="text-sm font-semibold text-(--eixo-green) hover:underline"
                         >
                             Carregar mais
                         </button>

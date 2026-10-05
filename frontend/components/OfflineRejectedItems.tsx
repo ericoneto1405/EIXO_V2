@@ -30,7 +30,7 @@ export default function OfflineRejectedItems<T extends RejectedItem>({
                     <div className="mt-2 flex flex-wrap gap-2">
                         <button
                             type="button"
-                            className="rounded-lg bg-[var(--eixo-green)] px-2.5 py-1 font-semibold text-[#1a1a1a]"
+                            className="rounded-lg bg-(--eixo-green) px-2.5 py-1 font-semibold text-[#1a1a1a]"
                             onClick={() => onCorrect(item)}
                         >
                             Corrigir

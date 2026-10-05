@@ -233,9 +233,9 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
     return (
         <div className="space-y-6">
             {/* Intervalo de pesagem */}
-            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
-                <h3 className="mb-1 text-base font-semibold text-[var(--eixo-text)]">Intervalo de Pesagem</h3>
-                <p className="mb-5 text-sm text-[var(--eixo-text-muted)]">
+            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-6">
+                <h3 className="mb-1 text-base font-semibold text-(--eixo-text)">Intervalo de Pesagem</h3>
+                <p className="mb-5 text-sm text-(--eixo-text-muted)">
                     Define de quantos em quantos dias o sistema alerta para uma nova pesagem.
                 </p>
 
@@ -253,7 +253,7 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
 
                 <form onSubmit={handleSaveInterval} className="flex items-end gap-4">
                     <div className="w-48">
-                        <label className="mb-1 block text-xs font-medium text-[var(--eixo-text-muted)]">
+                        <label className="mb-1 block text-xs font-medium text-(--eixo-text-muted)">
                             Dias entre pesagens
                         </label>
                         <div className="flex items-center gap-2">
@@ -263,15 +263,15 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
                                 max={365}
                                 value={interval}
                                 onChange={e => setInterval(e.target.value)}
-                                className="block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
+                                className="block w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden focus:ring-1 focus:ring-(--eixo-green)/10 transition-colors"
                             />
-                            <span className="whitespace-nowrap text-sm text-[var(--eixo-text-muted)]">dias</span>
+                            <span className="whitespace-nowrap text-sm text-(--eixo-text-muted)">dias</span>
                         </div>
                     </div>
                     <button
                         type="submit"
                         disabled={intervalSaving}
-                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:opacity-50"
+                        className="rounded-xl bg-(--eixo-green) px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)/30 disabled:opacity-50"
                     >
                         {intervalSaving ? 'Salvando…' : 'Salvar'}
                     </button>
@@ -279,9 +279,9 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
             </div>
 
             {/* Pesos alvo por categoria */}
-            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
-                <h3 className="mb-1 text-base font-semibold text-[var(--eixo-text)]">Peso Alvo por Categoria</h3>
-                <p className="mb-5 text-sm text-[var(--eixo-text-muted)]">
+            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-6">
+                <h3 className="mb-1 text-base font-semibold text-(--eixo-text)">Peso Alvo por Categoria</h3>
+                <p className="mb-5 text-sm text-(--eixo-text-muted)">
                     Peso alvo de abate ou saída para cada categoria do rebanho. Deixe em branco para não definir.
                 </p>
 
@@ -298,10 +298,10 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
                 )}
 
                 <form onSubmit={handleSaveTargets}>
-                    <div className="mb-5 overflow-hidden rounded-xl border border-[var(--eixo-border)]">
+                    <div className="mb-5 overflow-hidden rounded-xl border border-(--eixo-border)">
                         <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-left text-xs font-medium uppercase tracking-wide text-[var(--eixo-text-muted)]">
+                                <tr className="border-b border-(--eixo-border) bg-(--eixo-surface-soft) text-left text-xs font-medium uppercase tracking-wide text-(--eixo-text-muted)">
                                     <th className="px-4 py-3">Categoria</th>
                                     <th className="px-4 py-3 w-48">Peso alvo (kg)</th>
                                 </tr>
@@ -310,9 +310,9 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
                                 {targets.map((t, idx) => (
                                     <tr
                                         key={t.categoria}
-                                        className="border-b border-[var(--eixo-border)] last:border-0"
+                                        className="border-b border-(--eixo-border) last:border-0"
                                     >
-                                        <td className="px-4 py-3 font-medium text-[var(--eixo-text)]">
+                                        <td className="px-4 py-3 font-medium text-(--eixo-text)">
                                             {t.categoria}
                                         </td>
                                         <td className="px-4 py-3">
@@ -322,7 +322,7 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
                                                 placeholder="—"
                                                 value={t.pesoAlvoKg}
                                                 onChange={e => updateTargetPeso(idx, e.target.value)}
-                                                className="block w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-1.5 text-sm text-[var(--eixo-text)] placeholder:text-[#a8a29e] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
+                                                className="block w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-1.5 text-sm text-(--eixo-text) placeholder:text-[#a8a29e] focus:border-(--eixo-green) focus:outline-hidden focus:ring-1 focus:ring-(--eixo-green)/10 transition-colors"
                                             />
                                         </td>
                                     </tr>
@@ -334,7 +334,7 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
                     <button
                         type="submit"
                         disabled={targetsSaving}
-                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:opacity-50"
+                        className="rounded-xl bg-(--eixo-green) px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)/30 disabled:opacity-50"
                     >
                         {targetsSaving ? 'Salvando…' : 'Salvar pesos alvo'}
                     </button>
@@ -342,9 +342,9 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
             </div>
 
             {/* Raças cadastradas */}
-            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
-                <h3 className="mb-1 text-base font-semibold text-[var(--eixo-text)]">Raças Cadastradas</h3>
-                <p className="mb-5 text-sm text-[var(--eixo-text-muted)]">
+            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-6">
+                <h3 className="mb-1 text-base font-semibold text-(--eixo-text)">Raças Cadastradas</h3>
+                <p className="mb-5 text-sm text-(--eixo-text-muted)">
                     Lista de raças usadas na sua fazenda. Serão sugeridas ao cadastrar animais.
                 </p>
 
@@ -365,12 +365,12 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
                         placeholder="Ex: Nelore, Angus, Brahman…"
                         value={newBreed}
                         onChange={e => setNewBreed(e.target.value)}
-                        className="block flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] placeholder:text-[#a8a29e] focus:border-[var(--eixo-green)] focus:outline-none focus:ring-1 focus:ring-[var(--eixo-green)]/10 transition-colors"
+                        className="block flex-1 rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) placeholder:text-[#a8a29e] focus:border-(--eixo-green) focus:outline-hidden focus:ring-1 focus:ring-(--eixo-green)/10 transition-colors"
                     />
                     <button
                         type="submit"
                         disabled={breedAdding || !newBreed.trim()}
-                        className="rounded-xl bg-[var(--eixo-green)] px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-50"
+                        className="rounded-xl bg-(--eixo-green) px-5 py-2 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) disabled:opacity-50"
                     >
                         {breedAdding ? 'Adicionando…' : 'Adicionar'}
                     </button>
@@ -380,19 +380,19 @@ const HerdSettingsTab: React.FC<HerdSettingsTabProps> = ({ farmId }) => {
                 {breeds.length === 0 ? (
                     <p className="text-sm text-[#a8a29e]">Nenhuma raça cadastrada ainda.</p>
                 ) : (
-                    <div className="overflow-hidden rounded-xl border border-[var(--eixo-border)]">
+                    <div className="overflow-hidden rounded-xl border border-(--eixo-border)">
                         {breeds.map((b, idx) => (
                             <div
                                 key={b.id}
                                 className={`flex items-center justify-between px-4 py-3 ${
-                                    idx < breeds.length - 1 ? 'border-b border-[var(--eixo-border)]' : ''
+                                    idx < breeds.length - 1 ? 'border-b border-(--eixo-border)' : ''
                                 }`}
                             >
-                                <span className="text-sm font-medium text-[var(--eixo-text)]">{b.name}</span>
+                                <span className="text-sm font-medium text-(--eixo-text)">{b.name}</span>
                                 <button
                                     onClick={() => handleDeleteBreed(b.id)}
                                     disabled={breedDeleting === b.id}
-                                    className="rounded-lg bg-[#fff2ef] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] transition-colors hover:bg-[#f5ddd5] disabled:opacity-40"
+                                    className="rounded-lg bg-[#fff2ef] px-3 py-1 text-xs font-semibold text-(--eixo-danger) transition-colors hover:bg-[#f5ddd5] disabled:opacity-40"
                                 >
                                     {breedDeleting === b.id ? '…' : 'Remover'}
                                 </button>

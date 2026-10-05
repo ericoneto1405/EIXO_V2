@@ -209,7 +209,7 @@ const SemenTankModule: React.FC<SemenTankModuleProps> = ({ farmId, farmName }) =
 
   return (
     <div className="space-y-6 text-[#2f3a2d]">
-      <section className="rounded-[24px] border border-[#d7cab3] bg-[#fffaf1] p-6 shadow-sm">
+      <section className="rounded-[24px] border border-[#d7cab3] bg-[#fffaf1] p-6 shadow-xs">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#9d7d4d]">Estoque genético da fazenda</p>
@@ -238,7 +238,7 @@ const SemenTankModule: React.FC<SemenTankModuleProps> = ({ farmId, farmName }) =
         </div>
       )}
 
-      <section className="rounded-[24px] border border-[#d7cab3] bg-[#fffaf1] p-5 shadow-sm">
+      <section className="rounded-[24px] border border-[#d7cab3] bg-[#fffaf1] p-5 shadow-xs">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h2 className="text-xl font-black">Lotes no botijão</h2>
@@ -248,7 +248,7 @@ const SemenTankModule: React.FC<SemenTankModuleProps> = ({ farmId, farmName }) =
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Buscar lote, touro, registro ou local"
-            className="rounded-2xl border border-[#d7cab3] bg-white px-4 py-2 text-sm outline-none focus:border-[#9d7d4d] md:w-80"
+            className="rounded-2xl border border-[#d7cab3] bg-white px-4 py-2 text-sm outline-hidden focus:border-[#9d7d4d] md:w-80"
           />
         </div>
 
@@ -311,19 +311,19 @@ const SemenTankModule: React.FC<SemenTankModuleProps> = ({ farmId, farmName }) =
             </div>
             {!form.bullAnimalId && (
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Nome do touro"><input value={form.bullName} onChange={(event) => setForm((current) => ({ ...current, bullName: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
-                <Field label="Registro"><input value={form.bullRegistry} onChange={(event) => setForm((current) => ({ ...current, bullRegistry: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
+                <Field label="Nome do touro"><input value={form.bullName} onChange={(event) => setForm((current) => ({ ...current, bullName: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
+                <Field label="Registro"><input value={form.bullRegistry} onChange={(event) => setForm((current) => ({ ...current, bullRegistry: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
               </div>
             )}
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Lote"><input value={form.lote} onChange={(event) => setForm((current) => ({ ...current, lote: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
-              <Field label="Fornecedor"><input value={form.fornecedor} onChange={(event) => setForm((current) => ({ ...current, fornecedor: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
-              <Field label="Doses totais"><input type="number" min="1" value={form.dosesTotal} onChange={(event) => setForm((current) => ({ ...current, dosesTotal: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
-              <Field label="Doses disponíveis"><input type="number" min="0" value={form.dosesDisponiveis} onChange={(event) => setForm((current) => ({ ...current, dosesDisponiveis: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
-              <Field label="Data da coleta"><input type="date" value={form.dataColeta} onChange={(event) => setForm((current) => ({ ...current, dataColeta: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
-              <Field label="Local no botijão"><input value={form.localArmazenamento} onChange={(event) => setForm((current) => ({ ...current, localArmazenamento: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
+              <Field label="Lote"><input value={form.lote} onChange={(event) => setForm((current) => ({ ...current, lote: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
+              <Field label="Fornecedor"><input value={form.fornecedor} onChange={(event) => setForm((current) => ({ ...current, fornecedor: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
+              <Field label="Doses totais"><input type="number" min="1" value={form.dosesTotal} onChange={(event) => setForm((current) => ({ ...current, dosesTotal: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
+              <Field label="Doses disponíveis"><input type="number" min="0" value={form.dosesDisponiveis} onChange={(event) => setForm((current) => ({ ...current, dosesDisponiveis: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
+              <Field label="Data da coleta"><input type="date" value={form.dataColeta} onChange={(event) => setForm((current) => ({ ...current, dataColeta: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
+              <Field label="Local no botijão"><input value={form.localArmazenamento} onChange={(event) => setForm((current) => ({ ...current, localArmazenamento: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
             </div>
-            <Field label="Observações"><textarea value={form.observacoes} onChange={(event) => setForm((current) => ({ ...current, observacoes: event.target.value }))} className="min-h-20 w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
+            <Field label="Observações"><textarea value={form.observacoes} onChange={(event) => setForm((current) => ({ ...current, observacoes: event.target.value }))} className="min-h-20 w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
             <Actions saving={saving} onCancel={() => setFormOpen(false)} submitLabel="Salvar lote" />
           </form>
         </Modal>
@@ -333,11 +333,11 @@ const SemenTankModule: React.FC<SemenTankModuleProps> = ({ farmId, farmName }) =
         <Modal title={`Movimentar ${moveTarget.lote}`} onClose={() => setMoveTarget(null)}>
           <form onSubmit={submitMove} className="space-y-4">
             <div className="grid gap-3 md:grid-cols-3">
-              <Field label="Tipo"><select value={moveForm.type} onChange={(event) => setMoveForm((current) => ({ ...current, type: event.target.value as MoveType }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]">{(Object.keys(moveLabels) as MoveType[]).map((key) => <option key={key} value={key}>{moveLabels[key]}</option>)}</select></Field>
-              <Field label="Quantidade"><input type="number" min="1" value={moveForm.qty} onChange={(event) => setMoveForm((current) => ({ ...current, qty: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
-              <Field label="Data"><input type="date" value={moveForm.date} onChange={(event) => setMoveForm((current) => ({ ...current, date: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
+              <Field label="Tipo"><select value={moveForm.type} onChange={(event) => setMoveForm((current) => ({ ...current, type: event.target.value as MoveType }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]">{(Object.keys(moveLabels) as MoveType[]).map((key) => <option key={key} value={key}>{moveLabels[key]}</option>)}</select></Field>
+              <Field label="Quantidade"><input type="number" min="1" value={moveForm.qty} onChange={(event) => setMoveForm((current) => ({ ...current, qty: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
+              <Field label="Data"><input type="date" value={moveForm.date} onChange={(event) => setMoveForm((current) => ({ ...current, date: event.target.value }))} className="w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
             </div>
-            <Field label="Observações"><textarea value={moveForm.notes} onChange={(event) => setMoveForm((current) => ({ ...current, notes: event.target.value }))} className="min-h-20 w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-none focus:border-[#9d7d4d]" /></Field>
+            <Field label="Observações"><textarea value={moveForm.notes} onChange={(event) => setMoveForm((current) => ({ ...current, notes: event.target.value }))} className="min-h-20 w-full rounded-xl border border-[#d7cab3] bg-white px-3 py-2 text-sm text-[#2f3a2d] outline-hidden focus:border-[#9d7d4d]" /></Field>
             <Actions saving={saving} onCancel={() => setMoveTarget(null)} submitLabel="Registrar movimento" />
           </form>
         </Modal>
