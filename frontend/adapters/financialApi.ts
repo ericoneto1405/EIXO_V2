@@ -146,6 +146,28 @@ export const listTransactions = async (
   return payload.transactions || [];
 };
 
+export interface FinancialAllocation extends FinancialAllocationInput {
+  id: string;
+  amount: number;
+  lotName: string | null;
+  paddockName: string | null;
+  animalLabel: string | null;
+}
+
+export interface FinancialAllocationDetails {
+  editable: boolean;
+  reason: string | null;
+  allocations: FinancialAllocation[];
+  relatedResults: Array<{ id: string; description: string; amount: number; allocations: FinancialAllocation[] }>;
+}
+
+export const getTransactionAllocations = async (id: string): Promise<FinancialAllocationDetails> => {
+  const response = await fetch(buildApiUrl(`/financial/transactions/${encodeURIComponent(id)}/allocations`), { credentials: 'include' });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.message || 'Não foi possível consultar a distribuição.');
+  return data;
+};
+
 export const updateTransaction = async (
   id: string,
   payload: {

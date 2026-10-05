@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
-import { CATEGORIA_LABELS, FinancialTransaction } from '../../adapters/financialApi';
+import { CATEGORIA_LABELS, FinancialTransaction, TransactionType } from '../../adapters/financialApi';
 import { formatCurrency, MESES, PIE_COLORS } from '../financeUtils';
 import ChartCard from '../ChartCard';
 
 interface VisaoGeralTabProps {
+    onRetry: () => void;
+    onOpenGroup: (type: TransactionType, group: string) => void;
     transactions: FinancialTransaction[];
     isLoading: boolean;
     loadError: string | null;
@@ -17,6 +19,8 @@ interface VisaoGeralTabProps {
 
 const VisaoGeralTab: React.FC<VisaoGeralTabProps> = ({
     transactions,
+    onRetry,
+    onOpenGroup,
     isLoading,
     loadError,
     selectedMes,
@@ -54,14 +58,16 @@ const VisaoGeralTab: React.FC<VisaoGeralTabProps> = ({
         };
     }, [transactions]);
 
+    if (loadError) return <div role="alert" className="rounded-xl border border-(--eixo-border) p-4 text-sm text-(--eixo-danger)">{loadError} <button type="button" onClick={onRetry} className="underline">Tentar novamente</button></div>;
+    const total = (items: Array<{ value: number }>) => items.reduce((sum, item) => sum + item.value, 0);
     return (
         <>
             <div className="flex flex-wrap gap-3">
-                <select value={selectedMes} onChange={e => setSelectedMes(Number(e.target.value))}
+                <select aria-label="Mês da visão geral" value={selectedMes} onChange={e => setSelectedMes(Number(e.target.value))}
                     className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden">
                     {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
                 </select>
-                <select value={selectedAno} onChange={e => setSelectedAno(Number(e.target.value))}
+                <select aria-label="Ano da visão geral" value={selectedAno} onChange={e => setSelectedAno(Number(e.target.value))}
                     className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden">
                     {anos.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
@@ -71,6 +77,8 @@ const VisaoGeralTab: React.FC<VisaoGeralTabProps> = ({
                 <div className="rounded-xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-(--eixo-danger)">{loadError}</div>
             )}
 
+            <p className="text-sm text-(--eixo-text-muted)">{MESES[selectedMes - 1]} de {selectedAno} · Lançamentos por competência, incluindo pagos e pendentes. Estes valores não representam caixa realizado nem o resultado gerencial.</p>
+            {!isLoading && <div className="grid gap-3 sm:grid-cols-3">{[['Receitas lançadas', total(monthlyGroupCharts.receitas)], ['Despesas lançadas', total(monthlyGroupCharts.despesas)], ['Diferença entre lançamentos', total(monthlyGroupCharts.receitas) - total(monthlyGroupCharts.despesas)]].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-4"><p className="text-sm text-(--eixo-text-muted)">{label}</p><strong className="text-xl">{formatCurrency(Number(value))}</strong></div>)}</div>}
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                 <ChartCard title="Receitas por grupo">
                     {isLoading ? (
@@ -78,6 +86,7 @@ const VisaoGeralTab: React.FC<VisaoGeralTabProps> = ({
                     ) : monthlyGroupCharts.receitas.length === 0 ? (
                         <p className="text-sm text-(--eixo-text-muted)">Nenhuma receita no período selecionado.</p>
                     ) : (
+                        <>
                         <ResponsiveContainer width="100%" height={360}>
                             <PieChart>
                                 <Pie
@@ -101,6 +110,8 @@ const VisaoGeralTab: React.FC<VisaoGeralTabProps> = ({
                                 <Legend />
                             </PieChart>
                         </ResponsiveContainer>
+                        <ul className="mt-3 space-y-2">{monthlyGroupCharts.receitas.map((item) => <li key={item.name} className="flex items-center justify-between gap-3 text-sm"><button type="button" onClick={() => onOpenGroup('ENTRADA', item.name)} className="text-left underline">{item.name}</button><strong>{formatCurrency(item.value)}</strong></li>)}</ul>
+                        </>
                     )}
                 </ChartCard>
 
@@ -110,6 +121,7 @@ const VisaoGeralTab: React.FC<VisaoGeralTabProps> = ({
                     ) : monthlyGroupCharts.despesas.length === 0 ? (
                         <p className="text-sm text-(--eixo-text-muted)">Nenhuma despesa no período selecionado.</p>
                     ) : (
+                        <>
                         <ResponsiveContainer width="100%" height={360}>
                             <PieChart>
                                 <Pie
@@ -133,6 +145,8 @@ const VisaoGeralTab: React.FC<VisaoGeralTabProps> = ({
                                 <Legend />
                             </PieChart>
                         </ResponsiveContainer>
+                        <ul className="mt-3 space-y-2">{monthlyGroupCharts.despesas.map((item) => <li key={item.name} className="flex items-center justify-between gap-3 text-sm"><button type="button" onClick={() => onOpenGroup('SAIDA', item.name)} className="text-left underline">{item.name}</button><strong>{formatCurrency(item.value)}</strong></li>)}</ul>
+                        </>
                     )}
                 </ChartCard>
             </div>
