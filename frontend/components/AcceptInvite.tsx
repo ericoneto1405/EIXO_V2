@@ -55,7 +55,7 @@ const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess }) => {
     };
 
     return (
-        <div className="min-h-screen bg-[var(--eixo-bg)] text-[var(--eixo-text)]">
+        <div className="min-h-screen bg-(--eixo-bg) text-(--eixo-text)">
             <div className="relative overflow-hidden min-h-screen">
                 <div
                     className="absolute inset-0 opacity-40"
@@ -65,32 +65,32 @@ const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess }) => {
                         backgroundSize: 'cover',
                     }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[var(--eixo-surface)] via-[var(--eixo-bg)]/82 to-[var(--eixo-bg)]/60" />
+                <div className="absolute inset-0 bg-linear-to-t from-(--eixo-surface) via-(--eixo-bg)/82 to-(--eixo-bg)/60" />
 
                 <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-10 pt-8 lg:px-8">
                     <div className="mb-10">
                         <img src="/logo_eixo_official.svg" alt="EIXO" className="h-10 w-auto" />
-                        <div className="text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-[var(--eixo-text)]/72">
+                        <div className="text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-(--eixo-text)/72">
                             Gestão para Pecuária de Corte
                         </div>
                     </div>
 
                     <div className="flex flex-1 items-center justify-center">
-                        <div className="w-full max-w-xl rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]/95 shadow-xl backdrop-blur">
+                        <div className="w-full max-w-xl rounded-3xl border border-(--eixo-border) bg-(--eixo-surface)/95 shadow-xl backdrop-blur-sm">
                             <div className="p-8 lg:p-10">
                                 <div className="max-w-md mx-auto w-full">
 
                                     {/* Convite inválido */}
                                     {invalid && (
                                         <>
-                                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[rgba(184,66,50,0.08)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-danger)]">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-danger)]" />
+                                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-(--eixo-border) bg-[rgba(184,66,50,0.08)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-danger)">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-danger)" />
                                                 Convite inválido
                                             </div>
-                                            <h2 className="mt-2 text-2xl font-black text-[var(--eixo-text)]">
+                                            <h2 className="mt-2 text-2xl font-black text-(--eixo-text)">
                                                 Este convite não está mais disponível
                                             </h2>
-                                            <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text)]/72">
+                                            <p className="mt-3 text-sm leading-relaxed text-(--eixo-text)/72">
                                                 O link pode ter expirado ou já foi utilizado. Peça ao proprietário da organização que envie um novo convite.
                                             </p>
                                         </>
@@ -98,26 +98,26 @@ const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess }) => {
 
                                     {/* Carregando */}
                                     {!invalid && !info && (
-                                        <p className="text-sm text-[var(--eixo-text)]/72">Verificando convite…</p>
+                                        <p className="text-sm text-(--eixo-text)/72">Verificando convite…</p>
                                     )}
 
                                     {/* Formulário */}
                                     {!invalid && info && !success && (
                                         <>
                                             <div className="mb-6">
-                                                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite)]">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
+                                                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-(--eixo-border) bg-(--eixo-green-soft) px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-graphite)">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                                                     Convite recebido
                                                 </div>
-                                                <p className="text-sm uppercase tracking-[0.16em] text-[var(--eixo-text)]/72">
+                                                <p className="text-sm uppercase tracking-[0.16em] text-(--eixo-text)/72">
                                                     {info.orgName}
                                                 </p>
-                                                <h2 className="mt-2 text-3xl font-black text-[var(--eixo-text)]">
+                                                <h2 className="mt-2 text-3xl font-black text-(--eixo-text)">
                                                     Criar sua conta
                                                 </h2>
-                                                <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text)]/72">
+                                                <p className="mt-3 text-sm leading-relaxed text-(--eixo-text)/72">
                                                     Você foi convidado como{' '}
-                                                    <span className="font-semibold text-[var(--eixo-text)]">
+                                                    <span className="font-semibold text-(--eixo-text)">
                                                         {ROLE_LABEL[info.role] ?? info.role}
                                                     </span>
                                                     . Preencha seus dados para começar.
@@ -126,31 +126,31 @@ const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess }) => {
 
                                             <form onSubmit={handleSubmit} className="space-y-5">
                                                 <div>
-                                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">
+                                                    <label className="block text-sm font-medium text-(--eixo-text)">
                                                         E-mail
                                                     </label>
                                                     <input
                                                         type="email"
                                                         value={info.email}
                                                         readOnly
-                                                        className="mt-1 w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-[var(--eixo-text)]/60 cursor-not-allowed"
+                                                        className="mt-1 w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 text-(--eixo-text)/60 cursor-not-allowed"
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">
+                                                    <label className="block text-sm font-medium text-(--eixo-text)">
                                                         Seu nome
                                                     </label>
                                                     <input
                                                         type="text"
                                                         value={name}
                                                         onChange={(e) => setName(e.target.value)}
-                                                        className="mt-1 w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                        className="mt-1 w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 text-(--eixo-text) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)"
                                                         placeholder="Como você quer ser chamado"
                                                         required
                                                     />
                                                 </div>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-[var(--eixo-text)]">
+                                                    <label className="block text-sm font-medium text-(--eixo-text)">
                                                         Criar senha
                                                     </label>
                                                     <div className="relative mt-1">
@@ -158,7 +158,7 @@ const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess }) => {
                                                             type={showPassword ? 'text' : 'password'}
                                                             value={password}
                                                             onChange={(e) => setPassword(e.target.value)}
-                                                            className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 pr-12 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                            className="w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 pr-12 text-(--eixo-text) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)"
                                                             placeholder="Mínimo 8 caracteres"
                                                             required
                                                             minLength={8}
@@ -166,7 +166,7 @@ const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess }) => {
                                                         <button
                                                             type="button"
                                                             onClick={() => setShowPassword((v) => !v)}
-                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--eixo-text-muted)]"
+                                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-(--eixo-text-muted)"
                                                             aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                                                         >
                                                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -175,7 +175,7 @@ const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess }) => {
                                                 </div>
 
                                                 {error && (
-                                                    <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]">
+                                                    <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-(--eixo-danger)">
                                                         {error}
                                                     </div>
                                                 )}
@@ -183,7 +183,7 @@ const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess }) => {
                                                 <button
                                                     type="submit"
                                                     disabled={loading}
-                                                    className="w-full rounded-2xl bg-[var(--eixo-green)] py-3 font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-60"
+                                                    className="w-full rounded-2xl bg-(--eixo-green) py-3 font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) disabled:opacity-60"
                                                 >
                                                     {loading ? 'Criando conta…' : 'Entrar no EIXO'}
                                                 </button>
@@ -194,14 +194,14 @@ const AcceptInvite: React.FC<AcceptInviteProps> = ({ token, onSuccess }) => {
                                     {/* Sucesso */}
                                     {success && (
                                         <>
-                                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite)]">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
+                                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-(--eixo-border) bg-(--eixo-green-soft) px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-graphite)">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                                                 Conta criada
                                             </div>
-                                            <h2 className="mt-2 text-2xl font-black text-[var(--eixo-text)]">
+                                            <h2 className="mt-2 text-2xl font-black text-(--eixo-text)">
                                                 Bem-vindo ao EIXO!
                                             </h2>
-                                            <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text)]/72">
+                                            <p className="mt-3 text-sm leading-relaxed text-(--eixo-text)/72">
                                                 Sua conta foi criada. Redirecionando para o login…
                                             </p>
                                         </>

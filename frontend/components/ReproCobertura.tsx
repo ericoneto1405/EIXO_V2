@@ -24,11 +24,11 @@ import {
     salvarTanque,
 } from '../adapters/reproApi';
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]';
-const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
-const cardClass = 'rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5';
-const primaryButton = 'rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryButton = 'rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-semibold text-[var(--eixo-text)] transition hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)';
+const labelClass = 'block text-xs font-semibold text-(--eixo-text-muted)';
+const cardClass = 'rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5';
+const primaryButton = 'rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryButton = 'rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-semibold text-(--eixo-text) transition hover:bg-(--eixo-surface-soft) disabled:opacity-50';
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const fmtData = (v?: string | null) => (v ? new Date(v).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '—');
@@ -85,19 +85,19 @@ export const CoberturaAba: React.FC<{
 
             <div className={`${cardClass} space-y-3`}>
                 <h3 className="font-bold">IATF em andamento</h3>
-                {!sessoes.length && <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum protocolo aberto.</p>}
+                {!sessoes.length && <p className="text-sm text-(--eixo-text-muted)">Nenhum protocolo aberto.</p>}
                 {sessoes.map((s) => (
-                    <div key={s.id} className="rounded-xl border border-[var(--eixo-border)] p-3 text-sm">
+                    <div key={s.id} className="rounded-xl border border-(--eixo-border) p-3 text-sm">
                         <div className="flex flex-wrap items-start justify-between gap-2">
                             <div>
                                 <p className="font-semibold">
                                     Dia 0 em {fmtData(s.dia0)} · {s.protocolo || 'sem protocolo'} · {s.vacas.length} vaca(s)
                                     {s.status === 'INSEMINADO' ? ' · inseminada' : ''}
                                 </p>
-                                {s.responsavel && <p className="text-xs text-[var(--eixo-text-muted)]">Responsável: {s.responsavel}</p>}
+                                {s.responsavel && <p className="text-xs text-(--eixo-text-muted)">Responsável: {s.responsavel}</p>}
                                 {s.resumo?.alertas?.map((a) => <p key={a} className="text-xs text-amber-700">{a}</p>)}
                                 {s.resumo?.fora?.length ? (
-                                    <p className="text-xs text-[var(--eixo-text-muted)]">
+                                    <p className="text-xs text-(--eixo-text-muted)">
                                         Fora do protocolo: {s.resumo.fora.map((f) => `${f.brinco} (${f.motivo})`).join('; ')}
                                     </p>
                                 ) : null}
@@ -276,7 +276,7 @@ const AbrirIatf: React.FC<{
                     <input className={inputClass} value={responsavel} onChange={(e) => setResponsavel(e.target.value)} />
                 </label>
             </div>
-            <p className="text-xs text-[var(--eixo-text-muted)]">
+            <p className="text-xs text-(--eixo-text-muted)">
                 Vaca prenhe não entra: o hormônio pode causar aborto. O protocolo é definido pelo veterinário responsável.
             </p>
             <button type="button" className={primaryButton} disabled={!lotId || salvando} onClick={abrir}>
@@ -314,7 +314,7 @@ const Protocolos: React.FC<{
 
     return (
         <div className="space-y-3">
-            <ul className="divide-y divide-[var(--eixo-border)] text-sm">
+            <ul className="divide-y divide-(--eixo-border) text-sm">
                 {protocolos.map((p) => (
                     <li key={p.id} className="flex items-center justify-between py-2">
                         <span>
@@ -334,7 +334,7 @@ const Protocolos: React.FC<{
                 ))}
             </ul>
 
-            <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-3">
+            <div className="rounded-xl bg-(--eixo-surface-soft) p-3">
                 <label className="block">
                     <span className={labelClass}>Nome do protocolo</span>
                     <input className={inputClass} value={nome} onChange={(e) => setNome(e.target.value)} />
@@ -427,11 +427,11 @@ const Inseminacao: React.FC<{
                     </select>
                 </label>
             </div>
-            <ul className="max-h-64 divide-y divide-[var(--eixo-border)] overflow-y-auto text-sm">
+            <ul className="max-h-64 divide-y divide-(--eixo-border) overflow-y-auto text-sm">
                 {sessao.vacas.map((v) => (
                     <li key={v.animalId} className="flex flex-wrap items-center justify-between gap-2 py-2">
                         <span className="font-semibold">{v.brinco}</span>
-                        <select className="rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-sm"
+                        <select className="rounded-lg border border-(--eixo-border) px-2 py-1 text-sm"
                             value={escolhas[v.brinco] || padrao} onChange={(e) => setEscolhas((x) => ({ ...x, [v.brinco]: e.target.value }))}>
                             <option value="">Sem sêmen (não lança)</option>
                             {partidas.map((p) => <option key={p.id} value={p.id}>{p.touro} · {p.lote}</option>)}
@@ -488,10 +488,10 @@ export const BotijaoAba: React.FC<{
                 {dados.tanques.map((t) => {
                     const ultima = t.readings[t.readings.length - 1];
                     return (
-                        <div key={t.id} className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-[var(--eixo-border)] p-3 text-sm">
+                        <div key={t.id} className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-(--eixo-border) p-3 text-sm">
                             <div>
                                 <p className="font-semibold">{t.name}{t.canecas ? ` · ${t.canecas} canecas` : ''}</p>
-                                <p className="text-xs text-[var(--eixo-text-muted)]">
+                                <p className="text-xs text-(--eixo-text-muted)">
                                     {ultima ? `Última medição: ${fmtData(ultima.date)}${ultima.nivelCm != null ? ` · ${ultima.nivelCm} cm` : ''}` : 'Sem medição'}
                                     {t.nivelMinCm != null ? ` · mínimo ${t.nivelMinCm} cm` : ''}
                                     {t.ultimaRecargaEm ? ` · recarga em ${fmtData(t.ultimaRecargaEm)}` : ''}
@@ -500,7 +500,7 @@ export const BotijaoAba: React.FC<{
                             <div className="flex items-end gap-2">
                                 <label>
                                     <span className={labelClass}>Nível hoje (cm)</span>
-                                    <input type="number" min={0} step={0.5} className="w-28 rounded-lg border border-[var(--eixo-border)] px-2 py-1.5"
+                                    <input type="number" min={0} step={0.5} className="w-28 rounded-lg border border-(--eixo-border) px-2 py-1.5"
                                         value={medicao[t.id] || ''} onChange={(e) => setMedicao((m) => ({ ...m, [t.id]: e.target.value }))} />
                                 </label>
                                 <button type="button" className={secondaryButton}
@@ -560,11 +560,11 @@ export const BotijaoAba: React.FC<{
 
             <div className={`${cardClass} space-y-3`}>
                 <h3 className="font-bold">Doses no botijão</h3>
-                <p className="text-xs text-[var(--eixo-text-muted)]">É o mesmo estoque do Eixo Acasalamento: o que você lança aqui aparece lá.</p>
+                <p className="text-xs text-(--eixo-text-muted)">É o mesmo estoque do Eixo Acasalamento: o que você lança aqui aparece lá.</p>
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[640px] text-sm">
                         <thead>
-                            <tr className="text-left text-xs text-[var(--eixo-text-muted)]">
+                            <tr className="text-left text-xs text-(--eixo-text-muted)">
                                 <th className="py-2">Touro</th>
                                 <th>Partida</th>
                                 <th>Doses</th>
@@ -574,23 +574,23 @@ export const BotijaoAba: React.FC<{
                             </tr>
                         </thead>
                         <tbody>
-                            {!dados.partidas.length && <tr><td colSpan={6} className="py-6 text-center text-[var(--eixo-text-muted)]">Nenhuma dose no estoque.</td></tr>}
+                            {!dados.partidas.length && <tr><td colSpan={6} className="py-6 text-center text-(--eixo-text-muted)">Nenhuma dose no estoque.</td></tr>}
                             {dados.partidas.map((p) => (
-                                <tr key={p.id} className="border-t border-[var(--eixo-border)]">
+                                <tr key={p.id} className="border-t border-(--eixo-border)">
                                     <td className="py-2 font-semibold">{p.touro}</td>
                                     <td>{p.lote}</td>
                                     <td className={p.dosesDisponiveis === 0 ? 'text-red-700' : ''}>{p.dosesDisponiveis} de {p.dosesTotal}</td>
                                     <td>
-                                        <select className="rounded-lg border border-[var(--eixo-border)] px-2 py-1"
+                                        <select className="rounded-lg border border-(--eixo-border) px-2 py-1"
                                             value={p.tankId || ''} onChange={async (e) => { try { await atualizarPartida(farmId, p.id, { tankId: e.target.value || null }); await carregar(); } catch (err: any) { onErro(err.message); } }}>
                                             <option value="">Sem botijão</option>
                                             {dados.tanques.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                                         </select>
-                                        <input className="ml-2 w-20 rounded-lg border border-[var(--eixo-border)] px-2 py-1" placeholder="caneca" defaultValue={p.caneca || ''}
+                                        <input className="ml-2 w-20 rounded-lg border border-(--eixo-border) px-2 py-1" placeholder="caneca" defaultValue={p.caneca || ''}
                                             onBlur={async (e) => { if (e.target.value !== (p.caneca || '')) { try { await atualizarPartida(farmId, p.id, { caneca: e.target.value }); await carregar(); } catch (err: any) { onErro(err.message); } } }} />
                                     </td>
                                     <td>
-                                        <input type="number" min={0} step={0.01} className="w-24 rounded-lg border border-[var(--eixo-border)] px-2 py-1" defaultValue={p.custoDose ?? ''}
+                                        <input type="number" min={0} step={0.01} className="w-24 rounded-lg border border-(--eixo-border) px-2 py-1" defaultValue={p.custoDose ?? ''}
                                             onBlur={async (e) => { if (Number(e.target.value || 0) !== (p.custoDose || 0)) { try { await atualizarPartida(farmId, p.id, { custoDose: e.target.value }); await carregar(); } catch (err: any) { onErro(err.message); } } }} />
                                     </td>
                                     <td className="text-xs">
@@ -605,7 +605,7 @@ export const BotijaoAba: React.FC<{
                 </div>
 
                 {movimento && (
-                    <div className="flex flex-wrap items-end gap-2 rounded-xl bg-[var(--eixo-surface-soft)] p-3">
+                    <div className="flex flex-wrap items-end gap-2 rounded-xl bg-(--eixo-surface-soft) p-3">
                         <label>
                             <span className={labelClass}>{movimento.tipo === 'OUT' ? 'Doses perdidas' : 'Diferença (+ ou −)'}</span>
                             <input type="number" className={inputClass} value={movQtd} onChange={(e) => setMovQtd(e.target.value)} />

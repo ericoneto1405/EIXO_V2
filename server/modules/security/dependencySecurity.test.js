@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import ExcelJS from 'exceljs';
 import * as XLSX from 'xlsx';
@@ -7,6 +8,12 @@ import * as XLSX from 'xlsx';
 const require = createRequire(import.meta.url);
 const requireFromExpress = createRequire(require.resolve('express/package.json'));
 const qs = requireFromExpress('qs');
+
+test('lockfile não reintroduz braces em nenhuma cadeia de dependências', () => {
+  const lock = JSON.parse(readFileSync(new URL('../../../package-lock.json', import.meta.url), 'utf8'));
+  const paths = Object.keys(lock.packages).filter((path) => /(?:^|\/)node_modules\/braces$/.test(path));
+  assert.deepEqual(paths, [], 'A expansão recursiva vulnerável não pode voltar ao build ou ao desenvolvimento.');
+});
 
 test('qs preserva queries legítimas e bloqueia o bypass do limite de arrays', () => {
   const query = qs.parse('filtro[status]=ATIVO&ids[]=1&ids[]=2');

@@ -95,8 +95,8 @@ const emptyBatchForm = () => ({
 
 const toNumber = (value: string) => Number(String(value).replace(',', '.'));
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]';
-const labelClass = 'text-xs font-semibold text-[var(--eixo-text-muted)]';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)';
+const labelClass = 'text-xs font-semibold text-(--eixo-text-muted)';
 const PRODUCT_CATEGORIES = [
     ['VACINA', 'Vacinas'],
     ['VERMIFUGO', 'Vermífugos'],
@@ -335,7 +335,7 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
         });
     };
 
-    if (loading && products.length === 0) return <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-10 text-center text-sm text-[var(--eixo-text-muted)]">Carregando farmácia...</div>;
+    if (loading && products.length === 0) return <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-10 text-center text-sm text-(--eixo-text-muted)">Carregando farmácia...</div>;
 
     return (
         <div className="space-y-5">
@@ -346,40 +346,40 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                 <Summary label="Valor estimado do estoque" value={inventoryValue} currency />
             </div>
             {expiredLoss > 0 && (
-                <div role="alert" className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-[var(--eixo-danger)]">
+                <div role="alert" className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-(--eixo-danger)">
                     {expiredLoss.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} em produtos vencidos no estoque. Esse valor já é custo da fazenda e não chega a nenhum lote.
                 </div>
             )}
 
-            {error && <div role="alert" className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-[var(--eixo-danger)]">{error}</div>}
-            {success && <div role="status" className="rounded-2xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-4 py-3 text-sm font-semibold text-[var(--eixo-success)]">{success}</div>}
+            {error && <div role="alert" className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-(--eixo-danger)">{error}</div>}
+            {success && <div role="status" className="rounded-2xl border border-[#b6d4b0] bg-(--eixo-green-soft) px-4 py-3 text-sm font-semibold text-(--eixo-success)">{success}</div>}
 
             <div className="grid gap-5 xl:grid-cols-3">
                 <FormCard title="1. Cadastrar produto" description="Crie o item antes de registrar seus lotes.">
                     <form onSubmit={handleCreateProduct} className="space-y-3">
                         {catalog.length > 0 && (
-                            <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
+                            <div className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-3">
                                 <Field label="Buscar na lista EIXO">
                                     <input className={inputClass} value={catalogSearch} onChange={(event) => setCatalogSearch(event.target.value)} placeholder="Marca, laboratório ou princípio ativo" />
                                 </Field>
                                 {catalogMatches.length > 0 && (
-                                    <ul className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+                                    <ul className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-(--eixo-border) bg-(--eixo-surface)">
                                         {catalogMatches.map((item) => (
                                             <li key={item.key}>
-                                                <button type="button" onClick={() => pickCatalogItem(item)} className="w-full px-3 py-2 text-left text-sm hover:bg-[var(--eixo-surface-soft)]">
-                                                    <span className="font-semibold text-[var(--eixo-text)]">{item.brand}</span>
-                                                    <span className="text-[var(--eixo-text-muted)]"> · {item.laboratory}</span>
-                                                    {item.activeIngredient && <span className="block text-xs text-[var(--eixo-text-muted)]">{item.activeIngredient}</span>}
+                                                <button type="button" onClick={() => pickCatalogItem(item)} className="w-full px-3 py-2 text-left text-sm hover:bg-(--eixo-surface-soft)">
+                                                    <span className="font-semibold text-(--eixo-text)">{item.brand}</span>
+                                                    <span className="text-(--eixo-text-muted)"> · {item.laboratory}</span>
+                                                    {item.activeIngredient && <span className="block text-xs text-(--eixo-text-muted)">{item.activeIngredient}</span>}
                                                 </button>
                                             </li>
                                         ))}
                                     </ul>
                                 )}
                                 {catalogSearch.trim().length >= 2 && catalogMatches.length === 0 && (
-                                    <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">Não está na lista. Preencha os campos abaixo.</p>
+                                    <p className="mt-2 text-xs text-(--eixo-text-muted)">Não está na lista. Preencha os campos abaixo.</p>
                                 )}
                                 {selectedCatalogItem && (
-                                    <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">
+                                    <p className="mt-2 text-xs text-(--eixo-text-muted)">
                                         Preenchido pela lista EIXO. Carência conferida em {selectedCatalogItem.reviewedAt.split('-').reverse().join('/')} ({selectedCatalogItem.source}). Confira sempre a bula do frasco.
                                         {' '}<button type="button" className="font-semibold underline" onClick={() => setProductForm(emptyProductForm)}>Limpar</button>
                                     </p>
@@ -406,7 +406,7 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                             <Field label="Estoque mínimo"><input type="number" min="0" step="0.01" className={inputClass} value={productForm.minStock} onChange={(event) => setProductForm({ ...productForm, minStock: event.target.value })} placeholder="0" /></Field>
                             <Field label="Local de armazenamento"><input className={inputClass} value={productForm.storageLocation} onChange={(event) => setProductForm({ ...productForm, storageLocation: event.target.value })} placeholder="Ex.: geladeira 1" /></Field>
                         </div>
-                        <label className="flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 text-sm font-semibold text-[var(--eixo-text)]"><input type="checkbox" checked={productForm.refrigerated} onChange={(event) => setProductForm({ ...productForm, refrigerated: event.target.checked, storageMinTemp: event.target.checked && !productForm.storageMinTemp ? '2' : productForm.storageMinTemp, storageMaxTemp: event.target.checked && !productForm.storageMaxTemp ? '8' : productForm.storageMaxTemp })} /> Exige refrigeração</label>
+                        <label className="flex items-center gap-2 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2.5 text-sm font-semibold text-(--eixo-text)"><input type="checkbox" checked={productForm.refrigerated} onChange={(event) => setProductForm({ ...productForm, refrigerated: event.target.checked, storageMinTemp: event.target.checked && !productForm.storageMinTemp ? '2' : productForm.storageMinTemp, storageMaxTemp: event.target.checked && !productForm.storageMaxTemp ? '8' : productForm.storageMaxTemp })} /> Exige refrigeração</label>
                         {productForm.refrigerated && (
                             <div className="grid grid-cols-2 gap-3">
                                 <Field label="Temperatura mínima (°C)"><input type="number" step="0.5" className={inputClass} value={productForm.storageMinTemp} onChange={(event) => setProductForm({ ...productForm, storageMinTemp: event.target.value })} /></Field>
@@ -438,7 +438,7 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                             <Field label={`Quantidade${selectedBatchProduct ? ` (${selectedBatchProduct.unit})` : ''}`}><input required type="number" min="0.01" step="0.01" className={inputClass} value={batchForm.quantity} onChange={(event) => setBatchForm({ ...batchForm, quantity: event.target.value })} /></Field>
                             <Field label="Custo unitário (R$)"><input required={!batchForm.semCompra} type="number" min="0" step="0.01" className={inputClass} value={batchForm.unitCost} onChange={(event) => setBatchForm({ ...batchForm, unitCost: event.target.value })} /></Field>
                         </div>
-                        <label className="flex items-center gap-2 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 text-sm font-semibold text-[var(--eixo-text)]">
+                        <label className="flex items-center gap-2 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2.5 text-sm font-semibold text-(--eixo-text)">
                             <input type="checkbox" checked={batchForm.semCompra} onChange={(event) => setBatchForm({ ...batchForm, semCompra: event.target.checked })} />
                             Estoque que já estava na fazenda (não lançar no Financeiro)
                         </label>
@@ -464,8 +464,8 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                                     <Field label="Valor da entrada (R$)"><input required type="number" min="0.01" step="0.01" className={inputClass} value={batchForm.downPayment} onChange={(event) => setBatchForm({ ...batchForm, downPayment: event.target.value })} /></Field>
                                 )}
                                 {batchTotal > 0 && (
-                                    <p className="rounded-xl bg-[var(--eixo-surface-soft)] px-3 py-2 text-xs text-[var(--eixo-text-muted)]">
-                                        Total da compra: <strong className="text-[var(--eixo-text)]">{batchTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+                                    <p className="rounded-xl bg-(--eixo-surface-soft) px-3 py-2 text-xs text-(--eixo-text-muted)">
+                                        Total da compra: <strong className="text-(--eixo-text)">{batchTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
                                         {batchForm.condition === 'CARTAO' ? ' · cada parcela vence na data de pagamento da fatura.' : ''}
                                     </p>
                                 )}
@@ -488,13 +488,13 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
 
             <PharmacyTemperature farmId={farmId} />
 
-            <section className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+            <section className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5">
                 <div className="flex flex-wrap items-end justify-between gap-4">
                     <div>
-                        <h3 className="font-bold text-[var(--eixo-text)]">Produtos da Farmácia</h3>
-                        <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Pesquise e filtre antes de consultar lotes e informações sanitárias.</p>
+                        <h3 className="font-bold text-(--eixo-text)">Produtos da Farmácia</h3>
+                        <p className="mt-1 text-xs text-(--eixo-text-muted)">Pesquise e filtre antes de consultar lotes e informações sanitárias.</p>
                     </div>
-                    <p className="text-sm font-semibold text-[var(--eixo-text-muted)]">{filteredProducts.length} de {products.length} produtos</p>
+                    <p className="text-sm font-semibold text-(--eixo-text-muted)">{filteredProducts.length} de {products.length} produtos</p>
                 </div>
                 <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(260px,1fr)_220px_220px]">
                     <label className="block">
@@ -507,16 +507,16 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
 
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">
                     {filteredProducts.length === 0 ? (
-                        <div className="col-span-full rounded-xl border border-dashed border-[var(--eixo-border)] px-4 py-10 text-center text-sm text-[var(--eixo-text-muted)]">Nenhum produto encontrado com esses filtros.</div>
+                        <div className="col-span-full rounded-xl border border-dashed border-(--eixo-border) px-4 py-10 text-center text-sm text-(--eixo-text-muted)">Nenhum produto encontrado com esses filtros.</div>
                     ) : filteredProducts.map((product) => {
                         const status = getProductStatus(product);
                         const isExpanded = expandedProductId === product.id;
                         const nextExpiry = product.batches.filter((batch) => batch.quantity > 0 && batch.expiresAt).sort((a, b) => new Date(a.expiresAt || 0).getTime() - new Date(b.expiresAt || 0).getTime())[0];
                         return (
-                            <article key={product.id} className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
+                            <article key={product.id} className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-4">
                                 <button type="button" className="w-full text-left" onClick={() => setExpandedProductId(isExpanded ? null : product.id)} aria-expanded={isExpanded}>
                                     <div className="flex items-start justify-between gap-3">
-                                        <div><h4 className="font-bold text-[var(--eixo-text)]">{product.name}</h4><p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">{product.activeIngredient || 'Princípio ativo não informado'} · {CATEGORY_LABELS[product.category] || product.category}</p></div>
+                                        <div><h4 className="font-bold text-(--eixo-text)">{product.name}</h4><p className="mt-0.5 text-xs text-(--eixo-text-muted)">{product.activeIngredient || 'Princípio ativo não informado'} · {CATEGORY_LABELS[product.category] || product.category}</p></div>
                                         <StatusBadge status={status} />
                                     </div>
                                     <div className="mt-3 grid grid-cols-3 gap-2 text-sm">
@@ -524,10 +524,10 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                                         <ProductMetric label="Lotes" value={String(product.batches.length)} />
                                         <ProductMetric label="Próxima validade" value={nextExpiry?.expiresAt ? new Date(nextExpiry.expiresAt).toLocaleDateString('pt-BR') : 'Não informada'} />
                                     </div>
-                                    <p className="mt-3 text-xs font-semibold text-[var(--eixo-text-muted)]">{isExpanded ? 'Ocultar detalhes ↑' : 'Ver detalhes e lotes ↓'}</p>
+                                    <p className="mt-3 text-xs font-semibold text-(--eixo-text-muted)">{isExpanded ? 'Ocultar detalhes ↑' : 'Ver detalhes e lotes ↓'}</p>
                                 </button>
                                 {isExpanded && (
-                                    <div className="mt-4 border-t border-[var(--eixo-border)] pt-4">
+                                    <div className="mt-4 border-t border-(--eixo-border) pt-4">
                                         <dl className="grid gap-x-4 gap-y-3 text-sm sm:grid-cols-2">
                                             <Detail label="Fabricante" value={product.manufacturer} />
                                             <Detail label="Apresentação" value={product.presentation} />
@@ -536,9 +536,9 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                                             <Detail label="Carência para abate" value={product.slaughterWithdrawalDays === null ? null : `${product.slaughterWithdrawalDays} dias`} />
                                             <Detail label="Carência para leite" value={product.milkWithdrawalDays === null ? null : `${product.milkWithdrawalDays} dias`} />
                                         </dl>
-                                        {product.notes && <p className="mt-3 rounded-xl bg-[var(--eixo-surface)] px-3 py-2 text-xs text-[var(--eixo-text-muted)]">{product.notes}</p>}
+                                        {product.notes && <p className="mt-3 rounded-xl bg-(--eixo-surface) px-3 py-2 text-xs text-(--eixo-text-muted)">{product.notes}</p>}
                                         <div className="mt-3 space-y-2">
-                                            {product.batches.length === 0 ? <p className="text-xs text-[var(--eixo-text-muted)]">Nenhum lote cadastrado.</p> : product.batches.map((batch) => <div key={batch.id} className="flex flex-wrap justify-between gap-2 rounded-xl bg-[var(--eixo-surface)] px-3 py-2 text-xs"><span className="font-semibold">Lote {batch.lotNumber}</span><span>Saldo: {batch.quantity.toLocaleString('pt-BR')} {product.unit}</span><span>Validade: {batch.expiresAt ? new Date(batch.expiresAt).toLocaleDateString('pt-BR') : 'não informada'}</span></div>)}
+                                            {product.batches.length === 0 ? <p className="text-xs text-(--eixo-text-muted)">Nenhum lote cadastrado.</p> : product.batches.map((batch) => <div key={batch.id} className="flex flex-wrap justify-between gap-2 rounded-xl bg-(--eixo-surface) px-3 py-2 text-xs"><span className="font-semibold">Lote {batch.lotNumber}</span><span>Saldo: {batch.quantity.toLocaleString('pt-BR')} {product.unit}</span><span>Validade: {batch.expiresAt ? new Date(batch.expiresAt).toLocaleDateString('pt-BR') : 'não informada'}</span></div>)}
                                         </div>
                                     </div>
                                 )}
@@ -548,37 +548,37 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                 </div>
             </section>
 
-            <section className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
-                <div className="border-b border-[var(--eixo-border)] px-5 py-4"><h3 className="font-bold text-[var(--eixo-text)]">Estoque atual</h3><p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Saldos separados por produto e lote.</p></div>
+            <section className="overflow-hidden rounded-2xl border border-(--eixo-border) bg-(--eixo-surface)">
+                <div className="border-b border-(--eixo-border) px-5 py-4"><h3 className="font-bold text-(--eixo-text)">Estoque atual</h3><p className="mt-1 text-xs text-(--eixo-text-muted)">Saldos separados por produto e lote.</p></div>
                 <div className="overflow-x-auto">
                     <table className="w-full min-w-[760px] text-left text-sm">
-                        <thead className="bg-[var(--eixo-surface-soft)] text-xs uppercase text-[var(--eixo-text-muted)]"><tr><th className="px-5 py-3">Produto</th><th className="px-5 py-3">Categoria</th><th className="px-5 py-3">Lote</th><th className="px-5 py-3">Validade</th><th className="px-5 py-3 text-right">Saldo</th><th className="px-5 py-3">Situação</th></tr></thead>
-                        <tbody className="divide-y divide-[var(--eixo-border)]">
-                            {filteredBatches.length === 0 ? <tr><td colSpan={6} className="px-5 py-10 text-center text-[var(--eixo-text-muted)]">Nenhum lote encontrado.</td></tr> : filteredBatches.map((batch) => {
+                        <thead className="bg-(--eixo-surface-soft) text-xs uppercase text-(--eixo-text-muted)"><tr><th className="px-5 py-3">Produto</th><th className="px-5 py-3">Categoria</th><th className="px-5 py-3">Lote</th><th className="px-5 py-3">Validade</th><th className="px-5 py-3 text-right">Saldo</th><th className="px-5 py-3">Situação</th></tr></thead>
+                        <tbody className="divide-y divide-(--eixo-border)">
+                            {filteredBatches.length === 0 ? <tr><td colSpan={6} className="px-5 py-10 text-center text-(--eixo-text-muted)">Nenhum lote encontrado.</td></tr> : filteredBatches.map((batch) => {
                                 const low = batch.product.totalStock <= batch.product.minStock;
                                 const expired = batch.expiresAt ? new Date(batch.expiresAt).getTime() < Date.now() : false;
-                                return <tr key={batch.id}><td className="px-5 py-3"><p className="font-semibold text-[var(--eixo-text)]">{batch.product.name}</p>{batch.product.activeIngredient && <p className="text-xs text-[var(--eixo-text-muted)]">{batch.product.activeIngredient}</p>}</td><td className="px-5 py-3 text-[var(--eixo-text-muted)]">{CATEGORY_LABELS[batch.product.category] || batch.product.category}</td><td className="px-5 py-3">{batch.lotNumber}</td><td className="px-5 py-3">{batch.expiresAt ? new Date(batch.expiresAt).toLocaleDateString('pt-BR') : 'Não informada'}</td><td className="px-5 py-3 text-right font-bold">{batch.quantity.toLocaleString('pt-BR')} {batch.product.unit}</td><td className="px-5 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${expired || low ? 'bg-[#fff2ef] text-[var(--eixo-danger)]' : 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]'}`}>{expired ? 'Vencido' : low ? 'Estoque baixo' : 'Regular'}</span></td></tr>;
+                                return <tr key={batch.id}><td className="px-5 py-3"><p className="font-semibold text-(--eixo-text)">{batch.product.name}</p>{batch.product.activeIngredient && <p className="text-xs text-(--eixo-text-muted)">{batch.product.activeIngredient}</p>}</td><td className="px-5 py-3 text-(--eixo-text-muted)">{CATEGORY_LABELS[batch.product.category] || batch.product.category}</td><td className="px-5 py-3">{batch.lotNumber}</td><td className="px-5 py-3">{batch.expiresAt ? new Date(batch.expiresAt).toLocaleDateString('pt-BR') : 'Não informada'}</td><td className="px-5 py-3 text-right font-bold">{batch.quantity.toLocaleString('pt-BR')} {batch.product.unit}</td><td className="px-5 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${expired || low ? 'bg-[#fff2ef] text-(--eixo-danger)' : 'bg-(--eixo-green-soft) text-(--eixo-success)'}`}>{expired ? 'Vencido' : low ? 'Estoque baixo' : 'Regular'}</span></td></tr>;
                             })}
                         </tbody>
                     </table>
                 </div>
             </section>
 
-            <section className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
-                <h3 className="font-bold text-[var(--eixo-text)]">Movimentações recentes</h3>
-                <div className="mt-3 space-y-2">{movements.length === 0 ? <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma movimentação registrada.</p> : movements.slice(0, 10).map((movement) => <div key={movement.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-[var(--eixo-surface-soft)] px-4 py-3 text-sm"><div><span className="font-semibold text-[var(--eixo-text)]">{movement.product.name}</span><span className="ml-2 text-[var(--eixo-text-muted)]">Lote {movement.batch.lotNumber}</span>{movement.notes && <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">{movement.notes}</p>}</div><div className="text-right"><p className={`font-bold ${movement.type === 'EXIT' || movement.quantity < 0 ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-success)]'}`}>{movement.type === 'EXIT' ? '-' : movement.quantity > 0 ? '+' : ''}{Math.abs(movement.quantity).toLocaleString('pt-BR')} {movement.product.unit}</p><p className="text-xs text-[var(--eixo-text-muted)]">{new Date(movement.createdAt).toLocaleString('pt-BR')}</p></div></div>)}</div>
+            <section className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5">
+                <h3 className="font-bold text-(--eixo-text)">Movimentações recentes</h3>
+                <div className="mt-3 space-y-2">{movements.length === 0 ? <p className="text-sm text-(--eixo-text-muted)">Nenhuma movimentação registrada.</p> : movements.slice(0, 10).map((movement) => <div key={movement.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-(--eixo-surface-soft) px-4 py-3 text-sm"><div><span className="font-semibold text-(--eixo-text)">{movement.product.name}</span><span className="ml-2 text-(--eixo-text-muted)">Lote {movement.batch.lotNumber}</span>{movement.notes && <p className="mt-0.5 text-xs text-(--eixo-text-muted)">{movement.notes}</p>}</div><div className="text-right"><p className={`font-bold ${movement.type === 'EXIT' || movement.quantity < 0 ? 'text-(--eixo-danger)' : 'text-(--eixo-success)'}`}>{movement.type === 'EXIT' ? '-' : movement.quantity > 0 ? '+' : ''}{Math.abs(movement.quantity).toLocaleString('pt-BR')} {movement.product.unit}</p><p className="text-xs text-(--eixo-text-muted)">{new Date(movement.createdAt).toLocaleString('pt-BR')}</p></div></div>)}</div>
             </section>
         </div>
     );
 };
 
-const Summary: React.FC<{ label: string; value: number; attention?: boolean; currency?: boolean }> = ({ label, value, attention, currency }) => <div className={`rounded-2xl border p-4 ${attention ? 'border-[#efc2ba] bg-[#fff2ef]' : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)]'}`}><p className="text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">{label}</p><p className="mt-1 text-2xl font-extrabold text-[var(--eixo-text)]">{currency ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : value}</p></div>;
-const STATUS_CONTENT: Record<string, { label: string; className: string }> = { REGULAR: { label: 'Regular', className: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' }, LOW: { label: 'Estoque baixo', className: 'bg-[#fffbeb] text-[#92400e]' }, EXPIRING: { label: 'Próximo do vencimento', className: 'bg-[#fffbeb] text-[#92400e]' }, EXPIRED: { label: 'Vencido', className: 'bg-[#fff2ef] text-[var(--eixo-danger)]' } };
+const Summary: React.FC<{ label: string; value: number; attention?: boolean; currency?: boolean }> = ({ label, value, attention, currency }) => <div className={`rounded-2xl border p-4 ${attention ? 'border-[#efc2ba] bg-[#fff2ef]' : 'border-(--eixo-border) bg-(--eixo-surface)'}`}><p className="text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">{label}</p><p className="mt-1 text-2xl font-extrabold text-(--eixo-text)">{currency ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : value}</p></div>;
+const STATUS_CONTENT: Record<string, { label: string; className: string }> = { REGULAR: { label: 'Regular', className: 'bg-(--eixo-green-soft) text-(--eixo-success)' }, LOW: { label: 'Estoque baixo', className: 'bg-[#fffbeb] text-[#92400e]' }, EXPIRING: { label: 'Próximo do vencimento', className: 'bg-[#fffbeb] text-[#92400e]' }, EXPIRED: { label: 'Vencido', className: 'bg-[#fff2ef] text-(--eixo-danger)' } };
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => { const content = STATUS_CONTENT[status] || STATUS_CONTENT.REGULAR; return <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${content.className}`}>{content.label}</span>; };
-const ProductMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => <div><p className="text-[10px] font-semibold uppercase text-[var(--eixo-text-muted)]">{label}</p><p className="mt-0.5 font-bold text-[var(--eixo-text)]">{value}</p></div>;
-const Detail: React.FC<{ label: string; value: string | null }> = ({ label, value }) => <div><dt className="text-xs font-semibold text-[var(--eixo-text-muted)]">{label}</dt><dd className="mt-0.5 font-medium text-[var(--eixo-text)]">{value || 'Não informado'}</dd></div>;
-const FormCard: React.FC<{ title: string; description: string; children: React.ReactNode }> = ({ title, description, children }) => <section className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5"><h3 className="font-bold text-[var(--eixo-text)]">{title}</h3><p className="mb-4 mt-1 text-xs text-[var(--eixo-text-muted)]">{description}</p>{children}</section>;
+const ProductMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => <div><p className="text-[10px] font-semibold uppercase text-(--eixo-text-muted)">{label}</p><p className="mt-0.5 font-bold text-(--eixo-text)">{value}</p></div>;
+const Detail: React.FC<{ label: string; value: string | null }> = ({ label, value }) => <div><dt className="text-xs font-semibold text-(--eixo-text-muted)">{label}</dt><dd className="mt-0.5 font-medium text-(--eixo-text)">{value || 'Não informado'}</dd></div>;
+const FormCard: React.FC<{ title: string; description: string; children: React.ReactNode }> = ({ title, description, children }) => <section className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5"><h3 className="font-bold text-(--eixo-text)">{title}</h3><p className="mb-4 mt-1 text-xs text-(--eixo-text-muted)">{description}</p>{children}</section>;
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => <label className="block"><span className={labelClass}>{label}</span>{children}</label>;
-const SaveButton: React.FC<{ disabled: boolean; children: React.ReactNode }> = ({ disabled, children }) => <button type="submit" disabled={disabled} className="w-full rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:opacity-50">{children}</button>;
+const SaveButton: React.FC<{ disabled: boolean; children: React.ReactNode }> = ({ disabled, children }) => <button type="submit" disabled={disabled} className="w-full rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-(--eixo-green-dark) disabled:cursor-not-allowed disabled:opacity-50">{children}</button>;
 
 export default PharmacyModule;

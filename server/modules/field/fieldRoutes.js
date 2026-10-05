@@ -15,9 +15,9 @@ import { hasSanidadeAccess } from '../middlewares/requireAuth.js';
 import { carregarLembretesComCache, carregarSituacao } from '../sanity/sanityCalendar.js';
 const prisma = new PrismaClient();
 
-async function withOccurrenceAuthors(occurrences) {
+async function withOccurrenceAuthors(occurrences, database = prisma) {
     if (!occurrences.length) return occurrences;
-    const logs = await prisma.activityLog.findMany({
+    const logs = await database.activityLog.findMany({
         where: {
             entity: 'FieldOccurrence',
             entityId: { in: occurrences.map((occurrence) => occurrence.id) },
@@ -58,7 +58,8 @@ const decodeBase64Payload = (value) => {
     return Buffer.from(normalized, 'base64');
 };
 
-export function registerFieldRoutes(app) {
+export function registerFieldRoutes(app, { database = prisma } = {}) {
+    const prisma = database;
     app.get('/alerts', requireAuth, async (req, res) => {
         const { farmId } = req.query || {};
         const staleDays = 7;
@@ -129,8 +130,8 @@ export function registerFieldRoutes(app) {
 
                 const latestByKey = new Map();
                 const [staleWithAuthors, immediateWithAuthors] = await Promise.all([
-                    withOccurrenceAuthors(staleOccurrences),
-                    withOccurrenceAuthors(immediateOccurrences),
+                    withOccurrenceAuthors(staleOccurrences, prisma),
+                    withOccurrenceAuthors(immediateOccurrences, prisma),
                 ]);
                 staleWithAuthors.forEach((occurrence) => {
                     const scopeId = occurrence.paddockId || '__farm__';
@@ -315,8 +316,8 @@ export function registerFieldRoutes(app) {
                 ...(farmId ? { farmId: String(farmId) } : {}),
                 ...(type ? { type: String(type) } : {}),
                 ...(status ? { status: String(status) } : {}),
-                ...(req.access?.restrictToFarmIds?.length
-                    ? { farmId: { in: req.access.restrictToFarmIds, ...(farmId ? undefined : {}) } }
+                ...(!farmId && req.access?.restrictToFarmIds?.length
+                    ? { farmId: { in: req.access.restrictToFarmIds } }
                     : {}),
             };
 
@@ -337,7 +338,7 @@ export function registerFieldRoutes(app) {
             });
 
             return res.json({
-                occurrences: (await withOccurrenceAuthors(items)).map(serializeFieldOccurrence),
+                occurrences: (await withOccurrenceAuthors(items, prisma)).map(serializeFieldOccurrence),
                 total: items.length,
             });
         } catch (error) {
@@ -417,7 +418,7 @@ export function registerFieldRoutes(app) {
                     },
                 });
                 if (existingOccurrence) {
-                    const [existingWithAuthor] = await withOccurrenceAuthors([existingOccurrence]);
+                    const [existingWithAuthor] = await withOccurrenceAuthors([existingOccurrence], prisma);
                     return res.json({ occurrence: serializeFieldOccurrence(existingWithAuthor) });
                 }
             }
@@ -482,7 +483,7 @@ export function registerFieldRoutes(app) {
                 farmId: occurrence.farmId,
             });
 
-            const [occurrenceWithAuthor] = await withOccurrenceAuthors([occurrence]);
+            const [occurrenceWithAuthor] = await withOccurrenceAuthors([occurrence], prisma);
             return res.status(201).json({ occurrence: serializeFieldOccurrence(occurrenceWithAuthor) });
         } catch (error) {
             console.error(error);

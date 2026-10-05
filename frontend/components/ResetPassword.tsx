@@ -55,7 +55,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
     };
 
     return (
-        <div className="min-h-screen bg-[var(--eixo-bg)] text-[var(--eixo-text)]">
+        <div className="min-h-screen bg-(--eixo-bg) text-(--eixo-text)">
             <div className="relative min-h-screen overflow-hidden">
                 <div
                     className="absolute inset-0 opacity-40"
@@ -65,40 +65,40 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
                         backgroundSize: 'cover',
                     }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[var(--eixo-surface)] via-[var(--eixo-bg)]/82 to-[var(--eixo-bg)]/60" />
+                <div className="absolute inset-0 bg-linear-to-t from-(--eixo-surface) via-(--eixo-bg)/82 to-(--eixo-bg)/60" />
 
                 <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-10 pt-8 lg:px-8">
                     <div className="mb-10">
                         <img src="/logo_eixo_official.svg" alt="EIXO" className="h-10 w-auto" />
-                        <div className="text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-[var(--eixo-text)]/72">Gestão para Pecuária de Corte</div>
+                        <div className="text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-(--eixo-text)/72">Gestão para Pecuária de Corte</div>
                     </div>
 
                     <div className="flex flex-1 items-center justify-center">
-                        <div className="w-full max-w-xl rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]/95 shadow-xl backdrop-blur">
+                        <div className="w-full max-w-xl rounded-3xl border border-(--eixo-border) bg-(--eixo-surface)/95 shadow-xl backdrop-blur-sm">
                             <div className="flex flex-col justify-center p-8 lg:p-10">
                                 <div className="mx-auto w-full max-w-md">
                                     <button
                                         type="button"
                                         onClick={onBack}
-                                        className="mb-6 inline-flex items-center text-sm font-medium text-[var(--eixo-text)] transition-colors hover:underline"
+                                        className="mb-6 inline-flex items-center text-sm font-medium text-(--eixo-text) transition-colors hover:underline"
                                     >
                                         ← VOLTAR AO LOGIN
                                     </button>
 
                                     {success ? (
                                         <div>
-                                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite)]">
-                                                <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
+                                            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-(--eixo-border) bg-(--eixo-green-soft) px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-graphite)">
+                                                <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                                                 Senha atualizada
                                             </div>
-                                            <h2 className="text-3xl font-black text-[var(--eixo-text)]">Senha redefinida</h2>
-                                            <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text)]/72">
+                                            <h2 className="text-3xl font-black text-(--eixo-text)">Senha redefinida</h2>
+                                            <p className="mt-3 text-sm leading-relaxed text-(--eixo-text)/72">
                                                 Sua senha foi atualizada com sucesso. Faça login usando a nova senha.
                                             </p>
                                             <button
                                                 type="button"
                                                 onClick={onSuccess}
-                                                className="mt-6 w-full rounded-2xl bg-[var(--eixo-green)] py-3 font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)]"
+                                                className="mt-6 w-full rounded-2xl bg-(--eixo-green) py-3 font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark)"
                                             >
                                                 Ir para o login
                                             </button>
@@ -106,18 +106,18 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
                                     ) : (
                                         <form onSubmit={handleSubmit} className="space-y-5">
                                             <div>
-                                                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-graphite)]">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--eixo-green)]" />
+                                                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-(--eixo-border) bg-(--eixo-green-soft) px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-graphite)">
+                                                    <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                                                     Nova senha
                                                 </div>
-                                                <h2 className="text-3xl font-black text-[var(--eixo-text)]">Redefinir senha</h2>
-                                                <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text)]/72">
+                                                <h2 className="text-3xl font-black text-(--eixo-text)">Redefinir senha</h2>
+                                                <p className="mt-3 text-sm leading-relaxed text-(--eixo-text)/72">
                                                     Crie uma nova senha com pelo menos 8 caracteres, com letra e número.
                                                 </p>
                                             </div>
 
                                             <div>
-                                                <label htmlFor="new-password" className="block text-sm font-medium text-[var(--eixo-text)]">
+                                                <label htmlFor="new-password" className="block text-sm font-medium text-(--eixo-text)">
                                                     Nova senha
                                                 </label>
                                                 <div className="relative mt-1">
@@ -126,14 +126,14 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
                                                         type={showPassword ? 'text' : 'password'}
                                                         value={password}
                                                         onChange={(event) => setPassword(event.target.value)}
-                                                        className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 pr-12 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                        className="w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 pr-12 text-(--eixo-text) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)"
                                                         placeholder="Mínimo 8 caracteres"
                                                         required
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowPassword((value) => !value)}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--eixo-text-muted)]"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-(--eixo-text-muted)"
                                                         aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                                                     >
                                                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -142,7 +142,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
                                             </div>
 
                                             <div>
-                                                <label htmlFor="confirm-password" className="block text-sm font-medium text-[var(--eixo-text)]">
+                                                <label htmlFor="confirm-password" className="block text-sm font-medium text-(--eixo-text)">
                                                     Confirmar senha
                                                 </label>
                                                 <div className="relative mt-1">
@@ -151,14 +151,14 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
                                                         type={showConfirm ? 'text' : 'password'}
                                                         value={confirm}
                                                         onChange={(event) => setConfirm(event.target.value)}
-                                                        className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 pr-12 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                        className="w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 pr-12 text-(--eixo-text) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)"
                                                         placeholder="Repita a nova senha"
                                                         required
                                                     />
                                                     <button
                                                         type="button"
                                                         onClick={() => setShowConfirm((value) => !value)}
-                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--eixo-text-muted)]"
+                                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-(--eixo-text-muted)"
                                                         aria-label={showConfirm ? 'Ocultar confirmação' : 'Mostrar confirmação'}
                                                     >
                                                         {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -167,7 +167,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
                                             </div>
 
                                             {error && (
-                                                <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]">
+                                                <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-(--eixo-danger)">
                                                     {error}
                                                 </div>
                                             )}
@@ -175,7 +175,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
                                             <button
                                                 type="submit"
                                                 disabled={isLoading}
-                                                className="w-full rounded-2xl bg-[var(--eixo-green)] py-3 font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-60"
+                                                className="w-full rounded-2xl bg-(--eixo-green) py-3 font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) disabled:opacity-60"
                                             >
                                                 {isLoading ? 'Salvando...' : 'Atualizar senha'}
                                             </button>

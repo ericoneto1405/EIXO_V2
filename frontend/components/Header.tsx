@@ -41,7 +41,7 @@ const UsersIcon: React.FC = () => (
 );
 
 const CheckIcon: React.FC = () => (
-    <svg className="w-4 h-4 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <svg className="w-4 h-4 text-(--eixo-green)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
     </svg>
 );
@@ -245,7 +245,7 @@ const RainWidget: React.FC<RainWidgetProps> = ({ lat, lng, city }) => {
     return (
         <div className="min-w-0 rounded-2xl border border-[#b9dfc8] bg-[linear-gradient(135deg,#f8fbf4_0%,#eef8f1_50%,#e5f4ec_100%)] px-3 py-2.5">
             <div className="mb-2 flex items-center gap-2">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--eixo-green-soft)] text-[var(--eixo-green)]">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-(--eixo-green-soft) text-(--eixo-green)">
                     <RainIcon />
                 </span>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#4e6a57]">
@@ -442,23 +442,23 @@ const Header: React.FC<HeaderProps> = ({
     }, []);
 
     return (
-        <header className="relative z-20 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+        <header className="relative z-20 rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface)">
             <div className="flex items-center gap-3 px-4 py-3 lg:px-6">
 
                 {/* Seletor de Fazenda */}
                 <div className="relative shrink-0" ref={farmRef}>
                     <button
                         onClick={() => setFarmOpen((v) => !v)}
-                        className="flex max-w-[270px] items-center gap-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 transition-colors hover:bg-[#EDEDED]"
+                        className="flex max-w-[270px] items-center gap-3 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2.5 transition-colors hover:bg-[#EDEDED]"
                     >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--eixo-text)] text-sm font-bold text-white">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-(--eixo-text) text-sm font-bold text-white">
                             {farmAvatar}
                         </div>
                         <div className="hidden min-w-0 flex-1 text-left sm:block">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-(--eixo-text-muted)">
                                 {farmSubLabel}
                             </p>
-                            <p className="max-w-[180px] truncate text-sm font-bold text-[var(--eixo-text)]">
+                            <p className="max-w-[180px] truncate text-sm font-bold text-(--eixo-text)">
                                 {farmLabel}
                             </p>
                         </div>
@@ -466,9 +466,9 @@ const Header: React.FC<HeaderProps> = ({
                     </button>
 
                     {farmOpen && (
-                        <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-xl">
-                            <div className="border-b border-[var(--eixo-border)] px-4 py-3">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">Suas fazendas</p>
+                        <div className="absolute left-0 top-full z-30 mt-2 w-72 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) shadow-xl">
+                            <div className="border-b border-(--eixo-border) px-4 py-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-(--eixo-text-muted)">Suas fazendas</p>
                             </div>
                             <ul className="max-h-64 overflow-y-auto py-2">
                                 {hasFarms ? (
@@ -479,16 +479,16 @@ const Header: React.FC<HeaderProps> = ({
                                                     <button
                                                         type="button"
                                                         onClick={() => { onSelectFarm(null); setFarmOpen(false); }}
-                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                                                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-(--eixo-text) transition-colors hover:bg-(--eixo-surface-soft)"
                                                     >
-                                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--eixo-text)] text-white">
+                                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-(--eixo-text) text-white">
                                                             <HouseIcon />
                                                         </div>
                                                         <span className="flex-1 font-medium">Todas as fazendas</span>
                                                         {allFarmsSelected && <CheckIcon />}
                                                     </button>
                                                 </li>
-                                                <li className="mx-4 my-1 border-t border-[var(--eixo-border)]" />
+                                                <li className="mx-4 my-1 border-t border-(--eixo-border)" />
                                             </>
                                         )}
                                         {farms.map((farm) => (
@@ -496,9 +496,9 @@ const Header: React.FC<HeaderProps> = ({
                                                 <button
                                                     type="button"
                                                     onClick={() => { onSelectFarm(farm.id); setFarmOpen(false); }}
-                                                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                                                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm text-(--eixo-text) transition-colors hover:bg-(--eixo-surface-soft)"
                                                 >
-                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--eixo-text)] text-xs font-bold text-white">
+                                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-(--eixo-text) text-xs font-bold text-white">
                                                         {getInitials(farm.name)}
                                                     </div>
                                                     <span className="flex-1 font-medium">{farm.name}</span>
@@ -508,7 +508,7 @@ const Header: React.FC<HeaderProps> = ({
                                         ))}
                                     </>
                                 ) : (
-                                    <li className="px-4 py-3 text-sm text-[var(--eixo-text-muted)]">Nenhuma fazenda cadastrada.</li>
+                                    <li className="px-4 py-3 text-sm text-(--eixo-text-muted)">Nenhuma fazenda cadastrada.</li>
                                 )}
                             </ul>
                         </div>
@@ -523,7 +523,7 @@ const Header: React.FC<HeaderProps> = ({
                     <div className="relative shrink-0" ref={userRef}>
                         <button
                             onClick={() => setUserOpen((v) => !v)}
-                            className="flex items-center gap-2.5 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2.5 transition-colors hover:bg-[var(--eixo-surface-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--eixo-green)] focus-visible:ring-offset-2"
+                            className="flex items-center gap-2.5 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2.5 transition-colors hover:bg-(--eixo-surface-soft) focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--eixo-green) focus-visible:ring-offset-2"
                         >
                             <div
                                 className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-bold text-[#f5f0e8]"
@@ -534,31 +534,31 @@ const Header: React.FC<HeaderProps> = ({
                                     : getInitials(currentUser.name)
                                 }
                             </div>
-                            <span className="hidden max-w-[120px] truncate text-sm font-semibold text-[var(--eixo-text)] sm:block">
+                            <span className="hidden max-w-[120px] truncate text-sm font-semibold text-(--eixo-text) sm:block">
                                 {currentUser.name.split(' ')[0]}
                             </span>
                             <ChevronDownIcon isOpen={userOpen} />
                         </button>
 
                         {userOpen && (
-                            <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl">
-                                <div className="border-b border-[var(--eixo-border)] px-4 py-3">
+                            <div className="absolute right-0 top-full z-30 mt-2 w-56 rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) shadow-2xl">
+                                <div className="border-b border-(--eixo-border) px-4 py-3">
                                     <div className="flex items-center gap-2">
-                                        <p className="text-sm font-semibold text-[var(--eixo-text)]">{currentUser.name}</p>
+                                        <p className="text-sm font-semibold text-(--eixo-text)">{currentUser.name}</p>
                                         {roleBadge && (
-                                            <span className="rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">
+                                            <span className="rounded-full bg-(--eixo-surface-soft) px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-(--eixo-text-muted)">
                                                 {roleBadge}
                                             </span>
                                         )}
                                     </div>
-                                    <p className="truncate text-xs text-[var(--eixo-text-muted)]">{currentUser.email}</p>
+                                    <p className="truncate text-xs text-(--eixo-text-muted)">{currentUser.email}</p>
                                 </div>
                                 <ul className="py-2">
                                     <li>
                                         <button
                                             type="button"
                                             onClick={() => { onOpenProfile?.(); setUserOpen(false); }}
-                                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-(--eixo-text) transition-colors hover:bg-(--eixo-surface-soft)"
                                         >
                                             <UserIcon />
                                             <span>Meu Perfil</span>
@@ -566,12 +566,12 @@ const Header: React.FC<HeaderProps> = ({
                                     </li>
                                     {canRegisterUsers && (
                                         <>
-                                            <li className="my-1 border-t border-[var(--eixo-border)]" />
+                                            <li className="my-1 border-t border-(--eixo-border)" />
                                             <li>
                                                 <button
                                                     type="button"
                                                     onClick={() => { onOpenUserRegister?.(); setUserOpen(false); }}
-                                                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)]"
+                                                    className="flex w-full items-center gap-3 px-4 py-2 text-sm text-(--eixo-text) transition-colors hover:bg-(--eixo-surface-soft)"
                                                 >
                                                     <UsersIcon />
                                                     <span>Cadastrar usuários</span>
@@ -579,12 +579,12 @@ const Header: React.FC<HeaderProps> = ({
                                             </li>
                                         </>
                                     )}
-                                    <li className="my-1 border-t border-[var(--eixo-border)]" />
+                                    <li className="my-1 border-t border-(--eixo-border)" />
                                     <li>
                                         <button
                                             type="button"
                                             onClick={() => { onLogout?.(); setUserOpen(false); }}
-                                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-[var(--eixo-danger)] transition-colors hover:bg-[#fff2ef]"
+                                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-(--eixo-danger) transition-colors hover:bg-[#fff2ef]"
                                         >
                                             <LogoutIcon />
                                             <span>Sair</span>
@@ -598,7 +598,7 @@ const Header: React.FC<HeaderProps> = ({
             </div>
 
             {/* Atalhos rápidos — o cliente escolhe até 5 pelo botão de engrenagem; linha própria pra não disputar espaço com fazenda/usuário */}
-            <div className="flex flex-wrap items-center gap-2 border-t border-[var(--eixo-border)] px-4 py-2.5 lg:px-6">
+            <div className="flex flex-wrap items-center gap-2 border-t border-(--eixo-border) px-4 py-2.5 lg:px-6">
                 {activeShortcutKeys.map((key) => {
                     const item = SHORTCUT_CATALOG.find((c) => c.key === key);
                     if (!item) return null;
@@ -607,7 +607,7 @@ const Header: React.FC<HeaderProps> = ({
                             key={item.key}
                             type="button"
                             onClick={() => onShortcut(item.key)}
-                            className="flex h-9 items-center gap-1.5 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface)]"
+                            className="flex h-9 items-center gap-1.5 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 text-sm font-semibold text-(--eixo-text) transition-colors hover:bg-(--eixo-surface)"
                         >
                             <span>{item.icon}</span>
                             <span>{item.label}</span>
@@ -622,13 +622,13 @@ const Header: React.FC<HeaderProps> = ({
                         aria-label="Personalizar atalhos"
                         aria-expanded={shortcutsMenuOpen}
                         aria-haspopup="menu"
-                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface)]"
+                        className="flex h-9 w-9 items-center justify-center rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface)"
                     >
                         <GearIcon />
                     </button>
                     {shortcutsMenuOpen && (
-                        <div role="menu" className="absolute right-0 top-11 z-30 w-72 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 shadow-2xl">
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">
+                        <div role="menu" className="absolute right-0 top-11 z-30 w-72 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-3 shadow-2xl">
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-text-muted)">
                                 Atalhos do header ({shortcutsDraft.length}/{HEADER_SHORTCUTS_MAX})
                             </p>
                             <ul className="mb-3 flex flex-col gap-1">
@@ -637,13 +637,13 @@ const Header: React.FC<HeaderProps> = ({
                                     const disabled = !checked && shortcutsDraft.length >= HEADER_SHORTCUTS_MAX;
                                     return (
                                         <li key={item.key}>
-                                            <label className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-[var(--eixo-text)] ${disabled ? 'opacity-40' : 'cursor-pointer hover:bg-[var(--eixo-surface-soft)]'}`}>
+                                            <label className={`flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-(--eixo-text) ${disabled ? 'opacity-40' : 'cursor-pointer hover:bg-(--eixo-surface-soft)'}`}>
                                                 <input
                                                     type="checkbox"
                                                     checked={checked}
                                                     disabled={disabled}
                                                     onChange={() => toggleShortcutDraft(item.key)}
-                                                    className="h-4 w-4 rounded border-[var(--eixo-border)] accent-[var(--eixo-green)]"
+                                                    className="h-4 w-4 rounded-sm border-(--eixo-border) accent-(--eixo-green)"
                                                 />
                                                 <span>{item.icon}</span>
                                                 <span className="font-medium">{item.label}</span>
@@ -656,7 +656,7 @@ const Header: React.FC<HeaderProps> = ({
                                 <button
                                     type="button"
                                     onClick={() => setShortcutsMenuOpen(false)}
-                                    className="rounded-lg px-3 py-1.5 text-sm font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]"
+                                    className="rounded-lg px-3 py-1.5 text-sm font-semibold text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft)"
                                 >
                                     Cancelar
                                 </button>
@@ -664,7 +664,7 @@ const Header: React.FC<HeaderProps> = ({
                                     type="button"
                                     onClick={saveShortcuts}
                                     disabled={shortcutsSaving}
-                                    className="rounded-lg bg-[var(--eixo-green)] px-3 py-1.5 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:opacity-50"
+                                    className="rounded-lg bg-(--eixo-green) px-3 py-1.5 text-sm font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) disabled:opacity-50"
                                 >
                                     {shortcutsSaving ? 'Salvando…' : 'Salvar'}
                                 </button>

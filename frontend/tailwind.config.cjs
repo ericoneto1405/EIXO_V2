@@ -1,4 +1,5 @@
-const defaultTheme = require('tailwindcss/defaultTheme');
+// Mantém a mesma sequência de fontes de reserva usada antes da migração.
+const fontFallback = ['ui-sans-serif', 'system-ui', 'sans-serif', '"Apple Color Emoji"', '"Segoe UI Emoji"', '"Segoe UI Symbol"', '"Noto Color Emoji"'];
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -12,8 +13,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', ...defaultTheme.fontFamily.sans],
-        brand: ['Manrope', ...defaultTheme.fontFamily.sans],
+        sans: ['Inter', ...fontFallback],
+        brand: ['Manrope', ...fontFallback],
       },
       colors: {
         primary:          '#B6E23A',

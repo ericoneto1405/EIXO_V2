@@ -56,9 +56,9 @@ const emptyDealForm = {
   clientId: '', title: '', lotLabel: '', quantityAnimals: '', estimatedValue: '', expectedCloseDate: '', notes: '',
 };
 
-const inputClass = 'w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]';
-const primaryBtn = 'rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-bold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:opacity-60';
-const ghostBtn = 'rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]';
+const inputClass = 'w-full rounded-xl border border-(--eixo-border) bg-white px-3 py-2 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)';
+const primaryBtn = 'rounded-xl bg-(--eixo-green) px-4 py-2 text-sm font-bold text-[#1a1a1a] hover:bg-(--eixo-green-dark) disabled:opacity-60';
+const ghostBtn = 'rounded-xl border border-(--eixo-border) bg-white px-3 py-1.5 text-xs font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft)';
 
 const formatCurrency = (value: number | null | undefined) =>
   value === null || value === undefined ? '—' : value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -66,7 +66,7 @@ const formatCurrency = (value: number | null | undefined) =>
 const formatDate = (value: string | null | undefined) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <label className="block text-xs font-semibold text-[var(--eixo-text-soft)]">
+  <label className="block text-xs font-semibold text-(--eixo-text-soft)">
     {label}
     <div className="mt-1">{children}</div>
   </label>
@@ -130,7 +130,7 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
 
   if (!farmId) {
     return (
-      <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6 text-[var(--eixo-text-muted)]">
+      <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-6 text-(--eixo-text-muted)">
         Selecione uma fazenda para acessar a Gestão Comercial.
       </div>
     );
@@ -313,13 +313,13 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
     <div className="flex h-full flex-col gap-4 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h1 className="font-brand text-2xl font-extrabold text-[var(--eixo-text)]">Gestão Comercial</h1>
-          {farmName && <p className="text-sm text-[var(--eixo-text-soft)]">{farmName}</p>}
+          <h1 className="font-brand text-2xl font-extrabold text-(--eixo-text)">Gestão Comercial</h1>
+          {farmName && <p className="text-sm text-(--eixo-text-soft)">{farmName}</p>}
         </div>
         <div className="flex gap-2">
           {tabs.map((tab) => (
             <button key={tab.key} type="button" onClick={() => setActiveTab(tab.key)}
-              className={`rounded-xl px-4 py-2 text-sm font-bold ${activeTab === tab.key ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'border border-[var(--eixo-border)] bg-white text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]'}`}>
+              className={`rounded-xl px-4 py-2 text-sm font-bold ${activeTab === tab.key ? 'bg-(--eixo-green) text-[#1a1a1a]' : 'border border-(--eixo-border) bg-white text-(--eixo-text) hover:bg-(--eixo-surface-soft)'}`}>
               {tab.label}
             </button>
           ))}
@@ -331,7 +331,7 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
           {error} <button type="button" onClick={() => setError(null)} className="ml-2 font-bold">x</button>
         </div>
       )}
-      {loading && <p className="text-sm text-[var(--eixo-text-muted)]">Carregando...</p>}
+      {loading && <p className="text-sm text-(--eixo-text-muted)">Carregando...</p>}
 
       {activeTab === 'clientes' && (
         <div className="flex flex-col gap-3">
@@ -339,7 +339,7 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
             <button type="button" onClick={openNewClient} className={primaryBtn}>+ Novo cliente</button>
           </div>
           {clientFormOpen && (
-            <form onSubmit={submitClient} className="grid grid-cols-1 gap-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4 sm:grid-cols-3">
+            <form onSubmit={submitClient} className="grid grid-cols-1 gap-3 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-4 sm:grid-cols-3">
               <Field label="Nome"><input required className={inputClass} value={clientForm.name} onChange={(e) => setClientForm((c) => ({ ...c, name: e.target.value }))} /></Field>
               <Field label="Tipo">
                 <select className={inputClass} value={clientForm.type} onChange={(e) => setClientForm((c) => ({ ...c, type: e.target.value as CommercialClientType }))}>
@@ -360,14 +360,14 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
             </form>
           )}
 
-          <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
-            <table className="w-full text-left text-sm text-[var(--eixo-text)]">
-              <thead className="bg-[var(--eixo-surface-soft)] text-xs font-bold uppercase text-[var(--eixo-text-muted)]">
+          <div className="overflow-hidden rounded-2xl border border-(--eixo-border) bg-(--eixo-surface)">
+            <table className="w-full text-left text-sm text-(--eixo-text)">
+              <thead className="bg-(--eixo-surface-soft) text-xs font-bold uppercase text-(--eixo-text-muted)">
                 <tr><th className="px-4 py-2">Nome</th><th className="px-4 py-2">Tipo</th><th className="px-4 py-2">Contato</th><th className="px-4 py-2">Aniversário</th><th className="px-4 py-2">Cidade/UF</th><th className="px-4 py-2" /></tr>
               </thead>
               <tbody>
                 {clients.map((client) => (
-                  <tr key={client.id} className="border-t border-[var(--eixo-border)]">
+                  <tr key={client.id} className="border-t border-(--eixo-border)">
                     <td className="px-4 py-2 font-semibold">{client.name}</td>
                     <td className="px-4 py-2">{CLIENT_TYPE_LABELS[client.type]}</td>
                     <td className="px-4 py-2">{client.phone || client.email || '—'}</td>
@@ -380,7 +380,7 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
                   </tr>
                 ))}
                 {!clients.length && !loading && (
-                  <tr><td colSpan={6} className="px-4 py-6 text-center text-[var(--eixo-text-muted)]">Nenhum cliente cadastrado ainda.</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-6 text-center text-(--eixo-text-muted)">Nenhum cliente cadastrado ainda.</td></tr>
                 )}
               </tbody>
             </table>
@@ -393,10 +393,10 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
           <div className="flex justify-end">
             <button type="button" onClick={openNewDeal} disabled={!clients.length} className={primaryBtn}>+ Nova negociação</button>
           </div>
-          {!clients.length && <p className="text-sm text-[var(--eixo-text-muted)]">Cadastre um cliente antes de abrir uma negociação.</p>}
+          {!clients.length && <p className="text-sm text-(--eixo-text-muted)">Cadastre um cliente antes de abrir uma negociação.</p>}
 
           {dealFormOpen && (
-            <form onSubmit={submitDeal} className="grid grid-cols-1 gap-3 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4 sm:grid-cols-3">
+            <form onSubmit={submitDeal} className="grid grid-cols-1 gap-3 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-4 sm:grid-cols-3">
               <Field label="Cliente">
                 <select required className={inputClass} value={dealForm.clientId} onChange={(e) => setDealForm((d) => ({ ...d, clientId: e.target.value }))}>
                   {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
@@ -416,8 +416,8 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
           )}
 
           {closingDeal && (
-            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
-              <p className="mb-2 text-sm font-bold text-[var(--eixo-text)]">
+            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-4">
+              <p className="mb-2 text-sm font-bold text-(--eixo-text)">
                 {closingDeal.stage === 'GANHO' ? `Fechar "${closingDeal.deal.title}" como Ganho` : `Marcar "${closingDeal.deal.title}" como Perdido`}
               </p>
               {closingDeal.stage === 'GANHO' ? (
@@ -434,35 +434,35 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
             {STAGE_ORDER.map((stage) => (
-              <div key={stage} className="flex flex-col gap-2 rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-3">
-                <p className="text-xs font-bold uppercase text-[var(--eixo-text-muted)]">{STAGE_LABELS[stage]} ({dealsByStage.get(stage)?.length || 0})</p>
+              <div key={stage} className="flex flex-col gap-2 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-3">
+                <p className="text-xs font-bold uppercase text-(--eixo-text-muted)">{STAGE_LABELS[stage]} ({dealsByStage.get(stage)?.length || 0})</p>
                 {(dealsByStage.get(stage) || []).map((deal) => (
-                  <div key={deal.id} className="rounded-xl border border-[var(--eixo-border)] bg-white p-3 text-sm">
-                    <p className="font-bold text-[var(--eixo-text)]">{deal.title}</p>
-                    <p className="text-xs text-[var(--eixo-text-soft)]">{deal.client?.name || clientsById.get(deal.clientId)?.name}</p>
-                    <p className="text-xs text-[var(--eixo-text-soft)]">{deal.stage === 'GANHO' ? formatCurrency(deal.closedValue) : formatCurrency(deal.estimatedValue)}</p>
-                    {deal.lotLabel && <p className="text-xs text-[var(--eixo-text-muted)]">Lote: {deal.lotLabel}</p>}
-                    <select value={deal.stage} onChange={(e) => handleStageChange(deal, e.target.value as CommercialDealStage)} className="mt-2 w-full rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-xs">
+                  <div key={deal.id} className="rounded-xl border border-(--eixo-border) bg-white p-3 text-sm">
+                    <p className="font-bold text-(--eixo-text)">{deal.title}</p>
+                    <p className="text-xs text-(--eixo-text-soft)">{deal.client?.name || clientsById.get(deal.clientId)?.name}</p>
+                    <p className="text-xs text-(--eixo-text-soft)">{deal.stage === 'GANHO' ? formatCurrency(deal.closedValue) : formatCurrency(deal.estimatedValue)}</p>
+                    {deal.lotLabel && <p className="text-xs text-(--eixo-text-muted)">Lote: {deal.lotLabel}</p>}
+                    <select value={deal.stage} onChange={(e) => handleStageChange(deal, e.target.value as CommercialDealStage)} className="mt-2 w-full rounded-lg border border-(--eixo-border) px-2 py-1 text-xs">
                       {STAGE_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
                     </select>
                     {deal.stage === 'GANHO' && (
-                      <button type="button" onClick={() => openContract(deal)} className="mt-2 w-full rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-xs font-semibold hover:bg-[var(--eixo-surface-soft)]">
+                      <button type="button" onClick={() => openContract(deal)} className="mt-2 w-full rounded-lg border border-(--eixo-border) px-2 py-1 text-xs font-semibold hover:bg-(--eixo-surface-soft)">
                         {deal.hasContract ? 'Ver/editar contrato' : '+ Contrato'}
                       </button>
                     )}
                     <button type="button" onClick={() => removeDeal(deal)} className="mt-2 w-full text-xs text-red-600 hover:underline">Excluir</button>
 
                     {contractDealId === deal.id && (
-                      <form onSubmit={submitContract} className="mt-2 flex flex-col gap-2 rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-2">
+                      <form onSubmit={submitContract} className="mt-2 flex flex-col gap-2 rounded-lg border border-(--eixo-border) bg-(--eixo-surface-soft) p-2">
                         {contractLoading ? <p className="text-xs">Carregando...</p> : (
                           <>
-                            <input placeholder="Comissão %" type="number" step="0.01" className="rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-xs" value={contractForm.commissionPct} onChange={(e) => setContractForm((c) => ({ ...c, commissionPct: e.target.value }))} />
-                            <input placeholder="Comissão R$" type="number" step="0.01" className="rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-xs" value={contractForm.commissionAmount} onChange={(e) => setContractForm((c) => ({ ...c, commissionAmount: e.target.value }))} />
-                            <input placeholder="Condições de pagamento" className="rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-xs" value={contractForm.paymentTerms} onChange={(e) => setContractForm((c) => ({ ...c, paymentTerms: e.target.value }))} />
-                            <textarea placeholder="Notas" rows={2} className="rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-xs" value={contractForm.notes} onChange={(e) => setContractForm((c) => ({ ...c, notes: e.target.value }))} />
+                            <input placeholder="Comissão %" type="number" step="0.01" className="rounded-lg border border-(--eixo-border) px-2 py-1 text-xs" value={contractForm.commissionPct} onChange={(e) => setContractForm((c) => ({ ...c, commissionPct: e.target.value }))} />
+                            <input placeholder="Comissão R$" type="number" step="0.01" className="rounded-lg border border-(--eixo-border) px-2 py-1 text-xs" value={contractForm.commissionAmount} onChange={(e) => setContractForm((c) => ({ ...c, commissionAmount: e.target.value }))} />
+                            <input placeholder="Condições de pagamento" className="rounded-lg border border-(--eixo-border) px-2 py-1 text-xs" value={contractForm.paymentTerms} onChange={(e) => setContractForm((c) => ({ ...c, paymentTerms: e.target.value }))} />
+                            <textarea placeholder="Notas" rows={2} className="rounded-lg border border-(--eixo-border) px-2 py-1 text-xs" value={contractForm.notes} onChange={(e) => setContractForm((c) => ({ ...c, notes: e.target.value }))} />
                             <div className="flex gap-2">
-                              <button type="submit" className="rounded-lg bg-[var(--eixo-green)] px-2 py-1 text-xs font-bold">Salvar</button>
-                              <button type="button" onClick={() => setContractDealId(null)} className="rounded-lg border border-[var(--eixo-border)] px-2 py-1 text-xs">Fechar</button>
+                              <button type="submit" className="rounded-lg bg-(--eixo-green) px-2 py-1 text-xs font-bold">Salvar</button>
+                              <button type="button" onClick={() => setContractDealId(null)} className="rounded-lg border border-(--eixo-border) px-2 py-1 text-xs">Fechar</button>
                             </div>
                           </>
                         )}
@@ -478,40 +478,40 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
 
       {activeTab === 'alertas' && alerts && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
-            <p className="mb-2 font-bold text-[var(--eixo-text)]">Aniversários (7 dias)</p>
+          <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-4">
+            <p className="mb-2 font-bold text-(--eixo-text)">Aniversários (7 dias)</p>
             {alerts.birthdays.length ? alerts.birthdays.map((row) => (
-              <div key={row.client.id} className="border-t border-[var(--eixo-border)] py-2 text-sm">
-                <p className="font-semibold text-[var(--eixo-text)]">{row.client.name}</p>
-                <p className="text-xs text-[var(--eixo-text-soft)]">{formatDate(row.birthDate)} · {row.daysUntil === 0 ? 'hoje' : row.daysUntil === 1 ? 'amanhã' : `em ${row.daysUntil} dias`}</p>
+              <div key={row.client.id} className="border-t border-(--eixo-border) py-2 text-sm">
+                <p className="font-semibold text-(--eixo-text)">{row.client.name}</p>
+                <p className="text-xs text-(--eixo-text-soft)">{formatDate(row.birthDate)} · {row.daysUntil === 0 ? 'hoje' : row.daysUntil === 1 ? 'amanhã' : `em ${row.daysUntil} dias`}</p>
               </div>
-            )) : <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum aniversário na semana.</p>}
+            )) : <p className="text-sm text-(--eixo-text-muted)">Nenhum aniversário na semana.</p>}
           </div>
 
-          <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
-            <p className="mb-2 font-bold text-[var(--eixo-text)]">Sem comprar há 90+ dias</p>
+          <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-4">
+            <p className="mb-2 font-bold text-(--eixo-text)">Sem comprar há 90+ dias</p>
             {alerts.inactiveClients.length ? alerts.inactiveClients.map((row) => (
-              <div key={row.client.id} className="border-t border-[var(--eixo-border)] py-2 text-sm">
-                <p className="font-semibold text-[var(--eixo-text)]">{row.client.name}</p>
-                <p className="text-xs text-[var(--eixo-text-soft)]">{row.lastPurchaseAt ? `Última compra: ${formatDate(row.lastPurchaseAt)} (${row.daysSincePurchase}d)` : 'Nunca comprou'}</p>
+              <div key={row.client.id} className="border-t border-(--eixo-border) py-2 text-sm">
+                <p className="font-semibold text-(--eixo-text)">{row.client.name}</p>
+                <p className="text-xs text-(--eixo-text-soft)">{row.lastPurchaseAt ? `Última compra: ${formatDate(row.lastPurchaseAt)} (${row.daysSincePurchase}d)` : 'Nunca comprou'}</p>
               </div>
-            )) : <p className="text-sm text-[var(--eixo-text-muted)]">Todo mundo em dia.</p>}
+            )) : <p className="text-sm text-(--eixo-text-muted)">Todo mundo em dia.</p>}
           </div>
 
-          <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-4">
-            <p className="mb-2 font-bold text-[var(--eixo-text)]">Lembretes pendentes</p>
+          <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-4">
+            <p className="mb-2 font-bold text-(--eixo-text)">Lembretes pendentes</p>
             {alerts.reminders.length ? alerts.reminders.map((reminder) => (
-              <div key={reminder.id} className="border-t border-[var(--eixo-border)] py-2 text-sm">
-                <p className="font-semibold text-[var(--eixo-text)]">{reminder.client?.name}</p>
-                <p className="text-xs text-[var(--eixo-text-soft)]">{formatDate(reminder.dueDate)} {reminder.message ? `· ${reminder.message}` : ''}</p>
+              <div key={reminder.id} className="border-t border-(--eixo-border) py-2 text-sm">
+                <p className="font-semibold text-(--eixo-text)">{reminder.client?.name}</p>
+                <p className="text-xs text-(--eixo-text-soft)">{formatDate(reminder.dueDate)} {reminder.message ? `· ${reminder.message}` : ''}</p>
                 <div className="mt-1 flex gap-2">
                   <button type="button" onClick={() => completeReminder(reminder.id)} className={ghostBtn}>Concluir</button>
                   <button type="button" onClick={() => removeReminder(reminder.id)} className={ghostBtn}>Excluir</button>
                 </div>
               </div>
-            )) : <p className="text-sm text-[var(--eixo-text-muted)]">Nenhum lembrete pendente.</p>}
+            )) : <p className="text-sm text-(--eixo-text-muted)">Nenhum lembrete pendente.</p>}
 
-            <form onSubmit={submitReminder} className="mt-3 flex flex-col gap-2 border-t border-[var(--eixo-border)] pt-3">
+            <form onSubmit={submitReminder} className="mt-3 flex flex-col gap-2 border-t border-(--eixo-border) pt-3">
               <select className={inputClass} value={reminderForm.clientId} onChange={(e) => setReminderForm((r) => ({ ...r, clientId: e.target.value }))}>
                 <option value="">Selecione o cliente</option>
                 {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}

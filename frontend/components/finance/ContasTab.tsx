@@ -22,7 +22,7 @@ const FilterPill: React.FC<{
     <button
         type="button"
         onClick={onClick}
-        className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${active ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'}`}
+        className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${active ? 'bg-(--eixo-green) text-[#1a1a1a]' : 'bg-(--eixo-surface-soft) text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft)'}`}
     >
         {children}
     </button>
@@ -83,7 +83,7 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
     const totalVencido = abertasNoPeriodo.filter(isVencida).reduce((s, t) => s + t.valor, 0);
     const totalAVencer = abertasNoPeriodo.filter(t => !isVencida(t)).reduce((s, t) => s + t.valor, 0);
     const totalPago = noPeriodo.filter(t => t.status === 'PAGO').reduce((s, t) => s + t.valor, 0);
-    const corTotal = tipo === 'pagar' ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-success)]';
+    const corTotal = tipo === 'pagar' ? 'text-(--eixo-danger)' : 'text-(--eixo-success)';
 
     return (
         <>
@@ -93,31 +93,31 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
                     <p className={`font-brand text-2xl font-extrabold ${corTotal}`}>{formatCurrency(totalPendente)}</p>
                 </KpiCard>
                 <KpiCard title="Vencidos" icon={<ClockIcon />} tone="danger">
-                    <p className="font-brand text-2xl font-extrabold text-[var(--eixo-danger)]">{formatCurrency(totalVencido)}</p>
+                    <p className="font-brand text-2xl font-extrabold text-(--eixo-danger)">{formatCurrency(totalVencido)}</p>
                 </KpiCard>
                 <KpiCard title="A vencer" icon={<CalendarCheckIcon />} tone="success">
-                    <p className="font-brand text-2xl font-extrabold text-[var(--eixo-graphite)]">{formatCurrency(totalAVencer)}</p>
+                    <p className="font-brand text-2xl font-extrabold text-(--eixo-graphite)">{formatCurrency(totalAVencer)}</p>
                 </KpiCard>
                 <KpiCard title={tipo === 'pagar' ? 'Total pago' : 'Total recebido'} icon={<CheckIcon />}>
-                    <p className="font-brand text-2xl font-extrabold text-[var(--eixo-text)]">{formatCurrency(totalPago)}</p>
+                    <p className="font-brand text-2xl font-extrabold text-(--eixo-text)">{formatCurrency(totalPago)}</p>
                 </KpiCard>
             </div>
 
             {/* Período */}
             <div className="flex flex-wrap items-center gap-2">
-                <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--eixo-text-muted)]">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-(--eixo-text-muted)">
                     De
                     <input type="date" value={filtroDe} onChange={e => setFiltroDe(e.target.value)}
-                        className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" />
+                        className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden" />
                 </label>
-                <label className="flex items-center gap-1.5 text-xs font-medium text-[var(--eixo-text-muted)]">
+                <label className="flex items-center gap-1.5 text-xs font-medium text-(--eixo-text-muted)">
                     Até
                     <input type="date" value={filtroAte} onChange={e => setFiltroAte(e.target.value)}
-                        className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none" />
+                        className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden" />
                 </label>
                 {(filtroDe !== '' || filtroAte !== '') && (
                     <button type="button" onClick={() => { setFiltroDe(''); setFiltroAte(''); }}
-                        className="text-xs font-semibold text-[var(--eixo-text-muted)] underline hover:text-[var(--eixo-text)]">
+                        className="text-xs font-semibold text-(--eixo-text-muted) underline hover:text-(--eixo-text)">
                         Limpar período
                     </button>
                 )}
@@ -138,10 +138,10 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
             </div>
 
             {/* Tabela */}
-            <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+            <div className="overflow-hidden rounded-2xl border border-(--eixo-border) bg-(--eixo-surface)">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm text-[var(--eixo-text-muted)]">
-                        <thead className="bg-[var(--eixo-surface-soft)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--eixo-text-muted)]">
+                    <table className="w-full text-left text-sm text-(--eixo-text-muted)">
+                        <thead className="bg-(--eixo-surface-soft) text-[10px] font-bold uppercase tracking-[0.12em] text-(--eixo-text-muted)">
                             <tr>
                                 <th className="px-4 py-2.5">Vencimento</th>
                                 <th className="px-4 py-2.5">Categoria</th>
@@ -153,11 +153,11 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
                         </thead>
                         <tbody>
                             {pendingLoading ? (
-                                <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-[var(--eixo-text-muted)]">Carregando...</td></tr>
+                                <tr><td colSpan={6} className="px-4 py-10 text-center text-sm text-(--eixo-text-muted)">Carregando...</td></tr>
                             ) : filtrada.length === 0 ? (
                                 <tr>
                                     <td colSpan={6} className="px-4 py-10 text-center">
-                                        <p className="text-base font-semibold text-[var(--eixo-text)]">
+                                        <p className="text-base font-semibold text-(--eixo-text)">
                                             {lista.length === 0
                                                 ? `Nenhuma conta ${tipo === 'pagar' ? 'a pagar' : 'a receber'} em aberto`
                                                 : 'Nenhum resultado para este filtro'}
@@ -175,13 +175,13 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
                                     .map(t => {
                                         const badge = statusBadge(t);
                                         return (
-                                            <tr key={t.id} className="border-b border-[var(--eixo-border)] bg-[var(--eixo-surface)] hover:bg-[var(--eixo-surface)]">
-                                                <td className={`px-4 py-3 font-medium ${isVencida(t) ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-text)]'}`}>
+                                            <tr key={t.id} className="border-b border-(--eixo-border) bg-(--eixo-surface) hover:bg-(--eixo-surface)">
+                                                <td className={`px-4 py-3 font-medium ${isVencida(t) ? 'text-(--eixo-danger)' : 'text-(--eixo-text)'}`}>
                                                     {formatDate(t.vencimento)}
                                                 </td>
-                                                <td className="px-4 py-3 text-[var(--eixo-text)]">{getCatLabel(t)}</td>
-                                                <td className="px-4 py-3 text-[var(--eixo-text-muted)]">{t.descricao || '—'}</td>
-                                                <td className={`px-4 py-3 text-right font-semibold ${tipo === 'pagar' ? 'text-[var(--eixo-danger)]' : 'text-[var(--eixo-success)]'}`}>
+                                                <td className="px-4 py-3 text-(--eixo-text)">{getCatLabel(t)}</td>
+                                                <td className="px-4 py-3 text-(--eixo-text-muted)">{t.descricao || '—'}</td>
+                                                <td className={`px-4 py-3 text-right font-semibold ${tipo === 'pagar' ? 'text-(--eixo-danger)' : 'text-(--eixo-success)'}`}>
                                                     {formatCurrency(t.valor)}
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
@@ -191,7 +191,7 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
                                                 </td>
                                                 <td className="px-4 py-3 text-center">
                                                     {(t.herdEventId || t.sanitaryRecordId) ? (
-                                                        <span className="inline-flex items-center gap-1 text-xs text-[var(--eixo-text-muted)]"><LockIcon /> auto</span>
+                                                        <span className="inline-flex items-center gap-1 text-xs text-(--eixo-text-muted)"><LockIcon /> auto</span>
                                                     ) : (
                                                         <div className="inline-flex flex-wrap items-center justify-center gap-1.5">
                                                             {t.status !== 'PAGO' && (
@@ -199,7 +199,7 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
                                                                     type="button"
                                                                     disabled={markingPaid === t.id}
                                                                     onClick={() => handleMarkPaid(t.id)}
-                                                                    className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--eixo-border-strong)] bg-[var(--eixo-green-soft)] px-3 py-1 text-xs font-semibold text-[var(--eixo-success)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50"
+                                                                    className="inline-flex items-center gap-1.5 rounded-lg border border-(--eixo-border-strong) bg-(--eixo-green-soft) px-3 py-1 text-xs font-semibold text-(--eixo-success) transition-colors hover:bg-(--eixo-surface-soft) disabled:opacity-50"
                                                                 >
                                                                     <CheckIcon className="w-3.5 h-3.5" />
                                                                     {markingPaid === t.id ? '...' : 'Pago'}
@@ -210,14 +210,14 @@ const ContasTab: React.FC<ContasTabProps> = ({ tipo, pendingAll, pendingLoading,
                                                                 onClick={() => onEdit(t)}
                                                                 title="Editar lançamento"
                                                                 aria-label="Editar lançamento"
-                                                                className="rounded-lg border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-2 py-1 text-xs font-semibold text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--eixo-green)]"
+                                                                className="rounded-lg border border-(--eixo-border) bg-(--eixo-surface-soft) px-2 py-1 text-xs font-semibold text-(--eixo-text-muted) hover:bg-(--eixo-surface) focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--eixo-green)"
                                                             >
                                                                 <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828A2 2 0 0110 16.414H8v-2a2 2 0 01.586-1.414z" /></svg>
                                                             </button>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => onDelete(t)}
-                                                                className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-[var(--eixo-danger)] hover:bg-[rgba(184,66,50,0.12)]"
+                                                                className="rounded-lg border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-3 py-1 text-xs font-semibold text-(--eixo-danger) hover:bg-[rgba(184,66,50,0.12)]"
                                                             >
                                                                 Cancelar
                                                             </button>

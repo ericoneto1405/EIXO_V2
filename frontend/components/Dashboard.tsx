@@ -83,9 +83,9 @@ const fmt = (n: number, decimals = 1) =>
 
 // Classifica taxa de ocupação
 const getOccupationStatus = (taxa: number) => {
-    if (taxa < 0.8) return { label: 'Leve', color: 'text-[var(--eixo-info)]', bg: 'bg-[rgba(63,111,143,0.10)]' };
-    if (taxa <= 1.5) return { label: 'Adequada', color: 'text-[var(--eixo-success)]', bg: 'bg-[var(--eixo-green-soft)]' };
-    return { label: 'Sobrecarregado', color: 'text-[var(--eixo-danger)]', bg: 'bg-[rgba(184,66,50,0.08)]' };
+    if (taxa < 0.8) return { label: 'Leve', color: 'text-(--eixo-info)', bg: 'bg-[rgba(63,111,143,0.10)]' };
+    if (taxa <= 1.5) return { label: 'Adequada', color: 'text-(--eixo-success)', bg: 'bg-(--eixo-green-soft)' };
+    return { label: 'Sobrecarregado', color: 'text-(--eixo-danger)', bg: 'bg-[rgba(184,66,50,0.08)]' };
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -164,9 +164,9 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
             )}
 
             {/* Cabeçalho */}
-            <div className="rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-6 py-5">
-                <h1 className="font-brand text-2xl font-extrabold leading-tight text-[var(--eixo-text)]">Dashboard</h1>
-                <p className="mt-1 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
+            <div className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
+                <h1 className="font-brand text-2xl font-extrabold leading-tight text-(--eixo-text)">Dashboard</h1>
+                <p className="mt-1 text-sm leading-relaxed text-(--eixo-text-muted)">
                     {scope === 'all'
                         ? 'Resumo consolidado da operação.'
                         : `Resumo da Fazenda ${farmName || 'selecionada'}.`}
@@ -178,48 +178,48 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
 
                 {/* 1. Total de Animais */}
                 <KpiCard title="Total de Animais" icon={<CattleIcon />} loading={loading}>
-                    <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{kpis.totalAnimais}</p>
+                    <p className="text-2xl font-extrabold text-(--eixo-text)">{kpis.totalAnimais}</p>
                     {kpis.categorias.length > 0 && (
                         <div className="mt-2 space-y-1">
                             {kpis.categorias.map(cat => (
                                 <div key={cat.name} className="flex items-center justify-between gap-2">
-                                    <span className="truncate text-xs text-[var(--eixo-text-muted)]">{cat.name}</span>
-                                    <span className="shrink-0 text-xs font-semibold text-[var(--eixo-text)]">{cat.count}</span>
+                                    <span className="truncate text-xs text-(--eixo-text-muted)">{cat.name}</span>
+                                    <span className="shrink-0 text-xs font-semibold text-(--eixo-text)">{cat.count}</span>
                                 </div>
                             ))}
                         </div>
                     )}
                     {kpis.categorias.length === 0 && (
-                        <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Sem animais cadastrados</p>
+                        <p className="mt-1 text-xs text-(--eixo-text-soft)">Sem animais cadastrados</p>
                     )}
                 </KpiCard>
 
                 {/* 2. Nascimentos no mês */}
                 <KpiCard title="Nascimentos no mês" icon={<CalfIcon />} loading={loading}>
-                    <p className="text-2xl font-extrabold text-[var(--eixo-text)]">{kpis.nascimentosMes}</p>
-                    <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">No mês atual</p>
+                    <p className="text-2xl font-extrabold text-(--eixo-text)">{kpis.nascimentosMes}</p>
+                    <p className="mt-1 text-xs text-(--eixo-text-soft)">No mês atual</p>
                 </KpiCard>
 
                 {/* 3. Taxa de Ocupação */}
                 <KpiCard title="Taxa de Ocupação" icon={<OccupationIcon />} loading={loading}>
                     {kpis.taxaOcupacao !== null ? (
                         <>
-                            <p className="text-2xl font-extrabold text-[var(--eixo-text)]">
-                                {fmt(kpis.taxaOcupacao, 2)} <span className="text-sm font-semibold text-[var(--eixo-text-muted)]">cab/ha</span>
+                            <p className="text-2xl font-extrabold text-(--eixo-text)">
+                                {fmt(kpis.taxaOcupacao, 2)} <span className="text-sm font-semibold text-(--eixo-text-muted)">cab/ha</span>
                             </p>
                             <div className="mt-2">
                                 <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${occupationStatus!.bg} ${occupationStatus!.color}`}>
                                     {occupationStatus!.label}
                                 </span>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">
+                                <p className="mt-1 text-xs text-(--eixo-text-soft)">
                                     {kpis.totalAnimais} animais / {kpis.areaTotalHa ?? farmSize} ha
                                 </p>
                             </div>
                         </>
                     ) : (
                         <>
-                            <p className="text-2xl font-extrabold text-[var(--eixo-text-soft)]">—</p>
-                            <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">
+                            <p className="text-2xl font-extrabold text-(--eixo-text-soft)">—</p>
+                            <p className="mt-1 text-xs text-(--eixo-text-soft)">
                                 {!(kpis.areaTotalHa ?? farmSize) ? 'Área da fazenda não cadastrada' : 'Sem animais cadastrados'}
                             </p>
                         </>
@@ -230,18 +230,18 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                 <KpiCard title="GMD Médio" icon={<TrendIcon />} loading={loading}>
                     {kpis.gmdMedio !== null ? (
                         <>
-                            <p className="text-2xl font-extrabold text-[var(--eixo-text)]">
-                                {fmt(kpis.gmdMedio)} <span className="text-sm font-semibold text-[var(--eixo-text-muted)]">kg/dia</span>
+                            <p className="text-2xl font-extrabold text-(--eixo-text)">
+                                {fmt(kpis.gmdMedio)} <span className="text-sm font-semibold text-(--eixo-text-muted)">kg/dia</span>
                             </p>
-                            <div className={`mt-2 inline-flex items-center gap-1 text-xs font-semibold ${kpis.gmdMedio > 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
+                            <div className={`mt-2 inline-flex items-center gap-1 text-xs font-semibold ${kpis.gmdMedio > 0 ? 'text-(--eixo-success)' : 'text-(--eixo-danger)'}`}>
                                 <span>{kpis.gmdMedio > 0 ? '↑' : '↓'}</span>
                                 <span>Ganho médio diário</span>
                             </div>
                         </>
                     ) : (
                         <>
-                            <p className="text-2xl font-extrabold text-[var(--eixo-text-soft)]">—</p>
-                            <p className="mt-1 text-xs text-[var(--eixo-text-soft)]">Sem pesagens registradas</p>
+                            <p className="text-2xl font-extrabold text-(--eixo-text-soft)">—</p>
+                            <p className="mt-1 text-xs text-(--eixo-text-soft)">Sem pesagens registradas</p>
                         </>
                     )}
                 </KpiCard>
@@ -268,28 +268,28 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                 const tudo_ok = alertas.length === 0 && kpis.totalAnimais > 0;
 
                 return (
-                    <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5">
+                    <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5">
                         <div className="mb-4 flex items-center gap-2">
-                            <svg className="h-4 w-4 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="h-4 w-4 text-(--eixo-green)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                                     d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                             </svg>
-                            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--eixo-text-muted)]">
+                            <p className="text-xs font-semibold uppercase tracking-wider text-(--eixo-text-muted)">
                                 {scope === 'all' ? 'Raio-X da Operação' : 'Raio-X da Fazenda'}
                             </p>
                         </div>
 
                         {tudo_ok && (
-                            <div className="flex items-center gap-3 rounded-xl bg-[var(--eixo-green-soft)] px-4 py-3">
+                            <div className="flex items-center gap-3 rounded-xl bg-(--eixo-green-soft) px-4 py-3">
                                 <span className="text-lg">✅</span>
-                                <p className="text-sm font-semibold text-[var(--eixo-graphite)]">Tudo em ordem — nenhum alerta no momento.</p>
+                                <p className="text-sm font-semibold text-(--eixo-graphite)">Tudo em ordem — nenhum alerta no momento.</p>
                             </div>
                         )}
 
                         {!tudo_ok && kpis.totalAnimais === 0 && (
-                            <div className="flex items-center gap-3 rounded-xl bg-[var(--eixo-surface-soft)] px-4 py-3">
+                            <div className="flex items-center gap-3 rounded-xl bg-(--eixo-surface-soft) px-4 py-3">
                                 <span className="text-lg">ℹ️</span>
-                                <p className="text-sm text-[var(--eixo-text-muted)]">Cadastre animais para ver o diagnóstico da fazenda.</p>
+                                <p className="text-sm text-(--eixo-text-muted)">Cadastre animais para ver o diagnóstico da fazenda.</p>
                             </div>
                         )}
 
@@ -298,7 +298,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
                                 {alertas.map((a, i) => (
                                     <div key={i} className={`flex items-start gap-3 rounded-xl px-4 py-3 ${a.tipo === 'aviso' ? 'bg-[rgba(184,66,50,0.07)]' : 'bg-[rgba(213,150,0,0.07)]'}`}>
                                         <span className="mt-0.5 text-base">{a.tipo === 'aviso' ? '⚠️' : '📋'}</span>
-                                        <p className={`text-sm font-medium ${a.tipo === 'aviso' ? 'text-[var(--eixo-danger)]' : 'text-[#8a6000]'}`}>{a.texto}</p>
+                                        <p className={`text-sm font-medium ${a.tipo === 'aviso' ? 'text-(--eixo-danger)' : 'text-[#8a6000]'}`}>{a.texto}</p>
                                     </div>
                                 ))}
                             </div>

@@ -33,11 +33,11 @@ type Passo = 1 | 2 | 3 | 4;
 type ModoSelecao = 'IDENTIFICACAO' | 'LOTE';
 type Aba = SanidadeTab;
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] disabled:opacity-60';
-const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
-const cardClass = 'rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5';
-const primaryButton = 'rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryButton = 'rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--eixo-text)] transition hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) disabled:opacity-60';
+const labelClass = 'block text-xs font-semibold text-(--eixo-text-muted)';
+const cardClass = 'rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5';
+const primaryButton = 'rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryButton = 'rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2.5 text-sm font-semibold text-(--eixo-text) transition hover:bg-(--eixo-surface-soft) disabled:opacity-50';
 
 const ROUTE_LABELS: Record<string, string> = {
     SUBCUTANEA: 'Subcutânea',
@@ -83,9 +83,9 @@ const sugerirVia = (texto: string | null) => {
 
 const Aviso: React.FC<{ tone: 'danger' | 'warning' | 'success'; children: React.ReactNode }> = ({ tone, children }) => {
     const styles = {
-        danger: 'border-[#efc2ba] bg-[#fff2ef] text-[var(--eixo-danger)]',
+        danger: 'border-[#efc2ba] bg-[#fff2ef] text-(--eixo-danger)',
         warning: 'border-amber-200 bg-amber-50 text-amber-800',
-        success: 'border-[#b6d4b0] bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]',
+        success: 'border-[#b6d4b0] bg-(--eixo-green-soft) text-(--eixo-success)',
     }[tone];
     return <div role={tone === 'danger' ? 'alert' : 'status'} className={`rounded-xl border px-4 py-3 text-sm font-semibold ${styles}`}>{children}</div>;
 };
@@ -274,7 +274,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
 
     if (!farmId) return null;
     if (loading && !options) {
-        return <div className={`${cardClass} text-center text-sm text-[var(--eixo-text-muted)]`}>Carregando Sanidade...</div>;
+        return <div className={`${cardClass} text-center text-sm text-(--eixo-text-muted)`}>Carregando Sanidade...</div>;
     }
     if (loadError && !options) {
         return (
@@ -294,8 +294,8 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
     return (
         <div className="space-y-5">
             <div>
-                <h1 className="text-2xl font-extrabold text-[var(--eixo-text)]">Sanidade</h1>
-                <p className="text-sm text-[var(--eixo-text-muted)]">{farmName ? `${farmName} · ` : ''}Aplicações no curral e estoque de vacinas e remédios.</p>
+                <h1 className="text-2xl font-extrabold text-(--eixo-text)">Sanidade</h1>
+                <p className="text-sm text-(--eixo-text-muted)">{farmName ? `${farmName} · ` : ''}Aplicações no curral e estoque de vacinas e remédios.</p>
             </div>
 
             <SanidadeStatus farmId={farmId} refreshKey={statusKey} />
@@ -321,17 +321,17 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
             <div className="grid gap-3 sm:grid-cols-3">
                 <div className={cardClass}>
                     <p className={labelClass}>Aplicações registradas</p>
-                    <p className="mt-1 text-2xl font-extrabold text-[var(--eixo-text)]">{historico.length}</p>
+                    <p className="mt-1 text-2xl font-extrabold text-(--eixo-text)">{historico.length}</p>
                 </div>
                 <div className={`${cardClass} ${liberadosEmBreve ? 'border-amber-300' : ''}`}>
                     <p className={labelClass}>Animais em carência</p>
-                    <p className="mt-1 text-2xl font-extrabold text-[var(--eixo-text)]">{liberadosEmBreve}</p>
-                    <p className="text-xs text-[var(--eixo-text-muted)]">Não podem ir para o abate ainda.</p>
+                    <p className="mt-1 text-2xl font-extrabold text-(--eixo-text)">{liberadosEmBreve}</p>
+                    <p className="text-xs text-(--eixo-text-muted)">Não podem ir para o abate ainda.</p>
                 </div>
                 <div className={`${cardClass} ${semCarencia ? 'border-[#efc2ba]' : ''}`}>
                     <p className={labelClass}>Sem carência cadastrada</p>
-                    <p className="mt-1 text-2xl font-extrabold text-[var(--eixo-text)]">{semCarencia}</p>
-                    <p className="text-xs text-[var(--eixo-text-muted)]">Preencha a carência do produto na Farmácia.</p>
+                    <p className="mt-1 text-2xl font-extrabold text-(--eixo-text)">{semCarencia}</p>
+                    <p className="text-xs text-(--eixo-text-muted)">Preencha a carência do produto na Farmácia.</p>
                 </div>
             </div>
 
@@ -345,10 +345,10 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                             key={item.id}
                             className={`rounded-xl border px-2 py-2 text-center text-xs font-bold ${
                                 passo === item.id
-                                    ? 'border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] text-[var(--eixo-text)]'
+                                    ? 'border-(--eixo-green) bg-(--eixo-green-soft) text-(--eixo-text)'
                                     : passo > item.id
-                                        ? 'border-[var(--eixo-border)] text-[var(--eixo-text)]'
-                                        : 'border-[var(--eixo-border)] text-[var(--eixo-text-muted)]'
+                                        ? 'border-(--eixo-border) text-(--eixo-text)'
+                                        : 'border-(--eixo-border) text-(--eixo-text-muted)'
                             }`}
                         >
                             {item.id}. {item.label}
@@ -375,7 +375,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                             <label className={labelClass}>
                                 Identificações (separe por espaço, vírgula ou linha)
                                 <textarea rows={5} className={inputClass} value={identificacoesTexto} onChange={(event) => setIdentificacoesTexto(event.target.value)} placeholder="Ex.: 1023 1024 1031" />
-                                <span className="mt-1 block text-[var(--eixo-text-muted)]">{identificacoes.length} animais digitados</span>
+                                <span className="mt-1 block text-(--eixo-text-muted)">{identificacoes.length} animais digitados</span>
                             </label>
                         ) : (
                             <label className={labelClass}>
@@ -415,18 +415,18 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                                             </option>
                                         ))}
                                     </select>
-                                    {!produto.batches.length && <span className="mt-1 block text-[var(--eixo-danger)]">Sem saldo. Registre a entrada na Farmácia.</span>}
+                                    {!produto.batches.length && <span className="mt-1 block text-(--eixo-danger)">Sem saldo. Registre a entrada na Farmácia.</span>}
                                 </label>
                                 {precisaRendimento && (
                                     <label className={labelClass}>
                                         Quanto rende 1 {produto.unit} (em {produto.applicationUnit})
                                         <input type="number" min="0" step="0.01" className={inputClass} value={rendimento} onChange={(event) => setRendimento(event.target.value)} placeholder="Ex.: 500" />
-                                        <span className="mt-1 block text-[var(--eixo-text-muted)]">Fica salvo no produto para as próximas vezes.</span>
+                                        <span className="mt-1 block text-(--eixo-text-muted)">Fica salvo no produto para as próximas vezes.</span>
                                     </label>
                                 )}
-                                <div className="rounded-xl bg-[var(--eixo-surface-soft)] px-4 py-3 text-xs text-[var(--eixo-text-muted)]">
-                                    Carência para abate: <strong className="text-[var(--eixo-text)]">{produto.slaughterWithdrawalDays === null ? 'não cadastrada' : `${produto.slaughterWithdrawalDays} dias`}</strong>
-                                    {produto.suggestedDose && <> · Dose da bula: <strong className="text-[var(--eixo-text)]">{produto.suggestedDose}</strong></>}
+                                <div className="rounded-xl bg-(--eixo-surface-soft) px-4 py-3 text-xs text-(--eixo-text-muted)">
+                                    Carência para abate: <strong className="text-(--eixo-text)">{produto.slaughterWithdrawalDays === null ? 'não cadastrada' : `${produto.slaughterWithdrawalDays} dias`}</strong>
+                                    {produto.suggestedDose && <> · Dose da bula: <strong className="text-(--eixo-text)">{produto.suggestedDose}</strong></>}
                                 </div>
                             </>
                         )}
@@ -464,13 +464,13 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                         ) : (
                             <div>
                                 <p className={labelClass}>Dose pelo peso</p>
-                                <div className="mt-1 flex items-center gap-2 text-sm text-[var(--eixo-text)]">
+                                <div className="mt-1 flex items-center gap-2 text-sm text-(--eixo-text)">
                                     <input type="text" inputMode="decimal" aria-label="Quantidade" className={`${inputClass} mt-0 w-24`} value={dosePorKgTexto.ml} onChange={(event) => setDosePorKgTexto({ ...dosePorKgTexto, ml: event.target.value })} />
                                     <span>{produto.applicationUnit} a cada</span>
                                     <input type="text" inputMode="decimal" aria-label="Peso" className={`${inputClass} mt-0 w-24`} value={dosePorKgTexto.kg} onChange={(event) => setDosePorKgTexto({ ...dosePorKgTexto, kg: event.target.value })} />
                                     <span>kg</span>
                                 </div>
-                                <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Usa o último peso de cada animal. Animal sem peso fica de fora.</p>
+                                <p className="mt-1 text-xs text-(--eixo-text-muted)">Usa o último peso de cada animal. Animal sem peso fica de fora.</p>
                             </div>
                         )}
                         <div className="grid gap-3 sm:grid-cols-3">
@@ -491,7 +491,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                             <label className={labelClass}>
                                 Temperatura da caixa térmica agora (°C) · faixa do produto {produto.storageMinTemp ?? '—'} a {produto.storageMaxTemp ?? '—'} °C
                                 <input type="text" inputMode="decimal" className={inputClass} value={coolerTemp} onChange={(event) => setCoolerTemp(event.target.value)} placeholder="Ex.: 6" />
-                                <span className="mt-1 block text-[var(--eixo-text-muted)]">Fora da faixa, o EIXO não deixa aplicar: a vacina pode ter perdido o efeito.</span>
+                                <span className="mt-1 block text-(--eixo-text-muted)">Fora da faixa, o EIXO não deixa aplicar: a vacina pode ter perdido o efeito.</span>
                             </label>
                         )}
                         {produto.tags.some((tag) => tag.startsWith('BRUCELOSE')) && !vetName.trim() && (
@@ -513,23 +513,23 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                 {!semProdutos && passo === 4 && previa && produto && (
                     <div className="space-y-4">
                         <div className="grid gap-3 sm:grid-cols-4">
-                            <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-3">
+                            <div className="rounded-xl bg-(--eixo-surface-soft) p-3">
                                 <p className={labelClass}>Vão receber</p>
-                                <p className="text-xl font-extrabold text-[var(--eixo-text)]">{previa.resumo.aptos} <span className="text-sm font-semibold text-[var(--eixo-text-muted)]">de {previa.resumo.total}</span></p>
+                                <p className="text-xl font-extrabold text-(--eixo-text)">{previa.resumo.aptos} <span className="text-sm font-semibold text-(--eixo-text-muted)">de {previa.resumo.total}</span></p>
                             </div>
-                            <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-3">
+                            <div className="rounded-xl bg-(--eixo-surface-soft) p-3">
                                 <p className={labelClass}>Dose total</p>
-                                <p className="text-xl font-extrabold text-[var(--eixo-text)]">{formatNumber(previa.resumo.doseTotal)} {previa.resumo.unidadeDose}</p>
+                                <p className="text-xl font-extrabold text-(--eixo-text)">{formatNumber(previa.resumo.doseTotal)} {previa.resumo.unidadeDose}</p>
                             </div>
-                            <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-3">
+                            <div className="rounded-xl bg-(--eixo-surface-soft) p-3">
                                 <p className={labelClass}>Sai do estoque</p>
-                                <p className="text-xl font-extrabold text-[var(--eixo-text)]">{formatNumber(previa.resumo.consumoEstoque, 3)} {previa.resumo.unidadeEstoque || ''}</p>
-                                {lote && <p className="text-xs text-[var(--eixo-text-muted)]">Lote {lote.lotNumber}</p>}
+                                <p className="text-xl font-extrabold text-(--eixo-text)">{formatNumber(previa.resumo.consumoEstoque, 3)} {previa.resumo.unidadeEstoque || ''}</p>
+                                {lote && <p className="text-xs text-(--eixo-text-muted)">Lote {lote.lotNumber}</p>}
                             </div>
-                            <div className="rounded-xl bg-[var(--eixo-surface-soft)] p-3">
+                            <div className="rounded-xl bg-(--eixo-surface-soft) p-3">
                                 <p className={labelClass}>Custo do produto usado</p>
-                                <p className="text-xl font-extrabold text-[var(--eixo-text)]">{formatMoney(previa.resumo.custoTotal)}</p>
-                                <p className="text-xs text-[var(--eixo-text-muted)]">
+                                <p className="text-xl font-extrabold text-(--eixo-text)">{formatMoney(previa.resumo.custoTotal)}</p>
+                                <p className="text-xs text-(--eixo-text-muted)">
                                     {previa.resumo.carenciaAte ? `Carência até ${formatDate(previa.resumo.carenciaAte)}` : 'Carência não cadastrada'}
                                 </p>
                             </div>
@@ -545,9 +545,9 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                         {previa.avisosGerais.map((item) => <Aviso key={item} tone="warning">{item}</Aviso>)}
 
                         {previa.linhas.length > 0 && (
-                            <div className="max-h-80 overflow-auto rounded-xl border border-[var(--eixo-border)]">
+                            <div className="max-h-80 overflow-auto rounded-xl border border-(--eixo-border)">
                                 <table className="w-full text-left text-sm">
-                                    <thead className="sticky top-0 bg-[var(--eixo-surface-soft)] text-xs text-[var(--eixo-text-muted)]">
+                                    <thead className="sticky top-0 bg-(--eixo-surface-soft) text-xs text-(--eixo-text-muted)">
                                         <tr>
                                             <th className="px-3 py-2">Identificação</th>
                                             <th className="px-3 py-2">Sexo</th>
@@ -559,16 +559,16 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                                     </thead>
                                     <tbody>
                                         {[...previa.linhas].sort((a, b) => Number(a.apto) - Number(b.apto)).map((linha) => (
-                                            <tr key={linha.animalId} className="border-t border-[var(--eixo-border)]">
-                                                <td className="px-3 py-2 font-semibold text-[var(--eixo-text)]">{linha.brinco}</td>
+                                            <tr key={linha.animalId} className="border-t border-(--eixo-border)">
+                                                <td className="px-3 py-2 font-semibold text-(--eixo-text)">{linha.brinco}</td>
                                                 <td className="px-3 py-2">{linha.sexo === 'FEMEA' ? 'Fêmea' : linha.sexo === 'MACHO' ? 'Macho' : '—'}</td>
                                                 <td className="px-3 py-2">{linha.idadeDias === null ? '—' : `${Math.floor(linha.idadeDias / 30)} meses`}</td>
                                                 <td className="px-3 py-2">{linha.peso ? `${formatNumber(linha.peso, 0)} kg` : '—'}</td>
                                                 <td className="px-3 py-2">{linha.dose === null ? '—' : `${formatNumber(linha.dose)} ${previa.resumo.unidadeDose}`}</td>
                                                 <td className="px-3 py-2">
                                                     {linha.apto
-                                                        ? <span className="font-semibold text-[var(--eixo-success)]">Liberado</span>
-                                                        : <span className="font-semibold text-[var(--eixo-danger)]">{linha.bloqueios.join(' ')}</span>}
+                                                        ? <span className="font-semibold text-(--eixo-success)">Liberado</span>
+                                                        : <span className="font-semibold text-(--eixo-danger)">{linha.bloqueios.join(' ')}</span>}
                                                     {linha.avisos.length > 0 && <span className="block text-xs text-amber-700">{linha.avisos.join(' ')}</span>}
                                                 </td>
                                             </tr>
@@ -600,22 +600,22 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
 
             {carencia.length > 0 && (
                 <section className={cardClass}>
-                    <h2 className="text-base font-bold text-[var(--eixo-text)]">Animais que ainda não podem ir para o abate</h2>
+                    <h2 className="text-base font-bold text-(--eixo-text)">Animais que ainda não podem ir para o abate</h2>
                     <div className="mt-3 max-h-64 overflow-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="text-xs text-[var(--eixo-text-muted)]">
+                            <thead className="text-xs text-(--eixo-text-muted)">
                                 <tr><th className="py-2 pr-3">Identificação</th><th className="py-2 pr-3">Libera em</th><th className="py-2">Produtos</th></tr>
                             </thead>
                             <tbody>
                                 {carencia.map((item) => (
-                                    <tr key={item.animalId} className="border-t border-[var(--eixo-border)]">
-                                        <td className="py-2 pr-3 font-semibold text-[var(--eixo-text)]">{item.brinco}</td>
+                                    <tr key={item.animalId} className="border-t border-(--eixo-border)">
+                                        <td className="py-2 pr-3 font-semibold text-(--eixo-text)">{item.brinco}</td>
                                         <td className="py-2 pr-3">
                                             {item.semCarencia
-                                                ? <span className="font-semibold text-[var(--eixo-danger)]">Sem carência cadastrada</span>
+                                                ? <span className="font-semibold text-(--eixo-danger)">Sem carência cadastrada</span>
                                                 : formatDate(item.liberaEm)}
                                         </td>
-                                        <td className="py-2 text-[var(--eixo-text-muted)]">{item.produtos.join(', ')}</td>
+                                        <td className="py-2 text-(--eixo-text-muted)">{item.produtos.join(', ')}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -627,19 +627,19 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
             {custos && custos.porLote.length > 0 && (
                 <section className={cardClass}>
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <h2 className="text-base font-bold text-[var(--eixo-text)]">Custo sanitário por lote</h2>
-                        <p className="text-sm text-[var(--eixo-text-muted)]">Total aplicado: <strong className="text-[var(--eixo-text)]">{formatMoney(custos.total)}</strong></p>
+                        <h2 className="text-base font-bold text-(--eixo-text)">Custo sanitário por lote</h2>
+                        <p className="text-sm text-(--eixo-text-muted)">Total aplicado: <strong className="text-(--eixo-text)">{formatMoney(custos.total)}</strong></p>
                     </div>
-                    <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Valor do produto usado em cada lote. Esse custo já entrou no resultado da fazenda na compra.</p>
+                    <p className="mt-1 text-xs text-(--eixo-text-muted)">Valor do produto usado em cada lote. Esse custo já entrou no resultado da fazenda na compra.</p>
                     <div className="mt-3 overflow-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="text-xs text-[var(--eixo-text-muted)]">
+                            <thead className="text-xs text-(--eixo-text-muted)">
                                 <tr><th className="py-2 pr-3">Lote</th><th className="py-2 pr-3">Animais</th><th className="py-2 pr-3">Aplicações</th><th className="py-2 pr-3">Custo</th><th className="py-2">Por animal</th></tr>
                             </thead>
                             <tbody>
                                 {custos.porLote.map((item) => (
-                                    <tr key={item.lotId || 'sem-lote'} className="border-t border-[var(--eixo-border)]">
-                                        <td className="py-2 pr-3 font-semibold text-[var(--eixo-text)]">{item.lote}</td>
+                                    <tr key={item.lotId || 'sem-lote'} className="border-t border-(--eixo-border)">
+                                        <td className="py-2 pr-3 font-semibold text-(--eixo-text)">{item.lote}</td>
                                         <td className="py-2 pr-3">{item.animais}</td>
                                         <td className="py-2 pr-3">{item.aplicacoes}</td>
                                         <td className="py-2 pr-3">{formatMoney(item.custo)}</td>
@@ -655,13 +655,13 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                     {verAnimais && (
                         <div className="mt-3 max-h-64 overflow-auto">
                             <table className="w-full text-left text-sm">
-                                <thead className="text-xs text-[var(--eixo-text-muted)]">
+                                <thead className="text-xs text-(--eixo-text-muted)">
                                     <tr><th className="py-2 pr-3">Identificação</th><th className="py-2 pr-3">Lote</th><th className="py-2 pr-3">Aplicações</th><th className="py-2">Custo</th></tr>
                                 </thead>
                                 <tbody>
                                     {custos.porAnimal.map((item) => (
-                                        <tr key={item.animalId} className="border-t border-[var(--eixo-border)]">
-                                            <td className="py-2 pr-3 font-semibold text-[var(--eixo-text)]">{item.brinco}</td>
+                                        <tr key={item.animalId} className="border-t border-(--eixo-border)">
+                                            <td className="py-2 pr-3 font-semibold text-(--eixo-text)">{item.brinco}</td>
                                             <td className="py-2 pr-3">{item.lote || 'Sem lote'}</td>
                                             <td className="py-2 pr-3">{item.aplicacoes}</td>
                                             <td className="py-2">{formatMoney(item.custo)}</td>
@@ -675,13 +675,13 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
             )}
 
             <section className={cardClass}>
-                <h2 className="text-base font-bold text-[var(--eixo-text)]">Últimas aplicações</h2>
+                <h2 className="text-base font-bold text-(--eixo-text)">Últimas aplicações</h2>
                 {historico.length === 0 ? (
-                    <p className="mt-2 text-sm text-[var(--eixo-text-muted)]">Nenhuma aplicação registrada ainda.</p>
+                    <p className="mt-2 text-sm text-(--eixo-text-muted)">Nenhuma aplicação registrada ainda.</p>
                 ) : (
                     <div className="mt-3 overflow-auto">
                         <table className="w-full text-left text-sm">
-                            <thead className="text-xs text-[var(--eixo-text-muted)]">
+                            <thead className="text-xs text-(--eixo-text-muted)">
                                 <tr>
                                     <th className="py-2 pr-3">Data</th>
                                     <th className="py-2 pr-3">Produto</th>
@@ -694,9 +694,9 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                             </thead>
                             <tbody>
                                 {historico.map((item) => (
-                                    <tr key={item.groupId} className="border-t border-[var(--eixo-border)]">
+                                    <tr key={item.groupId} className="border-t border-(--eixo-border)">
                                         <td className="py-2 pr-3">{formatDate(item.appliedAt)}</td>
-                                        <td className="py-2 pr-3 font-semibold text-[var(--eixo-text)]">{item.produto}</td>
+                                        <td className="py-2 pr-3 font-semibold text-(--eixo-text)">{item.produto}</td>
                                         <td className="py-2 pr-3">{item.animais}</td>
                                         <td className="py-2 pr-3">{item.loteFrasco || '—'}</td>
                                         <td className="py-2 pr-3">{item.carenciaDesconhecida ? 'Não cadastrada' : formatDate(item.carenciaAte)}</td>
@@ -713,7 +713,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
             </>
             )}
 
-            <p className="text-xs text-[var(--eixo-text-muted)]">
+            <p className="text-xs text-(--eixo-text-muted)">
                 O EIXO ajuda a registrar e conferir, mas não substitui a orientação do veterinário responsável. Siga sempre a bula do produto.
             </p>
         </div>

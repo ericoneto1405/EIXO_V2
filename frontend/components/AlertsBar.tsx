@@ -24,21 +24,21 @@ interface AlertsBarProps {
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const ALERT_PANEL_STYLE: Record<AlertSeverity, string> = {
-    high: 'border-[rgba(184,66,50,0.18)] bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]',
+    high: 'border-[rgba(184,66,50,0.18)] bg-[rgba(184,66,50,0.08)] text-(--eixo-danger)',
     medium: 'border-[rgba(197,138,32,0.18)] bg-[rgba(197,138,32,0.10)] text-[#966d1f]',
-    info: 'border-[rgba(109,101,88,0.16)] bg-[rgba(255,250,241,0.72)] text-[var(--eixo-text)]',
+    info: 'border-[rgba(109,101,88,0.16)] bg-[rgba(255,250,241,0.72)] text-(--eixo-text)',
 };
 
 const ALERT_PANEL_DOT: Record<AlertSeverity, string> = {
-    high: 'bg-[var(--eixo-danger)]',
-    medium: 'bg-[var(--eixo-warning)]',
-    info: 'bg-[var(--eixo-text-muted)]',
+    high: 'bg-(--eixo-danger)',
+    medium: 'bg-(--eixo-warning)',
+    info: 'bg-(--eixo-text-muted)',
 };
 
 const ALERT_PANEL_BADGE: Record<AlertSeverity, string> = {
-    high: 'border-[rgba(184,66,50,0.18)] bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]',
+    high: 'border-[rgba(184,66,50,0.18)] bg-[rgba(184,66,50,0.08)] text-(--eixo-danger)',
     medium: 'border-[rgba(197,138,32,0.18)] bg-[rgba(197,138,32,0.10)] text-[#966d1f]',
-    info: 'border-[var(--eixo-border)] bg-[rgba(255,250,241,0.88)] text-[var(--eixo-text-muted)]',
+    info: 'border-(--eixo-border) bg-[rgba(255,250,241,0.88)] text-(--eixo-text-muted)',
 };
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -175,27 +175,27 @@ const AlertsBar: React.FC<AlertsBarProps> = ({ selectedFarmId, onAlertAction }) 
 
     return (
         <>
-            <div className="mt-[10px] rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)]">
+            <div className="mt-[10px] rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface)">
                 <div className="flex items-center gap-2 px-4 py-3">
                     <div className="flex shrink-0 items-center gap-2 pr-1">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#EDEDED] text-[var(--eixo-text-muted)]">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#EDEDED] text-(--eixo-text-muted)">
                             <BellIcon />
                         </span>
                         <div className="min-w-0">
-                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--eixo-text-muted)]">Alertas</p>
-                            <p className="text-xs font-medium text-[var(--eixo-text-muted)]">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-(--eixo-text-muted)">Alertas</p>
+                            <p className="text-xs font-medium text-(--eixo-text-muted)">
                                 {operationalAlerts.length} {operationalAlerts.length === 1 ? 'pendente' : 'pendentes'}
                             </p>
                         </div>
                     </div>
 
-                    <div className="h-7 w-px shrink-0 bg-[var(--eixo-border)]" />
+                    <div className="h-7 w-px shrink-0 bg-(--eixo-border)" />
 
                     {canScrollLeft && (
                         <button
                             type="button"
                             onClick={() => alertsRowRef.current?.scrollBy({ left: -220, behavior: 'smooth' })}
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--eixo-border)]/70 bg-[var(--eixo-surface)]/88 text-[var(--eixo-text-soft)] transition-colors hover:bg-[#EDEDED]"
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-(--eixo-border)/70 bg-(--eixo-surface)/88 text-(--eixo-text-soft) transition-colors hover:bg-[#EDEDED]"
                             aria-label="Rolar alertas para a esquerda"
                         >
                             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -229,7 +229,7 @@ const AlertsBar: React.FC<AlertsBarProps> = ({ selectedFarmId, onAlertAction }) 
                         <button
                             type="button"
                             onClick={() => alertsRowRef.current?.scrollBy({ left: 220, behavior: 'smooth' })}
-                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[var(--eixo-border)]/70 bg-[var(--eixo-surface)]/88 text-[var(--eixo-text-soft)] transition-colors hover:bg-[#EDEDED]"
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-(--eixo-border)/70 bg-(--eixo-surface)/88 text-(--eixo-text-soft) transition-colors hover:bg-[#EDEDED]"
                             aria-label="Rolar alertas para a direita"
                         >
                             <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -243,13 +243,13 @@ const AlertsBar: React.FC<AlertsBarProps> = ({ selectedFarmId, onAlertAction }) 
             {selectedAlert && selectedAlertAnchor && (
                 <div
                     ref={alertPopoverRef}
-                    className="fixed z-50 w-80 rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-2xl"
+                    className="fixed z-50 w-80 rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) p-5 shadow-2xl"
                     style={{ top: selectedAlertAnchor.top, left: selectedAlertAnchor.left }}
                 >
                     <button
                         type="button"
                         onClick={() => { setSelectedAlert(null); setSelectedAlertAnchor(null); }}
-                        className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full text-[var(--eixo-text-soft)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
+                        className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full text-(--eixo-text-soft) transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text)"
                         aria-label="Fechar detalhe do alerta"
                     >
                         <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -262,25 +262,25 @@ const AlertsBar: React.FC<AlertsBarProps> = ({ selectedFarmId, onAlertAction }) 
                         {selectedAlert.severity === 'high' ? 'Alerta alto' : selectedAlert.severity === 'medium' ? 'Atenção' : 'Informativo'}
                     </div>
 
-                    <h3 className="pr-6 font-brand text-[15px] font-extrabold leading-snug text-[var(--eixo-text)]">
+                    <h3 className="pr-6 font-brand text-[15px] font-extrabold leading-snug text-(--eixo-text)">
                         {selectedAlert.title}
                     </h3>
 
-                    <p className="mt-2 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
+                    <p className="mt-2 text-sm leading-relaxed text-(--eixo-text-muted)">
                         {selectedAlert.description}
                     </p>
 
-                    <div className="mt-4 space-y-1.5 text-xs text-[var(--eixo-text-muted)]">
-                        <p><span className="font-semibold text-[var(--eixo-text)]">Origem:</span> {selectedAlert.sourceLabel}</p>
+                    <div className="mt-4 space-y-1.5 text-xs text-(--eixo-text-muted)">
+                        <p><span className="font-semibold text-(--eixo-text)">Origem:</span> {selectedAlert.sourceLabel}</p>
                         {selectedAlert.hoursToRespond && (
-                            <p><span className="font-semibold text-[var(--eixo-text)]">Prazo:</span> responder em até {selectedAlert.hoursToRespond}h</p>
+                            <p><span className="font-semibold text-(--eixo-text)">Prazo:</span> responder em até {selectedAlert.hoursToRespond}h</p>
                         )}
                     </div>
 
                     <button
                         type="button"
                         onClick={() => { setSelectedAlert(null); setSelectedAlertAnchor(null); }}
-                        className="mt-4 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] py-2.5 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-bg)]"
+                        className="mt-4 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) py-2.5 text-sm font-semibold text-(--eixo-text) transition-colors hover:bg-(--eixo-bg)"
                     >
                         {selectedAlert.actionLabel}
                     </button>

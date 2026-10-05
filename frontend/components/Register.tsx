@@ -106,23 +106,23 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
 }) => {
     if (phoneVerified) {
         return (
-            <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
-                <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-(--eixo-green-soft) px-3 py-2">
+                <svg className="h-4 w-4 shrink-0 text-(--eixo-success)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-xs font-medium text-[var(--eixo-success)]">Celular verificado — {phone}</span>
+                <span className="text-xs font-medium text-(--eixo-success)">Celular verificado — {phone}</span>
             </div>
         );
     }
     return (
-        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-3 space-y-2">
+        <div className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) p-3 space-y-2">
             <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold text-[var(--eixo-text)]">Confirme seu celular</p>
-                <span className="rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-[var(--eixo-text-muted)]">
+                <p className="text-xs font-semibold text-(--eixo-text)">Confirme seu celular</p>
+                <span className="rounded-full border border-(--eixo-border) bg-(--eixo-surface-soft) px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-(--eixo-text-muted)">
                     Para seu {docType}
                 </span>
             </div>
-            <p className="text-xs text-[var(--eixo-text-muted)]">{subtitle}</p>
+            <p className="text-xs text-(--eixo-text-muted)">{subtitle}</p>
             <div className="flex gap-2">
                 <input
                     type="tel"
@@ -131,13 +131,13 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
                     onChange={(e) => onPhoneChange(e.target.value)}
                     placeholder="(11) 99999-9999"
                     disabled={otpSent}
-                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)] disabled:opacity-60"
+                    className="flex-1 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2 text-sm text-(--eixo-text) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green) disabled:opacity-60"
                 />
                 <button
                     type="button"
                     onClick={onSendOtp}
                     disabled={phone.replace(/\D/g, '').length < 10 || isSendingOtp || otpSent || resendCooldown > 0}
-                    className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
+                    className="whitespace-nowrap rounded-xl bg-(--eixo-green) px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) disabled:cursor-not-allowed disabled:bg-(--eixo-green)/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-(--eixo-green)/35"
                 >
                     {isSendingOtp ? 'Enviando...' : otpSent ? 'Enviado ✓' : resendCooldown > 0 ? `Aguarde ${resendCooldown}s` : 'Enviar código'}
                 </button>
@@ -152,13 +152,13 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
                             value={otpCode}
                             onChange={(e) => onOtpCodeChange(e.target.value.replace(/\D/g, ''))}
                             placeholder="Código de 6 dígitos"
-                            className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-3 py-2 text-sm tracking-widest text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                            className="flex-1 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-3 py-2 text-sm tracking-widest text-(--eixo-text) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)"
                         />
                         <button
                             type="button"
                             onClick={onVerifyOtp}
                             disabled={otpCode.length !== 6 || isVerifyingOtp}
-                            className="whitespace-nowrap rounded-xl bg-[var(--eixo-green)] px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-[var(--eixo-green-dark)] disabled:cursor-not-allowed disabled:bg-[var(--eixo-green)]/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-[var(--eixo-green)]/35"
+                            className="whitespace-nowrap rounded-xl bg-(--eixo-green) px-3 py-2 text-xs font-semibold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) disabled:cursor-not-allowed disabled:bg-(--eixo-green)/35 disabled:text-[#1a1a1a]/80 disabled:hover:bg-(--eixo-green)/35"
                         >
                             {isVerifyingOtp ? 'Verificando...' : 'Confirmar'}
                         </button>
@@ -167,20 +167,20 @@ const PhoneVerification: React.FC<PhoneVerificationProps> = ({
                         type="button"
                         onClick={onResend}
                         disabled={isSendingOtp || resendCooldown > 0}
-                        className="text-xs text-[var(--eixo-text-muted)] hover:underline disabled:cursor-not-allowed disabled:opacity-55 disabled:no-underline"
+                        className="text-xs text-(--eixo-text-muted) hover:underline disabled:cursor-not-allowed disabled:opacity-55 disabled:no-underline"
                     >
                         {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Não recebi — reenviar'}
                     </button>
                     <button
                         type="button"
                         onClick={onEditPhone}
-                        className="ml-3 text-xs text-[var(--eixo-text-muted)] hover:underline"
+                        className="ml-3 text-xs text-(--eixo-text-muted) hover:underline"
                     >
                         Editar número
                     </button>
                 </div>
             )}
-            {otpError && <p className="text-xs text-[var(--eixo-danger)]">{otpError}</p>}
+            {otpError && <p className="text-xs text-(--eixo-danger)">{otpError}</p>}
         </div>
     );
 };
@@ -579,12 +579,12 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
         }
     };
 
-    const inputClass = 'mt-1 w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]';
-    const primaryButtonClass = 'bg-[var(--eixo-green)] text-[#1a1a1a] shadow-sm hover:bg-[var(--eixo-green-dark)]';
+    const inputClass = 'mt-1 w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 text-(--eixo-text) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)';
+    const primaryButtonClass = 'bg-(--eixo-green) text-[#1a1a1a] shadow-xs hover:bg-(--eixo-green-dark)';
     const disabledButtonClass = 'cursor-not-allowed bg-[#b8d58a] text-[rgba(47,58,45,0.78)] shadow-[inset_0_0_0_1px_rgba(118,184,42,0.12)] hover:bg-[#b8d58a]';
 
     return (
-        <div className="min-h-screen bg-[var(--eixo-bg)] text-[var(--eixo-text)]">
+        <div className="min-h-screen bg-(--eixo-bg) text-(--eixo-text)">
             {openModal && (
                 <LegalModal doc={openModal} onClose={() => setOpenModal(null)} />
             )}
@@ -597,53 +597,53 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                         backgroundSize: 'cover',
                     }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[var(--eixo-surface)] via-[var(--eixo-bg)]/82 to-[var(--eixo-bg)]/60" />
+                <div className="absolute inset-0 bg-linear-to-t from-(--eixo-surface) via-(--eixo-bg)/82 to-(--eixo-bg)/60" />
 
                 <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 pb-10 pt-8 lg:px-8">
                     <div className="mb-10">
                         <img src="/logo_eixo_official.svg" alt="EIXO" className="h-10 w-auto" />
-                        <div className="text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-[var(--eixo-text-muted)]">Gestão para Pecuária de Corte</div>
+                        <div className="text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-(--eixo-text-muted)">Gestão para Pecuária de Corte</div>
                     </div>
 
                     <div className="flex flex-1 items-center justify-center">
-                        <div className="w-full max-w-xl rounded-3xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)]/95 shadow-xl backdrop-blur">
+                        <div className="w-full max-w-xl rounded-3xl border border-(--eixo-border) bg-(--eixo-surface)/95 shadow-xl backdrop-blur-sm">
                             <div className="flex flex-col justify-center p-8 lg:p-10">
                                 <div className="mx-auto w-full max-w-md">
                                     <button
                                         type="button"
                                         onClick={onBack}
-                                        className="mb-6 inline-flex items-center text-sm font-medium text-[var(--eixo-text-muted)] transition-colors hover:text-[var(--eixo-green)]"
+                                        className="mb-6 inline-flex items-center text-sm font-medium text-(--eixo-text-muted) transition-colors hover:text-(--eixo-green)"
                                     >
                                         ← VOLTAR
                                     </button>
                                     <div className="mb-5">
-                                        <div className="mb-4 inline-flex items-center rounded-full border border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--eixo-graphite)]">
+                                        <div className="mb-4 inline-flex items-center rounded-full border border-(--eixo-border) bg-(--eixo-green-soft) px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
                                             Crie sua conta
                                         </div>
                                         <div>
-                                            <p className="text-sm uppercase tracking-[0.18em] text-[var(--eixo-text-muted)]">EIXO Essencial</p>
-                                            <h2 className="mt-2 text-3xl font-black text-[var(--eixo-text)]">Comece agora</h2>
-                                            <p className="mt-3 text-sm leading-relaxed text-[var(--eixo-text-muted)]">
+                                            <p className="text-sm uppercase tracking-[0.18em] text-(--eixo-text-muted)">EIXO Essencial</p>
+                                            <h2 className="mt-2 text-3xl font-black text-(--eixo-text)">Comece agora</h2>
+                                            <p className="mt-3 text-sm leading-relaxed text-(--eixo-text-muted)">
                                                 Sem cartão para começar. Organize sua fazenda hoje.
                                             </p>
                                         </div>
                                     </div>
 
-                                    <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">
-                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--eixo-green)] text-[10px] text-[#1a1a1a]">1</span>
+                                    <div className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-text-muted)">
+                                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-(--eixo-green) text-[10px] text-[#1a1a1a]">1</span>
                                         Etapa 1 de 2 · Confirmar quem é você
                                     </div>
 
                                     <form onSubmit={handleSubmit} className="space-y-4">
                                         {/* ── Documento ── */}
-                                        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4">
-                                            <p className="mb-1 text-sm font-semibold text-[var(--eixo-text)]">Identificação</p>
-                                            <p className="mb-3 text-xs text-[var(--eixo-text-muted)]">
+                                        <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-4">
+                                            <p className="mb-1 text-sm font-semibold text-(--eixo-text)">Identificação</p>
+                                            <p className="mb-3 text-xs text-(--eixo-text-muted)">
                                                 Usamos seu CNPJ ou CPF só pra confirmar que você é um produtor de verdade — não pedimos cartão nem pagamento aqui.
                                             </p>
 
                                             {/* Seletor CNPJ / CPF */}
-                                            <div className="mb-3 flex rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-0.5">
+                                            <div className="mb-3 flex rounded-xl border border-(--eixo-border) bg-(--eixo-surface) p-0.5">
                                                 {(['CNPJ', 'CPF'] as const).map((type) => (
                                                     <button
                                                         key={type}
@@ -651,8 +651,8 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                         onClick={() => handleDocTypeChange(type)}
                                                         className={`flex-1 rounded-[10px] py-2 text-sm font-semibold transition-colors ${
                                                             docType === type
-                                                                ? 'bg-[var(--eixo-green)] text-[#1a1a1a]'
-                                                                : 'text-[var(--eixo-text-muted)] hover:bg-[var(--eixo-surface-soft)]'
+                                                                ? 'bg-(--eixo-green) text-[#1a1a1a]'
+                                                                : 'text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft)'
                                                         }`}
                                                     >
                                                         {type}
@@ -668,12 +668,12 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                     value={docValue}
                                                     onChange={(e) => handleDocInput(e.target.value)}
                                                     placeholder={docType === 'CNPJ' ? '00.000.000/0000-00' : '000.000.000-00'}
-                                                    className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                    className="flex-1 rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)"
                                                 />
                                             </div>
 
                                             {docType === 'CNPJ' && isDocInputValid && (
-                                                <div className="mt-2 flex items-center gap-2 text-xs text-[var(--eixo-text-muted)]">
+                                                <div className="mt-2 flex items-center gap-2 text-xs text-(--eixo-text-muted)">
                                                     {isCnpjLoading ? (
                                                         <>
                                                             <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -684,7 +684,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                         </>
                                                     ) : cnpjResult ? (
                                                         <>
-                                                            <svg className="h-3.5 w-3.5 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <svg className="h-3.5 w-3.5 text-(--eixo-success)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M5 13l4 4L19 7" />
                                                             </svg>
                                                             <span>CNPJ consultado automaticamente.</span>
@@ -697,21 +697,21 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
 
                                             {/* Erro de documento */}
                                             {docError && (
-                                                <p className="mt-2 text-xs text-[var(--eixo-danger)]">{docError}</p>
+                                                <p className="mt-2 text-xs text-(--eixo-danger)">{docError}</p>
                                             )}
 
                                             {isCheckingDocument && (
-                                                <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">Validando se este {docType} já está cadastrado...</p>
+                                                <p className="mt-2 text-xs text-(--eixo-text-muted)">Validando se este {docType} já está cadastrado...</p>
                                             )}
 
                                             {/* CPF válido → etapa de celular */}
                                             {docType === 'CPF' && cpfValid && !documentAlreadyExists && !isCheckingDocument && (
                                                 <div className="mt-3 space-y-3">
-                                                    <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-[var(--eixo-green-soft)] px-3 py-2">
-                                                        <svg className="h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <div className="flex items-center gap-2 rounded-xl border border-[#b6d4b0] bg-(--eixo-green-soft) px-3 py-2">
+                                                        <svg className="h-4 w-4 shrink-0 text-(--eixo-success)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                                         </svg>
-                                                        <span className="text-xs font-medium text-[var(--eixo-success)]">CPF válido</span>
+                                                        <span className="text-xs font-medium text-(--eixo-success)">CPF válido</span>
                                                     </div>
 
                                                     <PhoneVerification
@@ -739,40 +739,40 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                             {cnpjResult && (
                                                 <div className={`mt-3 rounded-xl border px-3 py-3 ${
                                                     cnpjIsActive
-                                                        ? 'border-[#b6d4b0] bg-[var(--eixo-green-soft)]'
-                                                        : 'border-[var(--eixo-border)] bg-[var(--eixo-green-soft)]'
+                                                        ? 'border-[#b6d4b0] bg-(--eixo-green-soft)'
+                                                        : 'border-(--eixo-border) bg-(--eixo-green-soft)'
                                                 }`}>
                                                     <div className="flex items-start gap-2">
                                                         {cnpjIsActive ? (
-                                                            <svg className="mt-0.5 h-4 w-4 shrink-0 text-[var(--eixo-success)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <svg className="mt-0.5 h-4 w-4 shrink-0 text-(--eixo-success)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                                             </svg>
                                                         ) : (
-                                                            <svg className="mt-0.5 h-4 w-4 shrink-0 text-[var(--eixo-green)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <svg className="mt-0.5 h-4 w-4 shrink-0 text-(--eixo-green)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                                                             </svg>
                                                         )}
                                                         <div className="min-w-0">
-                                                            <p className={`text-xs font-bold uppercase tracking-wide ${cnpjIsActive ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-graphite)]'}`}>
+                                                            <p className={`text-xs font-bold uppercase tracking-wide ${cnpjIsActive ? 'text-(--eixo-success)' : 'text-(--eixo-graphite)'}`}>
                                                                 {cnpjResult.descricao_situacao_cadastral}
                                                             </p>
-                                                            <p className="mt-0.5 text-sm font-semibold text-[var(--eixo-text)] leading-snug">
+                                                            <p className="mt-0.5 text-sm font-semibold text-(--eixo-text) leading-snug">
                                                                 {cnpjResult.razao_social}
                                                             </p>
                                                             {cnpjResult.cnae_fiscal_descricao && (
-                                                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)] leading-snug">
+                                                                <p className="mt-0.5 text-xs text-(--eixo-text-muted) leading-snug">
                                                                     {cnpjResult.cnae_fiscal_descricao}
                                                                 </p>
                                                             )}
                                                             {(cnpjResult.municipio || cnpjResult.uf) && (
-                                                                <p className="mt-0.5 text-xs text-[var(--eixo-text-muted)]">
+                                                                <p className="mt-0.5 text-xs text-(--eixo-text-muted)">
                                                                     {[cnpjResult.municipio, cnpjResult.uf].filter(Boolean).join(' — ')}
                                                                 </p>
                                                             )}
                                                         </div>
                                                     </div>
                                                     {!cnpjIsActive && (
-                                                        <p className="mt-2 text-xs leading-relaxed text-[var(--eixo-graphite)]">
+                                                        <p className="mt-2 text-xs leading-relaxed text-(--eixo-graphite)">
                                                             Este CNPJ está com situação <strong>{cnpjResult.descricao_situacao_cadastral}</strong> na Receita Federal.
                                                             Selecione <strong>CPF</strong> acima para se cadastrar como produtor individual, ou tente outro CNPJ ativo.
                                                         </p>
@@ -809,29 +809,29 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                         {docType === 'CNPJ' && cnpjResult && (
                                             <>
                                                 <div>
-                                                    <label className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                                    <label className="block text-sm font-medium text-(--eixo-text-muted)">
                                                         Razão Social
                                                     </label>
-                                                    <div className={`${inputClass} cursor-default select-all bg-[var(--eixo-surface)] opacity-70`}>
+                                                    <div className={`${inputClass} cursor-default select-all bg-(--eixo-surface) opacity-70`}>
                                                         {cnpjResult.razao_social || '—'}
                                                     </div>
                                                 </div>
                                                 {cnpjResult.nome_fantasia && (
                                                     <div>
-                                                        <label className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                                        <label className="block text-sm font-medium text-(--eixo-text-muted)">
                                                             Nome Fantasia
                                                         </label>
-                                                        <div className={`${inputClass} cursor-default select-all bg-[var(--eixo-surface)] opacity-70`}>
+                                                        <div className={`${inputClass} cursor-default select-all bg-(--eixo-surface) opacity-70`}>
                                                             {cnpjResult.nome_fantasia}
                                                         </div>
                                                     </div>
                                                 )}
                                                 {(cnpjResult.logradouro || cnpjResult.municipio) && (
                                                     <div>
-                                                        <label className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                                        <label className="block text-sm font-medium text-(--eixo-text-muted)">
                                                             Endereço
                                                         </label>
-                                                        <div className={`${inputClass} cursor-default select-all bg-[var(--eixo-surface)] opacity-70`}>
+                                                        <div className={`${inputClass} cursor-default select-all bg-(--eixo-surface) opacity-70`}>
                                                             {[
                                                                 cnpjResult.logradouro,
                                                                 cnpjResult.bairro,
@@ -845,12 +845,12 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                         )}
 
                                         {/* ── Dados pessoais ── */}
-                                        <div className="mb-1 mt-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--eixo-text-muted)]">
-                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--eixo-green)] text-[10px] text-[#1a1a1a]">2</span>
+                                        <div className="mb-1 mt-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-text-muted)">
+                                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-(--eixo-green) text-[10px] text-[#1a1a1a]">2</span>
                                             Etapa 2 de 2 · Seus dados de acesso
                                         </div>
                                         <div>
-                                            <label htmlFor="register-name" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                            <label htmlFor="register-name" className="block text-sm font-medium text-(--eixo-text-muted)">
                                                 Nome completo
                                             </label>
                                             <input
@@ -864,7 +864,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                             />
                                         </div>
                                         <div>
-                                            <label htmlFor="register-email" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                            <label htmlFor="register-email" className="block text-sm font-medium text-(--eixo-text-muted)">
                                                 E-mail
                                             </label>
                                             <input
@@ -886,14 +886,14 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                 required
                                             />
                                             {(emailError || (email.trim().length > 0 && !isRegisterEmailValid)) && (
-                                                <p className="mt-2 text-xs text-[var(--eixo-danger)]">{emailError || 'E-mail inválido. Verifique se não há espaços ou caracteres a mais.'}</p>
+                                                <p className="mt-2 text-xs text-(--eixo-danger)">{emailError || 'E-mail inválido. Verifique se não há espaços ou caracteres a mais.'}</p>
                                             )}
                                             {isCheckingEmail && (
-                                                <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">Validando se este e-mail já está cadastrado...</p>
+                                                <p className="mt-2 text-xs text-(--eixo-text-muted)">Validando se este e-mail já está cadastrado...</p>
                                             )}
                                         </div>
                                         <div>
-                                            <label htmlFor="register-password" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                            <label htmlFor="register-password" className="block text-sm font-medium text-(--eixo-text-muted)">
                                                 Senha
                                             </label>
                                             <div className="relative mt-1">
@@ -902,25 +902,25 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                     type={showPassword ? 'text' : 'password'}
                                                     value={password}
                                                     onChange={(e) => setPassword(e.target.value)}
-                                                    className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 pr-12 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                    className="w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 pr-12 text-(--eixo-text) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)"
                                                     placeholder="Mínimo de 8 caracteres"
                                                     required
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowPassword((v) => !v)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--eixo-text-muted)] hover:text-[var(--eixo-text)]"
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-(--eixo-text-muted) hover:text-(--eixo-text)"
                                                     aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
                                                 >
                                                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                                 </button>
                                             </div>
-                                            <p className="mt-1 text-xs text-[var(--eixo-text)]/70">
+                                            <p className="mt-1 text-xs text-(--eixo-text)/70">
                                                 {PASSWORD_POLICY_MESSAGE}
                                             </p>
                                         </div>
                                         <div>
-                                            <label htmlFor="register-password-confirm" className="block text-sm font-medium text-[var(--eixo-text-muted)]">
+                                            <label htmlFor="register-password-confirm" className="block text-sm font-medium text-(--eixo-text-muted)">
                                                 Confirmar senha
                                             </label>
                                             <div className="relative mt-1">
@@ -929,14 +929,14 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                     type={showConfirmPassword ? 'text' : 'password'}
                                                     value={confirmPassword}
                                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                                    className="w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-3 pr-12 text-[var(--eixo-text)] focus:outline-none focus:ring-2 focus:ring-[var(--eixo-green)]"
+                                                    className="w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 pr-12 text-(--eixo-text) focus:outline-hidden focus:ring-2 focus:ring-(--eixo-green)"
                                                     placeholder="Repita sua senha"
                                                     required
                                                 />
                                                 <button
                                                     type="button"
                                                     onClick={() => setShowConfirmPassword((v) => !v)}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--eixo-text-muted)] hover:text-[var(--eixo-text)]"
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-(--eixo-text-muted) hover:text-(--eixo-text)"
                                                     aria-label={showConfirmPassword ? 'Ocultar senha' : 'Mostrar senha'}
                                                 >
                                                     {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -948,7 +948,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                         <div className={`rounded-2xl border px-4 py-2.5 transition-colors ${
                                             termsAccepted
                                                 ? 'border-[#cfe2c7] bg-[rgba(237,247,230,0.72)]'
-                                                : 'border-[var(--eixo-border)]/80 bg-[rgba(240,242,239,0.62)]'
+                                                : 'border-(--eixo-border)/80 bg-[rgba(240,242,239,0.62)]'
                                         }`}>
                                             <label className="flex cursor-pointer items-start gap-3">
                                                 <div className="relative mt-0.5 shrink-0">
@@ -960,8 +960,8 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                     />
                                                     <div className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
                                                         termsAccepted
-                                                            ? 'border-[var(--eixo-green)] bg-[var(--eixo-green)]'
-                                                            : 'border-[var(--eixo-border)] bg-[var(--eixo-surface)]'
+                                                            ? 'border-(--eixo-green) bg-(--eixo-green)'
+                                                            : 'border-(--eixo-border) bg-(--eixo-surface)'
                                                     }`}>
                                                         {termsAccepted && (
                                                             <svg className="h-3 w-3 text-[#1a1a1a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -970,12 +970,12 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                         )}
                                                     </div>
                                                 </div>
-                                                <span className="text-xs leading-relaxed text-[var(--eixo-text)]/66">
+                                                <span className="text-xs leading-relaxed text-(--eixo-text)/66">
                                                     Li e concordo com os{' '}
                                                     <button
                                                         type="button"
                                                         onClick={() => setOpenModal('terms')}
-                                                        className="font-medium text-[var(--eixo-text)]/72 underline decoration-[var(--eixo-border-strong)]/70 underline-offset-2 hover:text-[var(--eixo-text)]"
+                                                        className="font-medium text-(--eixo-text)/72 underline decoration-(--eixo-border-strong)/70 underline-offset-2 hover:text-(--eixo-text)"
                                                     >
                                                         Termos de Uso
                                                     </button>
@@ -983,7 +983,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                     <button
                                                         type="button"
                                                         onClick={() => setOpenModal('privacy')}
-                                                        className="font-medium text-[var(--eixo-text)]/72 underline decoration-[var(--eixo-border-strong)]/70 underline-offset-2 hover:text-[var(--eixo-text)]"
+                                                        className="font-medium text-(--eixo-text)/72 underline decoration-(--eixo-border-strong)/70 underline-offset-2 hover:text-(--eixo-text)"
                                                     >
                                                         Política de Privacidade
                                                     </button>
@@ -991,7 +991,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                                     <button
                                                         type="button"
                                                         onClick={() => setOpenModal('cookies')}
-                                                        className="font-medium text-[var(--eixo-text)]/72 underline decoration-[var(--eixo-border-strong)]/70 underline-offset-2 hover:text-[var(--eixo-text)]"
+                                                        className="font-medium text-(--eixo-text)/72 underline decoration-(--eixo-border-strong)/70 underline-offset-2 hover:text-(--eixo-text)"
                                                     >
                                                         Política de Cookies
                                                     </button>
@@ -1001,7 +1001,7 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                         </div>
 
                                         {error && (
-                                            <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]">
+                                            <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-(--eixo-danger)">
                                                 {error}
                                             </div>
                                         )}
@@ -1017,9 +1017,9 @@ const Register: React.FC<RegisterProps> = ({ onSuccess, onBack }) => {
                                         <button
                                             type="button"
                                             onClick={onBack}
-                                            className="-mt-1 w-full text-center text-sm text-[var(--eixo-text)]/72 transition-colors hover:text-[var(--eixo-green-dark)]"
+                                            className="-mt-1 w-full text-center text-sm text-(--eixo-text)/72 transition-colors hover:text-(--eixo-green-dark)"
                                         >
-                                            <span className="font-semibold text-[var(--eixo-green-dark)] underline decoration-[var(--eixo-green)]/45 underline-offset-2">
+                                            <span className="font-semibold text-(--eixo-green-dark) underline decoration-(--eixo-green)/45 underline-offset-2">
                                                 Já tenho conta
                                             </span>
                                         </button>

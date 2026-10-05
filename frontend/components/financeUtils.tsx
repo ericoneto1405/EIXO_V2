@@ -174,7 +174,7 @@ export const getCatLabel = (t: FinancialTransaction) =>
     t.accountCategoryName || CATEGORIA_LABELS[t.categoria] || t.categoria;
 
 export function statusBadge(t: FinancialTransaction) {
-    if (t.status === 'PAGO') return { label: 'Pago', cls: 'bg-[var(--eixo-green-soft)] text-[var(--eixo-success)]' };
-    if (isVencida(t)) return { label: 'Vencido', cls: 'bg-[rgba(184,66,50,0.08)] text-[var(--eixo-danger)]' };
-    return { label: 'Pendente', cls: 'bg-[rgba(197,138,32,0.10)] text-[var(--eixo-warning)]' };
+    if (t.status === 'PAGO') return { label: 'Pago', cls: 'bg-(--eixo-green-soft) text-(--eixo-success)' };
+    if (isVencida(t)) return { label: 'Vencido', cls: 'bg-[rgba(184,66,50,0.08)] text-(--eixo-danger)' };
+    return { label: 'Pendente', cls: 'bg-[rgba(197,138,32,0.10)] text-(--eixo-warning)' };
 }

@@ -58,25 +58,25 @@ const VisaoGeralTab: React.FC<VisaoGeralTabProps> = ({
         <>
             <div className="flex flex-wrap gap-3">
                 <select value={selectedMes} onChange={e => setSelectedMes(Number(e.target.value))}
-                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
+                    className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden">
                     {MESES.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
                 </select>
                 <select value={selectedAno} onChange={e => setSelectedAno(Number(e.target.value))}
-                    className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm text-[var(--eixo-text)] focus:border-[var(--eixo-green)] focus:outline-none">
+                    className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm text-(--eixo-text) focus:border-(--eixo-green) focus:outline-hidden">
                     {anos.map(a => <option key={a} value={a}>{a}</option>)}
                 </select>
             </div>
 
             {loadError && (
-                <div className="rounded-xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[var(--eixo-danger)]">{loadError}</div>
+                <div className="rounded-xl border border-[rgba(184,66,50,0.16)] bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-(--eixo-danger)">{loadError}</div>
             )}
 
             <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                 <ChartCard title="Receitas por grupo">
                     {isLoading ? (
-                        <p className="text-sm text-[var(--eixo-text-muted)]">Carregando receitas...</p>
+                        <p className="text-sm text-(--eixo-text-muted)">Carregando receitas...</p>
                     ) : monthlyGroupCharts.receitas.length === 0 ? (
-                        <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma receita no período selecionado.</p>
+                        <p className="text-sm text-(--eixo-text-muted)">Nenhuma receita no período selecionado.</p>
                     ) : (
                         <ResponsiveContainer width="100%" height={360}>
                             <PieChart>
@@ -106,9 +106,9 @@ const VisaoGeralTab: React.FC<VisaoGeralTabProps> = ({
 
                 <ChartCard title="Despesas por grupo">
                     {isLoading ? (
-                        <p className="text-sm text-[var(--eixo-text-muted)]">Carregando despesas...</p>
+                        <p className="text-sm text-(--eixo-text-muted)">Carregando despesas...</p>
                     ) : monthlyGroupCharts.despesas.length === 0 ? (
-                        <p className="text-sm text-[var(--eixo-text-muted)]">Nenhuma despesa no período selecionado.</p>
+                        <p className="text-sm text-(--eixo-text-muted)">Nenhuma despesa no período selecionado.</p>
                     ) : (
                         <ResponsiveContainer width="100%" height={360}>
                             <PieChart>

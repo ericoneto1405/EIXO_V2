@@ -52,21 +52,21 @@ const TAB_LABELS: Record<DetailTab, string> = {
   genetica: 'Genética',
 };
 
-const inputClass = 'w-full rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-2 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]';
-const primaryBtn = 'rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-bold text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)] disabled:opacity-60';
-const ghostBtn = 'rounded-xl border border-[var(--eixo-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--eixo-text)] hover:bg-[var(--eixo-surface-soft)]';
-const dangerLink = 'text-xs font-semibold text-[var(--eixo-danger)] hover:underline';
-const cardClass = 'rounded-2xl border border-[var(--eixo-border)] bg-white p-4';
+const inputClass = 'w-full rounded-xl border border-(--eixo-border) bg-white px-3 py-2 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)';
+const primaryBtn = 'rounded-xl bg-(--eixo-green) px-4 py-2 text-sm font-bold text-[#1a1a1a] hover:bg-(--eixo-green-dark) disabled:opacity-60';
+const ghostBtn = 'rounded-xl border border-(--eixo-border) bg-white px-3 py-1.5 text-xs font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft)';
+const dangerLink = 'text-xs font-semibold text-(--eixo-danger) hover:underline';
+const cardClass = 'rounded-2xl border border-(--eixo-border) bg-white p-4';
 
 const brl = (value: number | null | undefined) =>
   value === null || value === undefined ? '—' : value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 const fmtDate = (value: string | null | undefined) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 const today = () => new Date().toISOString().slice(0, 10);
 const animalLabel = (a: { nome?: string | null; brinco?: string | null }) => [a.nome, a.brinco].filter(Boolean).join(' · ') || 'Sem identificação';
-const resultTone = (value: number) => (value >= 0 ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]');
+const resultTone = (value: number) => (value >= 0 ? 'text-(--eixo-success)' : 'text-(--eixo-danger)');
 
 const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-  <label className="block text-xs font-semibold text-[var(--eixo-text-soft)]">
+  <label className="block text-xs font-semibold text-(--eixo-text-soft)">
     {label}
     <div className="mt-1">{children}</div>
   </label>
@@ -74,9 +74,9 @@ const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, 
 
 const Stat: React.FC<{ label: string; value: string; tone?: string; hint?: string }> = ({ label, value, tone, hint }) => (
   <div className={cardClass}>
-    <p className="text-xs font-semibold text-[var(--eixo-text-soft)]">{label}</p>
-    <p className={`mt-1 text-xl font-bold tabular-nums ${tone || 'text-[var(--eixo-text)]'}`}>{value}</p>
-    {hint && <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">{hint}</p>}
+    <p className="text-xs font-semibold text-(--eixo-text-soft)">{label}</p>
+    <p className={`mt-1 text-xl font-bold tabular-nums ${tone || 'text-(--eixo-text)'}`}>{value}</p>
+    {hint && <p className="mt-1 text-xs text-(--eixo-text-muted)">{hint}</p>}
   </div>
 );
 
@@ -210,7 +210,7 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
 
   if (!farmId) {
     return (
-      <div className={`${cardClass} text-sm text-[var(--eixo-text-soft)]`}>
+      <div className={`${cardClass} text-sm text-(--eixo-text-soft)`}>
         Selecione uma fazenda para ver o plantel de leilão.
       </div>
     );
@@ -222,18 +222,18 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
     return (
       <div className="space-y-4">
         <button type="button" className={ghostBtn} onClick={() => { setSelectedId(null); setDetail(null); }}>← Voltar ao plantel</button>
-        {detailLoading && !detail && <p className="text-sm text-[var(--eixo-text-soft)]">Carregando ficha…</p>}
-        {actionError && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-[var(--eixo-danger)]">{actionError}</p>}
+        {detailLoading && !detail && <p className="text-sm text-(--eixo-text-soft)">Carregando ficha…</p>}
+        {actionError && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-(--eixo-danger)">{actionError}</p>}
         {detail && a && (
           <>
             <div className={cardClass}>
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-xl font-bold text-[var(--eixo-text)]">{animalLabel(a)}</h2>
-                  <p className="text-sm text-[var(--eixo-text-soft)]">
+                  <h2 className="text-xl font-bold text-(--eixo-text)">{animalLabel(a)}</h2>
+                  <p className="text-sm text-(--eixo-text-soft)">
                     {[a.raca, a.categoria, a.sexo === 'FEMEA' ? 'Fêmea' : a.sexo ? 'Macho' : null].filter(Boolean).join(' · ') || '—'}
                   </p>
-                  <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">
+                  <p className="mt-1 text-xs text-(--eixo-text-muted)">
                     Registro {a.registro || '—'} · Nasc. {fmtDate(a.dataNascimento)} · Pai {a.paiNome || '—'} · Mãe {a.maeNome || '—'}
                   </p>
                 </div>
@@ -260,7 +260,7 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
                   key={key}
                   type="button"
                   onClick={() => setTab(key)}
-                  className={`rounded-xl px-4 py-2 text-sm font-semibold ${tab === key ? 'bg-[var(--eixo-green)] text-[#1a1a1a]' : 'border border-[var(--eixo-border)] bg-white text-[var(--eixo-text)]'}`}
+                  className={`rounded-xl px-4 py-2 text-sm font-semibold ${tab === key ? 'bg-(--eixo-green) text-[#1a1a1a]' : 'border border-(--eixo-border) bg-white text-(--eixo-text)'}`}
                 >
                   {TAB_LABELS[key]}
                 </button>
@@ -270,24 +270,24 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
             {tab === 'socios' && (
               <div className={`${cardClass} space-y-3`}>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-[var(--eixo-text)]">Condomínio</h3>
-                  <span className={`text-sm font-semibold ${Math.abs(partnerSum - 100) < 0.01 || !detail.partners.length ? 'text-[var(--eixo-text-soft)]' : 'text-amber-600'}`}>
+                  <h3 className="font-bold text-(--eixo-text)">Condomínio</h3>
+                  <span className={`text-sm font-semibold ${Math.abs(partnerSum - 100) < 0.01 || !detail.partners.length ? 'text-(--eixo-text-soft)' : 'text-amber-600'}`}>
                     {detail.partners.length ? `Cotas somam ${partnerSum.toLocaleString('pt-BR')}%` : 'Sem sócios: 100% da fazenda'}
                   </span>
                 </div>
                 {detail.partners.length > 0 && !detail.partners.some((p) => p.isOwnFarm) && (
                   <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-700">Nenhuma cota está marcada como "minha fazenda". Sua parte no resultado aparece como 0%.</p>
                 )}
-                <ul className="divide-y divide-[var(--eixo-border)]">
+                <ul className="divide-y divide-(--eixo-border)">
                   {detail.partners.map((p) => (
                     <li key={p.id} className="flex items-center justify-between py-2 text-sm">
                       <div>
-                        <p className="font-semibold text-[var(--eixo-text)]">{p.name}{p.isOwnFarm && <span className="ml-2 rounded-full bg-[var(--eixo-surface-soft)] px-2 py-0.5 text-xs">minha fazenda</span>}</p>
-                        <p className="text-xs text-[var(--eixo-text-muted)]">{[p.phone, p.since ? `desde ${fmtDate(p.since)}` : null].filter(Boolean).join(' · ')}</p>
+                        <p className="font-semibold text-(--eixo-text)">{p.name}{p.isOwnFarm && <span className="ml-2 rounded-full bg-(--eixo-surface-soft) px-2 py-0.5 text-xs">minha fazenda</span>}</p>
+                        <p className="text-xs text-(--eixo-text-muted)">{[p.phone, p.since ? `desde ${fmtDate(p.since)}` : null].filter(Boolean).join(' · ')}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-bold tabular-nums">{p.sharePct.toLocaleString('pt-BR')}%</span>
-                        <span className="text-xs text-[var(--eixo-text-soft)] tabular-nums">{brl((detail.money.result * p.sharePct) / 100)}</span>
+                        <span className="text-xs text-(--eixo-text-soft) tabular-nums">{brl((detail.money.result * p.sharePct) / 100)}</span>
                         <button type="button" className={dangerLink} disabled={busy} onClick={() => runAction(() => removePartner(p.id))}>Remover</button>
                       </div>
                     </li>
@@ -320,21 +320,21 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
                     <input className={inputClass} type="date" value={partnerForm.since} onChange={(e) => setPartnerForm((f) => ({ ...f, since: e.target.value }))} />
                   </Field>
                   <div className="flex flex-col justify-end gap-1">
-                    <label className="flex items-center gap-1 text-xs font-semibold text-[var(--eixo-text-soft)]">
+                    <label className="flex items-center gap-1 text-xs font-semibold text-(--eixo-text-soft)">
                       <input type="checkbox" checked={partnerForm.isOwnFarm} onChange={(e) => setPartnerForm((f) => ({ ...f, isOwnFarm: e.target.checked }))} />
                       Minha fazenda
                     </label>
                     <button type="submit" className={primaryBtn} disabled={busy}>Adicionar</button>
                   </div>
                 </form>
-                <p className="text-xs text-[var(--eixo-text-muted)]">Despesas e receitas do animal são divididas pela cota de cada sócio.</p>
+                <p className="text-xs text-(--eixo-text-muted)">Despesas e receitas do animal são divididas pela cota de cada sócio.</p>
               </div>
             )}
 
             {tab === 'documentos' && (
               <div className={`${cardClass} space-y-3`}>
-                <h3 className="font-bold text-[var(--eixo-text)]">Documentos</h3>
-                {notice && <p className="rounded-xl bg-[var(--eixo-green-soft)] px-3 py-2 text-sm text-[var(--eixo-text)]">{notice}</p>}
+                <h3 className="font-bold text-(--eixo-text)">Documentos</h3>
+                {notice && <p className="rounded-xl bg-(--eixo-green-soft) px-3 py-2 text-sm text-(--eixo-text)">{notice}</p>}
                 {reading && (
                   <DocumentReadingReview
                     extraction={reading.extraction}
@@ -353,13 +353,13 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
                     }}
                   />
                 )}
-                <ul className="divide-y divide-[var(--eixo-border)]">
-                  {detail.documents.length === 0 && <li className="py-2 text-sm text-[var(--eixo-text-soft)]">Nenhum documento ainda.</li>}
+                <ul className="divide-y divide-(--eixo-border)">
+                  {detail.documents.length === 0 && <li className="py-2 text-sm text-(--eixo-text-soft)">Nenhum documento ainda.</li>}
                   {detail.documents.map((d) => (
                     <li key={d.id} className="flex items-center justify-between py-2 text-sm">
                       <div>
-                        <p className="font-semibold text-[var(--eixo-text)]">{d.title || DOCUMENT_LABELS[d.type]}</p>
-                        <p className="text-xs text-[var(--eixo-text-muted)]">{DOCUMENT_LABELS[d.type]} · {d.fileName} · {fmtDate(d.createdAt)}</p>
+                        <p className="font-semibold text-(--eixo-text)">{d.title || DOCUMENT_LABELS[d.type]}</p>
+                        <p className="text-xs text-(--eixo-text-muted)">{DOCUMENT_LABELS[d.type]} · {d.fileName} · {fmtDate(d.createdAt)}</p>
                       </div>
                       <div className="flex items-center gap-3">
                         {readerEnabled && d.mimeType === 'application/pdf' && (
@@ -405,8 +405,8 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
             {tab === 'dinheiro' && (
               <div className="space-y-3">
                 <div className={`${cardClass} space-y-2`}>
-                  <h3 className="font-bold text-[var(--eixo-text)]">Compra e venda</h3>
-                  {detail.trades.length === 0 && <p className="text-sm text-[var(--eixo-text-soft)]">Sem compra ou venda registrada no Rebanho.</p>}
+                  <h3 className="font-bold text-(--eixo-text)">Compra e venda</h3>
+                  {detail.trades.length === 0 && <p className="text-sm text-(--eixo-text-soft)">Sem compra ou venda registrada no Rebanho.</p>}
                   {detail.trades.map((t) => (
                     <div key={t.id} className="flex justify-between text-sm">
                       <span>{t.type === 'COMPRA' ? 'Compra' : 'Venda'} · {fmtDate(t.date)} {t.origem || t.destino ? `· ${t.origem || t.destino}` : ''}</span>
@@ -415,20 +415,20 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
                   ))}
                 </div>
                 <div className={`${cardClass} space-y-2`}>
-                  <h3 className="font-bold text-[var(--eixo-text)]">Gastos e receitas</h3>
-                  <p className="text-xs text-[var(--eixo-text-muted)]">Vêm do Financeiro. Ao lançar, use "Dividir entre destinos" e escolha este animal.</p>
-                  {detail.entries.length === 0 && <p className="text-sm text-[var(--eixo-text-soft)]">Nenhum lançamento ligado a este animal.</p>}
+                  <h3 className="font-bold text-(--eixo-text)">Gastos e receitas</h3>
+                  <p className="text-xs text-(--eixo-text-muted)">Vêm do Financeiro. Ao lançar, use "Dividir entre destinos" e escolha este animal.</p>
+                  {detail.entries.length === 0 && <p className="text-sm text-(--eixo-text-soft)">Nenhum lançamento ligado a este animal.</p>}
                   {detail.entries.map((en) => (
                     <div key={en.id} className="flex justify-between text-sm">
                       <span>{fmtDate(en.date)} · {en.description || (en.kind === 'RECEITA' ? 'Receita' : 'Despesa')}</span>
-                      <span className={`font-semibold tabular-nums ${en.kind === 'RECEITA' ? 'text-[var(--eixo-success)]' : 'text-[var(--eixo-danger)]'}`}>
+                      <span className={`font-semibold tabular-nums ${en.kind === 'RECEITA' ? 'text-(--eixo-success)' : 'text-(--eixo-danger)'}`}>
                         {en.kind === 'RECEITA' ? '+' : '−'} {brl(en.amount)}
                       </span>
                     </div>
                   ))}
                 </div>
                 <div className={`${cardClass} space-y-3`}>
-                  <h3 className="font-bold text-[var(--eixo-text)]">Quanto vale</h3>
+                  <h3 className="font-bold text-(--eixo-text)">Quanto vale</h3>
                   {detail.valuations.map((v) => (
                     <div key={v.id} className="flex items-center justify-between text-sm">
                       <span>{fmtDate(v.date)} · {VALUATION_LABELS[v.source]}{v.notes ? ` · ${v.notes}` : ''}</span>
@@ -468,21 +468,21 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
             {tab === 'genetica' && (
               <div className="grid gap-3 md:grid-cols-3">
                 <div className={cardClass}>
-                  <h3 className="font-bold text-[var(--eixo-text)]">Sêmen</h3>
-                  {detail.genetics.semenBatches.length === 0 && <p className="mt-2 text-sm text-[var(--eixo-text-soft)]">Nenhum lote no botijão.</p>}
+                  <h3 className="font-bold text-(--eixo-text)">Sêmen</h3>
+                  {detail.genetics.semenBatches.length === 0 && <p className="mt-2 text-sm text-(--eixo-text-soft)">Nenhum lote no botijão.</p>}
                   {detail.genetics.semenBatches.map((s) => <p key={s.id} className="mt-2 text-sm">Lote {s.lote}: {s.dosesDisponiveis}/{s.dosesTotal} doses</p>)}
                 </div>
                 <div className={cardClass}>
-                  <h3 className="font-bold text-[var(--eixo-text)]">Aspirações e embriões</h3>
-                  {detail.genetics.embryoBatches.length === 0 && <p className="mt-2 text-sm text-[var(--eixo-text-soft)]">Nenhum lote de embrião como doadora.</p>}
+                  <h3 className="font-bold text-(--eixo-text)">Aspirações e embriões</h3>
+                  {detail.genetics.embryoBatches.length === 0 && <p className="mt-2 text-sm text-(--eixo-text-soft)">Nenhum lote de embrião como doadora.</p>}
                   {detail.genetics.embryoBatches.map((b) => <p key={b.id} className="mt-2 text-sm">{b.tecnica} · lote {b.lote}: {b.quantidadeDisponivel}/{b.quantidadeTotal}</p>)}
                 </div>
                 <div className={cardClass}>
-                  <h3 className="font-bold text-[var(--eixo-text)]">Reprodução e prenhezes</h3>
-                  {detail.genetics.reproEvents.length === 0 && <p className="mt-2 text-sm text-[var(--eixo-text-soft)]">Nenhum evento reprodutivo.</p>}
+                  <h3 className="font-bold text-(--eixo-text)">Reprodução e prenhezes</h3>
+                  {detail.genetics.reproEvents.length === 0 && <p className="mt-2 text-sm text-(--eixo-text-soft)">Nenhum evento reprodutivo.</p>}
                   {detail.genetics.reproEvents.map((r) => <p key={r.id} className="mt-2 text-sm">{fmtDate(r.date)} · {r.type.replace(/_/g, ' ').toLowerCase()}</p>)}
                 </div>
-                <p className="text-xs text-[var(--eixo-text-muted)] md:col-span-3">Esses dados vêm da Reprodução e do Botijão de Sêmen. Nada é digitado duas vezes.</p>
+                <p className="text-xs text-(--eixo-text-muted) md:col-span-3">Esses dados vêm da Reprodução e do Botijão de Sêmen. Nada é digitado duas vezes.</p>
               </div>
             )}
           </>
@@ -496,13 +496,13 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--eixo-text)]">Meus Leilões</h1>
-          <p className="text-sm text-[var(--eixo-text-soft)]">Patrimônio, sócios e documentos do plantel{farmName ? ` · ${farmName}` : ''}. Sem taxa por animal, de qualquer leiloeira.</p>
+          <h1 className="text-2xl font-bold text-(--eixo-text)">Meus Leilões</h1>
+          <p className="text-sm text-(--eixo-text-soft)">Patrimônio, sócios e documentos do plantel{farmName ? ` · ${farmName}` : ''}. Sem taxa por animal, de qualquer leiloeira.</p>
         </div>
         <button type="button" className={primaryBtn} onClick={openPicker}>+ Colocar animal no plantel</button>
       </div>
 
-      {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-[var(--eixo-danger)]">{error}</p>}
+      {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-(--eixo-danger)">{error}</p>}
 
       {plantel && (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -516,21 +516,21 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
       {pickerOpen && (
         <div className={`${cardClass} space-y-2`}>
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-[var(--eixo-text)]">Escolha um animal do Rebanho</h3>
+            <h3 className="font-bold text-(--eixo-text)">Escolha um animal do Rebanho</h3>
             <button type="button" className={ghostBtn} onClick={() => setPickerOpen(false)}>Fechar</button>
           </div>
-          <p className="text-xs text-[var(--eixo-text-muted)]">Animais com registro (P.O.) já aparecem sozinhos. Animal novo entra primeiro pelo Manejo do Rebanho.</p>
+          <p className="text-xs text-(--eixo-text-muted)">Animais com registro (P.O.) já aparecem sozinhos. Animal novo entra primeiro pelo Manejo do Rebanho.</p>
           <input className={inputClass} placeholder="Buscar por nome ou identificação" value={pickerSearch} onChange={(e) => setPickerSearch(e.target.value)} />
-          <div className="max-h-64 divide-y divide-[var(--eixo-border)] overflow-y-auto">
-            {pickerItems.length === 0 && <p className="py-2 text-sm text-[var(--eixo-text-soft)]">Nenhum animal encontrado.</p>}
+          <div className="max-h-64 divide-y divide-(--eixo-border) overflow-y-auto">
+            {pickerItems.length === 0 && <p className="py-2 text-sm text-(--eixo-text-soft)">Nenhum animal encontrado.</p>}
             {pickerItems.map((an) => (
               <button
                 key={an.id}
                 type="button"
-                className="block w-full py-2 text-left text-sm hover:bg-[var(--eixo-surface-soft)]"
+                className="block w-full py-2 text-left text-sm hover:bg-(--eixo-surface-soft)"
                 onClick={() => { setPickerOpen(false); setTab('socios'); setSelectedId(an.id); }}
               >
-                {animalLabel({ nome: an.nome, brinco: an.brinco || an.identificacao })} <span className="text-xs text-[var(--eixo-text-muted)]">{an.raca}</span>
+                {animalLabel({ nome: an.nome, brinco: an.brinco || an.identificacao })} <span className="text-xs text-(--eixo-text-muted)">{an.raca}</span>
               </button>
             ))}
           </div>
@@ -539,10 +539,10 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
 
       <input className={inputClass} placeholder="Buscar no plantel por nome, identificação, registro ou raça" value={search} onChange={(e) => setSearch(e.target.value)} />
 
-      {loading && !plantel && <p className="text-sm text-[var(--eixo-text-soft)]">Carregando plantel…</p>}
+      {loading && !plantel && <p className="text-sm text-(--eixo-text-soft)">Carregando plantel…</p>}
 
       {plantel && filteredItems.length === 0 && (
-        <div className={`${cardClass} text-sm text-[var(--eixo-text-soft)]`}>
+        <div className={`${cardClass} text-sm text-(--eixo-text-soft)`}>
           {plantel.items.length === 0
             ? 'Nenhum animal no plantel ainda. Animais com registro (P.O.) aparecem aqui sozinhos; os outros entram quando você adiciona um sócio, documento ou avaliação.'
             : 'Nenhum animal com esse filtro.'}
@@ -550,9 +550,9 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
       )}
 
       {filteredItems.length > 0 && (
-        <div className="overflow-x-auto rounded-2xl border border-[var(--eixo-border)] bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-(--eixo-border) bg-white">
           <table className="w-full min-w-[720px] text-sm">
-            <thead className="bg-[var(--eixo-surface-soft)] text-left text-xs text-[var(--eixo-text-soft)]">
+            <thead className="bg-(--eixo-surface-soft) text-left text-xs text-(--eixo-text-soft)">
               <tr>
                 <th className="px-3 py-2">Animal</th>
                 <th className="px-3 py-2">Registro</th>
@@ -563,12 +563,12 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
                 <th className="px-3 py-2 text-center">Docs</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--eixo-border)]">
+            <tbody className="divide-y divide-(--eixo-border)">
               {filteredItems.map((item) => (
-                <tr key={item.id} className="cursor-pointer hover:bg-[var(--eixo-surface-soft)]" onClick={() => { setTab('socios'); setSelectedId(item.id); }}>
+                <tr key={item.id} className="cursor-pointer hover:bg-(--eixo-surface-soft)" onClick={() => { setTab('socios'); setSelectedId(item.id); }}>
                   <td className="px-3 py-2">
-                    <p className="font-semibold text-[var(--eixo-text)]">{animalLabel(item)}{item.hasVideo && <span className="ml-1" title="Tem vídeo">▶</span>}</p>
-                    <p className="text-xs text-[var(--eixo-text-muted)]">{[item.raca, item.categoria, item.status !== 'VIVO' ? item.status.toLowerCase() : null].filter(Boolean).join(' · ')}</p>
+                    <p className="font-semibold text-(--eixo-text)">{animalLabel(item)}{item.hasVideo && <span className="ml-1" title="Tem vídeo">▶</span>}</p>
+                    <p className="text-xs text-(--eixo-text-muted)">{[item.raca, item.categoria, item.status !== 'VIVO' ? item.status.toLowerCase() : null].filter(Boolean).join(' · ')}</p>
                   </td>
                   <td className="px-3 py-2">{item.registro || '—'}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{brl(item.money.invested)}</td>

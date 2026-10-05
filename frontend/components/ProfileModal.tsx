@@ -343,32 +343,32 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4" onClick={onClose}>
             <div
-                className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[24px] border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-2xl"
+                className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) shadow-2xl"
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-6 py-4">
-                    <h2 className="font-brand text-lg font-bold text-[var(--eixo-text)]">Meu Perfil</h2>
+                <div className="flex items-center justify-between border-b border-(--eixo-border) px-6 py-4">
+                    <h2 className="font-brand text-lg font-bold text-(--eixo-text)">Meu Perfil</h2>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="flex h-8 w-8 items-center justify-center rounded-xl text-[var(--eixo-text-muted)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
+                        className="flex h-8 w-8 items-center justify-center rounded-xl text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text)"
                     >
                         <CloseIcon />
                     </button>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex flex-wrap gap-1 border-b border-[var(--eixo-border)] px-4 pt-4">
+                <div className="flex flex-wrap gap-1 border-b border-(--eixo-border) px-4 pt-4">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             type="button"
                             onClick={() => setActiveTab(tab.id)}
-                            className={`mb-[-1px] whitespace-nowrap rounded-t-xl px-2.5 py-2 text-sm font-semibold transition-colors ${
+                            className={`-mb-px whitespace-nowrap rounded-t-xl px-2.5 py-2 text-sm font-semibold transition-colors ${
                                 activeTab === tab.id
-                                    ? 'border-b-2 border-[var(--eixo-green)] text-[var(--eixo-text)]'
-                                    : 'text-[var(--eixo-text-muted)] hover:text-[var(--eixo-text)]'
+                                    ? 'border-b-2 border-(--eixo-green) text-(--eixo-text)'
+                                    : 'text-(--eixo-text-muted) hover:text-(--eixo-text)'
                             }`}
                         >
                             {tab.label}
@@ -383,30 +383,30 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                     {activeTab === 'dados' && (
                         <div className="space-y-4">
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Nome</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">Nome</label>
                                 <input
                                     type="text"
                                     value={name}
                                     onChange={e => { setName(e.target.value); setDadosSuccess(false); }}
-                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
+                                    className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) focus:ring-2 focus:ring-(--eixo-green)/30"
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">E-mail</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">E-mail</label>
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={e => { setEmail(e.target.value); setDadosSuccess(false); }}
-                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
+                                    className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) focus:ring-2 focus:ring-(--eixo-green)/30"
                                 />
                             </div>
-                            {dadosError && <p className="text-sm text-[var(--eixo-danger)]">{dadosError}</p>}
-                            {dadosSuccess && <p className="text-sm text-[var(--eixo-success)]">Dados atualizados com sucesso.</p>}
+                            {dadosError && <p className="text-sm text-(--eixo-danger)">{dadosError}</p>}
+                            {dadosSuccess && <p className="text-sm text-(--eixo-success)">Dados atualizados com sucesso.</p>}
                             <button
                                 type="button"
                                 onClick={handleSaveDados}
                                 disabled={dadosLoading}
-                                className="w-full rounded-xl bg-[#B6E23A] py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-[#a3d130] disabled:opacity-60"
+                                className="w-full rounded-xl bg-primary py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-primary-dark disabled:opacity-60"
                             >
                                 {dadosLoading ? 'Salvando...' : 'Salvar dados'}
                             </button>
@@ -417,12 +417,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                     {activeTab === 'celular' && (
                         <div className="space-y-4">
                             {user.phone && !phoneSuccess && (
-                                <p className="text-sm text-[var(--eixo-text-muted)]">
-                                    Celular atual: <span className="font-semibold text-[var(--eixo-text)]">{formatPhone(user.phone)}</span>
+                                <p className="text-sm text-(--eixo-text-muted)">
+                                    Celular atual: <span className="font-semibold text-(--eixo-text)">{formatPhone(user.phone)}</span>
                                 </p>
                             )}
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Novo celular</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">Novo celular</label>
                                 <div className="flex gap-2">
                                     <input
                                         type="tel"
@@ -430,14 +430,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                                         onChange={e => { setPhone(e.target.value); setPhoneSuccess(false); setPhoneError(null); }}
                                         placeholder="(00) 00000-0000"
                                         disabled={otpVerified || otpSent}
-                                        className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30 disabled:bg-[var(--eixo-surface-soft)]/70"
+                                        className="flex-1 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) focus:ring-2 focus:ring-(--eixo-green)/30 disabled:bg-(--eixo-surface-soft)/70"
                                     />
                                     {!otpVerified && (
                                         <button
                                             type="button"
                                             onClick={handleSendOtp}
                                             disabled={phoneLoading || phoneDigits.length < 10 || phoneDigits === currentPhoneDigits || otpSent || resendCooldown > 0}
-                                            className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-2.5 text-sm font-semibold text-[var(--eixo-text)] transition-colors hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50"
+                                            className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2.5 text-sm font-semibold text-(--eixo-text) transition-colors hover:bg-(--eixo-surface-soft) disabled:opacity-50"
                                         >
                                             {otpSent ? 'Enviado ✓' : resendCooldown > 0 ? `Aguarde ${resendCooldown}s` : 'Enviar SMS'}
                                         </button>
@@ -446,7 +446,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                             </div>
                             {otpSent && !otpVerified && (
                                 <div>
-                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Código SMS</label>
+                                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">Código SMS</label>
                                     <div className="flex gap-2">
                                         <input
                                             type="text"
@@ -454,13 +454,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                                             onChange={e => setOtpCode(e.target.value)}
                                             placeholder="000000"
                                             maxLength={6}
-                                            className="flex-1 rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
+                                            className="flex-1 rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) focus:ring-2 focus:ring-(--eixo-green)/30"
                                         />
                                         <button
                                             type="button"
                                             onClick={handleVerifyOtp}
                                             disabled={phoneLoading || otpCode.length < 4}
-                                            className="rounded-xl bg-[var(--eixo-text)] px-4 py-2.5 text-sm font-semibold text-[var(--eixo-surface)] transition-colors hover:bg-[var(--eixo-graphite)] disabled:opacity-50"
+                                            className="rounded-xl bg-(--eixo-text) px-4 py-2.5 text-sm font-semibold text-(--eixo-surface) transition-colors hover:bg-(--eixo-graphite) disabled:opacity-50"
                                         >
                                             Verificar
                                         </button>
@@ -470,14 +470,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                                             type="button"
                                             onClick={() => void handleResendOtp()}
                                             disabled={phoneLoading || resendCooldown > 0}
-                                            className="text-xs text-[var(--eixo-text-muted)] hover:underline disabled:cursor-not-allowed disabled:opacity-55 disabled:no-underline"
+                                            className="text-xs text-(--eixo-text-muted) hover:underline disabled:cursor-not-allowed disabled:opacity-55 disabled:no-underline"
                                         >
                                             {resendCooldown > 0 ? `Reenviar em ${resendCooldown}s` : 'Não recebi — reenviar'}
                                         </button>
                                         <button
                                             type="button"
                                             onClick={handleEditPhone}
-                                            className="text-xs text-[var(--eixo-text-muted)] hover:underline"
+                                            className="text-xs text-(--eixo-text-muted) hover:underline"
                                         >
                                             Editar número
                                         </button>
@@ -485,16 +485,16 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                                 </div>
                             )}
                             {otpVerified && !phoneSuccess && (
-                                <p className="text-sm font-medium text-[var(--eixo-success)]">✓ Número verificado. Clique em salvar.</p>
+                                <p className="text-sm font-medium text-(--eixo-success)">✓ Número verificado. Clique em salvar.</p>
                             )}
-                            {phoneError && <p className="text-sm text-[var(--eixo-danger)]">{phoneError}</p>}
-                            {phoneSuccess && <p className="text-sm text-[var(--eixo-success)]">Celular atualizado com sucesso.</p>}
+                            {phoneError && <p className="text-sm text-(--eixo-danger)">{phoneError}</p>}
+                            {phoneSuccess && <p className="text-sm text-(--eixo-success)">Celular atualizado com sucesso.</p>}
                             {otpVerified && !phoneSuccess && (
                                 <button
                                     type="button"
                                     onClick={handleSavePhone}
                                     disabled={phoneLoading}
-                                    className="w-full rounded-xl bg-[#B6E23A] py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-[#a3d130] disabled:opacity-60"
+                                    className="w-full rounded-xl bg-primary py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-primary-dark disabled:opacity-60"
                                 >
                                     {phoneLoading ? 'Salvando...' : 'Salvar celular'}
                                 </button>
@@ -506,39 +506,39 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                     {activeTab === 'senha' && (
                         <div className="space-y-4">
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Senha atual</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">Senha atual</label>
                                 <input
                                     type="password"
                                     value={currentPassword}
                                     onChange={e => { setCurrentPassword(e.target.value); setSenhaSuccess(false); }}
-                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
+                                    className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) focus:ring-2 focus:ring-(--eixo-green)/30"
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Nova senha</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">Nova senha</label>
                                 <input
                                     type="password"
                                     value={newPassword}
                                     onChange={e => { setNewPassword(e.target.value); setSenhaSuccess(false); }}
-                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
+                                    className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) focus:ring-2 focus:ring-(--eixo-green)/30"
                                 />
                             </div>
                             <div>
-                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">Confirmar nova senha</label>
+                                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">Confirmar nova senha</label>
                                 <input
                                     type="password"
                                     value={confirmPassword}
                                     onChange={e => { setConfirmPassword(e.target.value); setSenhaSuccess(false); }}
-                                    className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
+                                    className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) focus:ring-2 focus:ring-(--eixo-green)/30"
                                 />
                             </div>
-                            {senhaError && <p className="text-sm text-[var(--eixo-danger)]">{senhaError}</p>}
-                            {senhaSuccess && <p className="text-sm text-[var(--eixo-success)]">Senha atualizada com sucesso.</p>}
+                            {senhaError && <p className="text-sm text-(--eixo-danger)">{senhaError}</p>}
+                            {senhaSuccess && <p className="text-sm text-(--eixo-success)">Senha atualizada com sucesso.</p>}
                             <button
                                 type="button"
                                 onClick={handleSaveSenha}
                                 disabled={senhaLoading}
-                                className="w-full rounded-xl bg-[#B6E23A] py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-[#a3d130] disabled:opacity-60"
+                                className="w-full rounded-xl bg-primary py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-primary-dark disabled:opacity-60"
                             >
                                 {senhaLoading ? 'Salvando...' : 'Atualizar senha'}
                             </button>
@@ -548,7 +548,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                     {/* ── Foto ── */}
                     {activeTab === 'foto' && (
                         <div className="flex flex-col items-center gap-6">
-                            <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-[var(--eixo-border)] bg-[var(--eixo-text)] text-2xl font-bold text-[var(--eixo-surface)]">
+                            <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-(--eixo-border) bg-(--eixo-text) text-2xl font-bold text-(--eixo-surface)">
                                 {avatarPreview ? (
                                     <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
                                 ) : (
@@ -567,69 +567,69 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, onClose, onUpdated })
                                     type="button"
                                     onClick={() => fileInputRef.current?.click()}
                                     disabled={fotoLoading}
-                                    className="rounded-xl bg-[#B6E23A] px-6 py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-[#a3d130] disabled:opacity-60"
+                                    className="rounded-xl bg-primary px-6 py-2.5 text-sm font-bold text-[#1a1a1a] hover:bg-primary-dark disabled:opacity-60"
                                 >
                                     {fotoLoading ? 'Enviando...' : 'Escolher foto'}
                                 </button>
-                                <p className="mt-2 text-xs text-[var(--eixo-text-muted)]">JPEG, PNG ou WebP — máximo 5 MB</p>
+                                <p className="mt-2 text-xs text-(--eixo-text-muted)">JPEG, PNG ou WebP — máximo 5 MB</p>
                             </div>
-                            {fotoError && <p className="text-sm text-[var(--eixo-danger)]">{fotoError}</p>}
-                            {fotoSuccess && <p className="text-sm text-[var(--eixo-success)]">Foto atualizada com sucesso.</p>}
+                            {fotoError && <p className="text-sm text-(--eixo-danger)">{fotoError}</p>}
+                            {fotoSuccess && <p className="text-sm text-(--eixo-success)">Foto atualizada com sucesso.</p>}
                         </div>
                     )}
 
                     {activeTab === 'encerramento' && (
                         <div className="space-y-4">
                             <div>
-                                <h3 className="text-base font-bold text-[var(--eixo-text)]">Pedido de encerramento da conta EIXO</h3>
-                                <p className="mt-1 text-sm text-[var(--eixo-text-muted)]">
+                                <h3 className="text-base font-bold text-(--eixo-text)">Pedido de encerramento da conta EIXO</h3>
+                                <p className="mt-1 text-sm text-(--eixo-text-muted)">
                                     O pedido gera um protocolo para análise. Seu acesso e seus dados continuam ativos nesta etapa.
                                 </p>
                             </div>
                             <fieldset className="space-y-2">
-                                <legend className="text-sm font-semibold text-[var(--eixo-text)]">O que deseja encerrar?</legend>
-                                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--eixo-border)] p-3 text-sm text-[var(--eixo-text)]">
+                                <legend className="text-sm font-semibold text-(--eixo-text)">O que deseja encerrar?</legend>
+                                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-(--eixo-border) p-3 text-sm text-(--eixo-text)">
                                     <input type="radio" name="closure-type" value="LOGIN" checked={closureType === 'LOGIN'} onChange={() => { setClosureType('LOGIN'); setClosureError(null); }} className="mt-1" />
-                                    <span><strong>Meu login</strong><span className="block text-[var(--eixo-text-muted)]">Meu acesso pessoal ao EIXO.</span></span>
+                                    <span><strong>Meu login</strong><span className="block text-(--eixo-text-muted)">Meu acesso pessoal ao EIXO.</span></span>
                                 </label>
                                 {isOwner && (
-                                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-[var(--eixo-border)] p-3 text-sm text-[var(--eixo-text)]">
+                                    <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-(--eixo-border) p-3 text-sm text-(--eixo-text)">
                                         <input type="radio" name="closure-type" value="ORGANIZATION" checked={closureType === 'ORGANIZATION'} onChange={() => { setClosureType('ORGANIZATION'); setClosureError(null); }} className="mt-1" />
-                                        <span><strong>Organização</strong><span className="block text-[var(--eixo-text-muted)]">Inclui a análise de fazendas, rebanho, financeiro e cobrança.</span></span>
+                                        <span><strong>Organização</strong><span className="block text-(--eixo-text-muted)">Inclui a análise de fazendas, rebanho, financeiro e cobrança.</span></span>
                                     </label>
                                 )}
                             </fieldset>
                             {closureLoading ? (
-                                <p className="text-sm text-[var(--eixo-text-muted)]">Consultando pedidos...</p>
+                                <p className="text-sm text-(--eixo-text-muted)">Consultando pedidos...</p>
                             ) : openClosureRequest ? (
-                                <div role="status" className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] p-4 text-sm text-[var(--eixo-text)]">
+                                <div role="status" className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-4 text-sm text-(--eixo-text)">
                                     <p className="font-semibold">Pedido em análise</p>
                                     <p className="mt-1">Protocolo: <strong className="break-all">{openClosureRequest.protocol}</strong></p>
-                                    <p className="mt-1 text-[var(--eixo-text-muted)]">Registrado em {new Date(openClosureRequest.createdAt).toLocaleString('pt-BR')}.</p>
+                                    <p className="mt-1 text-(--eixo-text-muted)">Registrado em {new Date(openClosureRequest.createdAt).toLocaleString('pt-BR')}.</p>
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                    <p className="text-sm text-[var(--eixo-text-muted)]">Para confirmar o pedido, digite o e-mail da sua conta.</p>
-                                    <label htmlFor="closure-confirmation-email" className="block text-xs font-semibold uppercase tracking-wide text-[var(--eixo-text-muted)]">E-mail de confirmação</label>
+                                    <p className="text-sm text-(--eixo-text-muted)">Para confirmar o pedido, digite o e-mail da sua conta.</p>
+                                    <label htmlFor="closure-confirmation-email" className="block text-xs font-semibold uppercase tracking-wide text-(--eixo-text-muted)">E-mail de confirmação</label>
                                     <input
                                         id="closure-confirmation-email"
                                         type="email"
                                         value={closureEmail}
                                         onChange={(event) => setClosureEmail(event.target.value)}
                                         autoComplete="email"
-                                        className="w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] px-4 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)] focus:ring-2 focus:ring-[var(--eixo-green)]/30"
+                                        className="w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green) focus:ring-2 focus:ring-(--eixo-green)/30"
                                     />
                                     <button
                                         type="button"
                                         onClick={handleRequestClosure}
                                         disabled={closureSubmitting || closureLoading || closureEmail.trim().toLowerCase() !== user.email.toLowerCase()}
-                                        className="w-full rounded-xl bg-[var(--eixo-text)] py-2.5 text-sm font-semibold text-[var(--eixo-surface)] disabled:opacity-60"
+                                        className="w-full rounded-xl bg-(--eixo-text) py-2.5 text-sm font-semibold text-(--eixo-surface) disabled:opacity-60"
                                     >
                                         {closureSubmitting ? 'Registrando...' : 'Registrar pedido de encerramento'}
                                     </button>
                                 </div>
                             )}
-                            {closureError && <p role="alert" className="text-sm text-[var(--eixo-danger)]">{closureError}</p>}
+                            {closureError && <p role="alert" className="text-sm text-(--eixo-danger)">{closureError}</p>}
                         </div>
                     )}
                 </div>

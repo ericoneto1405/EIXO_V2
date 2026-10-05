@@ -133,13 +133,13 @@ const StatusPopover: React.FC<StatusPopoverProps> = ({ state, pos, onClose, popo
         <div
             ref={popoverRef}
             style={{ top: adjustedTop, left: pos.left }}
-            className="fixed z-50 w-72 rounded-3xl border-2 border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5 shadow-2xl"
+            className="fixed z-50 w-72 rounded-3xl border-2 border-(--eixo-border) bg-(--eixo-surface) p-5 shadow-2xl"
         >
             {/* Botão fechar */}
             <button
                 type="button"
                 onClick={onClose}
-                className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full text-[var(--eixo-text-soft)] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text)]"
+                className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full text-(--eixo-text-soft) transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text)"
                 aria-label="Fechar"
             >
                 <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -150,29 +150,29 @@ const StatusPopover: React.FC<StatusPopoverProps> = ({ state, pos, onClose, popo
             {/* Badge do estado */}
             <div className={`mb-3 inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
                 state.type === 'plan_locked'
-                    ? 'border-[var(--eixo-border)] bg-[var(--eixo-green-soft)] text-[var(--eixo-graphite)]'
+                    ? 'border-(--eixo-border) bg-(--eixo-green-soft) text-(--eixo-graphite)'
                     : state.type === 'coming_soon'
                         ? 'border-[#4a4944] bg-[rgba(255,255,255,0.04)] text-[#b9b3a8]'
-                        : 'border-[var(--eixo-border)] bg-[rgba(255,250,241,0.78)] text-[var(--eixo-graphite)]'
+                        : 'border-(--eixo-border) bg-[rgba(255,250,241,0.78)] text-(--eixo-graphite)'
             }`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${
                     state.type === 'coming_soon'
                         ? 'bg-[#b9b3a8]'
-                        : 'bg-[var(--eixo-green)]'
+                        : 'bg-(--eixo-green)'
                 }`} />
                 {badgeLabel}
             </div>
 
             {/* Nome do módulo */}
-            <h3 className="pr-6 font-brand text-[15px] font-extrabold leading-snug text-[var(--eixo-text)]">
+            <h3 className="pr-6 font-brand text-[15px] font-extrabold leading-snug text-(--eixo-text)">
                 {state.title}
             </h3>
 
-            <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-[var(--eixo-text-soft)]">
+            <p className="mt-1 text-xs font-medium uppercase tracking-[0.12em] text-(--eixo-text-soft)">
                 {state.itemLabel}
             </p>
 
-            <p className="mt-2 text-sm leading-relaxed text-[var(--eixo-text-muted)]">{state.description}</p>
+            <p className="mt-2 text-sm leading-relaxed text-(--eixo-text-muted)">{state.description}</p>
 
             {/* CTA */}
             <button
@@ -189,12 +189,12 @@ const StatusPopover: React.FC<StatusPopoverProps> = ({ state, pos, onClose, popo
                     }
                     onClose();
                 }}
-                className={`mt-3 w-full rounded-xl py-2.5 text-sm font-semibold transition-colors active:translate-y-[1px] ${
+                className={`mt-3 w-full rounded-xl py-2.5 text-sm font-semibold transition-colors active:translate-y-px ${
                     state.type === 'coming_soon'
-                        ? 'border border-[var(--eixo-border)] bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] hover:bg-[var(--eixo-bg)]'
+                        ? 'border border-(--eixo-border) bg-(--eixo-surface-soft) text-(--eixo-text) hover:bg-(--eixo-bg)'
                         : state.type === 'needs_setup'
-                            ? 'bg-[var(--eixo-surface-soft)] text-[var(--eixo-text)] hover:bg-[var(--eixo-bg)]'
-                            : 'bg-[var(--eixo-green)] text-[#1a1a1a] hover:bg-[var(--eixo-green-dark)]'
+                            ? 'bg-(--eixo-surface-soft) text-(--eixo-text) hover:bg-(--eixo-bg)'
+                            : 'bg-(--eixo-green) text-[#1a1a1a] hover:bg-(--eixo-green-dark)'
                 }`}
             >
                 {state.cta}
@@ -476,7 +476,7 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
             ? ''
             :
         isActive
-            ? 'border border-transparent bg-[var(--eixo-green)] text-[#1a1a1a] font-bold'
+            ? 'border border-transparent bg-(--eixo-green) text-[#1a1a1a] font-bold'
             : 'border border-transparent text-white/75 hover:translate-y-[2px] hover:border-transparent hover:bg-white/8 hover:text-white active:bg-white/8'
     }`;
 
@@ -659,7 +659,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                 }`}
             >
                 <div
-                    className="flex h-full flex-col rounded-[30px] border border-[var(--eixo-graphite)]"
+                    className="flex h-full flex-col rounded-[30px] border border-(--eixo-graphite)"
                     style={{ backgroundColor: 'var(--eixo-text)' }}
                 >
                 <div className="px-5 pb-5 pt-4">
@@ -667,7 +667,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                         <button
                             type="button"
                             onClick={() => setIsCollapsed((prev) => !prev)}
-                            className="rounded-md border border-[var(--eixo-border-strong)]/20 bg-[var(--eixo-graphite)] p-1.5 text-[var(--eixo-text-soft)] transition-colors hover:bg-[var(--eixo-graphite)] hover:text-white"
+                            className="rounded-md border border-(--eixo-border-strong)/20 bg-(--eixo-graphite) p-1.5 text-(--eixo-text-soft) transition-colors hover:bg-(--eixo-graphite) hover:text-white"
                             aria-label={isCollapsed ? 'Expandir menu' : 'Recolher menu'}
                         >
                             <SidebarPanelIcon collapsed={isCollapsed} />
@@ -677,7 +677,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                         {!isCollapsed && (
                             <div className="flex min-h-[108px] w-[88%] flex-col items-center justify-center">
                                 <img src="/logo_eixo_official.svg" alt="EIXO" className="h-auto w-full max-w-[236px]" />
-                                <p className="mt-2 w-full max-w-[236px] whitespace-nowrap text-center text-[9px] font-semibold uppercase tracking-[0.06em] text-[var(--eixo-border-strong)]">
+                                <p className="mt-2 w-full max-w-[236px] whitespace-nowrap text-center text-[9px] font-semibold uppercase tracking-[0.06em] text-(--eixo-border-strong)">
                                     Gestão para Pecuária de Corte
                                 </p>
                             </div>
@@ -689,7 +689,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, setActiveItem, allowedMod
                     {navSectionsWithSubItems.map((section, sectionIdx) => (
                         <div
                             key={section.sectionLabel}
-                            className={sectionIdx > 0 ? 'mt-4 border-t border-[var(--eixo-graphite)] pt-4' : ''}
+                            className={sectionIdx > 0 ? 'mt-4 border-t border-(--eixo-graphite) pt-4' : ''}
                         >
                             {!isCollapsed && (
                                 <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#57534e]">

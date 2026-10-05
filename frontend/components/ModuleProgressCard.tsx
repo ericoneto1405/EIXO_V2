@@ -1,342 +1,65 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { buildApiUrl } from '../api';
+import React, { useCallback } from 'react';
+import { listAnimals } from '../adapters/herdApi';
+import { listTransactions } from '../adapters/financialApi';
+import { listFieldOccurrences } from '../adapters/fieldOccurrencesApi';
+import ProgressGuide, { GuideStep, guideButtonClass } from './ProgressGuide';
+import { FINANCIAL_RESULT_EVENT, financialResultKey, GuideNavigation, hasFarmWeighings, readFlag, useGuideCollapsed, useGuideData } from './progressGuideState';
 
 interface ModuleProgressCardProps {
     activeView: string;
+    userId: string;
     farmId: string | null;
-    onFinanceAction?: (action: 'SAIDA' | 'ENTRADA' | 'RESULTADO') => void;
+    farmName?: string | null;
+    canViewFinancialResult: boolean;
+    canEditAnimals: boolean;
+    canNavigateHerd: boolean;
+    onNavigate: GuideNavigation;
+    onFinanceAction: (action: 'SAIDA' | 'ENTRADA' | 'RESULTADO') => void;
 }
+const supportedViews = ['Nutrição', 'Financeiro', 'Ocorrências do EIXO Campo', 'Eixo Genetics', 'Reprodução', 'Eixo Acasalamento'];
 
-interface MetricsState {
-    animals: number;
-    weighings: number;
-    transactions: number;
-    occurrences: number;
-    poAnimals: number;
-    expenses: number;
-    incomes: number;
-    financialResultViewed: boolean;
-}
-
-interface StepItem {
-    title: string;
-    description: string;
-    done: boolean;
-}
-
-// ─── Persistência de módulos concluídos ───────────────────────────────────────
-const moduleDoneKey = (farmId: string, view: string) => `eixo_module_done_${farmId}_${view.replace(/\s/g, '_')}`;
-const isModuleDone = (farmId: string, view: string) => { try { return localStorage.getItem(moduleDoneKey(farmId, view)) === '1'; } catch { return false; } };
-const markModuleDone = (farmId: string, view: string) => { try { localStorage.setItem(moduleDoneKey(farmId, view), '1'); } catch { /* silencioso */ } };
-
-// ─── Cache de métricas (30s TTL por farmId+view) ──────────────────────────────
-const metricsCache = new Map<string, { data: MetricsState; ts: number }>();
-const CACHE_TTL_MS = 30_000;
-const FINANCIAL_PROGRESS_EVENT = 'eixo:financial-transactions-changed';
-const financialResultViewedKey = (farmId: string) => `eixo_financial_result_viewed_${farmId}`;
-const hasViewedFinancialResult = (farmId: string) => {
-    try { return localStorage.getItem(financialResultViewedKey(farmId)) === '1'; } catch { return false; }
-};
-const markFinancialResultViewed = (farmId: string) => {
-    try { localStorage.setItem(financialResultViewedKey(farmId), '1'); } catch { /* silencioso */ }
-};
-
-const getCached = (key: string): MetricsState | null => {
-    const entry = metricsCache.get(key);
-    if (!entry) return null;
-    if (Date.now() - entry.ts > CACHE_TTL_MS) { metricsCache.delete(key); return null; }
-    return entry.data;
-};
-
-const setCache = (key: string, data: MetricsState) => {
-    metricsCache.set(key, { data, ts: Date.now() });
-};
-
-// ─── Config por módulo ────────────────────────────────────────────────────────
-
-const cardConfig = (activeView: string, hasFarm: boolean, metrics: MetricsState): { title: string; steps: StepItem[] } | null => {
-    switch (activeView) {
-        case 'Nutrição':
-            return {
-                title: 'Progresso de Implantação — Nutrição',
-                steps: [
-                    { title: 'Selecionar fazenda', description: 'Defina a fazenda ativa para trabalhar no módulo.', done: hasFarm },
-                    { title: 'Ter animais cadastrados', description: 'Base mínima para planejamento e execução nutricional.', done: metrics.animals > 0 },
-                    { title: 'Registrar a primeira pesagem', description: 'Pesagem inicial para apoiar evolução de desempenho.', done: metrics.weighings > 0 },
-                ],
-            };
-        case 'Financeiro':
-            return {
-                title: 'Progresso de Implantação — Financeiro',
-                steps: [
-                    { title: 'Selecionar fazenda', description: 'Ative a fazenda para controlar as movimentações.', done: hasFarm },
-                    { title: 'Registrar uma despesa', description: 'Comece registrando um custo real da fazenda.', done: metrics.expenses > 0 },
-                    { title: 'Registrar uma receita', description: 'Registre uma entrada para compor o resultado da operação.', done: metrics.incomes > 0 },
-                    { title: 'Conferir o resultado do mês', description: 'Veja a leitura de receitas, despesas e resultado no DRE.', done: metrics.financialResultViewed },
-                ],
-            };
-        case 'Ocorrências do EIXO Campo':
-            return {
-                title: 'Progresso de Implantação — Ocorrências',
-                steps: [
-                    { title: 'Selecionar fazenda', description: 'Defina o escopo para receber ocorrências do campo.', done: hasFarm },
-                    { title: 'Receber a primeira ocorrência', description: 'Integração inicial do app de campo com o web.', done: metrics.occurrences > 0 },
-                    { title: 'Iniciar rotina de análise', description: 'Classifique e trate os registros recebidos.', done: metrics.occurrences > 0 },
-                ],
-            };
-        case 'Eixo Genetics':
-        case 'Reprodução':
-        case 'Eixo Acasalamento':
-            return {
-                title: 'Progresso de Implantação — Genetics',
-                steps: [
-                    { title: 'Selecionar fazenda', description: 'Ative a fazenda para iniciar o controle genético.', done: hasFarm },
-                    { title: 'Cadastrar rebanho', description: 'Inclua os animais da fazenda no estoque único.', done: metrics.animals > 0 },
-                    { title: 'Classificar animais P.O.', description: 'Marque como P.O. os animais registrados quando existirem.', done: metrics.poAnimals > 0 },
-                ],
-            };
-        default:
-            return null;
-    }
-};
-
-// ─── CTA por módulo (próximo passo pendente) ──────────────────────────────────
-
-const getNextCta = (activeView: string, steps: StepItem[]): string | null => {
-    const nextPending = steps.find((s) => !s.done);
-    if (!nextPending) return null;
-
-    const ctaMap: Record<string, string> = {
-        'Selecionar fazenda': 'Selecione uma fazenda no menu superior para continuar.',
-        'Ter animais cadastrados': 'Acesse Rebanho Comercial e cadastre ou importe animais.',
-        'Registrar a primeira pesagem': 'Acesse Rebanho Comercial → Pesagens para registrar.',
-        'Registrar uma despesa': 'Registre uma saída real da fazenda.',
-        'Registrar uma receita': 'Registre uma entrada da operação.',
-        'Conferir o resultado do mês': 'Abra o DRE para analisar receitas, despesas e resultado.',
-        'Receber a primeira ocorrência': 'Abra o EIXO Campo no celular e registre uma ocorrência.',
-        'Iniciar rotina de análise': 'Classifique as ocorrências recebidas nesta tela.',
-        'Cadastrar rebanho': 'Acesse Manejo do Rebanho e cadastre ou importe os animais.',
-        'Classificar animais P.O.': 'Na aba Animais, use o campo Tipo de cadastro para marcar P.O. quando houver registro.',
-    };
-
-    return ctaMap[nextPending.title] ?? null;
-};
-
-// ─── Componente ───────────────────────────────────────────────────────────────
-
-const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, farmId, onFinanceAction }) => {
-    const [loading, setLoading] = useState(false);
-    const [visible, setVisible] = useState(true);
-    const [metrics, setMetrics] = useState<MetricsState>({
-        animals: 0,
-        weighings: 0,
-        transactions: 0,
-        occurrences: 0,
-        poAnimals: 0,
-        expenses: 0,
-        incomes: 0,
-        financialResultViewed: false,
-    });
-
-    const hasFarm = Boolean(farmId);
-    const config = cardConfig(activeView, hasFarm, metrics);
-    const prevViewRef = useRef<string>('');
-    const [refreshTick, setRefreshTick] = useState(0);
-
-    useEffect(() => {
-        // Resetar visibilidade ao trocar de módulo (exceto se já concluído)
-        if (prevViewRef.current !== activeView) {
-            prevViewRef.current = activeView;
-            if (!farmId || !isModuleDone(farmId, activeView)) {
-                setVisible(true);
-            }
+const ModuleProgressCard: React.FC<ModuleProgressCardProps> = ({ activeView, userId, farmId, farmName, canViewFinancialResult, canEditAnimals, canNavigateHerd, onNavigate, onFinanceAction }) => {
+    const supported = supportedViews.includes(activeView);
+    const genetics = ['Eixo Genetics', 'Reprodução', 'Eixo Acasalamento'].includes(activeView);
+    const [collapsed, setCollapsed] = useGuideCollapsed(userId, farmId, activeView);
+    const context = JSON.stringify([userId, farmId, activeView, canViewFinancialResult]);
+    const load = useCallback(async () => {
+        const empty = { animals: false, weighings: false, expenses: false, incomes: false, occurrences: false, resultViewed: false };
+        if (!supported || !farmId) return empty;
+        if (activeView === 'Financeiro') {
+            const transactions = await listTransactions(farmId);
+            return { ...empty, expenses: transactions.some((item) => item.type === 'SAIDA'), incomes: transactions.some((item) => item.type === 'ENTRADA'), resultViewed: readFlag(financialResultKey(userId, farmId)) };
         }
-
-        // Modulo ja concluido: o cartao nao aparece mais, entao nao ha por que
-        // buscar nada de novo (antes buscava sempre, so escondia na tela).
-        if (!config || !farmId || isModuleDone(farmId, activeView)) return;
-
-        const cacheKey = `${activeView}::${farmId}`;
-        const cached = getCached(cacheKey);
-        if (cached) {
-            setMetrics(cached);
-            return;
+        if (activeView === 'Ocorrências do EIXO Campo') {
+            const occurrences = await listFieldOccurrences({ farmId, limit: 1 });
+            return { ...empty, occurrences: occurrences.some((item) => item.farmId === farmId) };
         }
-
-        // Cada modulo so busca o que o proprio checklist dele usa - antes
-        // buscava sempre os 4 endpoints, mesmo os que aquele modulo nunca le
-        // (ex: Financeiro baixando a lista inteira de animais da fazenda).
-        const needsAnimals = activeView === 'Nutrição' || activeView === 'Eixo Genetics' || activeView === 'Reprodução' || activeView === 'Eixo Acasalamento';
-        const needsWeighings = activeView === 'Nutrição';
-        const needsTransactions = activeView === 'Financeiro';
-        const needsOccurrences = activeView === 'Ocorrências do EIXO Campo';
-
-        let isActive = true;
-        const run = async () => {
-            setLoading(true);
-            try {
-                const [animalsRes, weighingsRes, transactionsRes, occurrencesRes] = await Promise.all([
-                    needsAnimals ? fetch(buildApiUrl(`/animals?farmId=${farmId}`), { credentials: 'include' }) : null,
-                    needsWeighings ? fetch(buildApiUrl(`/farms/${farmId}/weighings?limit=1`), { credentials: 'include' }) : null,
-                    needsTransactions ? fetch(buildApiUrl(`/financial/transactions?farmId=${farmId}&limit=3`), { credentials: 'include' }) : null,
-                    needsOccurrences ? fetch(buildApiUrl(`/field-occurrences?farmId=${farmId}&limit=1`), { credentials: 'include' }) : null,
-                ]);
-                const [animalsData, weighingsData, transactionsData, occurrencesData] = await Promise.all([
-                    animalsRes ? animalsRes.json().catch(() => ({})) : Promise.resolve({} as any),
-                    weighingsRes ? weighingsRes.json().catch(() => ({})) : Promise.resolve({} as any),
-                    transactionsRes ? transactionsRes.json().catch(() => ({})) : Promise.resolve({} as any),
-                    occurrencesRes ? occurrencesRes.json().catch(() => ({})) : Promise.resolve({} as any),
-                ]);
-                const animals = Array.isArray(animalsData?.animals) ? animalsData.animals : [];
-                const transactions = Array.isArray(transactionsData?.transactions) ? transactionsData.transactions : [];
-                if (!isActive) return;
-                const data: MetricsState = {
-                    animals: Number(animalsData?.total ?? animalsData?.animals?.length ?? 0),
-                    weighings: Number(weighingsData?.total ?? weighingsData?.weighings?.length ?? 0),
-                    transactions: transactions.length,
-                    occurrences: Number(occurrencesData?.total ?? occurrencesData?.items?.length ?? occurrencesData?.occurrences?.length ?? 0),
-                    poAnimals: animals.filter((animal: any) => animal?.tipoCadastro === 'PO').length,
-                    expenses: transactions.filter((transaction: any) => transaction?.type === 'SAIDA').length,
-                    incomes: transactions.filter((transaction: any) => transaction?.type === 'ENTRADA').length,
-                    financialResultViewed: hasViewedFinancialResult(farmId),
-                };
-                setMetrics(data);
-                setCache(cacheKey, data);
-            } finally {
-                if (isActive) setLoading(false);
-            }
-        };
-        void run();
-        return () => { isActive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeView, farmId, refreshTick]);
-
-    useEffect(() => {
-        const handleFinancialChange = () => {
-            if (activeView !== 'Financeiro' || !farmId) return;
-            metricsCache.delete(`${activeView}::${farmId}`);
-            setRefreshTick((current) => current + 1);
-        };
-        window.addEventListener(FINANCIAL_PROGRESS_EVENT, handleFinancialChange);
-        return () => {
-            window.removeEventListener(FINANCIAL_PROGRESS_EVENT, handleFinancialChange);
-        };
-    }, [activeView, farmId]);
-
-    useEffect(() => {
-        if (!config || !visible) return;
-        const completedCount = config.steps.filter((step) => step.done).length;
-        const doneNow = completedCount === config.steps.length;
-        if (!doneNow) return;
-        const timeoutId = window.setTimeout(() => { if (farmId) markModuleDone(farmId, activeView); setVisible(false); }, 1500);
-        return () => window.clearTimeout(timeoutId);
-    }, [config, visible]);
-
-    if (!config || !visible) return null;
-
-    const completedCount = config.steps.filter((step) => step.done).length;
-    const allDone = completedCount === config.steps.length;
-    const progressPct = Math.round((completedCount / config.steps.length) * 100);
-    const ctaHint = !allDone ? getNextCta(activeView, config.steps) : null;
-    const nextFinanceStep = activeView === 'Financeiro' ? config.steps.find((step) => !step.done)?.title : null;
-
-    const handleFinanceAction = () => {
-        if (!farmId || !nextFinanceStep) return;
-        if (nextFinanceStep === 'Conferir o resultado do mês') {
-            markFinancialResultViewed(farmId);
-            metricsCache.delete(`${activeView}::${farmId}`);
-            setRefreshTick((current) => current + 1);
-            onFinanceAction?.('RESULTADO');
-            return;
-        }
-        onFinanceAction?.(nextFinanceStep === 'Registrar uma despesa' ? 'SAIDA' : 'ENTRADA');
-    };
-
-    return (
-        <div className="mb-6 rounded-2xl border-2 border-[#B6E23A] bg-[var(--eixo-surface)] shadow-sm transition-all duration-200 hover:shadow-md">
-            {/* Cabeçalho */}
-            <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-4">
-                <div>
-                    {allDone ? (
-                        <p className="text-sm font-semibold text-[var(--eixo-text)]">
-                            Módulo configurado! Tudo pronto para uso. 🎉
-                        </p>
-                    ) : (
-                        <>
-                            <p className="text-sm font-semibold text-[var(--eixo-text)]">
-                                {config.title} — {completedCount} de {config.steps.length}
-                            </p>
-                            <p className="text-xs text-[var(--eixo-text-muted)]">Acompanhe a evolução mínima para uso completo deste módulo.</p>
-                        </>
-                    )}
-                </div>
-                <button
-                    onClick={() => { if (farmId) markModuleDone(farmId, activeView); setVisible(false); }}
-                    className="flex h-7 w-7 items-center justify-center rounded-full text-[#a8a29e] transition-colors hover:bg-[var(--eixo-surface-soft)] hover:text-[var(--eixo-text-muted)]"
-                    aria-label="Fechar"
-                >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-
-            {/* Barra de progresso */}
-            <div className="h-1 bg-[var(--eixo-surface-soft)]">
-                <div className="h-1 rounded-full bg-[var(--eixo-green)] transition-all duration-700" style={{ width: `${progressPct}%` }} />
-            </div>
-
-            {/* Passos */}
-            {loading ? (
-                <div className="px-5 py-4 text-sm text-[#a8a29e]">Verificando progresso do módulo…</div>
-            ) : (
-                <div className="divide-y divide-[var(--eixo-surface-soft)] px-5">
-                    {config.steps.map((step, index) => (
-                        <div key={step.title} className="flex items-center gap-4 py-4">
-                            <div className="flex-shrink-0">
-                                {step.done ? (
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--eixo-green)]">
-                                        <svg className="h-4 w-4 text-[#1a1a1a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    </div>
-                                ) : (
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-[var(--eixo-border)] bg-[var(--eixo-surface)] text-xs font-bold text-[var(--eixo-text-muted)]">
-                                        {index + 1}
-                                    </div>
-                                )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className={`text-sm font-semibold ${step.done ? 'text-[#a8a29e]' : 'text-[var(--eixo-text)]'}`}>
-                                    {step.title}
-                                </p>
-                                <p className="mt-0.5 text-xs text-[#a8a29e]">{step.description}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* CTA — próximo passo */}
-            {!loading && ctaHint && (
-                <div className="border-t border-[var(--eixo-border)] px-5 py-3">
-                    <p className="text-xs text-[var(--eixo-text-muted)]">
-                        <span className="font-semibold text-[var(--eixo-text)]">Próximo passo: </span>
-                        {ctaHint}
-                    </p>
-                    {activeView === 'Financeiro' && (
-                        <button type="button" onClick={handleFinanceAction} className="mt-3 rounded-xl border-2 border-[#5a8c00] bg-[#B6E23A] px-3.5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130]">
-                            {nextFinanceStep === 'Conferir o resultado do mês'
-                                ? 'Ver resultado do mês'
-                                : nextFinanceStep === 'Registrar uma despesa'
-                                    ? 'Registrar despesa'
-                                    : 'Registrar receita'}
-                        </button>
-                    )}
-                </div>
-            )}
-        </div>
+        const [animals, weighings] = await Promise.all([listAnimals(farmId, 'COMMERCIAL'), activeView === 'Nutrição' ? hasFarmWeighings(farmId) : false]);
+        return { ...empty, animals: animals.length > 0, weighings };
+    }, [supported, farmId, activeView, userId]);
+    const { data, loading, error, retry } = useGuideData(context, load, ['eixo:herd-onboarding-progress-changed', 'eixo:financial-transactions-changed', FINANCIAL_RESULT_EVENT]);
+    if (!supported) return null;
+    const steps: GuideStep[] = [{ title: 'Selecionar fazenda', description: 'Defina a fazenda ativa para continuar.', done: Boolean(farmId) }];
+    if (activeView === 'Financeiro') steps.push(
+        { title: 'Registrar uma despesa', description: 'Comece registrando um custo real da fazenda.', done: Boolean(data?.expenses) },
+        { title: 'Registrar uma receita', description: 'Registre uma entrada da operação.', done: Boolean(data?.incomes) },
+        { title: 'Conferir o resultado financeiro', description: 'Consulte receitas, despesas e resultado no DRE anual.', done: Boolean(data?.resultViewed), unavailable: !canViewFinancialResult },
     );
+    else if (activeView === 'Ocorrências do EIXO Campo') steps.push({ title: 'Receber a primeira ocorrência', description: 'Abra o EIXO Campo no celular e registre uma ocorrência nesta fazenda.', done: Boolean(data?.occurrences) });
+    else {
+        steps.push({ title: 'Cadastrar animais', description: 'Cadastre ou importe a base inicial do rebanho.', done: Boolean(data?.animals) });
+        if (activeView === 'Nutrição') steps.push({ title: 'Registrar a primeira pesagem', description: 'Prepare a base para acompanhar o desempenho.', done: Boolean(data?.weighings) });
+    }
+    const next = steps.find((step) => !step.done && !step.unavailable);
+    const financeAction = next?.title === 'Registrar uma despesa' ? 'SAIDA' : next?.title === 'Registrar uma receita' ? 'ENTRADA' : 'RESULTADO';
+    return <ProgressGuide key={context} title="Primeiros passos" moduleName={activeView === 'Ocorrências do EIXO Campo' ? 'Ocorrências' : activeView} detailsNote={genetics ? <p className="mt-3 text-xs text-(--eixo-text-muted)">Opcional: classifique animais como P.O. quando houver registro.</p> : undefined} description="Prepare a base inicial para começar a usar este módulo." farmName={farmName} steps={steps} loading={loading} error={error} hasData={Boolean(data)} collapsed={collapsed} onCollapse={setCollapsed} onRetry={retry}>
+        {farmId && next && <>
+            {activeView === 'Financeiro' && <button type="button" className={guideButtonClass} onClick={() => onFinanceAction(financeAction)}>{financeAction === 'SAIDA' ? 'Registrar despesa' : financeAction === 'ENTRADA' ? 'Registrar receita' : 'Ver resultado financeiro'}</button>}
+            {next.title === 'Cadastrar animais' && canNavigateHerd && canEditAnimals && <button type="button" className={guideButtonClass} onClick={() => onNavigate('Rebanho Comercial', { herdTab: 'animals', openAnimalForm: true })}>Cadastrar animais</button>}
+            {next.title === 'Registrar a primeira pesagem' && canNavigateHerd && canEditAnimals && <button type="button" className={guideButtonClass} onClick={() => onNavigate('Rebanho Comercial', { herdTab: 'weighings' })}>Registrar pesagem</button>}
+            {((next.title === 'Cadastrar animais' && (!canNavigateHerd || !canEditAnimals)) || (next.title === 'Registrar a primeira pesagem' && (!canNavigateHerd || !canEditAnimals))) && <p className="text-sm text-(--eixo-text-muted)">Peça a um responsável com acesso para concluir este passo.</p>}
+            {activeView === 'Ocorrências do EIXO Campo' && <button type="button" className={guideButtonClass} onClick={retry}>Verificar recebimento novamente</button>}
+        </>}
+    </ProgressGuide>;
 };
-
 export default ModuleProgressCard;

@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-09-30.1';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-09-30';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-05.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-10-05';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -24,6 +24,21 @@ export const SUPPORT_MODULE_CATALOG = [
 ];
 
 const SUPPORT_TOPIC_DEFINITIONS = [
+    {
+        id: 'primeiros-passos',
+        title: 'Primeiros passos da fazenda e dos módulos',
+        keywords: ['primeiros passos', 'guia', 'implantação', 'progresso', 'abrir guia', 'concluir primeiros passos'],
+        href: 'eixo:view:Fazendas',
+        guidance: [
+            'O resumo de Primeiros passos mostra a fazenda e a contagem. Use Abrir guia para acessar a próxima tarefa e Ver todos os passos para revisar a sequência.',
+            'Selecione uma fazenda antes de cadastrar dados. Cadastro manual e importação dependem das permissões do usuário.',
+            'O guia inicial ensina o fluxo com a fazenda selecionada e é concluído uma vez por usuário. Após completar as quatro etapas, confirme Concluir primeiros passos.',
+            'Recolher o guia não conclui as etapas. A preferência de abertura dos módulos fica salva por usuário, fazenda e módulo.',
+            'Os guias dos módulos acompanham os dados da fazenda. P.O. é uma orientação opcional; receber uma ocorrência não comprova análise.',
+            'No Financeiro, consultar o resultado só conta após o DRE da fazenda carregar com sucesso. Recursos indisponíveis no plano ficam fora da contagem.',
+            'Em Verificando, aguarde a consulta. Se houver falha, use Tentar novamente; dados anteriores identificados não confirmam o contexto atual.',
+        ],
+    },
     {
         id: 'visao-geral',
         title: 'Visão Geral',

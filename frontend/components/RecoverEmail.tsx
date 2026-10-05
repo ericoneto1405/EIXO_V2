@@ -69,7 +69,7 @@ const RecoverEmail: React.FC<RecoverEmailProps> = ({ onBack }) => {
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-[#EDEDED] px-4">
-            <div className="w-full max-w-md rounded-3xl border border-[#EDEDED] bg-white p-8 shadow-sm">
+            <div className="w-full max-w-md rounded-3xl border border-[#EDEDED] bg-white p-8 shadow-xs">
 
                 {/* Logo */}
                 <div className="mb-8 flex flex-col items-center">
@@ -86,7 +86,7 @@ const RecoverEmail: React.FC<RecoverEmailProps> = ({ onBack }) => {
                         </div>
 
                         {error && (
-                            <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[#b84232]">
+                            <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-danger">
                                 {error}
                             </div>
                         )}
@@ -101,14 +101,14 @@ const RecoverEmail: React.FC<RecoverEmailProps> = ({ onBack }) => {
                                 placeholder="00.000.000/0001-00"
                                 maxLength={18}
                                 required
-                                className="w-full rounded-2xl border border-[#EDEDED] bg-[#EDEDED] px-4 py-3 text-sm text-[#2F2F2F] outline-none focus:border-[#B6E23A] focus:ring-2 focus:ring-[#B6E23A]/30"
+                                className="w-full rounded-2xl border border-[#EDEDED] bg-[#EDEDED] px-4 py-3 text-sm text-[#2F2F2F] outline-hidden focus:border-primary focus:ring-2 focus:ring-[#B6E23A]/30"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading || cnpj.replace(/\D/g, '').length !== 14}
-                            className="w-full rounded-2xl bg-[#B6E23A] py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130] disabled:opacity-50"
+                            className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-primary-dark disabled:opacity-50"
                         >
                             {loading ? 'Enviando...' : 'Enviar código por SMS'}
                         </button>
@@ -129,7 +129,7 @@ const RecoverEmail: React.FC<RecoverEmailProps> = ({ onBack }) => {
                         </div>
 
                         {error && (
-                            <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-[#b84232]">
+                            <div className="rounded-2xl bg-[rgba(184,66,50,0.08)] px-4 py-3 text-sm text-danger">
                                 {error}
                             </div>
                         )}
@@ -144,14 +144,14 @@ const RecoverEmail: React.FC<RecoverEmailProps> = ({ onBack }) => {
                                 placeholder="000000"
                                 maxLength={6}
                                 required
-                                className="w-full rounded-2xl border border-[#EDEDED] bg-[#EDEDED] px-4 py-3 text-center text-lg font-bold tracking-[0.3em] text-[#2F2F2F] outline-none focus:border-[#B6E23A] focus:ring-2 focus:ring-[#B6E23A]/30"
+                                className="w-full rounded-2xl border border-[#EDEDED] bg-[#EDEDED] px-4 py-3 text-center text-lg font-bold tracking-[0.3em] text-[#2F2F2F] outline-hidden focus:border-primary focus:ring-2 focus:ring-[#B6E23A]/30"
                             />
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading || code.length !== 6}
-                            className="w-full rounded-2xl bg-[#B6E23A] py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130] disabled:opacity-50"
+                            className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-primary-dark disabled:opacity-50"
                         >
                             {loading ? 'Verificando...' : 'Confirmar código'}
                         </button>
@@ -164,8 +164,8 @@ const RecoverEmail: React.FC<RecoverEmailProps> = ({ onBack }) => {
 
                 {step === 'done' && (
                     <div className="space-y-5 text-center">
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#f0f9d4]">
-                            <svg className="h-7 w-7 text-[#B6E23A]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary-soft">
+                            <svg className="h-7 w-7 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                             </svg>
                         </div>
@@ -182,7 +182,7 @@ const RecoverEmail: React.FC<RecoverEmailProps> = ({ onBack }) => {
                         <button
                             type="button"
                             onClick={onBack}
-                            className="w-full rounded-2xl bg-[#B6E23A] py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130]"
+                            className="w-full rounded-2xl bg-primary py-3 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-primary-dark"
                         >
                             Ir para o login
                         </button>

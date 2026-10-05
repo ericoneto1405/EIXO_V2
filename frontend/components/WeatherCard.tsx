@@ -132,21 +132,21 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
     // ── Sem coordenadas ───────────────────────────────────────────────────────
     if (!hasCoords) {
         return (
-            <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
-                <div className="flex items-center gap-2 border-b border-[var(--eixo-border)] px-5 py-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--eixo-green-soft)] text-lg">🌤️</div>
-                    <p className="text-sm font-semibold text-[var(--eixo-text)]">Previsão do Tempo</p>
+            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) shadow-xs">
+                <div className="flex items-center gap-2 border-b border-(--eixo-border) px-5 py-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-(--eixo-green-soft) text-lg">🌤️</div>
+                    <p className="text-sm font-semibold text-(--eixo-text)">Previsão do Tempo</p>
                 </div>
                 <div className="flex flex-col items-center px-5 py-6 text-center">
-                    <p className="text-sm text-[var(--eixo-text-muted)]">
-                        Cadastre as <span className="font-semibold text-[var(--eixo-text)]">coordenadas GPS</span> da fazenda para receber a previsão do tempo.
+                    <p className="text-sm text-(--eixo-text-muted)">
+                        Cadastre as <span className="font-semibold text-(--eixo-text)">coordenadas GPS</span> da fazenda para receber a previsão do tempo.
                     </p>
                     <p className="mt-1 text-xs text-[#a8a29e]">Fazendas → Editar fazenda → Localização GPS</p>
                     {onNavigateToFarms && (
                         <button
                             type="button"
                             onClick={onNavigateToFarms}
-                            className="mt-4 rounded-xl border-2 border-[#5a8c00] bg-[#B6E23A] px-5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-[#a3d130]"
+                            className="mt-4 rounded-xl border-2 border-[#5a8c00] bg-primary px-5 py-2 text-sm font-bold text-[#1a1a1a] transition-colors hover:bg-primary-dark"
                         >
                             Ir para Fazendas
                         </button>
@@ -161,18 +161,18 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
     const totalRain = Math.round(futureDays.reduce((sum, d) => sum + d.precipitation, 0) * 10) / 10;
 
     return (
-        <div className="overflow-hidden rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] shadow-sm">
+        <div className="overflow-hidden rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) shadow-xs">
             {/* Cabeçalho */}
-            <div className="flex items-center justify-between border-b border-[var(--eixo-border)] px-5 py-4">
+            <div className="flex items-center justify-between border-b border-(--eixo-border) px-5 py-4">
                 <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--eixo-green-soft)] text-lg">🌤️</div>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-(--eixo-green-soft) text-lg">🌤️</div>
                     <div>
-                        <p className="text-sm font-semibold text-[var(--eixo-text)]">Previsão do Tempo</p>
-                        {city && <p className="text-xs text-[var(--eixo-text-muted)]">{city} · próximos 7 dias</p>}
+                        <p className="text-sm font-semibold text-(--eixo-text)">Previsão do Tempo</p>
+                        {city && <p className="text-xs text-(--eixo-text-muted)">{city} · próximos 7 dias</p>}
                     </div>
                 </div>
                 {!loading && !error && forecast.length > 0 && (
-                    <div className={`rounded-full px-3 py-1 text-xs font-bold ${totalRain > 0 ? 'bg-[#dbeafe] text-[#1d4ed8]' : 'bg-[var(--eixo-surface-soft)] text-[#a8a29e]'}`}>
+                    <div className={`rounded-full px-3 py-1 text-xs font-bold ${totalRain > 0 ? 'bg-[#dbeafe] text-[#1d4ed8]' : 'bg-(--eixo-surface-soft) text-[#a8a29e]'}`}>
                         {totalRain > 0 ? `☔ ${totalRain} mm esta semana` : '☀️ Semana seca'}
                     </div>
                 )}
@@ -183,9 +183,9 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
                 <div className="flex gap-3 overflow-x-auto px-5 py-4">
                     {Array.from({ length: 7 }).map((_, i) => (
                         <div key={i} className="flex min-w-[70px] flex-col items-center gap-2">
-                            <div className="h-3 w-8 animate-pulse rounded bg-[var(--eixo-surface-soft)]" />
-                            <div className="h-6 w-12 animate-pulse rounded bg-[var(--eixo-surface-soft)]" />
-                            <div className="h-3 w-10 animate-pulse rounded bg-[var(--eixo-surface-soft)]" />
+                            <div className="h-3 w-8 animate-pulse rounded-sm bg-(--eixo-surface-soft)" />
+                            <div className="h-6 w-12 animate-pulse rounded-sm bg-(--eixo-surface-soft)" />
+                            <div className="h-3 w-10 animate-pulse rounded-sm bg-(--eixo-surface-soft)" />
                         </div>
                     ))}
                 </div>
@@ -202,11 +202,11 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
                             <div
                                 key={day.date}
                                 className={`flex min-w-[76px] flex-1 flex-col items-center gap-1 rounded-xl px-2 py-3 ${
-                                    day.isYesterday ? 'bg-[#f5f5f4] opacity-70' : isToday ? 'bg-[var(--eixo-green-soft)]' : isRainy ? 'bg-[#eff6ff]' : 'hover:bg-[var(--eixo-surface-soft)]'
+                                    day.isYesterday ? 'bg-[#f5f5f4] opacity-70' : isToday ? 'bg-(--eixo-green-soft)' : isRainy ? 'bg-[#eff6ff]' : 'hover:bg-(--eixo-surface-soft)'
                                 }`}
                             >
                                 {/* Dia */}
-                                <p className={`text-[11px] font-semibold ${day.isYesterday ? 'text-[#78716c]' : isToday ? 'text-[var(--eixo-graphite)]' : 'text-[var(--eixo-text-muted)]'}`}>
+                                <p className={`text-[11px] font-semibold ${day.isYesterday ? 'text-[#78716c]' : isToday ? 'text-(--eixo-graphite)' : 'text-(--eixo-text-muted)'}`}>
                                     {day.isYesterday ? 'Ontem' : isToday ? 'Hoje' : DAYS[d.getDay()]}
                                 </p>
 
@@ -226,12 +226,12 @@ const WeatherCard: React.FC<WeatherCardProps> = ({ city, lat, lng, onNavigateToF
                                 </span>
 
                                 {/* Temperatura */}
-                                <p className="text-[11px] text-[var(--eixo-text-muted)]">
+                                <p className="text-[11px] text-(--eixo-text-muted)">
                                     {day.tempMax}° <span className="text-[10px]">{day.tempMin}°</span>
                                 </p>
 
                                 {/* Umidade e vento */}
-                                <div className="flex flex-col items-center gap-0.5 pt-1 border-t border-[var(--eixo-border)]">
+                                <div className="flex flex-col items-center gap-0.5 pt-1 border-t border-(--eixo-border)">
                                     {day.humidity > 0 && (
                                         <p className="text-[10px] text-[#78716c]" title="Umidade máxima">💧{day.humidity}%</p>
                                     )}

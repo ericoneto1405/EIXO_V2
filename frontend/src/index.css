@@ -1,7 +1,27 @@
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@config "../tailwind.config.cjs";
+
+/* Preserva a borda padrão e os campos de data usados no Tailwind 3. */
+@layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: #e5e7eb;
+  }
+  ::placeholder {
+    color: #9ca3af;
+    opacity: 1;
+  }
+  button, [role='button'] {
+    cursor: pointer;
+  }
+  :disabled {
+    cursor: default;
+  }
+  ::-webkit-datetime-edit-fields-wrapper {
+    padding: revert;
+  }
+}
+
 
 :root {
   /* Paleta oficial — Manual de Marca EIXO v1.0 */

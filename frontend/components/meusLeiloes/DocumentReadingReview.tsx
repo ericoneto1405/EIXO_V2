@@ -10,11 +10,11 @@ interface Props {
   onCancel: () => void;
 }
 
-const inputClass = 'w-full rounded-lg border border-[var(--eixo-border)] bg-white px-2 py-1.5 text-sm outline-none focus:border-[var(--eixo-green)]';
-const label = 'block text-xs font-semibold text-[var(--eixo-text-soft)]';
+const inputClass = 'w-full rounded-lg border border-(--eixo-border) bg-white px-2 py-1.5 text-sm outline-hidden focus:border-(--eixo-green)';
+const label = 'block text-xs font-semibold text-(--eixo-text-soft)';
 
 const Line: React.FC<{ name: string; value: string | number | null }> = ({ name, value }) => (
-  <p className="text-sm"><span className="text-[var(--eixo-text-soft)]">{name}:</span> {value ?? '—'}</p>
+  <p className="text-sm"><span className="text-(--eixo-text-soft)">{name}:</span> {value ?? '—'}</p>
 );
 
 // O criador confere e corrige tudo antes de salvar; nada da IA entra direto.
@@ -48,23 +48,23 @@ const DocumentReadingReview: React.FC<Props> = ({ extraction, redacted, hasPurch
   };
 
   return (
-    <div className="space-y-3 rounded-2xl border-2 border-[var(--eixo-green)] bg-[var(--eixo-green-soft)] p-4">
+    <div className="space-y-3 rounded-2xl border-2 border-(--eixo-green) bg-(--eixo-green-soft) p-4">
       <div className="flex items-center justify-between">
-        <h4 className="font-bold text-[var(--eixo-text)]">Confira o que a IA encontrou</h4>
-        {redactedTotal > 0 && <span className="text-xs text-[var(--eixo-text-muted)]">{redactedTotal} dado(s) pessoal(is) escondido(s) antes do envio</span>}
+        <h4 className="font-bold text-(--eixo-text)">Confira o que a IA encontrou</h4>
+        {redactedTotal > 0 && <span className="text-xs text-(--eixo-text-muted)">{redactedTotal} dado(s) pessoal(is) escondido(s) antes do envio</span>}
       </div>
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-xl bg-white p-3">
-          <p className="mb-1 text-xs font-bold uppercase text-[var(--eixo-text-soft)]">Animal no documento</p>
+          <p className="mb-1 text-xs font-bold uppercase text-(--eixo-text-soft)">Animal no documento</p>
           <Line name="Nome" value={animal.nome} />
           <Line name="Registro" value={animal.registro} />
           <Line name="Raça / sexo" value={[animal.raca, animal.sexo === 'FEMEA' ? 'Fêmea' : animal.sexo === 'MACHO' ? 'Macho' : null].filter(Boolean).join(' · ') || null} />
           <Line name="Pai / mãe" value={[animal.pai, animal.mae].filter(Boolean).join(' × ') || null} />
-          <p className="mt-1 text-xs text-[var(--eixo-text-muted)]">Se não for este animal, cancele.</p>
+          <p className="mt-1 text-xs text-(--eixo-text-muted)">Se não for este animal, cancele.</p>
         </div>
         <div className="rounded-xl bg-white p-3">
-          <p className="mb-1 text-xs font-bold uppercase text-[var(--eixo-text-soft)]">Leilão</p>
+          <p className="mb-1 text-xs font-bold uppercase text-(--eixo-text-soft)">Leilão</p>
           <Line name="Leilão" value={[leilao.nome, leilao.leiloeira].filter(Boolean).join(' · ') || null} />
           <Line name="Data" value={leilao.data ? new Date(`${leilao.data}T12:00:00`).toLocaleDateString('pt-BR') : null} />
           <Line name="Valor" value={leilao.valorTotal !== null ? leilao.valorTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : null} />
@@ -78,10 +78,10 @@ const DocumentReadingReview: React.FC<Props> = ({ extraction, redacted, hasPurch
 
       <div className="rounded-xl bg-white p-3">
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-xs font-bold uppercase text-[var(--eixo-text-soft)]">Sócios</p>
-          <span className="text-xs text-[var(--eixo-text-muted)]">Selecionados: {selectedSum.toLocaleString('pt-BR')}%</span>
+          <p className="text-xs font-bold uppercase text-(--eixo-text-soft)">Sócios</p>
+          <span className="text-xs text-(--eixo-text-muted)">Selecionados: {selectedSum.toLocaleString('pt-BR')}%</span>
         </div>
-        {partners.length === 0 && <p className="text-sm text-[var(--eixo-text-soft)]">Nenhum sócio encontrado.</p>}
+        {partners.length === 0 && <p className="text-sm text-(--eixo-text-soft)">Nenhum sócio encontrado.</p>}
         {partners.map((p, i) => (
           <div key={i} className="mb-2 grid grid-cols-[auto_2fr_1fr_auto] items-center gap-2">
             <input type="checkbox" checked={p.include} onChange={(e) => setPartners((rows) => rows.map((r, j) => j === i ? { ...r, include: e.target.checked } : r))} aria-label="Incluir" />
@@ -92,7 +92,7 @@ const DocumentReadingReview: React.FC<Props> = ({ extraction, redacted, hasPurch
         ))}
       </div>
 
-      <p className="text-xs text-[var(--eixo-text-muted)]">Valores abaixo são do animal inteiro (100%). A sua parte é calculada pela cota.</p>
+      <p className="text-xs text-(--eixo-text-muted)">Valores abaixo são do animal inteiro (100%). A sua parte é calculada pela cota.</p>
       <div className="grid gap-3 md:grid-cols-2">
         <div className="space-y-2 rounded-xl bg-white p-3">
           <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={useValuation} onChange={(e) => setUseValuation(e.target.checked)} />Registrar valor do leilão em "Quanto vale"</label>
@@ -103,7 +103,7 @@ const DocumentReadingReview: React.FC<Props> = ({ extraction, redacted, hasPurch
         </div>
         <div className="space-y-2 rounded-xl bg-white p-3">
           {hasPurchase ? (
-            <p className="text-sm text-[var(--eixo-text-soft)]">Este animal já tem compra no Rebanho; não será criada outra.</p>
+            <p className="text-sm text-(--eixo-text-soft)">Este animal já tem compra no Rebanho; não será criada outra.</p>
           ) : (
             <>
               <label className="flex items-center gap-2 text-sm font-semibold"><input type="checkbox" checked={usePurchase} onChange={(e) => setUsePurchase(e.target.checked)} />Registrar a compra no Rebanho</label>
@@ -112,17 +112,17 @@ const DocumentReadingReview: React.FC<Props> = ({ extraction, redacted, hasPurch
                 <label className={label}>Valor (R$)<input className={inputClass} type="number" min="1" value={purchase.value} onChange={(e) => setPurchase((v) => ({ ...v, value: e.target.value }))} /></label>
               </div>
               <label className={label}>Origem<input className={inputClass} value={purchase.origem} onChange={(e) => setPurchase((v) => ({ ...v, origem: e.target.value }))} /></label>
-              <p className="text-xs text-[var(--eixo-text-muted)]">As parcelas a pagar continuam sendo lançadas no Financeiro.</p>
+              <p className="text-xs text-(--eixo-text-muted)">As parcelas a pagar continuam sendo lançadas no Financeiro.</p>
             </>
           )}
         </div>
       </div>
 
       <div className="flex justify-end gap-2">
-        <button type="button" className="rounded-xl border border-[var(--eixo-border)] bg-white px-4 py-2 text-sm font-semibold" onClick={onCancel} disabled={busy}>Cancelar</button>
+        <button type="button" className="rounded-xl border border-(--eixo-border) bg-white px-4 py-2 text-sm font-semibold" onClick={onCancel} disabled={busy}>Cancelar</button>
         <button
           type="button"
-          className="rounded-xl bg-[var(--eixo-green)] px-4 py-2 text-sm font-bold text-[#1a1a1a] disabled:opacity-60"
+          className="rounded-xl bg-(--eixo-green) px-4 py-2 text-sm font-bold text-[#1a1a1a] disabled:opacity-60"
           onClick={submit}
           disabled={busy || (usePurchase && !hasPurchase && (!purchase.date || !(Number(purchase.value) > 0)))}
         >

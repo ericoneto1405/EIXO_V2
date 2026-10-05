@@ -32,10 +32,10 @@ const CustomTooltip = ({ active, payload }: any) => {
     if (!active || !payload?.length) return null;
     const d: ChartPoint = payload[0].payload;
     return (
-        <div className="rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-3 shadow-sm">
-            <p className="mb-1 text-xs font-semibold text-[var(--eixo-text-muted)]">{d.dateLabel}</p>
-            <p className="text-sm font-bold text-[var(--eixo-text)]">{d.peso.toFixed(1)} kg</p>
-            <p className="text-xs text-[var(--eixo-text-muted)]">
+        <div className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-3 shadow-xs">
+            <p className="mb-1 text-xs font-semibold text-(--eixo-text-muted)">{d.dateLabel}</p>
+            <p className="text-sm font-bold text-(--eixo-text)">{d.peso.toFixed(1)} kg</p>
+            <p className="text-xs text-(--eixo-text-muted)">
                 GMD:{' '}
                 {d.gmd != null ? (
                     <span className={d.gmd >= 0 ? 'text-green-700' : 'text-red-600'}>
@@ -80,11 +80,11 @@ const WeightEvolutionChart: React.FC<Props> = ({ animalId, animalLabel, herdType
     }, [animalId, herdType]);
 
     return (
-        <div className="rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-6">
-            <p className="mb-4 text-base font-semibold text-[var(--eixo-text)]">
+        <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-6">
+            <p className="mb-4 text-base font-semibold text-(--eixo-text)">
                 Evolução de Peso
                 {animalLabel && (
-                    <span className="ml-2 text-sm font-normal text-[var(--eixo-text-muted)]">— {animalLabel}</span>
+                    <span className="ml-2 text-sm font-normal text-(--eixo-text-muted)">— {animalLabel}</span>
                 )}
             </p>
 

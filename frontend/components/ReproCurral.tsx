@@ -9,12 +9,12 @@ import {
     enviarLancamento,
 } from '../adapters/reproApi';
 
-const inputClass = 'mt-1 w-full rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2.5 text-sm text-[var(--eixo-text)] outline-none focus:border-[var(--eixo-green)]';
-const labelClass = 'block text-xs font-semibold text-[var(--eixo-text-muted)]';
-const cardClass = 'rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] p-5';
-const primaryButton = 'rounded-xl bg-[var(--eixo-green)] px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
-const secondaryButton = 'rounded-xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-3 py-2 text-sm font-semibold text-[var(--eixo-text)] transition hover:bg-[var(--eixo-surface-soft)] disabled:opacity-50';
-const botaoGrande = 'w-full rounded-2xl border border-[var(--eixo-border)] bg-[var(--eixo-surface)] px-4 py-4 text-left text-lg font-bold text-[var(--eixo-text)] transition hover:bg-[var(--eixo-surface-soft)]';
+const inputClass = 'mt-1 w-full rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2.5 text-sm text-(--eixo-text) outline-hidden focus:border-(--eixo-green)';
+const labelClass = 'block text-xs font-semibold text-(--eixo-text-muted)';
+const cardClass = 'rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5';
+const primaryButton = 'rounded-xl bg-(--eixo-green) px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50';
+const secondaryButton = 'rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm font-semibold text-(--eixo-text) transition hover:bg-(--eixo-surface-soft) disabled:opacity-50';
+const botaoGrande = 'w-full rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-4 text-left text-lg font-bold text-(--eixo-text) transition hover:bg-(--eixo-surface-soft)';
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const norm = (v: string) => v.trim().toUpperCase();
@@ -113,7 +113,7 @@ export const CurralUnico: React.FC<{
             <div className={`${cardClass} flex flex-wrap items-center justify-between gap-3`}>
                 <div className="text-sm">
                     <p className="font-semibold">{cache.vacas.length} vaca(s) no celular</p>
-                    <p className="text-xs text-[var(--eixo-text-muted)]">
+                    <p className="text-xs text-(--eixo-text-muted)">
                         {cache.baixadoEm ? `Baixadas em ${new Date(cache.baixadoEm).toLocaleString('pt-BR')}` : 'Baixe antes de ir ao curral.'}
                         {fila.waitingCount > 0 ? ` · ${fila.waitingCount} lançamento(s) esperando internet` : ''}
                     </p>
@@ -162,9 +162,9 @@ export const CurralUnico: React.FC<{
 
                     {vaca && (
                         <>
-                            <div className="rounded-xl bg-[var(--eixo-surface-soft)] px-4 py-3">
+                            <div className="rounded-xl bg-(--eixo-surface-soft) px-4 py-3">
                                 <p className="text-lg font-bold">{vaca.brinco}{vaca.lote ? ` · ${vaca.lote}` : ''}</p>
-                                <p className="text-sm text-[var(--eixo-text-muted)]">{vaca.resumo}</p>
+                                <p className="text-sm text-(--eixo-text-muted)">{vaca.resumo}</p>
                             </div>
                             <div className="space-y-2">
                                 {vaca.acoes.map((a) => (
@@ -174,18 +174,18 @@ export const CurralUnico: React.FC<{
                                             setPasso({ acao: a, vaca });
                                         }}>
                                         {a.titulo}
-                                        <span className="block text-sm font-normal text-[var(--eixo-text-muted)]">{a.ajuda}</span>
+                                        <span className="block text-sm font-normal text-(--eixo-text-muted)">{a.ajuda}</span>
                                     </button>
                                 ))}
-                                {!vaca.acoes.length && <p className="text-sm text-[var(--eixo-text-muted)]">Nada a lançar para esta vaca hoje.</p>}
+                                {!vaca.acoes.length && <p className="text-sm text-(--eixo-text-muted)">Nada a lançar para esta vaca hoje.</p>}
                             </div>
                         </>
                     )}
 
                     {feitos.length > 0 && (
-                        <div className="border-t border-[var(--eixo-border)] pt-3 text-sm">
+                        <div className="border-t border-(--eixo-border) pt-3 text-sm">
                             <p className={labelClass}>Últimos lançamentos</p>
-                            {feitos.map((f) => <p key={f} className="text-[var(--eixo-text-muted)]">{f}</p>)}
+                            {feitos.map((f) => <p key={f} className="text-(--eixo-text-muted)">{f}</p>)}
                         </div>
                     )}
                 </div>
@@ -228,7 +228,7 @@ const FormPasso: React.FC<{
     return (
         <div className={`${cardClass} space-y-4`}>
             <div>
-                <p className="text-sm text-[var(--eixo-text-muted)]">{vaca.brinco} · {vaca.resumo}</p>
+                <p className="text-sm text-(--eixo-text-muted)">{vaca.brinco} · {vaca.resumo}</p>
                 <h3 className="text-xl font-bold">{acao.titulo}</h3>
             </div>
             <label className="block"><span className={labelClass}>Data</span>
@@ -243,7 +243,7 @@ const FormPasso: React.FC<{
                             onClick={() => enviar({ resultado: 'VAZIA' }, 'falhada')}>FALHADA</button>
                     </div>
                     <details>
-                        <summary className="cursor-pointer text-sm text-[var(--eixo-text-muted)]">Anotar mais (opcional)</summary>
+                        <summary className="cursor-pointer text-sm text-(--eixo-text-muted)">Anotar mais (opcional)</summary>
                         <div className="mt-2 grid gap-3 sm:grid-cols-3">
                             <label><span className={labelClass}>Dias de gestação</span>
                                 <input type="number" inputMode="numeric" className={inputClass} value={dados.diasGestacao ?? ''} onChange={(e) => set('diasGestacao', e.target.value ? Number(e.target.value) : null)} /></label>
@@ -315,7 +315,7 @@ const FormPasso: React.FC<{
 
             {acao.tipo === 'PERDA' && (
                 <>
-                    <p className="text-sm text-[var(--eixo-text-muted)]">Fica na história da vaca e ela volta a aparecer para conferir prenhez.</p>
+                    <p className="text-sm text-(--eixo-text-muted)">Fica na história da vaca e ela volta a aparecer para conferir prenhez.</p>
                     <button type="button" className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white" onClick={() => enviar({}, 'perdeu a cria')}>
                         Confirmar
                     </button>
@@ -331,7 +331,7 @@ const FormPasso: React.FC<{
                                 <option key={m} value={m}>{m}</option>
                             ))}
                         </select></label>
-                    <p className="text-sm text-[var(--eixo-text-muted)]">O descarte encerra a ficha dela na reprodução. A venda continua no Rebanho.</p>
+                    <p className="text-sm text-(--eixo-text-muted)">O descarte encerra a ficha dela na reprodução. A venda continua no Rebanho.</p>
                     <button type="button" className="rounded-xl bg-red-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50" disabled={!dados.motivo}
                         onClick={() => enviar({}, `para descarte (${dados.motivo})`)}>
                         Confirmar descarte
