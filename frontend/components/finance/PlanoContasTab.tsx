@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import FinanceDialog from './FinanceDialog';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     AccountCategory,
     AccountCategoryType,
@@ -34,6 +35,14 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
     openCreateSignal,
 }) => {
     // ── Nova categoria ──
+    const [pcDirty, setPcDirty] = useState(false);
+    const [pcDiscardRequested, setPcDiscardRequested] = useState(false);
+    const pcDiscardPanel = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!pcDiscardRequested) return;
+        pcDiscardPanel.current?.scrollIntoView({ block: 'nearest' });
+        pcDiscardPanel.current?.querySelector('button')?.focus();
+    }, [pcDiscardRequested]);
     const [pcModalOpen, setPcModalOpen] = useState(false);
     const [pcFormName, setPcFormName] = useState('');
     const [pcFormGroup, setPcFormGroup] = useState('');
@@ -55,6 +64,12 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
     const [editingRecognitionRule, setEditingRecognitionRule] = useState<RecognitionRule>('IMMEDIATE');
     const [editCatSaving, setEditCatSaving] = useState(false);
 
+    const closeCategoryModal = () => {
+        if (pcIsSaving) return;
+        if (pcDirty) { setPcDiscardRequested(true); return; }
+        setPcModalOpen(false);
+    };
+
     const existingGroups = useMemo(() => {
         const set = new Set(categories.filter(c => c.type === pcFormType).map(c => c.group));
         return Array.from(set).sort();
@@ -75,7 +90,7 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
 
     const handleCreateCategory = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!farmId) return;
+        if (!farmId || pcIsSaving) return;
         if (!pcFormName.trim()) { setPcFormError('Informe o nome da categoria.'); return; }
         if (!pcResolvedGroup) { setPcFormError('Informe o grupo.'); return; }
         setPcIsSaving(true);
@@ -100,6 +115,8 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
     };
 
     const openCategoryModal = (type: AccountCategoryType = 'SAIDA', useNewGroup = false) => {
+        setPcDirty(false);
+        setPcDiscardRequested(false);
         setPcFormType(type);
         setPcCashFlowClass('OPERATING');
         setPcResultClass(type === 'ENTRADA' ? 'OPERATING_REVENUE' : 'PRODUCTION_COST');
@@ -159,10 +176,10 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                         <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5 shadow-xs">
                             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                                 <div className="w-full max-w-xl">
-                                    <label className={labelCls}>Buscar no plano de contas</label>
+                                    <label htmlFor="category-search" className={labelCls}>Buscar no plano de contas</label>
                                     <input
                                         type="text"
-                                        value={pcSearch}
+                                        id="category-search" value={pcSearch}
                                         onChange={(e) => setPcSearch(e.target.value)}
                                         placeholder="Busque por tipo, grupo ou categoria"
                                         className={inputCls}
@@ -215,17 +232,17 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                                 </span>
                                                 <input
                                                     type="text"
-                                                    value={editingCatGroup}
+                                                    aria-label="Grupo da categoria" value={editingCatGroup}
                                                     onChange={e => setEditingCatGroup(e.target.value)}
                                                     placeholder="Grupo"
                                                     className="w-full rounded-lg border border-(--eixo-border) bg-(--eixo-surface) px-3 py-2 text-sm focus:outline-hidden lg:w-48"
                                                 />
-                                                <select value={editingCashFlowClass} onChange={(e) => setEditingCashFlowClass(e.target.value as CashFlowClass)} className="rounded-lg border border-(--eixo-border) px-2 py-2 text-xs"><option value="OPERATING">Operação</option><option value="INVESTING">Investimento</option><option value="FINANCING">Financiamento</option></select>
-                                                <select value={editingResultClass} onChange={(e) => setEditingResultClass(e.target.value as ResultClass | '')} className="rounded-lg border border-(--eixo-border) px-2 py-2 text-xs"><option value="">Fora da DRE</option><option value="OPERATING_REVENUE">Receita</option><option value="PRODUCTION_COST">Custo</option><option value="OPERATING_EXPENSE">Despesa</option><option value="FINANCIAL_RESULT">Financeiro</option><option value="OTHER_RESULT">Outros</option></select>
-                                                <select value={editingRecognitionRule} onChange={(e) => setEditingRecognitionRule(e.target.value as RecognitionRule)} className="rounded-lg border border-(--eixo-border) px-2 py-2 text-xs"><option value="IMMEDIATE">Competência</option><option value="ON_NUTRITION_CONSUMPTION">Consumo</option><option value="ON_ANIMAL_SALE">Venda animal</option><option value="NOT_IN_RESULT">Fora da DRE</option></select>
+                                                <select aria-label="Classificação de caixa" value={editingCashFlowClass} onChange={(e) => setEditingCashFlowClass(e.target.value as CashFlowClass)} className="rounded-lg border border-(--eixo-border) px-2 py-2 text-xs"><option value="OPERATING">Operação</option><option value="INVESTING">Investimento</option><option value="FINANCING">Financiamento</option></select>
+                                                <select aria-label="Classificação de resultado" value={editingResultClass} onChange={(e) => setEditingResultClass(e.target.value as ResultClass | '')} className="rounded-lg border border-(--eixo-border) px-2 py-2 text-xs"><option value="">Fora da DRE</option><option value="OPERATING_REVENUE">Receita</option><option value="PRODUCTION_COST">Custo</option><option value="OPERATING_EXPENSE">Despesa</option><option value="FINANCIAL_RESULT">Financeiro</option><option value="OTHER_RESULT">Outros</option></select>
+                                                <select aria-label="Regra de reconhecimento" value={editingRecognitionRule} onChange={(e) => setEditingRecognitionRule(e.target.value as RecognitionRule)} className="rounded-lg border border-(--eixo-border) px-2 py-2 text-xs"><option value="IMMEDIATE">Competência</option><option value="ON_NUTRITION_CONSUMPTION">Consumo</option><option value="ON_ANIMAL_SALE">Venda animal</option><option value="NOT_IN_RESULT">Fora da DRE</option></select>
                                                 <input
                                                     type="text"
-                                                    value={editingCatName}
+                                                    aria-label="Nome da categoria" value={editingCatName}
                                                     onChange={e => setEditingCatName(e.target.value)}
                                                     className="w-full rounded-lg border border-(--eixo-green) bg-(--eixo-surface) px-3 py-2 text-sm focus:outline-hidden"
                                                 />
@@ -301,29 +318,28 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
 
             {/* ── Modal: Nova categoria ───────────────────────── */}
             {pcModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setPcModalOpen(false)}>
-                    <div className="w-full max-w-md rounded-2xl bg-(--eixo-surface) shadow-2xl" onClick={e => e.stopPropagation()}>
+                <FinanceDialog titleId="finance-category-title" onClose={closeCategoryModal} busy={pcIsSaving}>
                         <header className="flex items-center justify-between border-b border-(--eixo-border) p-5">
-                            <h3 className="font-brand text-lg font-bold text-(--eixo-text)">Nova categoria</h3>
-                            <button type="button" aria-label="Fechar" onClick={() => setPcModalOpen(false)} className="rounded-full p-2 text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft) focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--eixo-green)">✕</button>
+                            <h3 id="finance-category-title" className="font-brand text-lg font-bold text-(--eixo-text)">Nova categoria</h3>
+                            <button type="button" aria-label="Fechar" disabled={pcIsSaving} onClick={closeCategoryModal} className="rounded-full p-2 text-(--eixo-text-muted) hover:bg-(--eixo-surface-soft) focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--eixo-green)">✕</button>
                         </header>
-                        <form onSubmit={handleCreateCategory} className="space-y-4 p-6">
+                        <form onChange={() => setPcDirty(true)} onSubmit={handleCreateCategory} className="space-y-4 p-6">
                             <div>
-                                <label className={labelCls}>Tipo</label>
-                                <select value={pcFormType} onChange={e => { const type = e.target.value as AccountCategoryType; setPcFormType(type); setPcResultClass(type === 'ENTRADA' ? 'OPERATING_REVENUE' : 'PRODUCTION_COST'); }} className={inputCls}>
+                                <label htmlFor="category-type" className={labelCls}>Tipo</label>
+                                <select id="category-type" value={pcFormType} onChange={e => { const type = e.target.value as AccountCategoryType; setPcFormType(type); setPcResultClass(type === 'ENTRADA' ? 'OPERATING_REVENUE' : 'PRODUCTION_COST'); }} className={inputCls}>
                                     <option value="ENTRADA">Entrada</option>
                                     <option value="SAIDA">Saída</option>
                                 </select>
                             </div>
                             <div>
-                                <label className={labelCls}>Grupo</label>
-                                <select value={pcFormGroup} onChange={e => { setPcFormGroup(e.target.value); setPcFormNewGroup(''); }} className={inputCls} required>
+                                <label htmlFor="category-group" className={labelCls}>Grupo</label>
+                                <select id="category-group" value={pcFormGroup} onChange={e => { setPcFormGroup(e.target.value); setPcFormNewGroup(''); }} className={inputCls} required>
                                     <option value="">Selecione um grupo...</option>
                                     {existingGroups.map(g => <option key={g} value={g}>{g}</option>)}
                                     <option value="__new__">+ Novo grupo...</option>
                                 </select>
                                 {pcFormGroup === '__new__' && (
-                                    <input type="text" value={pcFormNewGroup} onChange={e => setPcFormNewGroup(e.target.value)}
+                                    <input aria-label="Nome do novo grupo" type="text" value={pcFormNewGroup} onChange={e => setPcFormNewGroup(e.target.value)}
                                         placeholder="Nome do novo grupo" className={`${inputCls} mt-2`} autoFocus required />
                                 )}
                                 <p className="mt-2 text-xs text-(--eixo-text-muted)">
@@ -331,31 +347,32 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                 </p>
                             </div>
                             <div>
-                                <label className={labelCls}>Nome da categoria</label>
-                                <input type="text" value={pcFormName} onChange={e => setPcFormName(e.target.value)}
+                                <label htmlFor="category-name" className={labelCls}>Nome da categoria</label>
+                                <input type="text" id="category-name" value={pcFormName} onChange={e => setPcFormName(e.target.value)}
                                     placeholder="Ex: Arrendamento de Pasto" className={inputCls} required />
                             </div>
                             <div>
-                                <label className={labelCls}>Como movimenta o caixa?</label>
-                                <select value={pcCashFlowClass} onChange={e => setPcCashFlowClass(e.target.value as CashFlowClass)} className={inputCls}>
+                                <label htmlFor="category-cash" className={labelCls}>Como movimenta o caixa?</label>
+                                <select id="category-cash" value={pcCashFlowClass} onChange={e => setPcCashFlowClass(e.target.value as CashFlowClass)} className={inputCls}>
                                     <option value="OPERATING">Operação</option><option value="INVESTING">Investimento</option><option value="FINANCING">Financiamento</option>
                                 </select>
                             </div>
                             <div>
-                                <label className={labelCls}>Como entra no resultado?</label>
-                                <select value={pcResultClass} onChange={e => setPcResultClass(e.target.value as ResultClass | '')} className={inputCls}>
+                                <label htmlFor="category-result" className={labelCls}>Como entra no resultado?</label>
+                                <select id="category-result" value={pcResultClass} onChange={e => setPcResultClass(e.target.value as ResultClass | '')} className={inputCls}>
                                     <option value="">Não entra na DRE</option><option value="OPERATING_REVENUE">Receita operacional</option><option value="PRODUCTION_COST">Custo de produção</option><option value="OPERATING_EXPENSE">Despesa operacional</option><option value="FINANCIAL_RESULT">Resultado financeiro</option><option value="OTHER_RESULT">Outros resultados</option>
                                 </select>
                             </div>
                             <div>
-                                <label className={labelCls}>Quando reconhecer?</label>
-                                <select value={pcRecognitionRule} onChange={e => setPcRecognitionRule(e.target.value as RecognitionRule)} className={inputCls}>
+                                <label htmlFor="category-recognition" className={labelCls}>Quando reconhecer?</label>
+                                <select id="category-recognition" value={pcRecognitionRule} onChange={e => setPcRecognitionRule(e.target.value as RecognitionRule)} className={inputCls}>
                                     <option value="IMMEDIATE">Na competência informada</option><option value="ON_NUTRITION_CONSUMPTION">No consumo da Nutrição</option><option value="ON_ANIMAL_SALE">Na venda do animal</option><option value="NOT_IN_RESULT">Não entra na DRE</option>
                                 </select>
                             </div>
-                            {pcFormError && <p className="text-sm text-(--eixo-danger)">{pcFormError}</p>}
+                            {pcDiscardRequested && <div ref={pcDiscardPanel} role="alert" className="rounded-xl border border-(--eixo-border) p-3 text-sm"><p>Descartar as informações desta categoria?</p><div className="mt-2 flex gap-3"><button type="button" onClick={() => setPcDiscardRequested(false)} className="underline">Continuar preenchendo</button><button type="button" onClick={() => setPcModalOpen(false)} className="text-(--eixo-danger) underline">Descartar e fechar</button></div></div>}
+                            {pcFormError && <p role="alert" className="text-sm text-(--eixo-danger)">{pcFormError}</p>}
                             <div className="flex justify-end gap-3">
-                                <button type="button" onClick={() => setPcModalOpen(false)}
+                                <button type="button" disabled={pcIsSaving} onClick={closeCategoryModal}
                                     className="rounded-xl border border-(--eixo-border) px-4 py-2 text-sm font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft)">
                                     Cancelar
                                 </button>
@@ -365,8 +382,7 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                 </button>
                             </div>
                         </form>
-                    </div>
-                </div>
+                </FinanceDialog>
             )}
         </>
     );

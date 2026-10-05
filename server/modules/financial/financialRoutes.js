@@ -1,3 +1,4 @@
+import { canEditTransactionAllocations, registerFinancialAllocationRoutes } from './financialAllocationRoutes.js';
 import { PrismaClient } from '@prisma/client';
 import { upsertSystemAccountCategories } from '../../accountCategoryDefaults.js';
 import { logActivity, recordActivityLog } from '../utils/activityLog.js';
@@ -70,6 +71,7 @@ const ensureSystemAccountCategories = async () => {
 };
 
 export function registerFinancialRoutes(app) {
+    registerFinancialAllocationRoutes(app, { database: prisma });
     // ── Plano de Contas ──────────────────────────────────────────────────────────
 
     app.get('/account-categories', requireAuth, requireBillingAccess, async (req, res) => {
@@ -376,6 +378,9 @@ export function registerFinancialRoutes(app) {
                 }
             }
             const resolvedStatus = status ?? existing.status;
+            if (allocations !== undefined && !canEditTransactionAllocations({ ...existing, status: resolvedStatus }, accountCategory)) {
+                return res.status(400).json({ message: 'A divisão deste lançamento é mantida pelo fluxo que reconhece o resultado e não pode ser alterada aqui.' });
+            }
             const transaction = await prisma.$transaction(async (tx) => {
                 const updated = await tx.financialTransaction.update({
                     where: { id: req.params.id },

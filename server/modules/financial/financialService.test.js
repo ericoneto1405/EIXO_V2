@@ -152,3 +152,31 @@ test('resultado automático usa sourceKey idempotente', async () => {
     await upsertAutomaticResult(db, payload);
     assert.deepEqual([...sourceKeys], ['NUTRITION_EXECUTION:1:CONSUMPTION']);
 });
+
+test('edição de divisão substitui valores exatos e preserva fase e animal', async () => {
+    const operations = [];
+    const db = {
+        lot: { findFirst: async ({ where }) => { assert.equal(where.farmId, 'farm-a'); return { id: where.id, name: 'Lote A', productionPhase: 'ENGORDA' }; } },
+        animal: { findFirst: async ({ where }) => { assert.equal(where.farmId, 'farm-a'); return { id: where.id, brinco: '001' }; } },
+        financialResultEntry: { upsert: async () => { operations.push('result'); return { id: 'entry-a' }; } },
+        financialResultAllocation: { deleteMany: async () => operations.push('delete'), createMany: async ({ data }) => operations.push(data) },
+    };
+    await syncTransactionResult(db, { id: 'tx-a', farmId: 'farm-a', modelVersion: 2, status: 'PAGO', valor: 100 }, { id: 'cat-a', isConfigured: true, recognitionRule: 'IMMEDIATE', resultClass: 'PRODUCTION_COST' }, [{ lotId: 'lot-a', animalId: 'animal-a', productionPhase: 'RECRIA', amount: 33.33 }]);
+    assert.equal(operations[2][0].amount, 33.33); assert.equal(operations[2][0].productionPhase, 'RECRIA'); assert.equal(operations[2][0].animalId, 'animal-a'); assert.equal(operations[2][0].resultEntryId, 'entry-a');
+});
+
+test('divisão inválida não remove a distribuição anterior', async () => {
+    let changed = false;
+    const db = { financialResultEntry: { upsert: async () => { changed = true; } }, financialResultAllocation: { deleteMany: async () => { changed = true; } } };
+    await assert.rejects(() => syncTransactionResult(db, { id: 'tx-a', farmId: 'farm-a', modelVersion: 2, status: 'PAGO', valor: 100 }, { isConfigured: true, recognitionRule: 'IMMEDIATE', resultClass: 'PRODUCTION_COST' }, [{ amount: 101 }]), /soma/);
+    assert.equal(changed, false);
+});
+
+test('edição sem distribuição preserva destinos e lista vazia limpa explicitamente', async () => {
+    let deletions = 0;
+    const db = { financialResultEntry: { upsert: async () => ({ id: 'entry-a' }) }, financialResultAllocation: { deleteMany: async () => { deletions++; } } };
+    const transaction = { id: 'tx-a', farmId: 'farm-a', modelVersion: 2, status: 'PAGO', valor: 100 };
+    const category = { isConfigured: true, recognitionRule: 'IMMEDIATE', resultClass: 'PRODUCTION_COST' };
+    await syncTransactionResult(db, transaction, category); assert.equal(deletions, 0);
+    await syncTransactionResult(db, transaction, category, []); assert.equal(deletions, 1);
+});

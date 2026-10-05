@@ -86,7 +86,9 @@ export const formatCurrency = (value: number) =>
 
 export const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return '—';
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    const day = dateString.slice(0, 10);
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : '—';
 };
 
 export const MESES = [
@@ -164,17 +166,20 @@ export function groupByGroup(cats: AccountCategory[]): Map<string, AccountCatego
     return map;
 }
 
+export function localDateInput(date = new Date()): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 export function isVencida(t: FinancialTransaction): boolean {
-    if (t.status === 'PAGO') return false;
-    if (!t.vencimento) return false;
-    return new Date(t.vencimento) < new Date();
+    return t.status === 'PENDENTE' && !!t.vencimento && t.vencimento.slice(0, 10) < localDateInput();
 }
 
 export const getCatLabel = (t: FinancialTransaction) =>
     t.accountCategoryName || CATEGORIA_LABELS[t.categoria] || t.categoria;
 
 export function statusBadge(t: FinancialTransaction) {
-    if (t.status === 'PAGO') return { label: 'Pago', cls: 'bg-(--eixo-green-soft) text-(--eixo-success)' };
+    if (t.status === 'CANCELADO') return { label: 'Cancelado', cls: 'bg-(--eixo-surface-soft) text-(--eixo-text-muted)' };
+    if (t.status === 'PAGO') return { label: t.type === 'ENTRADA' ? 'Recebido' : 'Pago', cls: 'bg-(--eixo-green-soft) text-(--eixo-success)' };
     if (isVencida(t)) return { label: 'Vencido', cls: 'bg-[rgba(184,66,50,0.08)] text-(--eixo-danger)' };
     return { label: 'Pendente', cls: 'bg-[rgba(197,138,32,0.10)] text-(--eixo-warning)' };
 }
