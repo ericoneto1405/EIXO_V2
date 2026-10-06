@@ -190,6 +190,7 @@ model MarketPublishJob {
 }
 
 model Farm {
+  sanitaryHistoryRequests SanitaryHistoryRequest[]
   id                      String                   @id @default(uuid())
   name                    String
   city                    String
@@ -2466,9 +2467,10 @@ model SanitaryApplication {
   groupId                  String          @map("group_id")
   animalId                 String
   productId                String
-  batchId                  String
+  batchId                  String?
+  origin                   String          @default("STOCK")
   appliedAt                DateTime        @map("applied_at")
-  dose                     Float
+  dose                     Float?
   doseUnit                 String          @map("dose_unit")
   route                    String?
   appliedByName            String?         @map("applied_by_name")
@@ -2484,7 +2486,7 @@ model SanitaryApplication {
   farm                     Farm            @relation(fields: [farmId], references: [id], onDelete: Cascade)
   animal                   Animal          @relation(fields: [animalId], references: [id], onDelete: Cascade)
   product                  PharmacyProduct @relation(fields: [productId], references: [id], onDelete: NoAction)
-  batch                    PharmacyBatch   @relation(fields: [batchId], references: [id], onDelete: NoAction)
+  batch                    PharmacyBatch?  @relation(fields: [batchId], references: [id], onDelete: NoAction)
 
   @@index([farmId, appliedAt])
   @@index([animalId, appliedAt])
@@ -3120,4 +3122,17 @@ model AnimalValuation {
 
   @@index([farmId])
   @@index([animalId, date])
+}
+
+model SanitaryHistoryRequest {
+  id          String   @id @default(uuid())
+  farmId      String
+  farm        Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  requestId   String
+  payloadHash String
+  groupId     String
+  result      Json
+  createdAt   DateTime @default(now())
+  @@unique([farmId, requestId])
+  @@map("sanitary_history_requests")
 }

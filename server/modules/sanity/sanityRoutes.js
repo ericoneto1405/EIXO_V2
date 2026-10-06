@@ -1,3 +1,4 @@
+import { normalizeHistory, historyPreview, saveHistory } from './sanityHistory.js';
 import { randomUUID } from 'node:crypto';
 import { PrismaClient } from '@prisma/client';
 import { requireBillingAccess, requireEntitlement, requireModule, requireNonFieldWorker } from '../middlewares/requireAuth.js';
@@ -43,7 +44,7 @@ const attachSanityFarm = async (req, res, next) => {
 
 // Busca os animais pela identificação digitada no curral (ou por lote/lista).
 // Identificação que não existe ou que se repete volta para a tela — nunca some em silêncio.
-async function resolverSelecao(farmId, selecao = {}) {
+async function resolverSelecao(farmId, selecao = {}, db = prisma) {
     const digitados = (Array.isArray(selecao.brincos) ? selecao.brincos : []).map((value) => String(value ?? '').trim()).filter(Boolean);
     const brincos = [...new Set(digitados.map(normalizarBrinco))];
     const variantes = [...new Set(digitados.flatMap((value) => [value, value.toUpperCase(), value.toLowerCase()]))];
@@ -55,7 +56,7 @@ async function resolverSelecao(farmId, selecao = {}) {
     const repetidos = [];
 
     if (brincos.length) {
-        const candidatos = await prisma.animal.findMany({
+        const candidatos = await db.animal.findMany({
             where: { farmId, brinco: { in: variantes } },
             select: ANIMAL_SELECT,
         });
@@ -71,11 +72,12 @@ async function resolverSelecao(farmId, selecao = {}) {
         }
     }
     if (animalIds.length) {
-        const porId = await prisma.animal.findMany({ where: { farmId, id: { in: animalIds } }, select: ANIMAL_SELECT });
+        const porId = await db.animal.findMany({ where: { farmId, id: { in: animalIds } }, select: ANIMAL_SELECT });
+        animalIds.filter(id => !porId.some(animal => animal.id === id)).forEach(id => naoEncontrados.push(id));
         porId.forEach((animal) => encontrados.set(animal.id, animal));
     }
     if (lotId) {
-        const doLote = await prisma.animal.findMany({ where: { farmId, lotId, status: 'VIVO' }, select: ANIMAL_SELECT });
+        const doLote = await db.animal.findMany({ where: { farmId, lotId, status: 'VIVO' }, select: ANIMAL_SELECT });
         doLote.forEach((animal) => encontrados.set(animal.id, animal));
     }
     return { animais: [...encontrados.values()], naoEncontrados, repetidos };
@@ -156,6 +158,22 @@ export function registerSanityRoutes(app) {
         requireModule('Sanidade'),
         attachSanityFarm,
     );
+
+    app.post('/farms/:farmId/sanidade/historico/preview', async (req, res) => {
+        try {
+            const input = normalizeHistory(req.body || {});
+            const product = await prisma.pharmacyProduct.findFirst({ where: { id: input.productId, farmId: req.sanityFarm.id, active: true } });
+            if (!product) return res.status(400).json({ message: 'Escolha um produto da Farmácia.' });
+            return res.json(historyPreview(input, product, await resolverSelecao(req.sanityFarm.id, input.selecao)));
+        } catch (error) { return res.status(error.status || 500).json({ message: error.status ? error.message : 'Erro ao conferir o histórico.' }); }
+    });
+    app.post('/farms/:farmId/sanidade/historico', async (req, res) => {
+        try {
+            const result = await saveHistory(prisma, req, normalizeHistory(req.body || {}), req.body?.requestId, resolverSelecao);
+            limparCacheLembretes(req.sanityFarm.id);
+            return res.status(201).json(result);
+        } catch (error) { return res.status(error.status || 500).json({ message: error.status ? error.message : 'Erro ao salvar o histórico.', ...(error.previa || {}) }); }
+    });
 
     app.get('/farms/:farmId/sanidade/opcoes', async (req, res) => {
         const farm = req.sanityFarm;
@@ -341,7 +359,7 @@ export function registerSanityRoutes(app) {
                     where: { groupId: { in: grupos.map((grupo) => grupo.groupId) } },
                     distinct: ['groupId'],
                     select: {
-                        groupId: true, doseUnit: true, route: true, appliedByName: true, vetName: true,
+                        groupId: true, origin: true, doseUnit: true, route: true, appliedByName: true, vetName: true,
                         slaughterWithdrawalUntil: true, withdrawalUnknown: true,
                         product: { select: { name: true, category: true } },
                         batch: { select: { lotNumber: true } },
@@ -354,6 +372,7 @@ export function registerSanityRoutes(app) {
                     const info = porGrupo.get(grupo.groupId);
                     return {
                         groupId: grupo.groupId,
+                        origin: info?.origin || 'STOCK',
                         appliedAt: grupo._max.appliedAt,
                         animais: grupo._count._all,
                         doseTotal: grupo._sum.dose,
@@ -391,6 +410,7 @@ export function registerSanityRoutes(app) {
             const registros = await prisma.sanitaryApplication.findMany({
                 where: {
                     farmId: farm.id,
+                    unitCost: { not: null },
                     ...(de || ate ? { appliedAt: { ...(de ? { gte: de } : {}), ...(ate ? { lte: ate } : {}) } } : {}),
                 },
                 select: {

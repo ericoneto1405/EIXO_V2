@@ -41,6 +41,9 @@ export interface HerdEvent {
 }
 
 export interface SanitaryRecord {
+    origin?: 'INDIVIDUAL' | 'STOCK' | 'HISTORY';
+    registeredBy?: string | null;
+    appliedBy?: string | null;
     id: string;
     farmId: string;
     animalId: string | null;
@@ -628,6 +631,13 @@ export const listSanitaryRecords = async (animalId: string, herdType: HerdType):
         throw new Error(payload?.message || 'Erro ao listar registros sanitários.');
     }
     return payload.records || [];
+};
+
+export const listSanitaryTimeline = async (animalId: string): Promise<SanitaryRecord[]> => {
+    const response = await fetch(buildApiUrl(`/animals/${encodeURIComponent(animalId)}/historico-sanitario`), { credentials: 'include' });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.message || 'Erro ao consultar histórico sanitário.');
+    return data.records || [];
 };
 
 export const createSanitaryRecord = async (

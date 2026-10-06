@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-05.2';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-05.3';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-10-05';
 
 export const SUPPORT_TONE_RULES = [
@@ -300,6 +300,10 @@ const SUPPORT_TOPIC_DEFINITIONS = [
             'A dose pode ser igual para todos ou calculada pelo último peso de cada animal.',
             'O EIXO bloqueia vacina de brucelose em macho ou fora da idade, lote vencido e estoque insuficiente. Animais bloqueados aparecem com o motivo; é possível aplicar só nos liberados.',
             'Ao salvar, o estoque do lote baixa sozinho. O custo do produto usado aparece em Custo sanitário por lote e por animal, sem lançar de novo no resultado (já entrou na compra). A tela mostra quais animais ainda estão em carência para abate.',
+            'Para uma aplicação que já aconteceu, escolha Registrar aplicação anterior: selecione os animais, informe produto e data, confira e salve. A dose pode ficar sem informação. Esse caminho não movimenta estoque nem Financeiro e não exige lote do frasco ou saldo.',
+            'No histórico anterior, inconsistências de identificação, sexo ou idade bloqueiam o grupo inteiro. Corrija os dados antes de repetir. Carência desconhecida não libera animais para abate.',
+            'É possível cadastrar um produto da Farmácia durante o histórico e retornar com os dados preservados. Após importar animais, o atalho Registrar histórico sanitário leva somente os animais cadastrados, quando houver acesso à Sanidade.',
+            'No detalhe do animal, a aba Sanitário reúne registros individuais e aplicações de Sanidade, identificando origem e autoria disponível. Registros individuais em texto livre não alimentam automaticamente calendário ou carência.',
         ],
     },
     {

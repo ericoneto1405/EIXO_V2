@@ -1,3 +1,4 @@
+import { loadSanitaryTimeline } from '../sanity/sanityTimeline.js';
 import { PrismaClient } from '@prisma/client';
 import express from 'express';
 import { randomUUID } from 'node:crypto';
@@ -159,6 +160,13 @@ app.post('/animals/:id/eventos', requireAuth, async (req, res) => {
 // =============================================
 // MANEJO SANITÁRIO — Rebanho Comercial
 // =============================================
+
+// Consulta nova para o desktop; preserva o contrato sanitário do EIXO Campo.
+app.get('/animals/:id/historico-sanitario', requireAuth, asyncRoute(async (req, res) => {
+    const animal = await prisma.animal.findFirst({ where: { id: req.params.id, farm: buildFarmRelationFilter(req) } });
+    if (!animal) return res.status(404).json({ message: 'Animal não encontrado.' });
+    return res.json({ records: await loadSanitaryTimeline(prisma, animal) });
+}));
 
 app.get('/animals/:id/sanitario', async (req, res) => {
     const { id } = req.params;

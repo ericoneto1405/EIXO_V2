@@ -109,6 +109,7 @@ interface ImportHerdModalProps {
     farmId?: string | null;
     farmName?: string | null;
     onSuccess?: () => void;
+    onRegisterSanitaryHistory?: (animals: Array<{ id: string; identificacao: string }>) => void;
     herdType: HerdType;
     paddocks?: Paddock[];
     lots?: Lot[];
@@ -122,6 +123,7 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
     farmId,
     farmName,
     onSuccess,
+    onRegisterSanitaryHistory,
     herdType,
     paddocks = [],
     lots = [],
@@ -858,6 +860,13 @@ const ImportHerdModal: React.FC<ImportHerdModalProps> = ({
                             Selecionar planilha corrigida
                         </button>
                     )}
+                    {status === 'done' && result && result.criados > 0 && onRegisterSanitaryHistory && (result.detalhes?.criados?.length || 0) > 0 && <div className="w-full space-y-2 rounded-xl border border-(--eixo-border) p-3">
+                        <p className="text-sm">Os animais já receberam vacinas, vermífugos ou tratamentos? Registre o histórico agora ou depois.</p>
+                        <div className="flex flex-wrap gap-2"><button type="button" className="rounded-xl bg-(--eixo-green) px-4 py-2 text-sm font-bold" onClick={() => {
+                            const animals = result.detalhes?.criados?.filter(animal => animal.id) || [];
+                            onSuccess?.(); handleClose(); onRegisterSanitaryHistory(animals);
+                        }}>Registrar histórico sanitário</button><button type="button" className="rounded-xl border border-(--eixo-border) px-4 py-2 text-sm" onClick={handleSeeAnimals}>Fazer depois</button></div>
+                    </div>}
                     {status === 'done' && result && result.criados > 0 && (
                         <button
                             type="button"

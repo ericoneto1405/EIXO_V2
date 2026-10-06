@@ -1,3 +1,4 @@
+import SanitaryHistoryForm, { ImportedSanitaryAnimal } from './SanitaryHistoryForm';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     AnimalEmCarencia,
@@ -23,10 +24,12 @@ import SanidadeStatus from './SanidadeStatus';
 
 export type SanidadeTab = 'APLICACOES' | 'CALENDARIO' | 'CASOS' | 'FARMACIA';
 
+export interface SanidadeNavigationRequest { tab: SanidadeTab; nonce: number; historical?: boolean; animals?: ImportedSanitaryAnimal[] }
+
 interface SanidadeModuleProps {
     farmId?: string | null;
     farmName?: string | null;
-    tabRequest?: { tab: SanidadeTab; nonce: number } | null;
+    tabRequest?: SanidadeNavigationRequest | null;
 }
 
 type Passo = 1 | 2 | 3 | 4;
@@ -91,13 +94,16 @@ const Aviso: React.FC<{ tone: 'danger' | 'warning' | 'success'; children: React.
 };
 
 const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRequest }) => {
+    const [historyPending, setHistoryPending] = useState(false);
+    const [historical, setHistorical] = useState(Boolean(tabRequest?.historical));
+    const [historyAnimals, setHistoryAnimals] = useState<ImportedSanitaryAnimal[]>(tabRequest?.animals || []);
     const [aba, setAba] = useState<Aba>(tabRequest?.tab || 'APLICACOES');
     const [avisoPreenchido, setAvisoPreenchido] = useState<string | null>(null);
     const [statusKey, setStatusKey] = useState(0);
     const [coolerTemp, setCoolerTemp] = useState('');
 
     useEffect(() => {
-        if (tabRequest) setAba(tabRequest.tab);
+        if (tabRequest) { setAba(tabRequest.tab); setHistorical(Boolean(tabRequest.historical)); setHistoryAnimals(tabRequest.animals || []); }
     }, [tabRequest]);
     const [options, setOptions] = useState<SanityOptions | null>(null);
     const [historico, setHistorico] = useState<AplicacaoResumo[]>([]);
@@ -131,9 +137,9 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
     const [erro, setErro] = useState<string | null>(null);
     const [sucesso, setSucesso] = useState<string | null>(null);
 
-    const carregar = useCallback(async () => {
+    const carregar = useCallback(async (silent = false) => {
         if (!farmId) return;
-        setLoading(true);
+        if (!silent) setLoading(true);
         setLoadError(null);
         try {
             const [opcoes, lista, emCarencia, custo] = await Promise.all([
@@ -301,10 +307,10 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
             <SanidadeStatus farmId={farmId} refreshKey={statusKey} />
 
             <div className="flex flex-wrap gap-2" role="tablist">
-                <button type="button" role="tab" aria-selected={aba === 'APLICACOES'} className={aba === 'APLICACOES' ? primaryButton : secondaryButton} onClick={() => setAba('APLICACOES')}>Aplicações</button>
-                <button type="button" role="tab" aria-selected={aba === 'CALENDARIO'} className={aba === 'CALENDARIO' ? primaryButton : secondaryButton} onClick={() => setAba('CALENDARIO')}>Calendário</button>
-                <button type="button" role="tab" aria-selected={aba === 'CASOS'} className={aba === 'CASOS' ? primaryButton : secondaryButton} onClick={() => setAba('CASOS')}>Doenças e mortes</button>
-                <button type="button" role="tab" aria-selected={aba === 'FARMACIA'} className={aba === 'FARMACIA' ? primaryButton : secondaryButton} onClick={() => setAba('FARMACIA')}>Farmácia</button>
+                <button type="button" role="tab" disabled={historyPending} aria-selected={aba === 'APLICACOES'} className={aba === 'APLICACOES' ? primaryButton : secondaryButton} onClick={() => setAba('APLICACOES')}>Aplicações</button>
+                <button type="button" role="tab" disabled={historyPending} aria-selected={aba === 'CALENDARIO'} className={aba === 'CALENDARIO' ? primaryButton : secondaryButton} onClick={() => setAba('CALENDARIO')}>Calendário</button>
+                <button type="button" role="tab" disabled={historyPending} aria-selected={aba === 'CASOS'} className={aba === 'CASOS' ? primaryButton : secondaryButton} onClick={() => setAba('CASOS')}>Doenças e mortes</button>
+                <button type="button" role="tab" disabled={historyPending} aria-selected={aba === 'FARMACIA'} className={aba === 'FARMACIA' ? primaryButton : secondaryButton} onClick={() => setAba('FARMACIA')}>Farmácia</button>
             </div>
 
             {aba === 'CASOS' && <SanidadeCases key={farmId} farmId={farmId} onChanged={() => void carregar()} />}
@@ -315,7 +321,12 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
 
             {aba === 'FARMACIA' && <PharmacyModule key={farmId} farmId={farmId} onStockChanged={() => void carregar()} />}
 
-            {aba === 'APLICACOES' && (
+            {aba === 'APLICACOES' && <div className="flex flex-wrap gap-2">
+                <button type="button" disabled={historyPending} className={!historical ? primaryButton : secondaryButton} onClick={() => setHistorical(false)}>Registrar aplicação · consome estoque</button>
+                <button type="button" disabled={historyPending} className={historical ? primaryButton : secondaryButton} onClick={() => setHistorical(true)}>Registrar aplicação anterior</button>
+            </div>}
+            {aba === 'APLICACOES' && historical && farmId && <SanitaryHistoryForm key={`${farmId}:${tabRequest?.nonce || 0}`} farmId={farmId} farmName={farmName} initialAnimals={historyAnimals} onPendingChange={setHistoryPending} onSaved={() => void carregar(true)} onClose={() => { setHistorical(false); setHistoryAnimals([]); }} />}
+            {aba === 'APLICACOES' && !historical && (
             <>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -696,7 +707,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
                                 {historico.map((item) => (
                                     <tr key={item.groupId} className="border-t border-(--eixo-border)">
                                         <td className="py-2 pr-3">{formatDate(item.appliedAt)}</td>
-                                        <td className="py-2 pr-3 font-semibold text-(--eixo-text)">{item.produto}</td>
+                                        <td className="py-2 pr-3 font-semibold text-(--eixo-text)">{item.produto}<span className="block text-xs font-normal">{item.origin === 'HISTORY' ? 'Aplicação anterior' : 'Aplicação com estoque'}</span></td>
                                         <td className="py-2 pr-3">{item.animais}</td>
                                         <td className="py-2 pr-3">{item.loteFrasco || '—'}</td>
                                         <td className="py-2 pr-3">{item.carenciaDesconhecida ? 'Não cadastrada' : formatDate(item.carenciaAte)}</td>

@@ -237,7 +237,9 @@ export function registerHQRoutes(app) {
             const [totalOrgs, totalUsers, subscriptions, animals] = await Promise.all([
                 prisma.organization.count(),
                 prisma.user.count(),
-                prisma.billingSubscription.findMany({ where: { status: 'ACTIVE' } }),
+                prisma.billingSubscription.findMany({
+                    where: { status: 'ACTIVE', provider: { not: 'INTERNAL' } },
+                }),
                 prisma.animal.count(),
             ]);
 
@@ -277,7 +279,11 @@ export function registerHQRoutes(app) {
 
             const paidOrgIds = (
                 await prisma.billingSubscription.findMany({
-                    where: { status: 'ACTIVE', NOT: { planCode: 'GRATIS' } },
+                    where: {
+                        status: 'ACTIVE',
+                        provider: { not: 'INTERNAL' },
+                        NOT: { planCode: 'GRATIS' },
+                    },
                     select: { organizationId: true },
                 })
             ).map((subscription) => subscription.organizationId);
