@@ -13,7 +13,7 @@ import {
     deleteWeighing,
     listHerdEvents,
     listPaddockMoves,
-    listSanitaryRecords,
+    listSanitaryTimeline,
     listWeighings,
     updateWeighing,
 } from '../adapters/herdApi';
@@ -313,7 +313,7 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
         setIsLoadingSanitary(true);
         setSanitaryError(null);
         try {
-            const records = await listSanitaryRecords(animalId, resolvedMode);
+            const records = await listSanitaryTimeline(animalId);
             setSanitaryRecords(records || []);
         } catch (error: any) {
             setSanitaryError(error?.message || 'Não foi possível listar registros sanitários.');
@@ -1355,6 +1355,12 @@ const AnimalDetailModal: React.FC<AnimalDetailModalProps> = ({
                                                     </span>
                                                     <div className="flex-1 text-sm text-(--eixo-text)">
                                                         <span className="font-medium">{rec.produto}</span>
+                                                        <p className="text-xs text-(--eixo-text-muted)">{rec.origin === 'HISTORY' ? 'Aplicação anterior' : rec.origin === 'STOCK' ? 'Aplicação com estoque' : 'Registro individual'}</p>
+                                                        {rec.origin === 'INDIVIDUAL' && <p className="text-xs text-(--eixo-text-muted)">Registro em texto livre: não alimenta calendário e carência.</p>}
+                                                        {!rec.dose && <p className="text-xs text-(--eixo-text-muted)">Dose não informada</p>}
+                                                        <p className="text-xs text-(--eixo-text-muted)">Cadastrado em: {new Date(rec.createdAt).toLocaleDateString('pt-BR')}</p>
+                                                        {rec.registeredBy && <p className="text-xs text-(--eixo-text-muted)">Cadastrado por: {rec.registeredBy}</p>}
+                                                        {rec.appliedBy && <p className="text-xs text-(--eixo-text-muted)">Aplicado por: {rec.appliedBy}</p>}
                                                         <span className="ml-3 text-(--eixo-text-muted)">{new Date(rec.date).toLocaleDateString('pt-BR')}</span>
                                                         {rec.dose && <span className="ml-3 text-(--eixo-text-muted)">Dose: {rec.dose}</span>}
                                                         {rec.proximaAplicacao && (

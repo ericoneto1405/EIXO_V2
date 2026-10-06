@@ -78,11 +78,11 @@ export interface Previa {
     total: number;
     aptos: number;
     bloqueados: number;
-    doseTotal: number;
+    doseTotal: number | null;
     unidadeDose: string;
     consumoEstoque: number | null;
     unidadeEstoque: string | null;
-    custoTotal: number;
+    custoTotal: number | null;
     carenciaAte: string | null;
     carenciaDias: number | null;
     carenciaDesconhecida: boolean;
@@ -94,6 +94,7 @@ export interface Previa {
 }
 
 export interface AplicacaoResumo {
+  origin?: 'STOCK' | 'HISTORY';
   groupId: string;
   appliedAt: string;
   animais: number;
@@ -259,7 +260,7 @@ export const previewAplicacao = (farmId: string, payload: AplicacaoPayload) =>
   request<Previa>(`${base(farmId)}/aplicacoes/preview`, { method: 'POST', body: JSON.stringify(payload) });
 
 export const salvarAplicacao = (farmId: string, payload: AplicacaoPayload) =>
-  request<{ groupId: string; aplicados: number; ignorados: number; consumoEstoque: number; custoTotal: number; carenciaAte: string | null }>(
+  request<{ groupId: string; aplicados: number; ignorados: number; consumoEstoque: number; custoTotal: number | null; carenciaAte: string | null }>(
     `${base(farmId)}/aplicacoes`,
     { method: 'POST', body: JSON.stringify(payload) },
   );
@@ -299,3 +300,18 @@ export const encerrarCaso = (farmId: string, caseId: string, payload: { status: 
 
 export const listarCarencia = (farmId: string) =>
   request<{ animais: AnimalEmCarencia[] }>(`${base(farmId)}/carencia`);
+
+export interface HistoricalApplicationPayload {
+  productId: string;
+  appliedAt: string;
+  selecao: { animalIds?: string[]; brincos?: string[]; lotId?: string | null };
+  dose?: number | null;
+  doseUnit?: string | null;
+  appliedByName?: string;
+  notes?: string;
+  requestId: string;
+}
+export const previewHistory = (farmId: string, payload: HistoricalApplicationPayload) =>
+  request<Previa>(`${base(farmId)}/historico/preview`, { method: 'POST', body: JSON.stringify(payload) });
+export const saveHistory = (farmId: string, payload: HistoricalApplicationPayload) =>
+  request<{ groupId: string; aplicados: number }>(`${base(farmId)}/historico`, { method: 'POST', body: JSON.stringify(payload) });

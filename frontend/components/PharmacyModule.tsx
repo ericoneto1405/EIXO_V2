@@ -60,6 +60,8 @@ interface CatalogItem {
 interface PharmacyModuleProps {
     farmId: string;
     onStockChanged?: () => void;
+    onProductCreated?: (id: string) => void;
+    productOnly?: boolean;
 }
 
 type PaymentCondition = 'PAGO' | 'A_PAGAR' | 'PARCELADO' | 'ENTRADA_PARCELADO' | 'CARTAO';
@@ -141,7 +143,7 @@ const buildCatalogNotes = (item: CatalogItem) =>
         item.notes,
     ].filter(Boolean).join('\n');
 
-const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged }) => {
+const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged, onProductCreated, productOnly = false }) => {
     const [products, setProducts] = useState<PharmacyProduct[]>([]);
     const [movements, setMovements] = useState<PharmacyMovement[]>([]);
     const [loading, setLoading] = useState(true);
@@ -289,6 +291,7 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
             setProductForm(emptyProductForm);
             setBatchForm((current) => ({ ...current, productId: payload.product.id }));
             setSuccess('Produto cadastrado. Agora registre o primeiro lote.');
+            onProductCreated?.(payload.product.id);
         });
     };
 
@@ -339,13 +342,14 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
 
     return (
         <div className="space-y-5">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {!productOnly && <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <Summary label="Produtos cadastrados" value={products.length} />
                 <Summary label="Estoque baixo" value={lowStockCount} attention={lowStockCount > 0} />
                 <Summary label="Vencidos ou até 60 dias" value={expiringCount} attention={expiringCount > 0} />
                 <Summary label="Valor estimado do estoque" value={inventoryValue} currency />
             </div>
-            {expiredLoss > 0 && (
+            }
+            {!productOnly && expiredLoss > 0 && (
                 <div role="alert" className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-(--eixo-danger)">
                     {expiredLoss.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} em produtos vencidos no estoque. Esse valor já é custo da fazenda e não chega a nenhum lote.
                 </div>
@@ -354,8 +358,8 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
             {error && <div role="alert" className="rounded-2xl border border-[#efc2ba] bg-[#fff2ef] px-4 py-3 text-sm font-semibold text-(--eixo-danger)">{error}</div>}
             {success && <div role="status" className="rounded-2xl border border-[#b6d4b0] bg-(--eixo-green-soft) px-4 py-3 text-sm font-semibold text-(--eixo-success)">{success}</div>}
 
-            <div className="grid gap-5 xl:grid-cols-3">
-                <FormCard title="1. Cadastrar produto" description="Crie o item antes de registrar seus lotes.">
+            <div className={productOnly ? 'space-y-5' : 'grid gap-5 xl:grid-cols-3'}>
+                <FormCard title={productOnly ? 'Cadastrar produto' : '1. Cadastrar produto'} description={productOnly ? 'Cadastre o produto utilizado. Não é necessário registrar compra ou estoque.' : 'Crie o item antes de registrar seus lotes.'}>
                     <form onSubmit={handleCreateProduct} className="space-y-3">
                         {catalog.length > 0 && (
                             <div className="rounded-xl border border-(--eixo-border) bg-(--eixo-surface-soft) p-3">
@@ -427,6 +431,7 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                     </form>
                 </FormCard>
 
+                {!productOnly && <>
                 <FormCard title="2. Registrar compra" description="Entra no estoque e no Financeiro como custo da fazenda.">
                     <form onSubmit={handleCreateBatch} className="space-y-3">
                         <Field label="Produto"><select required className={inputClass} value={batchForm.productId} onChange={(event) => setBatchForm({ ...batchForm, productId: event.target.value })}><option value="">Selecione</option>{products.map((product) => <option key={product.id} value={product.id}>{product.name}</option>)}</select></Field>
@@ -484,8 +489,10 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                         <SaveButton disabled={saving || allBatches.length === 0}>Salvar movimentação</SaveButton>
                     </form>
                 </FormCard>
+                </>}
             </div>
 
+            {!productOnly && <>
             <PharmacyTemperature farmId={farmId} />
 
             <section className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-5">
@@ -568,6 +575,7 @@ const PharmacyModule: React.FC<PharmacyModuleProps> = ({ farmId, onStockChanged 
                 <h3 className="font-bold text-(--eixo-text)">Movimentações recentes</h3>
                 <div className="mt-3 space-y-2">{movements.length === 0 ? <p className="text-sm text-(--eixo-text-muted)">Nenhuma movimentação registrada.</p> : movements.slice(0, 10).map((movement) => <div key={movement.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-(--eixo-surface-soft) px-4 py-3 text-sm"><div><span className="font-semibold text-(--eixo-text)">{movement.product.name}</span><span className="ml-2 text-(--eixo-text-muted)">Lote {movement.batch.lotNumber}</span>{movement.notes && <p className="mt-0.5 text-xs text-(--eixo-text-muted)">{movement.notes}</p>}</div><div className="text-right"><p className={`font-bold ${movement.type === 'EXIT' || movement.quantity < 0 ? 'text-(--eixo-danger)' : 'text-(--eixo-success)'}`}>{movement.type === 'EXIT' ? '-' : movement.quantity > 0 ? '+' : ''}{Math.abs(movement.quantity).toLocaleString('pt-BR')} {movement.product.unit}</p><p className="text-xs text-(--eixo-text-muted)">{new Date(movement.createdAt).toLocaleString('pt-BR')}</p></div></div>)}</div>
             </section>
+            </>}
         </div>
     );
 };

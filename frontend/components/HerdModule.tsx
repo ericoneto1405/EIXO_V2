@@ -137,6 +137,7 @@ interface HerdModuleProps {
     weighingOnlyMode?: boolean;
     canImportAnimals?: boolean;
     canBulkDeleteAnimals?: boolean;
+    onRegisterSanitaryHistory?: (animals: Array<{ id: string; identificacao: string }>) => void;
     onOpenAnimalLink?: (farmId: string, animalId: string) => void;
 }
 
@@ -277,6 +278,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
     canImportAnimals = false,
     canBulkDeleteAnimals = false,
     onOpenAnimalLink,
+    onRegisterSanitaryHistory,
 }) => {
     const resolvedMode: HerdType = herdType ?? mode ?? 'COMMERCIAL';
     const [activeTab, setActiveTab] = useState<TabKey>('overview');
@@ -3056,6 +3058,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
                     farmId={farmId}
                     farmName={farmName}
                     onSuccess={loadData}
+                    onRegisterSanitaryHistory={onRegisterSanitaryHistory}
                     herdType={resolvedMode}
                     paddocks={paddocks}
                     lots={lots}
