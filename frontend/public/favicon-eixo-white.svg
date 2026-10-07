@@ -1,5 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
   <rect x="2" y="2" width="60" height="60" rx="14" fill="#ffffff" stroke="#e7dcc8" stroke-width="2" />
-  <path d="M17 16h8l11 15-11 17h-8l11-17z" fill="#5E5E5E" />
-  <path d="M47 16h-8l-11 15 11 17h8L36 31z" fill="#B6E23A" />
+  <svg x="12" y="12" width="40" height="40" viewBox="764 7 574 512" preserveAspectRatio="xMidYMid meet">
+    <path id="x-graphite" fill="#5E5E5E" d="
+      M 780 7
+      L 902 7
+      Q 918 7 928 21
+      L 1105 250
+      Q 1116 264 1105 278
+      L 928 506
+      Q 918 519 902 519
+      L 780 519
+      Q 764 519 773 506
+      L 989 264
+      L 773 20
+      Q 764 7 780 7
+      Z"/>
+    <path id="x-green-upper" fill="#B6E23A" d="
+      M 1212 7
+      L 1320 7
+      Q 1338 7 1326 23
+      L 1144 224
+      Q 1134 238 1123 224
+      L 1085 181
+      Q 1073 168 1085 154
+      L 1197 22
+      Q 1203 7 1212 7
+      Z"/>
+    <path id="x-green-lower" fill="#B6E23A" d="
+      M 1085 349
+      L 1123 306
+      Q 1134 292 1144 306
+      L 1326 503
+      Q 1338 519 1320 519
+      L 1212 519
+      Q 1203 519 1197 504
+      L 1085 374
+      Q 1073 361 1085 349
+      Z"/>
+  </svg>
 </svg>
