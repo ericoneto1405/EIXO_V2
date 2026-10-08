@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-07.2';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-07.3';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-10-07';
 
 export const SUPPORT_TONE_RULES = [
@@ -391,6 +391,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         ],
     },
     {
+        // Revisão visual: logo institucional no cabeçalho; regras e ações dos planos preservadas.
         id: 'planos-permissoes',
         title: 'Planos, cadeados e permissões',
         keywords: ['plano', 'planos', 'cadeado', 'bloqueado', 'permissão', 'acesso', 'upgrade'],
