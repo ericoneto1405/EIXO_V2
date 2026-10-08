@@ -58,13 +58,11 @@ const ProgressGuide: React.FC<Props> = ({
     const label = moduleName ? `${title} — ${moduleName}` : title;
 
     return (
-        <section aria-label={label} className="mb-4 rounded-2xl border border-(--eixo-border-strong) bg-(--eixo-surface)">
+        <section aria-label={label} className="mb-4 rounded-2xl border border-(--eixo-border-strong) border-l-4 border-l-(--eixo-green) bg-(--eixo-surface)">
             <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3">
                 <div className="min-w-0 flex-1 basis-48">
-                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                        <h2 className="text-sm font-semibold text-(--eixo-text)">{title}</h2>
-                        {moduleName && <span className="text-xs text-(--eixo-text-muted)">{moduleName}</span>}
-                    </div>
+                    <h2 className="text-base font-bold text-(--eixo-text)">Guia de implantação</h2>
+                    <p className="mt-1 text-sm text-(--eixo-text-muted)">{label}</p>
                     <p className="mt-1 wrap-break-word text-xs text-(--eixo-text-muted)">
                         {farmName ? `Fazenda: ${farmName}` : 'Nenhuma fazenda selecionada'}
                     </p>
@@ -77,7 +75,7 @@ const ProgressGuide: React.FC<Props> = ({
                     type="button" ref={toggleRef} onClick={toggle}
                     aria-expanded={!collapsed} aria-controls={contentId}
                     aria-label={`${collapsed ? 'Abrir' : 'Recolher'} guia${moduleName ? ` de ${moduleName}` : ''}`}
-                    className="flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft) focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--eixo-text)"
+                    className={`flex shrink-0 items-center gap-2 ${collapsed ? guideButtonClass : 'rounded-lg px-3 py-2 text-sm font-semibold text-(--eixo-text) hover:bg-(--eixo-surface-soft) focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--eixo-text)'}`}
                 >
                     {collapsed ? 'Abrir guia' : 'Recolher guia'}
                     <svg aria-hidden="true" className={`h-4 w-4 ${collapsed ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
