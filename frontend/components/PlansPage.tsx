@@ -194,23 +194,20 @@ const PlansPage: React.FC<PlansPageProps> = ({
     return (
         <div className="min-h-screen bg-(--eixo-surface-soft)">
             {/* Header */}
-            <header className="border-b border-(--eixo-border) bg-(--eixo-surface) px-6 py-4">
-                <div className="mx-auto flex max-w-5xl items-center justify-between">
+            <header className="border-b border-(--eixo-border) bg-(--eixo-surface) px-4 py-4 sm:px-6">
+                <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
                     <button
                         type="button"
                         onClick={handleBack}
-                        className="inline-flex items-center gap-2 rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2 text-sm font-semibold text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text)"
+                        className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-2 text-sm font-semibold text-(--eixo-text-muted) transition-colors hover:bg-(--eixo-surface-soft) hover:text-(--eixo-text)"
                     >
                         <span aria-hidden="true">←</span>
                         Voltar
                     </button>
-                    <div className="inline-flex flex-col items-center leading-none">
-                        <img src="/logo_eixo_official.svg" alt="EIXO" className="h-7" />
-                        <span className="mt-[4px] text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-(--eixo-text)/75">
-                            Gestão para Pecuária de Corte
-                        </span>
+                    <div className="inline-flex shrink-0 flex-col items-center leading-none">
+                        <img src="/logo_eixo_institucional.svg" alt="EIXO — Gestão para Pecuária de Corte" width={180} height={72} className="h-auto w-[180px] max-w-full" />
                     </div>
-                    <div className="w-[92px]" aria-hidden="true" />
+                    <div className="hidden w-[92px] shrink-0 sm:block" aria-hidden="true" />
                 </div>
             </header>
 
