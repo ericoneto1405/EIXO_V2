@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React from 'react';
 import TeamPermissions, { TeamPermissionsProps } from './TeamPermissions';
 import FieldOccurrences from './FieldOccurrences';
@@ -18,8 +19,7 @@ const AppEixoCampo: React.FC<AppEixoCampoProps> = ({
     return (
         <div className="space-y-6">
             <div>
-                <h1 className="font-brand text-2xl font-extrabold text-(--eixo-text)">APP EIXO CAMPO</h1>
-                <p className="mt-2 text-sm text-(--eixo-text-muted)">Gestão do aplicativo e acompanhamento dos registros de campo.</p>
+                <ModuleHeader title="APP EIXO CAMPO" subtitle="Gerencie colaboradores, aparelhos e registros de campo." />
             </div>
             <nav aria-label="Seções do APP EIXO CAMPO" className="flex flex-wrap gap-3">
                 {[

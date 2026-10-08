@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React, { useEffect, useMemo, useState } from 'react';
 import * as XLSX from 'xlsx';
 import {
@@ -239,12 +240,10 @@ const EixoAcasalamento: React.FC<EixoAcasalamentoProps> = ({ farmId }) => {
 
   return (
     <div className="space-y-5 text-(--eixo-text)">
-      <header className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-6 shadow-xs">
+      <header className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-(--eixo-text-muted)">Eixo Acasalamento</p>
-            <h2 className="mt-2 text-3xl font-black leading-tight">Recomendação de touros</h2>
-            <p className="mt-2 text-sm text-(--eixo-text-muted)">Plantel, objetivo e prova oficial.</p>
+            <ModuleHeader embedded title="Eixo Acasalamento" subtitle="Consulte recomendações de touros conforme o plantel e o objetivo de seleção." />
           </div>
           <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface-soft) px-4 py-3 text-xs text-(--eixo-text-muted)">
             <strong className="block text-(--eixo-text)">Base</strong>

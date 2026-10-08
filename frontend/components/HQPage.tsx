@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React from 'react';
 import { buildApiUrl } from '../api';
 import HQClosures from './HQClosures';
@@ -1059,10 +1060,9 @@ const HQPage: React.FC = () => {
 
     return (
         <div className="h-full overflow-y-auto rounded-2xl bg-[#EDEDED] p-4 lg:p-6" style={{ fontFamily: 'Manrope, sans-serif' }}>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5 flex flex-col items-start justify-between gap-4 lg:flex-row">
                 <div>
-                    <h1 className="text-2xl font-extrabold text-[#2F2F2F]">EIXO HQ</h1>
-                    <p className="mt-1 text-sm text-[#5E5E5E]">Painel estratégico para acompanhamento geral da operação.</p>
+                    <ModuleHeader embedded title="EIXO HQ" subtitle="Acompanhe os indicadores gerais da operação." />
                 </div>
                 <button
                     type="button"

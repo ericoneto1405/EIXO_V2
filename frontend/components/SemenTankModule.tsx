@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React, { useEffect, useMemo, useState } from 'react';
 import type { AnimalUI } from '../types';
 import {
@@ -209,15 +210,10 @@ const SemenTankModule: React.FC<SemenTankModuleProps> = ({ farmId, farmName }) =
 
   return (
     <div className="space-y-6 text-[#2f3a2d]">
-      <section className="rounded-[24px] border border-[#d7cab3] bg-[#fffaf1] p-6 shadow-xs">
+      <section className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.24em] text-[#9d7d4d]">Estoque genético da fazenda</p>
-            <h1 className="mt-2 text-3xl font-black">Botijão de sêmen</h1>
-            <p className="mt-2 max-w-3xl text-sm text-[#6d6558]">
-              Controle os lotes de sêmen disponíveis na fazenda. O Eixo Acasalamento considera este estoque como disponibilidade real, junto com as centrais comerciais.
-            </p>
-            {farmName && <p className="mt-1 text-xs font-semibold text-[#74644e]">Fazenda: {farmName}</p>}
+            <ModuleHeader embedded title="Botijão de sêmen" subtitle="Controle os lotes de sêmen disponíveis na fazenda." farmName={farmName} />
           </div>
           <button type="button" onClick={openCreate} className="rounded-2xl bg-[#9d7d4d] px-5 py-3 text-sm font-bold text-white hover:bg-[#8f7144]">
             Cadastrar sêmen

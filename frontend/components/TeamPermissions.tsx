@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React from 'react';
 import { buildApiUrl } from '../api';
 import {
@@ -136,7 +137,6 @@ const FieldCollaboratorModal: React.FC<FieldCollaboratorModalProps> = ({
                 <div className="flex items-center justify-between border-b border-(--eixo-border) px-6 py-5">
                     <div>
                         <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-(--eixo-green-soft) px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
-                            <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                             App EIXO Campo
                         </div>
                         <h3 className="font-brand text-xl font-extrabold text-(--eixo-text)">Novo colaborador de campo</h3>
@@ -353,7 +353,6 @@ const EditFieldCollaboratorModal: React.FC<EditFieldCollaboratorModalProps> = ({
                 <div className="flex items-center justify-between border-b border-(--eixo-border) px-6 py-5">
                     <div>
                         <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-(--eixo-green-soft) px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
-                            <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                             App EIXO Campo
                         </div>
                         <h3 className="font-brand text-xl font-extrabold text-(--eixo-text)">Editar colaborador</h3>
@@ -536,7 +535,6 @@ const EditSystemUserModal: React.FC<EditSystemUserModalProps> = ({
                 <div className="flex items-center justify-between border-b border-(--eixo-border) px-6 py-5">
                     <div>
                         <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-(--eixo-green-soft) px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
-                            <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                             Sistema web
                         </div>
                         <h3 className="font-brand text-xl font-extrabold text-(--eixo-text)">Editar usuário</h3>
@@ -835,7 +833,6 @@ const ActivationCodeModal: React.FC<ActivationCodeModalProps> = ({ payload, onCl
             <div className="w-full max-w-md rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) shadow-2xl">
                 <div className="border-b border-(--eixo-border) px-6 py-5">
                     <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-(--eixo-green-soft) px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
-                        <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                         App EIXO Campo
                     </div>
                     <h3 className="font-brand text-xl font-extrabold text-(--eixo-text)">Código de ativação</h3>
@@ -1122,14 +1119,7 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                 <div className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
                     <div className="flex flex-wrap items-center justify-between gap-4">
                         <div>
-                            <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-(--eixo-green-soft) px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
-                                <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
-                                {mode === 'field' ? 'APP EIXO CAMPO' : 'Estrutura da Fazenda'}
-                            </div>
-                            <h1 className="font-brand text-2xl font-extrabold leading-tight text-(--eixo-text)">{mode === 'field' ? 'Colaboradores e aparelhos' : 'Usuários e Permissões'}</h1>
-                            <p className="mt-1 text-sm leading-relaxed text-(--eixo-text-muted)">
-                                {mode === 'field' ? 'Gerencie colaboradores, códigos de ativação e aparelhos do aplicativo.' : 'Gerencie os usuários e as permissões de acesso ao sistema web.'}
-                            </p>
+                            <ModuleHeader embedded title={mode === 'field' ? 'Colaboradores e aparelhos' : 'Usuários e Permissões'} subtitle={mode === 'field' ? 'Gerencie colaboradores, códigos de ativação e aparelhos do aplicativo.' : 'Gerencie usuários e permissões de acesso ao sistema web.'} headingLevel={mode === 'field' ? 'h2' : 'h1'} />
                         </div>
                     </div>
                 </div>
@@ -1168,7 +1158,6 @@ const TeamPermissions: React.FC<TeamPermissionsProps> = ({
                     <div className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-6">
                         <div className="mb-4">
                             <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-(--eixo-green-soft) px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
-                                <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                                 Convite por e-mail
                             </div>
                             <h3 className="font-brand text-base font-extrabold text-(--eixo-text)">Convidar usuário</h3>

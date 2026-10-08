@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React from 'react';
 import { buildApiUrl } from '../api';
 import {
@@ -546,14 +547,10 @@ const NutritionModule: React.FC<NutritionModuleProps> = ({ farmId, farmName, cur
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
+            <div className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[rgba(197,138,32,0.18)] bg-[rgba(197,138,32,0.08)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-(--eixo-warning)">
-                            <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-warning)" />
-                            {farmName || 'Fazenda'}
-                        </div>
-                        <h2 className="font-brand text-2xl font-extrabold leading-tight text-(--eixo-text)">Nutrição</h2>
+                        <ModuleHeader embedded title="Nutrição" subtitle="Organize o manejo nutricional e acompanhe o fornecimento de alimentos." farmName={farmName} />
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {VIEWS.map((item) => (

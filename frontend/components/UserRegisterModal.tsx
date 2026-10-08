@@ -109,7 +109,6 @@ const UserRegisterModal: React.FC<UserRegisterModalProps> = ({
                 <div className="flex items-center justify-between border-b border-(--eixo-border) px-6 py-5">
                     <div>
                         <div className="mb-1.5 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-(--eixo-green-soft) px-3 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
-                            <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                             Sistema web
                         </div>
                         <h3 className="font-brand text-xl font-extrabold text-(--eixo-text)">Novo usuário</h3>

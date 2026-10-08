@@ -1,3 +1,4 @@
+import ModuleHeader from './components/ModuleHeader';
 import React, { Suspense, useState, useRef, useEffect } from 'react';
 import AssistantChat from './components/AssistantChat';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -1071,7 +1072,7 @@ const AppContent: React.FC = () => {
             const canRequestPlanUpgrade = ['OWNER', 'ADMIN'].includes(currentUser?.membershipRole || '');
             return (
                 <section className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-6 lg:p-8">
-                    <h1 className="font-brand text-2xl font-extrabold text-(--eixo-graphite)">Eixo Acasalamento</h1>
+                    <ModuleHeader embedded title="Eixo Acasalamento" subtitle="Consulte recomendações de touros conforme o plantel e o objetivo de seleção." />
                     <p className="mt-3 text-sm text-(--eixo-text-muted)" role="status">
                         {hasRequiredPlan
                             ? 'Você não tem permissão para acessar o Acasalamento. Solicite acesso ao responsável pela organização.'
@@ -1531,12 +1532,6 @@ const AppContent: React.FC = () => {
                             <img src="/logo_eixo_negative.svg" alt="EIXO" className="h-4 w-auto" />
                             <span className="mt-1 border-t border-white/10 pt-1 text-[10px] font-bold uppercase leading-none tracking-widest text-(--eixo-green-soft)">
                                 suporte
-                            </span>
-
-                            {/* Ponto verde — ativo */}
-                            <span className="absolute right-2 top-1.5 flex h-2.5 w-2.5 items-center justify-center">
-                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-(--eixo-success) opacity-50" />
-                                <span className="relative h-1.5 w-1.5 rounded-full bg-(--eixo-success) ring-2 ring-(--eixo-graphite)" />
                             </span>
                         </button>
 

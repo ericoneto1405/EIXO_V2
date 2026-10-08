@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Candidata,
@@ -150,8 +151,7 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName, currentUser
     return (
         <div className="space-y-5 p-4 md:p-6">
             <div>
-                <h1 className="text-2xl font-bold text-(--eixo-text)">Reprodução</h1>
-                <p className="text-sm text-(--eixo-text-muted)">{farmName || 'Fazenda'} · o sistema sugere, o produtor decide.</p>
+                <ModuleHeader title="Reprodução" subtitle="Acompanhe coberturas, diagnósticos de gestação e partos." farmName={farmName} />
             </div>
 
             <div className="flex flex-wrap gap-2">

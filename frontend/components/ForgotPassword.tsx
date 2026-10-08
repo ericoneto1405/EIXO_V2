@@ -87,7 +87,6 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
                                         <form onSubmit={handleSubmit} className="space-y-5">
                                             <div>
                                                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-(--eixo-border) bg-(--eixo-green-soft) px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-graphite)">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                                                     Recuperação segura
                                                 </div>
                                                 <h2 className="text-3xl font-black text-(--eixo-text)">Recuperar senha</h2>
