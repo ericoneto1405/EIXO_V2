@@ -1,3 +1,4 @@
+import { registerReproWorkflowRoutes } from './reproWorkflowRoutes.js';
 import { PrismaClient } from '@prisma/client';
 import { requireBillingAccess, requireEntitlement, requireModule, requireNonFieldWorker } from '../middlewares/requireAuth.js';
 import { buildFarmScopeFilter } from '../middlewares/farmScope.js';
@@ -200,6 +201,8 @@ export function registerReproRoutes(app) {
         attachReproFarm,
     );
 
+    registerReproWorkflowRoutes(app, { prisma, temPerformance, recalcularVaca });
+
     app.get('/farms/:farmId/reproducao/config', async (req, res) => {
         try {
             const config = await carregarConfig(req.reproFarm.id);
@@ -401,6 +404,7 @@ export function registerReproRoutes(app) {
             const farmId = req.reproFarm.id;
             const atual = await prisma.reproEvent.findFirst({ where: { id: String(req.params.eventId), farmId }, include: { animal: { select: { sexo: true } } } });
             if (!atual) return res.status(404).json({ message: 'Evento não encontrado.' });
+            if (atual.payload?.workflowVersion === 1) return res.status(409).json({ message: 'Registro integrado: preserve o histórico e faça a correção pelo fluxo de origem.' });
             if (!TIPOS_MANUAIS.includes(atual.type)) return res.status(400).json({ message: 'Este evento é editado na tela de origem.' });
             const evento = { ...lerEvento({ ...req.body, type: atual.type }) };
             const outros = await prisma.reproEvent.findMany({ where: { animalId: atual.animalId, id: { not: atual.id } } });
@@ -424,6 +428,7 @@ export function registerReproRoutes(app) {
             const farmId = req.reproFarm.id;
             const atual = await prisma.reproEvent.findFirst({ where: { id: String(req.params.eventId), farmId } });
             if (!atual) return res.status(404).json({ message: 'Evento não encontrado.' });
+            if (atual.payload?.workflowVersion === 1) return res.status(409).json({ message: 'Registro integrado: preserve o histórico e faça a correção pelo fluxo de origem.' });
             if (!TIPOS_MANUAIS.includes(atual.type) && atual.type !== 'LIBERACAO') return res.status(400).json({ message: 'Este evento é apagado na tela de origem.' });
             if (atual.type === 'LIBERACAO') {
                 const outros = await prisma.reproEvent.count({ where: { animalId: atual.animalId, id: { not: atual.id } } });
@@ -827,6 +832,7 @@ export function registerReproRoutes(app) {
             const farmId = req.reproFarm.id;
             const evento = await prisma.reproEvent.findFirst({ where: { id: String(req.params.eventId), farmId, type: 'PARTO' } });
             if (!evento) return res.status(404).json({ message: 'Parto não encontrado.' });
+            if (evento.payload?.workflowVersion === 1) return res.status(409).json({ message: 'Este parto vincula animais cadastrados no Rebanho. A exclusão de crias permanece bloqueada.' });
             const ids = (Array.isArray(evento.payload?.crias) ? evento.payload.crias : []).map((c) => c.calfAnimalId).filter(Boolean);
             if (!ids.length && evento.payload?.calfAnimalId) ids.push(evento.payload.calfAnimalId);
             for (const id of ids) {
@@ -1472,6 +1478,7 @@ export function registerReproRoutes(app) {
             const farmId = req.reproFarm.id;
             const sessao = await prisma.iatfSession.findFirst({ where: { id: String(req.params.id), farmId }, include: { protocol: true } });
             if (!sessao) return res.status(404).json({ message: 'Protocolo não encontrado.' });
+            if (sessao.resumo?.workflowVersion === 1) return res.status(409).json({ message: 'Use o fluxo integrado para esta rodada.' });
             const dia = Number.parseInt(req.params.dia, 10);
             const passo = (sessao.protocol?.passos || []).find((p) => Number(p.dia) === dia);
             if (!passo) return res.status(404).json({ message: 'Passo não encontrado.' });
@@ -1500,7 +1507,8 @@ export function registerReproRoutes(app) {
 
             await prisma.$transaction(async (tx) => {
                 for (const b of baixa || []) {
-                    await tx.pharmacyBatch.update({ where: { id: b.batchId }, data: { quantity: { decrement: b.usar } } });
+                    const changed = await tx.pharmacyBatch.updateMany({ where: { id: b.batchId, farmId, quantity: { gte: b.usar } }, data: { quantity: { decrement: b.usar } } });
+                    if (changed.count !== 1) throw new Error('Estoque alterado durante o manejo.');
                     await tx.pharmacyMovement.create({
                         data: { farmId, productId: passo.produtoId, batchId: b.batchId, type: 'EXIT', quantity: b.usar, unitCost: b.unitCost, notes: `IATF dia ${dia}: ${vacas.length} vaca(s)` },
                     });
@@ -1522,6 +1530,7 @@ export function registerReproRoutes(app) {
             const farmId = req.reproFarm.id;
             const sessao = await prisma.iatfSession.findFirst({ where: { id: String(req.params.id), farmId } });
             if (!sessao) return res.status(404).json({ message: 'Protocolo não encontrado.' });
+            if (sessao.resumo?.workflowVersion === 1) return res.status(409).json({ message: 'Use o fluxo integrado para esta rodada.' });
             if (sessao.status === 'INSEMINADO') return res.json({ repetido: true, message: 'Esta IATF já foi lançada.' });
             const data = parseData(req.body?.data) || new Date();
             const linhas = (Array.isArray(req.body?.linhas) ? req.body.linhas : []).slice(0, MAX_LOTE);
@@ -1562,7 +1571,8 @@ export function registerReproRoutes(app) {
                     await recalcularVaca(tx, f.animalId, config);
                 }
                 for (const [partidaId, qtd] of usoPorPartida) {
-                    await tx.semenBatch.update({ where: { id: partidaId }, data: { dosesDisponiveis: { decrement: qtd } } });
+                    const changed = await tx.semenBatch.updateMany({ where: { id: partidaId, farmId, dosesDisponiveis: { gte: qtd } }, data: { dosesDisponiveis: { decrement: qtd } } });
+                    if (changed.count !== 1) throw new Error('Sêmen consumido durante o manejo.');
                     await tx.semenMove.create({ data: { semenBatchId: partidaId, date: data, qty: qtd, type: 'USE', notes: `IATF ${sessao.id.slice(0, 8)}` } });
                 }
                 await tx.iatfSession.update({
@@ -1583,6 +1593,7 @@ export function registerReproRoutes(app) {
             const farmId = req.reproFarm.id;
             const sessao = await prisma.iatfSession.findFirst({ where: { id: String(req.params.id), farmId } });
             if (!sessao) return res.status(404).json({ message: 'Protocolo não encontrado.' });
+            if (sessao.resumo?.workflowVersion === 1) return res.status(409).json({ message: 'Use o fluxo integrado para esta rodada.' });
             if (sessao.status === 'INSEMINADO') return res.status(400).json({ message: 'Já tem inseminação lançada: apague as coberturas pela ficha das vacas.' });
             await prisma.iatfSession.delete({ where: { id: sessao.id } });
             res.json({ ok: true });

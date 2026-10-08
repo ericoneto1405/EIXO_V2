@@ -276,6 +276,7 @@ model Farm {
   bullLots                BullLotAssignment[]
   reproProtocols          ReproProtocol[]
   iatfSessions            IatfSession[]
+  reproWorkflowRecords    ReproWorkflowRecord[]
 }
 
 model Paddock {
@@ -3135,4 +3136,23 @@ model SanitaryHistoryRequest {
   createdAt   DateTime @default(now())
   @@unique([farmId, requestId])
   @@map("sanitary_history_requests")
+}
+
+// Registros versionados do fluxo integrado. Endpoints legados permanecem compatíveis.
+model ReproWorkflowRecord {
+  id          String   @id @default(uuid())
+  farmId      String
+  kind        String
+  clientId    String
+  animalId    String?
+  sessionId   String?
+  data        Json
+  createdById String?
+  createdAt   DateTime @default(now())
+  farm        Farm     @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  @@unique([farmId, clientId])
+  @@index([farmId, kind, createdAt])
+  @@index([farmId, sessionId])
+  @@index([farmId, animalId])
 }

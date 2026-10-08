@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-07.3';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-10-07';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-08.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-10-08';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -17,7 +17,7 @@ export const SUPPORT_MODULE_CATALOG = [
     { name: 'Financeiro', href: 'eixo:view:Financeiro', entitlementCodes: ['CORE', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'liga lançamentos, despesas e receitas; DRE, fluxo de caixa, analytics e qualidade do dado exigem EIXO Gestão em diante.', salesTrigger: 'despesas, receitas, lucro, fluxo de caixa, compra ou venda.' },
     { name: 'Nutrição', href: 'eixo:view:Nutri%C3%A7%C3%A3o', entitlementCodes: ['NUTRITION', 'EIXO_NUTRITION', 'EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'controla dieta, consumo, custo por lote e ingredientes em risco.', salesTrigger: 'cocho, dieta, trato, consumo, suplemento, ração ou custo alimentar.' },
     { name: 'EIXO Acasalamento', href: '/genetics/acasalamento', entitlementCodes: ['GENETICS', 'EIXO_DECISAO'], benefit: 'apoia decisões de acasalamento com histórico e objetivo produtivo.', salesTrigger: 'acasalamento, touro, sêmen, botijão, matriz ou genética.' },
-    { name: 'Reprodução', href: 'eixo:view:Reprodu%C3%A7%C3%A3o', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'lista as fêmeas que podem entrar na reprodução (com trava de brucelose) e guarda a ficha reprodutiva de cada vaca; farol e números da vaca exigem EIXO Performance.', salesTrigger: 'novilha, vaca, prenhez, toque, cobertura, reprodução, descarte de vaca ou estação de monta.' },
+    { name: 'Reprodução', href: 'eixo:view:Reprodu%C3%A7%C3%A3o', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'integra seleção de matrizes, protocolos, manejos, diagnósticos, partos e desmama aos animais, à Farmácia e ao Botijão; farol e números exigem EIXO Performance.', salesTrigger: 'novilha, vaca, prenhez, toque, cobertura, reprodução, descarte de vaca ou estação de monta.' },
     { name: 'Sanidade', href: 'eixo:view:Sanidade', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'farmácia com compra ligada ao Financeiro e registro de vacinas e remédios no curral, com trava de brucelose, lote vencido e carência para abate.', salesTrigger: 'vacina, brucelose, raiva, vermífugo, carrapato, remédio, carência ou calendário sanitário.' },
     { name: 'Gestão Comercial', href: 'eixo:view:Gest%C3%A3o%20Comercial', entitlementCodes: ['EIXO_GESTAO', 'EIXO_DECISAO'], benefit: 'CRM da fazenda: clientes, pipeline de negociação por etapas, contrato e lembretes de aniversário/recompra.', salesTrigger: 'venda, cliente, comprador, negociação, pipeline, contrato ou aniversário de cliente.' },
     { name: 'Meus Leilões', href: 'eixo:view:Meus%20Leil%C3%B5es', entitlementCodes: ['EIXO_DECISAO'], benefit: 'patrimônio do plantel de leilão: sócios e cotas, documentos (ABCZ, contrato, nota), vídeo, avaliações e resultado por animal, sem taxa por animal e de qualquer leiloeira.', salesTrigger: 'leilão, condomínio, sócio, cota, animal P.O., registro ABCZ, contrato de compra, valorização ou patrimônio do plantel.' },
@@ -199,12 +199,12 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['reproducao', 'novilha', 'liberar', 'apta', 'candidata', 'ficha da vaca', 'prenhe', 'vazia', 'cobertura', 'ecc', 'descarte', 'brucelose'],
         href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
         guidance: [
-            'A Reprodução tem quatro lugares: Hoje (o que fazer agora), Curral (Lançar, toque em lote, partos e desmama), Rebanho (vacas, prontas para o touro e falhadas para decidir) e Números. Botijão, cobertura/IATF, estação de monta, touros e critérios ficam em Ajustes da reprodução.',
-            'Só libera fêmea com vacina de brucelose registrada. Se ela foi vacinada antes do EIXO, use Informar vacina anterior (data e B19 ou RB51).',
-            'Selecione as fêmeas e clique em Liberar. Fêmea comprada pode ser liberada como histórico desconhecido, informando partos anteriores e situação atual.',
-            'Em Rebanho > Vacas, a ficha mostra a linha do tempo da vaca: liberação, cobertura, diagnóstico, perda, ECC, observação e descarte. Editar ou apagar um evento refaz a situação da vaca.',
-            'Os critérios (idade, peso e ECC mínimos, tempo de gestação) são definidos pelo produtor em Critérios; o EIXO não preenche valor padrão.',
-            'O farol das candidatas (apta, falta X kg) e os números da vaca (partos, idade ao 1º parto, intervalo entre partos) são do EIXO Performance.',
+            "A Reprodução está organizada em Hoje, Curral, Rebanho, Números e Ajustes da reprodução. Hoje reúne pendências; Curral concentra os lançamentos; protocolos, estação, Botijão e critérios ficam em Ajustes.",
+            "Todo animal deve ser cadastrado em Manejo do Rebanho > Animais, na fazenda selecionada. Na Reprodução, selecione as fêmeas existentes; filtros por identificação, lote e pasto facilitam a seleção.",
+            "Em Rebanho > Prontas para o touro, registre a liberação. A vacina de brucelose precisa estar registrada; para vacinação anterior ao EIXO, use Informar vacina anterior com data e B19 ou RB51.",
+            "Confira os impedimentos por animal antes de confirmar. Impedimento operacional e recomendação do farol são diferentes: vermelho exige avaliação, mas não registra descarte sozinho.",
+            "Em Rebanho > Vacas, consulte a ficha e o histórico de manejos. Registros antigos permanecem históricos; não comprovam aplicações individuais que nunca foram registradas.",
+            "Aplicações integradas são corrigidas por reversão rastreável, quando permitida, e não apagadas pela ficha antiga. Os critérios das candidatas e os números da vaca exigem EIXO Performance.",
         ],
     },
     {
@@ -213,12 +213,12 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['curral', 'lancar', 'tronco', 'identificacao', 'brinco', 'cheia', 'falhada', 'pariu', 'desmamar', 'sem internet'],
         href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
         guidance: [
-            'Em Reprodução > Curral > Lançar, o produtor digita a identificação e o EIXO mostra a vaca com uma frase curta (categoria, situação e o que aconteceu por último).',
-            'O EIXO oferece só o que cabe naquela vaca: vaca cheia mostra Pariu, Perdeu a cria e Conferir de novo; vaca falhada mostra Conferir prenhez, Soltar com o touro e, quando passou do limite de falhas, Mandar para descarte. Vaca com bezerro no ponto mostra Desmamar.',
-            'Conferir prenhez tem dois botões grandes: CHEIA e FALHADA. Dias de gestação, ECC e veterinário ficam escondidos em "Anotar mais".',
-            'Tudo o que for conferido no mesmo dia entra na mesma sessão de toque, sem o produtor abrir sessão nenhuma.',
-            'Funciona sem internet: baixe as vacas antes de sair, e cada lançamento fica guardado no celular até o sinal voltar. Lançamento repetido não grava duas vezes.',
-            'As telas antigas continuam para quem prefere lote inteiro: Toque em lote, Partos e Desmama.',
+            "Em Reprodução > Curral > Lançar, use Iniciar IATF para selecionar protocolo, D0, responsável e fêmeas existentes. A estação de monta é opcional.",
+            "Abra a rodada e use Registrar manejo. Selecione somente as fêmeas efetivamente manejadas; aplique os dados comuns e ajuste as exceções. Registre procedimento, produto e dose quando aplicáveis, data/hora, responsável e ocorrência.",
+            "Confira a quantidade de animais e o consumo antes de confirmar. Produtos e estoque vêm da Farmácia; falta de saldo, produto vencido ou seleção inválida impedem a confirmação integral. Procedimento sem produto não baixa estoque.",
+            "Fêmeas ausentes continuam pendentes. Retirar do protocolo exige motivo e não equivale a descarte reprodutivo.",
+            "Sem internet, o preenchimento fica como rascunho local, separado por usuário e fazenda. Não altera estoque nem situação oficial e não é enviado automaticamente: ao voltar a internet, revise e confirme.",
+            "Falha de confirmação preserva o rascunho para correção. Reenvio do mesmo lançamento não duplica a baixa. Reverter aplicação mantém o histórico e devolve o consumo à Farmácia; manejos posteriores dependentes podem impedir a reversão.",
         ],
     },
     {
@@ -227,12 +227,12 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['toque', 'ultrassom', 'diagnostico', 'prenhez', 'prenhe', 'vazia', 'tronco', 'curral', 'sem internet', 'pendencia', 'perda', 'aborto', 'repasse', 'descarte'],
         href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
         guidance: [
-            'Antes de ir ao curral, abra Reprodução > Curral > Conferir prenhez e toque em Baixar vacas: a lista fica no celular e o lançamento funciona sem internet.',
-            'Informe data, método, veterinário e, se quiser, o lote. Digite a identificação, confira a vaca que aparece e toque em CHEIA ou FALHADA — é prenhe e vazia na linguagem do curral (dias de gestação, ECC e observação são opcionais).',
-            'Em Fechar toque, o EIXO mostra o resumo e quem do lote não passou no tronco. Sem sinal, o toque fica guardado no celular e é enviado sozinho quando a internet voltar.',
-            'Identificação que não bate vira pendência em Toques anteriores: escolha de qual vaca era ou ignore. Vaca que estava prenhe e aparece vazia ganha uma perda automática na ficha.',
-            'Apagar um toque apaga todos os diagnósticos dele e refaz a situação das vacas.',
-            'Em Rebanho > Falhadas para decidir, selecione as vacas e escolha nova cobertura, repasse com touro ou descarte (com motivo). A decisão é sempre do produtor.',
+            "Em Reprodução > Curral > Toque em lote, use Registrar diagnóstico e selecione as fêmeas e a tentativa de cobertura correspondente. O diagnóstico pode ser individual ou em lote e admite tentativas históricas existentes.",
+            "Informe data, resultado e responsável. Diferencie diagnóstico inicial de confirmação; confirmar exige um diagnóstico anterior da mesma tentativa.",
+            "Correções e confirmações ficam vinculadas à mesma tentativa. Repetir o diagnóstico não acrescenta outra falha reprodutiva; registre perdas gestacionais quando comprovadas, sem presumir perda a partir de falta de informação.",
+            "Resultado final da estação só pode ser registrado após o fim das exposições. Animal sem diagnóstico não é classificado como vazio.",
+            "Em Rebanho > Falhadas para decidir, avalie nova tentativa, monta natural/repasse ou descarte. O farol orienta a revisão; a decisão é registrada pelo responsável.",
+            "Sem internet, mantenha o diagnóstico como rascunho. Ao retornar, revise e confirme online; rascunhos não atualizam a situação oficial nem são enviados automaticamente.",
         ],
     },
     {
@@ -241,12 +241,12 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['parto', 'pariu', 'nascimento', 'bezerro', 'bezerra', 'gemeos', 'natimorto', 'desmama', 'desmame', 'peso ajustado', '205 dias', 'parto atrasado'],
         href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
         guidance: [
-            'Em Curral > Partos, digite a vaca, a data, o tipo de parto e os dados da cria (sexo, vivo ou morto, peso e identificação opcionais). Marque Gêmeos se forem duas crias.',
-            'Cria viva entra sozinha no Rebanho com mãe, raça, pasto e lote da mãe; sem identificação, fica com a provisória "Mãe X-n". O pai vem da cobertura registrada, se houver.',
-            'O EIXO bloqueia novo parto com menos de 280 dias do anterior e avisa quando a vaca estava vazia no toque ou o parto veio cedo demais depois da cobertura.',
-            'A lista de partos previstos mostra os próximos 30 dias; passou 15 dias da previsão aparece como parto atrasado. Apagar um parto apaga também o bezerro, se ele ainda não tiver outros registros.',
-            'Em Curral > Desmama, o EIXO separa os bezerros prontos pela idade e/ou peso definidos em Critérios. Preencha o peso de cada um e salve; funciona sem internet.',
-            'O peso vai para o bezerro e para a ficha da mãe, ajustado para 205 dias (usa o peso ao nascer ou o padrão definido pelo produtor). Desmama com menos de 90 dias é aceita e marcada como precoce.',
+            "Em Reprodução > Curral > Partos, use Vincular parto e crias. Para cria viva, cadastre primeiro o animal em Manejo do Rebanho > Animais e depois selecione-o no parto para vinculá-lo à mãe.",
+            "O acesso contextual a Animais preserva o rascunho do parto. Confira fazenda, sexo, nascimento e vínculos existentes. O parto não cria outro animal automaticamente e não apaga o cadastro da cria vinculada.",
+            "Natimorto é registrado no parto sem exigir cadastro de animal vivo. Partos históricos preservam suas crias e vínculos.",
+            "Em Curral > Desmama, use Registrar desmama, selecione a cria existente e informe data e peso. O registro alimenta o histórico da cria e da mãe.",
+            "Pesagem do mesmo dia e mesmo peso é reutilizada; peso divergente bloqueia a confirmação para correção, evitando duplicar pesagens. Informe o grupo de manejo/safra para permitir comparação das crias.",
+            "Sem internet, parto e desmama ficam como rascunhos locais para revisão e confirmação online; não alteram os registros oficiais até a confirmação.",
         ],
     },
     {
@@ -255,12 +255,13 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['indicador', 'taxa de prenhez', 'natalidade', 'desmama', 'iep', 'intervalo entre partos', 'farol', 'descarte', 'meta', 'painel', 'performance'],
         href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
         guidance: [
-            'Painel, indicadores e farol exigem o EIXO Performance. No EIXO Gestão o cliente anota tudo (candidatas, toque, partos, desmama e ficha), mas não vê os números.',
-            'A aba Hoje abre com "O que fazer agora" e funciona no EIXO Gestão; o item "vacas no vermelho" e os Números exigem o Performance. O quadro: vacas no vermelho, partos atrasados, vazias para decidir, fêmeas aptas e bezerros prontos para desmama. Cada quadro leva à aba correspondente.',
-            'Os indicadores usam os últimos 12 meses e podem ser filtrados por lote e categoria (novilha, primípara, multípara). Com menos de 10 vacas na base, o EIXO mostra "dados insuficientes" em vez de número enganoso.',
-            'As metas (prenhez, natalidade, desmama, intervalo entre partos e idade ao 1º parto) são definidas pelo produtor em Critérios; sem meta, o número aparece sem cor.',
-            'O farol da vaca sempre mostra o motivo escrito. Vermelho vem de vazias seguidas, duas perdas de gestação, intervalo entre partos alto ou bezerros leves — os limites também são do produtor.',
-            'Na sugestão de descarte, o produtor escolhe Descartar (grava o motivo na ficha) ou Manter (escreve o porquê; a vaca volta a aparecer depois do próximo toque).',
+            "Indicadores e farol exigem EIXO Performance. No EIXO Gestão, o produtor pode registrar os manejos. Hoje mostra pendências e acesso ao trabalho; rascunhos aparecem separados dos registros confirmados.",
+            "Em Ajustes da reprodução > Critérios, revise os modelos Comercial e P.O. antes de ativar. Os modelos começam inativos. Limites sugeridos são configurações do produto, não recomendações veterinárias.",
+            "O farol mostra cor, texto e motivos: Dentro dos critérios, Atenção, Revisar permanência ou Dados insuficientes. Descarte registrado é uma situação distinta. Não há nota única: reprodução, produção das crias, qualidade racial/funcional e evolução são avaliadas separadamente.",
+            "Ausência de registro genealógico não penaliza o modelo Comercial. Avaliação racial/funcional registra resultado, motivo, data e avaliador. Evolução exige comparação válida; sem dados suficientes, o sistema informa essa falta.",
+            "Estações vazias só contam com exposição e diagnóstico final comprovados. Confirmações da mesma tentativa não multiplicam falhas; tentativas sem estação não são transformadas em estações. Peso à desmama só é comparado no mesmo grupo informado.",
+            "Um critério crítico comprovado prevalece sobre dados incompletos de outras dimensões. Verde exige dados suficientes nos critérios ativos; limites de intervalo entre partos e desmama precisam ser definidos para ativar essas regras.",
+            "Manter matriz exige justificativa e reavaliação após o próximo diagnóstico. Registrar descarte reprodutivo exige motivo e data, registra o responsável e preserva o animal em Manejo do Rebanho; não registra venda automaticamente.",
         ],
     },
     {
@@ -269,12 +270,12 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['cobertura', 'monta natural', 'touro no lote', 'repasse', 'iatf', 'protocolo', 'inseminacao', 'inseminador', 'semen', 'botijao', 'nitrogenio', 'dose', 'caneca'],
         href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
         guidance: [
-            'Monta natural: em Ajustes da reprodução > Cobertura / IATF informe o lote, o touro e as datas em que ele entrou e saiu. Marque "touro de repasse" quando ele entra depois da IATF.',
-            'O protocolo de IATF é cadastrado pelo produtor (nome, passos com o dia, o que fazer e o hormônio da Farmácia). O EIXO não sugere hormônio nem dose: quem define é o veterinário responsável.',
-            'Ao abrir o protocolo, o EIXO separa quem entra e quem fica fora com o motivo. Vaca prenhe é bloqueada porque o hormônio pode causar aborto; vaca em outro protocolo aberto também fica fora.',
-            'Cada passo aparece com a data e pode ser marcado como feito; ao marcar, o hormônio baixa sozinho do estoque da Farmácia, pelo lote que vence primeiro.',
-            'No dia de inseminar, escolha o sêmen (o mesmo para todas ou por vaca) e o inseminador. A dose baixa do botijão e a cobertura entra na ficha de cada vaca.',
-            'Em Ajustes da reprodução, a aba Botijão mostra o mesmo estoque de sêmen do Eixo Acasalamento, agora com botijão, caneca, custo por dose, medição de nitrogênio e recarga. Nível abaixo do mínimo vira alerta vermelho; antes do protocolo o EIXO avisa se faltar dose ou hormônio.',
+            "Em Ajustes da reprodução > Cobertura / IATF, use Cadastrar protocolo. O modelo reutilizável contém etapas e intervalos a partir do D0, procedimentos, produtos da Farmácia, doses e unidades. Uma etapa pode ter vários procedimentos e aplicações. O veterinário responsável define o protocolo; o EIXO não prescreve hormônios nem doses.",
+            "Em Curral > Lançar, use Iniciar IATF e informe protocolo, D0, responsável e participantes; a estação é opcional. A rodada guarda uma cópia do protocolo: edições futuras no modelo não alteram rodadas iniciadas.",
+            "Use Registrar manejo para registrar o que realmente foi feito por fêmea. Confira consumo e saldo; a baixa da Farmácia ocorre somente com a confirmação integral. Ausentes continuam pendentes e retirada exige motivo.",
+            "Em Registrar inseminação, informe data/hora e inseminador, escolha uma partida de sêmen comum e ajuste exceções por fêmea. O fluxo registra uma dose por fêmea, touro e partida; podem ser usados touros diferentes na mesma rodada. Fêmeas não inseminadas mantêm situação explícita.",
+            "O sêmen vem de Ajustes da reprodução > Botijão, compartilhado com EIXO Acasalamento. Falta de sêmen impede confirmar a inseminação; o rascunho é preservado. A confirmação registra a cobertura e o consumo sem baixa duplicada no reenvio.",
+            "Para monta natural ou repasse, use Registrar monta natural / repasse e selecione touros existentes em Animais, fêmeas expostas e datas de entrada e saída. Exposição a vários touros não presume paternidade.",
         ],
     },
     {
@@ -283,12 +284,12 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         keywords: ['estacao de monta', 'estacao', 'touro', 'exame andrologico', 'fertilidade', 'inapto', 'lotacao', 'touro por vaca', 'repasse', 'retirar touro'],
         href: 'eixo:view:Reprodu%C3%A7%C3%A3o',
         guidance: [
-            'A estação de monta é opcional: quem cobre o ano todo não cadastra nada e o EIXO usa os últimos 12 meses.',
-            'Em Ajustes da reprodução > Estação de monta, informe nome, início, fim, tipo (monta natural, IATF ou IATF com repasse) e os lotes. O painel mostra fêmeas na estação, cobertas, diagnosticadas e prenhes, além dos dias que faltam.',
-            'A estação avisa quando há cobertura lançada fora do período e quando ela terminou com touro ainda no lote.',
-            'Em Ajustes da reprodução > Touros, cada touro tem o exame de fertilidade (data, resultado, libido, perímetro e veterinário). O exame vale 12 meses.',
-            'Touro reprovado (inapto) sai do lote na hora, perde a função de reprodutor e vai para a lista de descarte; ele não pode voltar a lote.',
-            'O EIXO calcula sozinho quantas vacas cada lote suporta e mostra uma frase pronta, por exemplo "Lote 2: 1 touro para 55 vacas. Para este lote, o recomendado é até 48". Quando o número cai por falta de exame ou por idade do touro, o EIXO explica em palavras. Nunca bloqueia: lotação é decisão do produtor.',
+            "A estação de monta é opcional. Quem trabalha continuamente usa os mesmos manejos sem cadastrar estação; tentativas sem estação permanecem identificadas no histórico.",
+            "Em Ajustes da reprodução > Estação de monta, use Nova estação e informe nome, período e modalidade: monta natural, IATF ou ambas. Selecione fêmeas existentes por identificação, lote ou pasto.",
+            "A participação fica registrada por animal. Mudar lote ou pasto depois não altera os participantes históricos. Participar da estação sem cobertura registrada não conta como exposição.",
+            "Associe as rodadas de IATF e exposições aos touros à estação quando aplicável. O fim do período impede novas exposições, mas permite diagnósticos posteriores.",
+            "Use Fechar estação e confira as pendências apresentadas. Animal sem diagnóstico não é classificado como vazio; resultado final exige término das exposições.",
+            "Os touros da monta vêm de Manejo do Rebanho > Animais. Em Ajustes da reprodução > Touros, consulte os exames de fertilidade e as informações de capacidade. Exposição com vários touros não define o pai da cria.",
         ],
     },
     {
