@@ -150,8 +150,10 @@ export function numerosDaVaca(eventos = [], animal = {}) {
         .map((e) => Number(e.payload.pesoAjustado205));
     const pesoMedioDesmama = pesos.length ? Math.round(pesos.reduce((s, p) => s + p, 0) / pesos.length) : null;
 
+    const ultimoPorTentativa = new Map(lista.filter((e) => e.type === 'DIAGNOSTICO_PRENHEZ' && e.payload?.tentativaId).map((e) => [e.payload.tentativaId, e]));
     let vaziasSeguidas = 0;
     for (const e of lista) {
+        if (e.type === 'DIAGNOSTICO_PRENHEZ' && e.payload?.tentativaId && ultimoPorTentativa.get(e.payload.tentativaId) !== e) continue;
         if (e.type === 'DIAGNOSTICO_PRENHEZ') vaziasSeguidas = e.payload?.resultado === 'VAZIA' ? vaziasSeguidas + 1 : 0;
         if (e.type === 'PARTO') vaziasSeguidas = 0;
     }

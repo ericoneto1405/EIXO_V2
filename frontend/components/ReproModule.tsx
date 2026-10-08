@@ -1,3 +1,5 @@
+import ReproMatrixManagement from './ReproMatrixManagement';
+import ReproWorkflow from './ReproWorkflow';
 import ModuleHeader from './ModuleHeader';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -22,18 +24,16 @@ import {
     listarVacas,
     salvarReproConfig,
 } from '../adapters/reproApi';
-import { DecidirVazias, ToqueCurral } from './ReproToque';
-import { listarToques } from '../adapters/reproApi';
-import { DesmamaAba, PartosAba } from './ReproParto';
 import { PainelAba } from './ReproPainel';
-import { BotijaoAba, CoberturaAba } from './ReproCobertura';
-import { EstacaoAba, TourosAba } from './ReproTouros';
-import { CurralUnico } from './ReproCurral';
+import { BotijaoAba } from './ReproCobertura';
+import { TourosAba } from './ReproTouros';
 
 interface ReproModuleProps {
     farmId?: string | null;
     farmName?: string | null;
     currentUserId?: string | null;
+    onOpenAnimals?: () => void;
+    onOpenPharmacy?: () => void;
 }
 
 type Aba = 'HOJE' | 'NUMEROS' | 'CURRAL' | 'CANDIDATAS' | 'COBERTURA' | 'TOQUE' | 'DECIDIR' | 'PARTOS' | 'DESMAMA' | 'BOTIJAO' | 'ESTACAO' | 'TOUROS' | 'FICHA' | 'CRITERIOS';
@@ -120,13 +120,12 @@ function resumoEvento(e: EventoRepro) {
     }
 }
 
-const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName, currentUserId }) => {
-    const [aba, setAba] = useState<Aba>('HOJE');
+const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName, currentUserId, onOpenAnimals, onOpenPharmacy }) => {
+    const [aba, setAba] = useState<Aba>(() => { try { const destination = sessionStorage.getItem(`eixo:repro:return:${currentUserId}:${farmId}`); sessionStorage.removeItem(`eixo:repro:return:${currentUserId}:${farmId}`); return destination === 'PARTOS' || destination === 'CURRAL' ? destination : 'HOJE'; } catch { return 'HOJE'; } });
     const [meta, setMeta] = useState<ConfigResposta | null>(null);
     const [erro, setErro] = useState<string | null>(null);
     const [aviso, setAviso] = useState<string | null>(null);
     const [fichaId, setFichaId] = useState<string | null>(null);
-    const [lotes, setLotes] = useState<{ id: string; name: string }[]>([]);
 
     const carregarMeta = useCallback(async () => {
         if (!farmId) return;
@@ -140,11 +139,6 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName, currentUser
     useEffect(() => {
         void carregarMeta();
     }, [carregarMeta]);
-
-    useEffect(() => {
-        if (!farmId) return;
-        listarToques(farmId).then((r) => setLotes(r.lotes)).catch(() => setLotes([]));
-    }, [farmId]);
 
     if (!farmId) return null;
 
@@ -183,22 +177,17 @@ const ReproModule: React.FC<ReproModuleProps> = ({ farmId, farmName, currentUser
             {erro && <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</div>}
             {aviso && <div className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">{aviso}</div>}
 
+            {['HOJE', 'CURRAL', 'COBERTURA', 'ESTACAO', 'TOQUE', 'PARTOS', 'DESMAMA', 'DECIDIR', 'NUMEROS', 'CRITERIOS'].includes(aba) && <ReproWorkflow key={`${currentUserId}:${farmId}`} farmId={farmId} userId={currentUserId || null} mode={aba} onNavigate={(tab) => setAba(tab as Aba)} onFicha={(id) => { setFichaId(id); setAba('FICHA'); }} onPharmacy={() => { try { sessionStorage.setItem(`eixo:repro:return:${currentUserId}:${farmId}`, 'CURRAL'); } catch {} onOpenPharmacy?.(); }} onAnimals={() => { try { sessionStorage.setItem(`eixo:repro:return:${currentUserId}:${farmId}`, 'PARTOS'); } catch {} onOpenAnimals?.(); }} />}
+
             {(aba === 'HOJE' || aba === 'NUMEROS') && (
-                <PainelAba farmId={farmId} modo={aba} performance={Boolean(meta?.performance)}
+                <PainelAba farmId={farmId} modo={aba} performance={Boolean(meta?.performance)} showLegacyFarol={false}
                     onErro={setErro} onAviso={setAviso}
                     onIr={(destino) => setAba(destino as Aba)}
                     onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />
             )}
             {aba === 'CANDIDATAS' && <Candidatas farmId={farmId} onErro={setErro} onAviso={setAviso} irParaCriterios={() => setAba('CRITERIOS')} />}
-            {aba === 'COBERTURA' && <CoberturaAba farmId={farmId} lotes={lotes} onErro={setErro} onAviso={setAviso} />}
             {aba === 'BOTIJAO' && <BotijaoAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
-            {aba === 'ESTACAO' && <EstacaoAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'TOUROS' && <TourosAba farmId={farmId} onErro={setErro} onAviso={setAviso} />}
-            {aba === 'CURRAL' && <CurralUnico farmId={farmId} currentUserId={currentUserId} lotes={lotes} onErro={setErro} onAviso={setAviso} />}
-            {aba === 'TOQUE' && <ToqueCurral farmId={farmId} currentUserId={currentUserId} onErro={setErro} onAviso={setAviso} />}
-            {aba === 'DECIDIR' && <DecidirVazias farmId={farmId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}
-            {aba === 'PARTOS' && <PartosAba farmId={farmId} currentUserId={currentUserId} onErro={setErro} onAviso={setAviso} onAbrirFicha={(id) => { setFichaId(id); setAba('FICHA'); }} />}
-            {aba === 'DESMAMA' && <DesmamaAba farmId={farmId} currentUserId={currentUserId} onErro={setErro} onAviso={setAviso} irParaCriterios={() => setAba('CRITERIOS')} />}
             {aba === 'FICHA' && meta && <FichaVaca farmId={farmId} meta={meta} vacaId={fichaId} onSelecionar={setFichaId} onErro={setErro} onAviso={setAviso} />}
             {aba === 'CRITERIOS' && meta && <Criterios farmId={farmId} meta={meta} onSalvo={carregarMeta} onErro={setErro} />}
             <p className="text-xs text-(--eixo-text-muted)">
@@ -557,11 +546,7 @@ const FichaVaca: React.FC<{
                             <div className="text-right">
                                 <p className="text-lg font-bold">{situacaoTexto(ficha.vaca.situacao)}</p>
                                 {ficha.vaca.previsaoParto && <p className="text-sm">Previsão de parto: {fmtData(ficha.vaca.previsaoParto)}</p>}
-                                {ficha.farol?.cor && (
-                                    <p className={`mt-1 inline-block rounded-full px-2 py-1 text-xs font-bold ${COR_CLASS[ficha.farol.cor]}`}>
-                                        {ficha.farol.motivos.join(' · ')}
-                                    </p>
-                                )}
+
                             </div>
                         </div>
                         {ficha.numeros ? (
@@ -577,6 +562,8 @@ const FichaVaca: React.FC<{
                         )}
                     </div>
 
+                    <ReproMatrixManagement key={ficha.vaca.id} farmId={farmId} animalId={ficha.vaca.id} />
+
                     <div className={cardClass}>
                         <div className="mb-3 flex items-center justify-between">
                             <h3 className="font-bold">Linha do tempo</h3>
@@ -586,7 +573,7 @@ const FichaVaca: React.FC<{
                         </div>
                         <ol className="space-y-2">
                             {ficha.eventos.map((e) => {
-                                const manual = meta.tiposManuais.includes(e.type);
+                                const manual = meta.tiposManuais.includes(e.type) && e.payload?.workflowVersion !== 1;
                                 return (
                                     <li key={e.id} className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-(--eixo-border) px-3 py-2">
                                         <div>
@@ -595,7 +582,7 @@ const FichaVaca: React.FC<{
                                         </div>
                                         <div className="flex gap-2 text-xs">
                                             {manual && <button type="button" className="underline" onClick={() => setEditando(e)}>Editar</button>}
-                                            {(manual || e.type === 'PARTO' || e.type === 'DESMAME' || (e.type === 'LIBERACAO' && ficha.eventos.length === 1)) && (
+                                            {e.payload?.workflowVersion !== 1 && (manual || e.type === 'PARTO' || e.type === 'DESMAME' || (e.type === 'LIBERACAO' && ficha.eventos.length === 1)) && (
                                                 apagarId === e.id ? (
                                                     <>
                                                         <button type="button" className="font-bold text-red-700 underline" onClick={() => apagar(e.id)}>Confirmar</button>
@@ -676,7 +663,7 @@ const FormEvento: React.FC<{
                 <label>
                     <span className={labelClass}>Tipo</span>
                     <select className={inputClass} value={tipo} disabled={Boolean(evento)} onChange={(e) => { setTipo(e.target.value as TipoEvento); setPayload({}); }}>
-                        {meta.tiposManuais.map((t) => <option key={t} value={t}>{TIPO_LABEL[t]}</option>)}
+                        {meta.tiposManuais.filter((t) => !['COBERTURA', 'DIAGNOSTICO_PRENHEZ'].includes(t)).map((t) => <option key={t} value={t}>{TIPO_LABEL[t]}</option>)}
                     </select>
                 </label>
                 <label>
@@ -846,9 +833,9 @@ const Criterios: React.FC<{
             </div>
             {meta.performance && (
                 <>
-                    <h3 className="pt-2 font-bold">Metas e limites do farol</h3>
+                    <h3 className="pt-2 font-bold">Metas dos indicadores</h3>
                     <div className="grid gap-4 md:grid-cols-2">
-                        {CAMPOS_PERFORMANCE.map((c) => (
+                        {CAMPOS_PERFORMANCE.filter((c) => !['vaziasSeguidasLimite', 'iepMaxMeses', 'pesoMinDesmamaFarol'].includes(c.campo)).map((c) => (
                             <label key={c.campo} className="block">
                                 <span className={labelClass}>{c.label}</span>
                                 <input type="number" min={0} step={c.step || 1} className={inputClass} value={valores[c.campo]}

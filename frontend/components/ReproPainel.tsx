@@ -27,12 +27,13 @@ const fmt = (i: Indicador) => (i.valor == null ? null : `${i.valor.toLocaleStrin
 export const PainelAba: React.FC<{
     farmId: string;
     modo: 'HOJE' | 'NUMEROS';
+    showLegacyFarol?: boolean;
     performance: boolean;
     onErro: (m: string | null) => void;
     onAviso: (m: string | null) => void;
     onIr: (aba: string) => void;
     onAbrirFicha: (id: string) => void;
-}> = ({ farmId, modo, performance, onErro, onAviso, onIr, onAbrirFicha }) => {
+}> = ({ farmId, modo, performance, showLegacyFarol = true, onErro, onAviso, onIr, onAbrirFicha }) => {
     const [itens, setItens] = useState<ItemPainel[]>([]);
     const [indicadores, setIndicadores] = useState<Indicador[]>([]);
     const [info, setInfo] = useState<{ janela: string; minimo: number; totalVacas: number; lotes: { id: string; name: string }[]; categorias: string[] } | null>(null);
@@ -45,14 +46,14 @@ export const PainelAba: React.FC<{
     const carregarFarol = useCallback(async () => {
         try {
             if (modo === 'HOJE') {
-                setItens((await fetchPainel(farmId)).itens);
+                setItens((await fetchPainel(farmId)).itens.filter((item) => showLegacyFarol || item.chave !== 'vermelhas'));
                 return;
             }
-            if (performance) setFarol(await fetchFarol(farmId));
+            if (performance && showLegacyFarol) setFarol(await fetchFarol(farmId));
         } catch (e: any) {
             onErro(e.message);
         }
-    }, [farmId, modo, performance, onErro]);
+    }, [farmId, modo, performance, showLegacyFarol, onErro]);
 
     useEffect(() => {
         void carregarFarol();

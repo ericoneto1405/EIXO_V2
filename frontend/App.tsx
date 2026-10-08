@@ -1158,7 +1158,7 @@ const AppContent: React.FC = () => {
                         />
                     );
                 }
-                return <ReproModule farmId={selectedFarmId} farmName={selectedFarm?.name} currentUserId={currentUser?.id || null} />;
+                return <ReproModule key={`${currentUser?.id}:${selectedFarmId}`} farmId={selectedFarmId} farmName={selectedFarm?.name} currentUserId={currentUser?.id || null} onOpenAnimals={() => handleOnboardingNavigate('Rebanho Comercial', { herdTab: 'animals', openAnimalForm: true })} onOpenPharmacy={() => { setSanidadeTabRequest({ tab: 'FARMACIA', nonce: Date.now() }); setActiveView('Sanidade'); }} />;
             case 'Sanidade':
                 if (!hasSelectedFarm) {
                     return (
