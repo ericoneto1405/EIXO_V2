@@ -247,6 +247,7 @@ const UPGRADE_CONTENT: Record<string, {
         icon: <UpgradeReportIcon />,
     },
     'Gestão Comercial': {
+        accessLabels: ['Gestão Comercial'],
         requiredPlan: 'PRO',
         moduleName: 'Gestão Comercial',
         tagline: 'O CRM da fazenda: organize negociações, compradores e histórico de vendas',

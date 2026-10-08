@@ -136,8 +136,8 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
   const focusRing = 'focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-(--eixo-graphite) focus-visible:ring-offset-2';
   const btnPrimary = `inline-flex items-center justify-center gap-2 rounded-xl bg-(--eixo-green) px-6 py-3 text-lg font-bold text-[#1a1a1a] transition-colors hover:bg-(--eixo-green-dark) ${focusRing}`;
   const btnSecondary = `inline-flex items-center justify-center gap-2 rounded-xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-3 text-sm font-semibold text-(--eixo-text) transition-colors hover:bg-(--eixo-bg) ${focusRing}`;
-  const headerSecondaryButton = `inline-flex h-10 items-center justify-center rounded-xl border border-(--eixo-border) bg-(--eixo-surface)/70 px-4 text-sm font-semibold text-(--eixo-text) shadow-xs transition-colors hover:bg-(--eixo-surface) ${focusRing}`;
-  const headerPrimaryButton = `inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.76)] bg-[rgba(182,226,58,0.82)] px-5 text-sm font-bold text-[#1a1a1a] shadow-[0_10px_22px_rgba(121,160,24,0.18),inset_0_1px_0_rgba(255,255,255,0.58)] transition-all duration-200 hover:bg-[rgba(182,226,58,0.92)] hover:shadow-[0_12px_28px_rgba(121,160,24,0.24),inset_0_1px_0_rgba(255,255,255,0.66)] ${focusRing}`;
+  const headerSecondaryButton = `h-10 items-center justify-center rounded-xl border border-(--eixo-border) bg-(--eixo-surface)/70 px-4 text-sm font-semibold text-(--eixo-text) shadow-xs transition-colors hover:bg-(--eixo-surface) ${focusRing}`;
+  const headerPrimaryButton = `h-10 items-center justify-center gap-2 rounded-xl border border-[rgba(182,226,58,0.76)] bg-[rgba(182,226,58,0.82)] px-5 text-sm font-bold text-[#1a1a1a] shadow-[0_10px_22px_rgba(121,160,24,0.18),inset_0_1px_0_rgba(255,255,255,0.58)] transition-all duration-200 hover:bg-[rgba(182,226,58,0.92)] hover:shadow-[0_12px_28px_rgba(121,160,24,0.24),inset_0_1px_0_rgba(255,255,255,0.66)] ${focusRing}`;
   const navItems: Array<{ label: string; id: string; action: () => void }> = [
     { label: 'O que você ganha', id: 'gratis', action: () => scrollTo('gratis') },
     { label: 'Antes e Depois', id: 'antes-depois', action: () => scrollTo('antes-depois') },
@@ -154,10 +154,7 @@ const PublicLanding: React.FC<PublicLandingProps> = ({ onEnter, onRegister }) =>
       <header className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 ${isScrolled ? 'border-b border-(--eixo-border) bg-(--eixo-bg)/95 shadow-xs backdrop-blur-sm' : 'bg-(--eixo-bg)'}`}>
         <div className="mx-auto flex h-[75px] max-w-7xl items-center justify-between px-4 lg:px-8">
           <div className="inline-flex shrink-0 flex-col items-center leading-none">
-            <img src="/logo_eixo_official.svg" alt="EIXO" className="h-[2.53575rem] w-auto" />
-            <div className="mt-[4px] text-[9px] font-semibold uppercase tracking-[0.06em] whitespace-nowrap text-(--eixo-text)/75">
-              Gestão para Pecuária de Corte
-            </div>
+            <img src="/logo_eixo_institucional.svg" alt="EIXO — Gestão para Pecuária de Corte" width={180} height={72} className="h-auto w-[180px] max-w-full" />
           </div>
           <nav
             className="hidden items-center rounded-2xl border border-white/45 bg-white/22 p-1 shadow-[0_12px_30px_rgba(47,47,47,0.07),inset_0_1px_0_rgba(255,255,255,0.56)] backdrop-blur-xl xl:flex"
