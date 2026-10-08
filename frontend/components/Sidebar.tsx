@@ -155,11 +155,6 @@ const StatusPopover: React.FC<StatusPopoverProps> = ({ state, pos, onClose, popo
                         ? 'border-[#4a4944] bg-[rgba(255,255,255,0.04)] text-[#b9b3a8]'
                         : 'border-(--eixo-border) bg-[rgba(255,250,241,0.78)] text-(--eixo-graphite)'
             }`}>
-                <span className={`h-1.5 w-1.5 rounded-full ${
-                    state.type === 'coming_soon'
-                        ? 'bg-[#b9b3a8]'
-                        : 'bg-(--eixo-green)'
-                }`} />
                 {badgeLabel}
             </div>
 
@@ -491,7 +486,7 @@ const SidebarButton: React.FC<SidebarButtonProps> = ({
                 <span className="flex items-center justify-center mr-3 text-current">{icon}</span>
             ) : null}
             {!isCollapsed && !icon && isSubItem ? (
-                <span className="mr-3 h-1.5 w-1.5 rounded-full bg-current" />
+                <span aria-hidden="true" className="mr-3 h-1.5 w-1.5" />
             ) : null}
             {!isCollapsed && (
                 <>

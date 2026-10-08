@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   AnimalDocumentType,
@@ -494,10 +495,9 @@ const MeusLeiloes: React.FC<MeusLeiloesProps> = ({ farmId, farmName }) => {
   // ── Lista do plantel ────────────────────────────────────────────────
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5 flex flex-col items-start justify-between gap-4 lg:flex-row">
         <div>
-          <h1 className="text-2xl font-bold text-(--eixo-text)">Meus Leilões</h1>
-          <p className="text-sm text-(--eixo-text-soft)">Patrimônio, sócios e documentos do plantel{farmName ? ` · ${farmName}` : ''}. Sem taxa por animal, de qualquer leiloeira.</p>
+          <ModuleHeader embedded title="Meus Leilões" subtitle="Acompanhe o patrimônio, os sócios e os documentos do plantel." farmName={farmName} />
         </div>
         <button type="button" className={primaryBtn} onClick={openPicker}>+ Colocar animal no plantel</button>
       </div>

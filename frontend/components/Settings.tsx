@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 
 import React, { useState } from 'react';
 
@@ -36,8 +37,7 @@ const Settings: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto">
             <div className="mb-6">
-                <h1 className="font-brand text-2xl font-extrabold text-(--eixo-text)">Configurações</h1>
-                <p className="mt-1 text-sm text-(--eixo-text-muted)">Gerencie suas preferências e segurança.</p>
+                <ModuleHeader title="Configurações" subtitle="Gerencie suas preferências e segurança." />
             </div>
 
             <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) p-6 md:p-8">

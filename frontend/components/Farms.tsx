@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React, { useEffect, useRef, useState } from 'react';
 import FarmRegistrationForm from './FarmRegistrationForm';
 import { Farm } from '../types';
@@ -142,14 +143,7 @@ const Farms: React.FC<FarmsProps> = ({
             <div className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                     <div>
-                        <h1 className="font-brand text-2xl font-extrabold leading-tight text-(--eixo-text)">
-                            {activeTab === 'map' ? 'Mapa da Fazenda' : 'Fazendas e Pastos'}
-                        </h1>
-                        <p className="mt-1 text-sm leading-relaxed text-(--eixo-text-muted)">
-                            {activeTab === 'map'
-                                    ? 'Visualize e organize a base territorial da fazenda selecionada.'
-                                    : 'Gerencie as fazendas cadastradas e a base territorial da operação.'}
-                        </p>
+                        <ModuleHeader embedded title="Fazendas e Pastos" subtitle="Gerencie as fazendas, os pastos e a organização territorial." />
                     </div>
                     {!showForm && activeTab === 'farms' && (() => {
                         const freeLimitHit = isFreePlan && farms.length >= 1;

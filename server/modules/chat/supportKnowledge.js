@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-07.1';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-07.2';
 export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-10-07';
 
 export const SUPPORT_TONE_RULES = [
@@ -46,6 +46,8 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         href: 'eixo:view:Vis%C3%A3o%20Geral',
         guidance: [
             'Acesse Visão Geral para acompanhar os principais indicadores da fazenda selecionada.',
+            'Os módulos apresentam título e subtítulo padronizados. Quando exibido, o contexto usa Fazenda antes do nome, sem duplicar esse prefixo; quantidades aparecem separadamente.',
+            'Bolinhas decorativas foram retiradas. Indicadores de alertas e status reais permanecem; o botão de suporte, por si só, não informa disponibilidade online.',
             'Confirme a fazenda no seletor antes de interpretar os números.',
             'O total do rebanho considera somente os animais vivos; vendidos e mortos não entram nos indicadores nem na ocupação.',
         ],

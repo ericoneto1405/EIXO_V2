@@ -1,11 +1,10 @@
+import ModuleHeader from './ModuleHeader';
 import React from 'react';
 
 const ConfinementContracts: React.FC = () => {
     return (
-        <div>
-            <p className="mb-6 text-(--eixo-text-muted)">
-                Contratos, lotes de confinamento e rotinas comerciais.
-            </p>
+        <div className="space-y-4">
+            <ModuleHeader title="Confinamento e Contratos" subtitle="Este módulo está em desenvolvimento." />
 
             <div className="flex h-96 flex-col items-center justify-center rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-12 text-center shadow-xs">
                 <svg className="mb-4 h-16 w-16 text-(--eixo-text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import SanitaryHistoryForm, { ImportedSanitaryAnimal } from './SanitaryHistoryForm';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -300,8 +301,7 @@ const SanidadeModule: React.FC<SanidadeModuleProps> = ({ farmId, farmName, tabRe
     return (
         <div className="space-y-5">
             <div>
-                <h1 className="text-2xl font-extrabold text-(--eixo-text)">Sanidade</h1>
-                <p className="text-sm text-(--eixo-text-muted)">{farmName ? `${farmName} · ` : ''}Aplicações no curral e estoque de vacinas e remédios.</p>
+                <ModuleHeader title="Sanidade" subtitle="Registre aplicações e acompanhe o calendário sanitário, as doenças e o estoque." farmName={farmName} />
             </div>
 
             <SanidadeStatus farmId={farmId} refreshKey={statusKey} />

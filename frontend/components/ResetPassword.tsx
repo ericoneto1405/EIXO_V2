@@ -107,7 +107,6 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ token, onSuccess, onBack 
                                         <form onSubmit={handleSubmit} className="space-y-5">
                                             <div>
                                                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-(--eixo-border) bg-(--eixo-green-soft) px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-(--eixo-graphite)">
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                                                     Nova senha
                                                 </div>
                                                 <h2 className="text-3xl font-black text-(--eixo-text)">Redefinir senha</h2>

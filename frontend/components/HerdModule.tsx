@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import HerdAnimalModal from './AnimalDetailModal';
 import LotDetailModal from './LotDetailModal';
@@ -2272,8 +2273,7 @@ const HerdModule: React.FC<HerdModuleProps> = ({
             <div className="mb-4 rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
                     <div>
-                        <h2 className="font-brand m-0 text-2xl font-extrabold leading-tight text-(--eixo-text)">{title}</h2>
-                        <p className="mt-1 font-sans text-[13px] text-(--eixo-text-muted)">{farmName || 'Fazenda'} · {activeAnimals.length} animais ativos</p>
+                        <ModuleHeader embedded title={title} subtitle="Gerencie animais, lotes, movimentações e pesagens." farmName={farmName} context={`${activeAnimals.length} animais ativos`} />
                     </div>
                     <div className="flex flex-col gap-3 xl:items-end">
                         {activeTab === 'animals' && (

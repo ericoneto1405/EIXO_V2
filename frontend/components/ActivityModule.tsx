@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React, { useCallback, useEffect, useState } from 'react';
 import { buildApiUrl } from '../api';
 
@@ -196,14 +197,10 @@ const ActivityModule: React.FC<ActivityModuleProps> = ({ farmId, farmName }) => 
     return (
         <div className="space-y-4">
             {/* Header */}
-            <div className="rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
-                <div className="flex items-center justify-between">
+            <div className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
+                <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
                     <div>
-                        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-(--eixo-green-soft) px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
-                            {farmName || 'Todas as fazendas'}
-                        </div>
-                        <h2 className="font-brand text-2xl font-extrabold leading-tight text-(--eixo-text)">Registro de Atividades</h2>
-                        <p className="mt-1 text-sm text-(--eixo-text-muted)">Tudo que aconteceu no sistema, do mais novo ao mais antigo.</p>
+                        <ModuleHeader embedded title="Registro de Atividades" subtitle="Consulte o histórico de ações registradas no sistema." farmName={farmName} context={!farmName ? 'Todas as fazendas' : undefined} />
                     </div>
                     <button
                         type="button"

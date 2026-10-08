@@ -1,9 +1,10 @@
+import ModuleHeader from './ModuleHeader';
 import React from 'react';
 
 const Suppliers: React.FC = () => {
     return (
-        <div>
-            <p className="text-(--eixo-text-muted) dark:text-(--eixo-text-soft) mb-6">Gerencie seus fornecedores de insumos, produtos e animais.</p>
+        <div className="space-y-4">
+            <ModuleHeader title="Fornecedores" subtitle="Este módulo está em desenvolvimento." />
             <div className="bg-(--eixo-surface) dark:bg-(--eixo-surface) rounded-xl shadow-lg p-12 text-center flex flex-col items-center justify-center h-96">
                 <svg className="w-16 h-16 text-primary mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h6m-6 4h6m-6 4h6"></path></svg>
                 <h2 className="text-2xl font-semibold text-(--eixo-text) dark:text-(--eixo-text-soft)">Módulo em Desenvolvimento</h2>

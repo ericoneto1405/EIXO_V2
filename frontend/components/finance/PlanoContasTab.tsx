@@ -274,7 +274,7 @@ const PlanoContasTab: React.FC<PlanoContasTabProps> = ({
                                                     {cat.isSystem ? (
                                                         <span className="shrink-0 text-(--eixo-text-muted)"><LockIcon /></span>
                                                     ) : (
-                                                        <span className="flex h-3.5 w-3.5 shrink-0 rounded-full bg-(--eixo-green-soft)" />
+                                                        <span aria-hidden="true" className="flex h-3.5 w-3.5 shrink-0" />
                                                     )}
                                                     <span className="truncate text-sm font-medium text-(--eixo-text)">{cat.name}</span>
                                                     {!cat.isActive && (

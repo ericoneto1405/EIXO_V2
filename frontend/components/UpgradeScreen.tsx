@@ -28,7 +28,6 @@ const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
         <div className="grid h-full gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
             <section className="rounded-[24px] border border-(--eixo-border) bg-(--eixo-surface) p-6 lg:p-8">
                 <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#d9ead0] bg-(--eixo-green-soft) px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-(--eixo-graphite)">
-                    <span className="h-1.5 w-1.5 rounded-full bg-(--eixo-green)" />
                     Desbloqueie no {PLAN_NAMES[requiredPlan] ?? requiredPlan}
                 </div>
 
@@ -48,7 +47,6 @@ const UpgradeScreen: React.FC<UpgradeScreenProps> = ({
                             key={benefit}
                             className="flex items-start gap-3 rounded-2xl border border-(--eixo-border) bg-(--eixo-surface) px-4 py-3"
                         >
-                            <span className="mt-1 h-2 w-2 rounded-full bg-(--eixo-green)" />
                             <p className="text-sm leading-relaxed text-(--eixo-text-muted)">{benefit}</p>
                         </div>
                     ))}

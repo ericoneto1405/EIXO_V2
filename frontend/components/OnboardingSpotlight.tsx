@@ -23,7 +23,6 @@ const OnboardingSpotlight: React.FC<OnboardingSpotlightProps> = ({
 }) => (
     <div className="mx-auto w-full max-w-md rounded-[24px] border-2 border-primary bg-(--eixo-surface) p-8 shadow-md transition-all duration-200 hover:-translate-y-1 hover:scale-[1.02]">
         <div className="inline-flex items-center gap-2 rounded-full bg-primary-soft px-3 py-1 text-xs font-semibold text-[#3a5c10]">
-            <span className="h-2 w-2 rounded-full bg-primary" />
             <span>Passo {step} de {totalSteps}</span>
         </div>
 

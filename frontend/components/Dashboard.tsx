@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React, { useEffect, useState } from 'react';
 import WeatherCard from './WeatherCard';
 import KpiCard from './KpiCard';
@@ -165,12 +166,7 @@ const Dashboard: React.FC<DashboardProps> = ({ scope, farmId, farmName, farmSize
 
             {/* Cabeçalho */}
             <div className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5">
-                <h1 className="font-brand text-2xl font-extrabold leading-tight text-(--eixo-text)">Dashboard</h1>
-                <p className="mt-1 text-sm leading-relaxed text-(--eixo-text-muted)">
-                    {scope === 'all'
-                        ? 'Resumo consolidado da operação.'
-                        : `Resumo da Fazenda ${farmName || 'selecionada'}.`}
-                </p>
+                <ModuleHeader embedded title="Visão Geral" subtitle="Acompanhe os principais indicadores da operação." farmName={scope === 'all' ? undefined : farmName} context={scope === 'all' ? 'Todas as fazendas' : undefined} />
             </div>
 
             {/* KPIs */}

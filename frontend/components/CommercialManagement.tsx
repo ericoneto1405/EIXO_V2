@@ -1,3 +1,4 @@
+import ModuleHeader from './ModuleHeader';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import CommercialBuyersOverview, { BuyerGroup, BUYER_GROUPS, buyerGroup } from './CommercialBuyersOverview';
 import {
@@ -326,10 +327,9 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
 
   return (
     <div className="flex h-full flex-col gap-4 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="rounded-3xl border border-(--eixo-border) bg-(--eixo-surface) px-6 py-5 flex flex-col items-start justify-between gap-4 lg:flex-row">
         <div>
-          <h1 className="font-brand text-2xl font-extrabold text-(--eixo-text)">Gestão Comercial</h1>
-          {farmName && <p className="text-sm text-(--eixo-text-soft)">{farmName}</p>}
+          <ModuleHeader embedded title="Gestão Comercial" subtitle="Organize compradores e acompanhe negociações de animais." farmName={farmName} />
         </div>
         <div className="flex gap-2">
           {tabs.map((tab) => (
