@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import CommercialBuyersOverview, { BuyerGroup, BUYER_GROUPS, buyerGroup } from './CommercialBuyersOverview';
 import {
   CommercialAlertsUI,
   CommercialClientType,
@@ -79,6 +80,11 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
   const [alerts, setAlerts] = useState<CommercialAlertsUI | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedBuyerGroup, setSelectedBuyerGroup] = useState<BuyerGroup | null>(null);
+  const [loadedFarmId, setLoadedFarmId] = useState<string | null>(null);
+  const currentFarmId = useRef(farmId);
+  currentFarmId.current = farmId;
+  const loadVersion = useRef(0);
 
   const [clientFormOpen, setClientFormOpen] = useState(false);
   const [clientForm, setClientForm] = useState(emptyClientForm);
@@ -101,23 +107,32 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
 
   const loadAll = async () => {
     if (!farmId) return;
+    const version = ++loadVersion.current;
     setLoading(true);
     setError(null);
     try {
       const [clientsData, dealsData, alertsData] = await Promise.all([
         listClients(farmId), listDeals(farmId), getAlerts(farmId),
       ]);
+      if (currentFarmId.current !== farmId || version !== loadVersion.current) return;
       setClients(clientsData);
       setDeals(dealsData);
       setAlerts(alertsData);
+      setLoadedFarmId(farmId);
     } catch (err) {
+      if (currentFarmId.current !== farmId || version !== loadVersion.current) return;
+      setLoadedFarmId(null);
       setError(err instanceof Error ? err.message : 'Erro ao carregar dados comerciais.');
     } finally {
-      setLoading(false);
+      if (currentFarmId.current === farmId && version === loadVersion.current) setLoading(false);
     }
   };
 
-  useEffect(() => { void loadAll(); }, [farmId]);
+  useEffect(() => { setSelectedBuyerGroup(null); void loadAll(); }, [farmId]);
+
+  const visibleClients = useMemo(() => selectedBuyerGroup && alerts
+    ? clients.filter((client) => buyerGroup(client.id, alerts) === selectedBuyerGroup)
+    : clients, [clients, alerts, selectedBuyerGroup]);
 
   const clientsById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
 
@@ -333,7 +348,18 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
       )}
       {loading && <p className="text-sm text-(--eixo-text-muted)">Carregando...</p>}
 
-      {activeTab === 'clientes' && (
+      {!loading && loadedFarmId === farmId && alerts && <CommercialBuyersOverview
+        clients={clients} alerts={alerts} selected={selectedBuyerGroup}
+        onSelect={(group) => { setSelectedBuyerGroup((current) => current === group ? null : group); setActiveTab('clientes'); }}
+      />}
+      {!loading && loadedFarmId === null && error && <button type="button" onClick={() => void loadAll()} className={ghostBtn}>Tentar carregar novamente</button>}
+
+      {!loading && loadedFarmId === farmId && selectedBuyerGroup && activeTab === 'clientes' && <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-(--eixo-border) bg-(--eixo-green-soft) px-4 py-3">
+        <p className="text-sm text-(--eixo-text)"><strong>{visibleClients.length.toLocaleString('pt-BR')} {visibleClients.length === 1 ? 'cliente selecionado' : 'clientes selecionados'}</strong> · {BUYER_GROUPS.find((group) => group.key === selectedBuyerGroup)?.label} · {farmName || 'Fazenda selecionada'}. A lista abaixo mostra este grupo.</p>
+        <button type="button" onClick={() => setSelectedBuyerGroup(null)} className={ghostBtn}>Mostrar todos</button>
+      </div>}
+
+      {activeTab === 'clientes' && loadedFarmId === farmId && !loading && (
         <div className="flex flex-col gap-3">
           <div className="flex justify-end">
             <button type="button" onClick={openNewClient} className={primaryBtn}>+ Novo cliente</button>
@@ -360,13 +386,13 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
             </form>
           )}
 
-          <div className="overflow-hidden rounded-2xl border border-(--eixo-border) bg-(--eixo-surface)">
+          <div className="overflow-x-auto rounded-2xl border border-(--eixo-border) bg-(--eixo-surface)">
             <table className="w-full text-left text-sm text-(--eixo-text)">
               <thead className="bg-(--eixo-surface-soft) text-xs font-bold uppercase text-(--eixo-text-muted)">
                 <tr><th className="px-4 py-2">Nome</th><th className="px-4 py-2">Tipo</th><th className="px-4 py-2">Contato</th><th className="px-4 py-2">Aniversário</th><th className="px-4 py-2">Cidade/UF</th><th className="px-4 py-2" /></tr>
               </thead>
               <tbody>
-                {clients.map((client) => (
+                {visibleClients.map((client) => (
                   <tr key={client.id} className="border-t border-(--eixo-border)">
                     <td className="px-4 py-2 font-semibold">{client.name}</td>
                     <td className="px-4 py-2">{CLIENT_TYPE_LABELS[client.type]}</td>
@@ -379,8 +405,8 @@ const CommercialManagement: React.FC<CommercialManagementProps> = ({ farmId, far
                     </td>
                   </tr>
                 ))}
-                {!clients.length && !loading && (
-                  <tr><td colSpan={6} className="px-4 py-6 text-center text-(--eixo-text-muted)">Nenhum cliente cadastrado ainda.</td></tr>
+                {!visibleClients.length && !loading && (
+                  <tr><td colSpan={6} className="px-4 py-6 text-center text-(--eixo-text-muted)">{selectedBuyerGroup ? 'Nenhum cliente neste grupo.' : 'Nenhum cliente cadastrado ainda.'}</td></tr>
                 )}
               </tbody>
             </table>

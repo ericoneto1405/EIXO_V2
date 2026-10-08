@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 
-export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-05.3';
-export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-10-05';
+export const SUPPORT_KNOWLEDGE_REVISION = '2026-10-07.1';
+export const SUPPORT_KNOWLEDGE_UPDATED_AT = '2026-10-07';
 
 export const SUPPORT_TONE_RULES = [
     'Seja cordial, solícito, positivo e direto.',
@@ -371,6 +371,7 @@ const SUPPORT_TOPIC_DEFINITIONS = [
         href: 'eixo:view:Gest%C3%A3o%20Comercial',
         guidance: [
             'Cadastre clientes (frigorífico, pecuarista ou leilão/corretor) e acompanhe o pipeline de negociação por etapas, da prospecção ao fechamento.',
+            'Selecione uma fazenda e use Compradores da fazenda para filtrar os clientes por Compra recente (menos de 90 dias), Retomar relacionamento (90 dias ou mais) ou Primeira compra (sem negociação ganha registrada). Use Mostrar todos para limpar o filtro. A classificação considera apenas negociações marcadas como Ganho no CRM dessa fazenda.',
             'Negociação fechada (Ganho) permite gerar contrato com comissão. A aba Alertas avisa aniversário de cliente e quem não compra há 90+ dias.',
         ],
     },
