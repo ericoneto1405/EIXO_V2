@@ -65,7 +65,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ userId, farmI
             if (mounted.current) setSaving(false);
         }
     };
-    if (completed) return null;
+    if (completed || (farms.length > 0 && !farmId)) return null;
     return <ProgressGuide key={context} requiresConfirmation title="Primeiros passos" description="Aprenda o fluxo usando a fazenda selecionada. Este guia é concluído uma vez por usuário." farmName={selectedFarm?.name} steps={steps} loading={loading} error={error} hasData={Boolean(data)} collapsed={collapsed} onCollapse={setCollapsed} onRetry={retry}>
         {allDone ? <>
             {saveError && <p role="alert" className="mb-3 text-sm text-(--eixo-danger)">Não foi possível salvar a conclusão. Seus passos foram preservados.</p>}
