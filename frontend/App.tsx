@@ -1207,9 +1207,11 @@ const AppContent: React.FC = () => {
                 if (!hasSelectedFarm) {
                     return (
                         <FarmRequiredPanel
-                            title="Cadastre uma fazenda para começar"
-                            actionLabel="Cadastrar fazenda"
-                            onAction={handleRegisterFarmView}
+                            title={farms.length > 0
+                                ? 'Selecione uma fazenda no menu superior para acessar o Manejo do Rebanho'
+                                : 'Cadastre uma fazenda para começar'}
+                            actionLabel={farms.length > 0 ? undefined : 'Cadastrar fazenda'}
+                            onAction={farms.length > 0 ? undefined : handleRegisterFarmView}
                         />
                     );
                 }
